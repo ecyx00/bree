@@ -1,0 +1,726 @@
+const std = @import("std");
+const oni = @import("oniguruma");
+
+/// Default URL/path regex. This is used to detect URLs and file paths in
+/// terminal output.
+///
+/// This is here in the config package because one day the matchers will be
+/// configurable and this will be a default.
+///
+/// For scheme URLs, this regex is liberal in what it accepts after the scheme,
+/// with exceptions for URLs ending with . or ). Although such URLs are
+/// perfectly valid, it is common for text to contain URLs surrounded by
+/// parentheses (such as in Markdown links) or at the end of sentences.
+/// Therefore, this regex excludes them as follows:
+///
+/// 1. Do not match regexes ending with .
+/// 2. Do not match regexes ending with ), except for ones which contain a (
+///    without a subsequent )
+///
+/// Rule 2 means that we handle the following two cases:
+///
+///   "https://en.wikipedia.org/wiki/Rust_(video_game)" (include parens)
+///   "(https://example.com)" (do not include the parens)
+///
+/// There are many complicated cases where these heuristics break down, but
+/// handling them well requires a non-regex approach.
+const url_schemes =
+    \\https?://|mailto:|ftp://|file:|ssh:|git://|ssh://|tel:|magnet:|ipfs://|ipns://|gemini://|gopher://|news:
+;
+
+const ipv6_url_pattern =
+    \\(?:\[[:0-9a-fA-F]+(?:[:0-9a-fA-F]*)+\](?::[0-9]+)?)
+;
+
+const scheme_url_chars =
+    \\[\w\-.~:/?#@!$&*+,;=%]
+;
+
+const path_chars =
+    \\[\w\-.~:\/?#@!$&*+;=%]
+;
+
+const path_chars_no_dot =
+    \\[\w\-~:\/?#@!$&*+;=%]
+;
+
+const path_segment_chars =
+    \\[\w\-.~:?#@!$&*+;=%]
+;
+
+const path_segment_chars_no_dot =
+    \\[\w\-~:?#@!$&*+;=%]
+;
+
+const optional_bracketed_word_suffix =
+    \\(?:[\(\[]\w*[\)\]])?
+;
+
+const no_trailing_punctuation =
+    \\(?<![,.])
+;
+
+const no_trailing_colon =
+    \\(?<!:)
+;
+
+const no_trailing_path_punctuation =
+    \\(?:(?<![,.])|(?= *$))
+;
+
+const trailing_spaces_at_eol =
+    // Hard-wrap normalization may append one match-only NUL after all mapped
+    // cells. Let spaces remain part of the match so clipboard policy can trim
+    // them, without teaching the punctuation guard to accept that delimiter.
+    \\(?: +(?= *(?:\x00)?$))?
+;
+
+const dotted_spaced_path_lookahead =
+    \\(?=[\w\-.~:\/?#@!$&*+;=% ]*\.)
+;
+
+const dotted_path_lookahead =
+    \\(?=[\w\-.~:\/?#@!$&*+;=%]*\.)
+;
+
+const non_dotted_path_lookahead =
+    \\(?![\w\-.~:\/?#@!$&*+;=%]*\.)
+;
+
+const single_spaced_path_no_dot_segment =
+    \\ (?! )(?!\w+:\/\/)(?!\.{0,2}\/)(?!~\/)
+++ path_chars_no_dot ++
+    "+";
+
+const single_spaced_path_no_dot_segments =
+    "(?:" ++ single_spaced_path_no_dot_segment ++ ")*";
+
+const path_body_with_undotted_leaf =
+    "(?:" ++ path_segment_chars ++ "+/)*" ++ path_segment_chars_no_dot ++ "+";
+
+const path_body_with_dotted_leaf =
+    "(?:" ++ path_segment_chars ++ "+/)*" ++ path_segment_chars ++ "*\\." ++ path_segment_chars ++ "+";
+
+const malformed_spaced_path_lookahead =
+    "(?=(?:" ++ single_spaced_path_no_dot_segment ++ ")*  )";
+
+const dotted_path_space_dir_segment_no_dot_tail =
+    \\(?:(?<!:) (?! )(?!\w+:\/\/)(?!\.{0,2}\/)(?!~\/)
+++ path_chars_no_dot ++
+    "+" ++
+    single_spaced_path_no_dot_segments ++
+    "/" ++
+    path_chars_no_dot ++
+    "*)";
+
+const dotted_path_space_dir_segment_dotted_tail =
+    \\(?:(?<!:) (?! )(?!\w+:\/\/)(?!\.{0,2}\/)(?!~\/)
+++ path_chars_no_dot ++
+    "+" ++
+    single_spaced_path_no_dot_segments ++
+    "/" ++
+    path_chars_no_dot ++
+    "*\\." ++
+    path_chars ++
+    "*)";
+
+const dotted_path_space_dir_prefix_segments =
+    "(?:" ++ dotted_path_space_dir_segment_no_dot_tail ++ ")*";
+
+const dotted_path_space_file_segment =
+    \\(?:(?<!:) (?! )(?!\w+:\/\/)(?!\.{0,2}\/)(?!~\/)
+++ path_chars_no_dot ++
+    "+" ++
+    single_spaced_path_no_dot_segments ++
+    "\\." ++
+    path_chars ++
+    "*)";
+
+const dotted_path_space_single_file_segment =
+    \\(?:(?<!:) (?! )(?!\w+:\/\/)(?!\.{0,2}\/)(?!~\/)
+++ path_chars_no_dot ++
+    "+\\." ++
+    path_chars ++
+    "*)";
+
+const dotted_path_space_dir_suffix =
+    dotted_path_space_dir_prefix_segments ++
+    dotted_path_space_dir_segment_dotted_tail;
+
+const dotted_path_space_suffix =
+    dotted_path_space_dir_prefix_segments ++
+    "(?:" ++ dotted_path_space_dir_segment_dotted_tail ++ "|" ++ dotted_path_space_file_segment ++ ")";
+
+const any_path_space_segments =
+    \\(?:(?<!:) (?!\w+:\/\/)(?!\.{0,2}\/)(?!~\/)[\w\-.~:\/?#@!$&*+;=%]+)*
+;
+
+// Branch 1: URLs with explicit schemes (http, mailto, ftp, etc.).
+const scheme_url_branch =
+    "(?:" ++ url_schemes ++ ")" ++
+    "(?:" ++ ipv6_url_pattern ++ "|" ++ scheme_url_chars ++ "+" ++ optional_bracketed_word_suffix ++ ")+" ++
+    no_trailing_punctuation;
+
+// Local development servers commonly print a host and port without a scheme.
+// Keep the boundary strict so email addresses and lookalike hosts do not become
+// local links. The application chooses the HTTP scheme when opening the match.
+const localhost_port_branch =
+    \\(?<![\w.@:/-])(?i:(?:[a-z0-9-]+\.)*localhost):[0-9]+(?![\w@:])(?!\.[\w-])
+++ "(?:[/?#]" ++ scheme_url_chars ++ "*" ++ optional_bracketed_word_suffix ++ ")?" ++
+    no_trailing_punctuation;
+
+const rooted_or_relative_path_prefix =
+    \\(?:\.\.\/|\.\/|(?<!\w)~\/|(?:[\w][\w\-.]*\/)*(?<!\w)\$[A-Za-z_]\w*\/|\.[\w][\w\-.]*\/|(?<![\w~\/])\/(?!\/))
+;
+
+// Branch 2: Absolute paths and dot-relative paths (/, ./, ../).
+// A dotted segment is treated as file-like, while the undotted case stays
+// broad to capture directory-like paths with spaces.
+const rooted_or_relative_path_branch =
+    rooted_or_relative_path_prefix ++
+    "(?:" ++
+    dotted_spaced_path_lookahead ++
+    path_body_with_undotted_leaf ++
+    dotted_path_space_suffix ++
+    no_trailing_colon ++
+    no_trailing_path_punctuation ++
+    trailing_spaces_at_eol ++
+    "|" ++
+    dotted_spaced_path_lookahead ++
+    path_body_with_undotted_leaf ++
+    malformed_spaced_path_lookahead ++
+    no_trailing_colon ++
+    no_trailing_path_punctuation ++
+    trailing_spaces_at_eol ++
+    "|" ++
+    dotted_spaced_path_lookahead ++
+    path_body_with_dotted_leaf ++
+    "(?:" ++ dotted_path_space_dir_suffix ++ "|" ++ dotted_path_space_single_file_segment ++ ")" ++
+    no_trailing_colon ++
+    no_trailing_path_punctuation ++
+    trailing_spaces_at_eol ++
+    "|" ++
+    dotted_path_lookahead ++
+    path_chars ++ "+" ++
+    no_trailing_colon ++
+    no_trailing_path_punctuation ++
+    trailing_spaces_at_eol ++
+    "|" ++
+    non_dotted_path_lookahead ++
+    path_chars ++ "+" ++
+    any_path_space_segments ++
+    no_trailing_colon ++
+    trailing_spaces_at_eol ++
+    ")";
+
+// Branch 3: Bare relative paths such as src/config/url.zig.
+const bare_relative_path_prefix =
+    \\(?<!\$\d*)(?<!\w)[\w][\w\-.]*\/
+;
+
+const bare_relative_path_branch =
+    dotted_path_lookahead ++
+    bare_relative_path_prefix ++
+    path_chars ++ "+" ++
+    no_trailing_path_punctuation ++
+    no_trailing_colon ++
+    trailing_spaces_at_eol;
+
+pub const scheme_regex = scheme_url_branch ++ "|" ++ localhost_port_branch;
+
+pub const path_regex =
+    rooted_or_relative_path_branch ++
+    "|" ++
+    bare_relative_path_branch;
+
+pub const regex = scheme_regex ++ "|" ++ path_regex;
+
+test "url regex bare localhost ports" {
+    const testing = std.testing;
+    try oni.testing.ensureInit();
+    var re = try oni.Regex.init(scheme_regex, .{}, oni.Encoding.utf8, oni.Syntax.default, null);
+    defer re.deinit();
+
+    for ([_][]const u8{
+        "localhost:8000",
+        "localhost:8000/probe?encoded=a%2Fb&duplicate=1&duplicate=2#fragment",
+        "api.localhost:8000/path",
+        "LOCALHOST:8000",
+    }) |value| {
+        var reg = try re.search(value, .{});
+        defer reg.deinit();
+        const match = value[@intCast(reg.starts()[0])..@intCast(reg.ends()[0])];
+        try testing.expectEqualStrings(value, match);
+    }
+
+    for ([_][]const u8{
+        "notlocalhost:8000",
+        "localhost.evil.example:8000",
+        "user@localhost:8000",
+        "localhost:8000suffix",
+        "localhost:8000.evil",
+    }) |value| {
+        var result = re.search(value, .{});
+        if (result) |*reg| {
+            reg.deinit();
+            return error.TestUnexpectedResult;
+        } else |_| {}
+    }
+
+    const punctuated = "localhost:8000.";
+    var reg = try re.search(punctuated, .{});
+    defer reg.deinit();
+    try testing.expectEqualStrings(
+        "localhost:8000",
+        punctuated[@intCast(reg.starts()[0])..@intCast(reg.ends()[0])],
+    );
+}
+
+test "url regex" {
+    const testing = std.testing;
+
+    try oni.testing.ensureInit();
+    var re = try oni.Regex.init(
+        regex,
+        .{},
+        oni.Encoding.utf8,
+        oni.Syntax.default,
+        null,
+    );
+    defer re.deinit();
+
+    // The URL cases to test what our regex matches. Feel free to add to this
+    // as we find bugs or just want more coverage.
+    const cases = [_]struct {
+        input: []const u8,
+        expect: []const u8,
+        num_matches: usize = 1,
+    }{
+        .{
+            .input = "hello https://example.com world",
+            .expect = "https://example.com",
+        },
+        .{
+            .input = "https://example.com/foo(bar) more",
+            .expect = "https://example.com/foo(bar)",
+        },
+        .{
+            .input = "https://example.com/foo(bar)baz more",
+            .expect = "https://example.com/foo(bar)baz",
+        },
+        .{
+            .input = "Link inside (https://example.com) parens",
+            .expect = "https://example.com",
+        },
+        .{
+            .input = "Link period https://example.com. More text.",
+            .expect = "https://example.com",
+        },
+        .{
+            .input = "Link trailing comma https://example.com, more text.",
+            .expect = "https://example.com",
+        },
+        .{
+            .input = "Link in double quotes \"https://example.com\" and more",
+            .expect = "https://example.com",
+        },
+        .{
+            .input = "Link in single quotes 'https://example.com' and more",
+            .expect = "https://example.com",
+        },
+        .{
+            .input = "some file with https://google.com https://duckduckgo.com links.",
+            .expect = "https://google.com",
+        },
+        .{
+            .input = "and links in it. links https://yahoo.com mailto:test@example.com ssh://1.2.3.4",
+            .expect = "https://yahoo.com",
+        },
+        .{
+            .input = "also match http://example.com non-secure links",
+            .expect = "http://example.com",
+        },
+        .{
+            .input = "match tel://+12123456789 phone numbers",
+            .expect = "tel://+12123456789",
+        },
+        .{
+            .input = "match with query url https://example.com?query=1&other=2 and more text.",
+            .expect = "https://example.com?query=1&other=2",
+        },
+        .{
+            .input = "url with dashes [mode 2027](https://github.com/contour-terminal/terminal-unicode-core) for better unicode support",
+            .expect = "https://github.com/contour-terminal/terminal-unicode-core",
+        },
+        .{
+            .input = "dot.http://example.com",
+            .expect = "http://example.com",
+        },
+        // weird characters in URL
+        .{
+            .input = "weird characters https://example.com/~user/?query=1&other=2#hash and more",
+            .expect = "https://example.com/~user/?query=1&other=2#hash",
+        },
+        // square brackets in URL
+        .{
+            .input = "square brackets https://example.com/[foo] and more",
+            .expect = "https://example.com/[foo]",
+        },
+        // square bracket following url
+        .{
+            .input = "[13]:TooManyStatements: TempFile#assign_temp_file_to_entity has approx 7 statements [https://example.com/docs/Too-Many-Statements.md]",
+            .expect = "https://example.com/docs/Too-Many-Statements.md",
+        },
+        // remaining URL schemes tests
+        .{
+            .input = "match ftp://example.com ftp links",
+            .expect = "ftp://example.com",
+        },
+        .{
+            .input = "match file://example.com file links",
+            .expect = "file://example.com",
+        },
+        .{
+            .input = "match ssh://example.com ssh links",
+            .expect = "ssh://example.com",
+        },
+        .{
+            .input = "match git://example.com git links",
+            .expect = "git://example.com",
+        },
+        .{
+            .input = "/tmp/test.txt http://www.google.com",
+            .expect = "/tmp/test.txt",
+        },
+        .{
+            .input = "match tel:+18005551234 tel links",
+            .expect = "tel:+18005551234",
+        },
+        .{
+            .input = "match magnet:?xt=urn:btih:1234567890 magnet links",
+            .expect = "magnet:?xt=urn:btih:1234567890",
+        },
+        .{
+            .input = "match ipfs://QmSomeHashValue ipfs links",
+            .expect = "ipfs://QmSomeHashValue",
+        },
+        .{
+            .input = "match ipns://QmSomeHashValue ipns links",
+            .expect = "ipns://QmSomeHashValue",
+        },
+        .{
+            .input = "match gemini://example.com gemini links",
+            .expect = "gemini://example.com",
+        },
+        .{
+            .input = "match gopher://example.com gopher links",
+            .expect = "gopher://example.com",
+        },
+        .{
+            .input = "match news:comp.infosystems.www.servers.unix news links",
+            .expect = "news:comp.infosystems.www.servers.unix",
+        },
+        .{
+            .input = "/Users/ghostty.user/code/example.py",
+            .expect = "/Users/ghostty.user/code/example.py",
+        },
+        .{
+            .input = "/Users/ghostty.user/code/../example.py",
+            .expect = "/Users/ghostty.user/code/../example.py",
+        },
+        .{
+            .input = "/Users/ghostty.user/code/../example.py hello world",
+            .expect = "/Users/ghostty.user/code/../example.py",
+        },
+        .{
+            .input = "../example.py",
+            .expect = "../example.py",
+        },
+        .{
+            .input = "../example.py ",
+            .expect = "../example.py ",
+        },
+        .{
+            .input = "first time ../example.py contributor ",
+            .expect = "../example.py",
+        },
+        .{
+            .input = "[link](/home/user/ghostty.user/example)",
+            .expect = "/home/user/ghostty.user/example",
+        },
+        // IPv6 URL tests - Basic tests
+        .{
+            .input = "Serving HTTP on :: port 8000 (http://[::]:8000/)",
+            .expect = "http://[::]:8000/",
+        },
+        .{
+            .input = "IPv6 address https://[2001:db8::1]:8080/path",
+            .expect = "https://[2001:db8::1]:8080/path",
+        },
+        .{
+            .input = "IPv6 localhost http://[::1]:3000",
+            .expect = "http://[::1]:3000",
+        },
+        .{
+            .input = "Complex IPv6 https://[2001:db8:85a3:8d3:1319:8a2e:370:7348]:443/",
+            .expect = "https://[2001:db8:85a3:8d3:1319:8a2e:370:7348]:443/",
+        },
+        // IPv6 URL tests - URLs with paths and query parameters
+        .{
+            .input = "IPv6 with path https://[2001:db8::1]/path/to/resource",
+            .expect = "https://[2001:db8::1]/path/to/resource",
+        },
+        .{
+            .input = "IPv6 with query https://[2001:db8::1]:8080/api?param=value&other=123",
+            .expect = "https://[2001:db8::1]:8080/api?param=value&other=123",
+        },
+        // IPv6 URL tests - Compressed forms
+        .{
+            .input = "IPv6 compressed http://[2001:db8::]:80/",
+            .expect = "http://[2001:db8::]:80/",
+        },
+        .{
+            .input = "IPv6 multiple zeros http://[2001:0:0:0:0:0:0:1]",
+            .expect = "http://[2001:0:0:0:0:0:0:1]",
+        },
+        // IPv6 URL tests - Special cases
+        .{
+            .input = "IPv6 link-local https://[fe80::1234:5678:9abc]",
+            .expect = "https://[fe80::1234:5678:9abc]",
+        },
+        .{
+            .input = "IPv6 multicast http://[ff02::1]/stream",
+            .expect = "http://[ff02::1]/stream",
+        },
+        // IPv6 URL tests - Mixed scenarios
+        .{
+            .input = "IPv6 in markdown [link](http://[2001:db8::1]/docs)",
+            .expect = "http://[2001:db8::1]/docs",
+        },
+        // File paths with spaces
+        .{
+            .input = "./spaces-end.   ",
+            .expect = "./spaces-end.   ",
+        },
+        .{
+            .input = "./space middle",
+            .expect = "./space middle",
+        },
+        .{
+            .input = "../test folder/file.txt",
+            .expect = "../test folder/file.txt",
+        },
+        .{
+            .input = "/tmp/test folder/file.txt",
+            .expect = "/tmp/test folder/file.txt",
+        },
+        .{
+            .input = "Start with /Users/tester/Recovered Screen Recordings/2026-05-18/screen-recording-2026-05-15-raw.mp4. It is a 75 MB Screen Studio recording, 46s long.",
+            .expect = "/Users/tester/Recovered Screen Recordings/2026-05-18/screen-recording-2026-05-15-raw.mp4",
+        },
+        .{
+            .input = "/Users/ghostty.user/Recovered Screen Recordings/file.mp4",
+            .expect = "/Users/ghostty.user/Recovered Screen Recordings/file.mp4",
+        },
+        .{
+            .input = "/tmp/test  folder/file.txt",
+            .expect = "/tmp/test",
+        },
+        .{
+            .input = "/tmp/foo bar  baz.txt",
+            .expect = "/tmp/foo",
+        },
+        .{
+            .input = "/tmp/foo.txt version is 1.2",
+            .expect = "/tmp/foo.txt",
+        },
+        .{
+            .input = "/tmp/foo bar.txt version is 1.2",
+            .expect = "/tmp/foo bar.txt",
+        },
+        .{
+            .input = "/tmp/foo.bar baz.txt version is 1.2",
+            .expect = "/tmp/foo.bar baz.txt",
+        },
+        .{
+            .input = "/tmp/v1.2 captures/video.mp4. It is ok",
+            .expect = "/tmp/v1.2 captures/video.mp4",
+        },
+        .{
+            .input = "/tmp/test folder/file.txt version is 1.2",
+            .expect = "/tmp/test folder/file.txt",
+        },
+        .{
+            .input = "/tmp/test folder/file.txt /tmp/other.txt",
+            .expect = "/tmp/test folder/file.txt",
+        },
+        // unified diff lines
+        .{
+            .input = "diff --git a/src/font/shaper/harfbuzz.zig b/src/font/shaper/harfbuzz.zig",
+            .expect = "a/src/font/shaper/harfbuzz.zig",
+        },
+        // Two space-separated absolute paths should match only the first
+        .{
+            .input = "/tmp/foo /tmp/bar",
+            .expect = "/tmp/foo",
+        },
+        .{
+            .input = "/tmp/foo.txt /tmp/bar.txt",
+            .expect = "/tmp/foo.txt",
+        },
+        .{
+            .input = "/tmp/foo bar /tmp/baz.txt",
+            .expect = "/tmp/foo bar",
+        },
+        .{
+            .input = "/tmp/foo bar http://example.com/a.txt",
+            .expect = "/tmp/foo bar",
+        },
+        // Bare relative file paths (no ./ or ../ prefix)
+        .{
+            .input = "src/config/url.zig",
+            .expect = "src/config/url.zig",
+        },
+        .{
+            .input = "app/folder/file.rb:1",
+            .expect = "app/folder/file.rb:1",
+        },
+        .{
+            .input = "modified:   src/config/url.zig",
+            .expect = "src/config/url.zig",
+        },
+        .{
+            .input = "lib/ghostty/terminal.zig:42:10",
+            .expect = "lib/ghostty/terminal.zig:42:10",
+        },
+        .{
+            .input = "some-pkg/src/file.txt more text",
+            .expect = "some-pkg/src/file.txt",
+        },
+        // comma should match substrings
+        .{
+            .input = "src/foo.c,baz.txt",
+            .expect = "src/foo.c",
+        },
+        .{
+            .input = "~/foo/bar.txt",
+            .expect = "~/foo/bar.txt",
+        },
+        .{
+            .input = "open ~/Documents/notes.md please",
+            .expect = "~/Documents/notes.md",
+        },
+        .{
+            .input = "~/.config/ghostty/config",
+            .expect = "~/.config/ghostty/config",
+        },
+        .{
+            .input = "directory: ~/src/ghostty-org/ghostty",
+            .expect = "~/src/ghostty-org/ghostty",
+        },
+        .{
+            .input = "$HOME/src/config/url.zig",
+            .expect = "$HOME/src/config/url.zig",
+        },
+        .{
+            .input = "project dir: $PWD/src/ghostty/main.zig",
+            .expect = "$PWD/src/ghostty/main.zig",
+        },
+        // $VAR mid-path should match fully, not partially from the $
+        .{
+            .input = "foo/$BAR/baz",
+            .expect = "foo/$BAR/baz",
+        },
+        .{
+            .input = ".foo/bar/$VAR",
+            .expect = ".foo/bar/$VAR",
+        },
+        .{
+            .input = ".config/ghostty/config",
+            .expect = ".config/ghostty/config",
+        },
+        .{
+            .input = "loaded from .local/share/ghostty/state.db now",
+            .expect = ".local/share/ghostty/state.db",
+        },
+        .{
+            .input = "../some/where",
+            .expect = "../some/where",
+        },
+        // comma-separated file paths
+        .{
+            .input = "  - shared/src/foo/SomeItem.m:12, shared/src/",
+            .expect = "shared/src/foo/SomeItem.m:12",
+        },
+        // mid-string dot should not partially match but fully
+        .{
+            .input = "foo.local/share",
+            .expect = "foo.local/share",
+        },
+        // numeric directory should match fully
+        .{
+            .input = "2024/report.txt",
+            .expect = "2024/report.txt",
+        },
+        // comma should stop matching in spaced path segments
+        .{
+            .input = "./foo bar,baz",
+            .expect = "./foo bar",
+        },
+        .{
+            .input = "/tmp/foo bar,baz",
+            .expect = "/tmp/foo bar",
+        },
+        // trailing colon should not be part of the path
+        .{
+            .input = "./.config/ghostty: Needs upstream (main)",
+            .expect = "./.config/ghostty",
+        },
+        .{
+            .input = "./Downloads: Operation not permitted",
+            .expect = "./Downloads",
+        },
+    };
+
+    for (cases) |case| {
+        //std.debug.print("input: {s}\n", .{case.input});
+        //std.debug.print("match: {s}\n", .{case.expect});
+        var reg = try re.search(case.input, .{});
+        //std.debug.print("count: {d}\n", .{@as(usize, reg.count())});
+        //std.debug.print("starts: {d}\n", .{reg.starts()});
+        //std.debug.print("ends: {d}\n", .{reg.ends()});
+        defer reg.deinit();
+        try testing.expectEqual(@as(usize, case.num_matches), reg.count());
+        const match = case.input[@intCast(reg.starts()[0])..@intCast(reg.ends()[0])];
+        try testing.expectEqualStrings(case.expect, match);
+    }
+
+    const no_match_cases = [_][]const u8{
+        // bare relative paths without any dot should not match as file paths
+        "input/output",
+        "foo/bar",
+        // $-numeric character should not match
+        "$10/bar",
+        "$10/$20",
+        "$10/bar.txt",
+        // comma should not let dot detection look past it
+        "foo/bar,baz.txt",
+        // spaces in prose should not make an undotted bare path look dotted
+        "read/write is complete.",
+        "input/output config.json",
+        // $VAR should not match mid-word
+        "foo$BAR/baz.txt",
+        // ~ should not match mid-word
+        "foo~/bar.txt",
+        // double-slash comments are not paths
+        "// foo bar",
+        "//foo",
+    };
+    for (no_match_cases) |input| {
+        var result = re.search(input, .{});
+        if (result) |*reg| {
+            reg.deinit();
+            return error.TestUnexpectedResult;
+        } else |_| {}
+    }
+}

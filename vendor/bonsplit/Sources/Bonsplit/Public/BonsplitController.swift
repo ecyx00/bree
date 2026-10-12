@@ -1,0 +1,1332 @@
+import Foundation
+import SwiftUI
+
+/// Main controller for the split tab bar system
+@MainActor
+@Observable
+public final class BonsplitController {
+
+    public struct ExternalTabDropRequest {
+        public enum Destination {
+            case insert(targetPane: PaneID, targetIndex: Int?)
+            case split(targetPane: PaneID, orientation: SplitOrientation, insertFirst: Bool)
+        }
+
+        public let tabId: TabID
+        public let sourcePaneId: PaneID
+        public let destination: Destination
+
+        public init(tabId: TabID, sourcePaneId: PaneID, destination: Destination) {
+            self.tabId = tabId
+            self.sourcePaneId = sourcePaneId
+            self.destination = destination
+        }
+    }
+
+    public struct ExternalFileDropRequest {
+        public let urls: [URL]
+        public let destination: ExternalTabDropRequest.Destination
+
+        public init(urls: [URL], destination: ExternalTabDropRequest.Destination) {
+            self.urls = urls
+            self.destination = destination
+        }
+    }
+
+    // MARK: - Delegate
+
+    /// Delegate for receiving callbacks about tab bar events
+    public weak var delegate: BonsplitDelegate?
+
+    // MARK: - Configuration
+
+    /// Configuration for behavior and appearance
+    public var configuration: BonsplitConfiguration
+
+    /// When false, drop delegates reject all drags. Set to false for inactive workspaces
+    /// so their views (kept alive in a ZStack for state preservation) don't intercept drags
+    /// meant for the active workspace.
+    @ObservationIgnored public var isInteractive: Bool = true {
+        didSet { internalController.isInteractive = isInteractive }
+    }
+
+    /// Whether pane tab shortcut hints are currently actionable.
+    ///
+    /// Pane focus is internal to Bonsplit, but host apps can move keyboard focus
+    /// to external controls while keeping the focused pane selected. Set this
+    /// to false when pane-number shortcuts should not currently be advertised.
+    public var tabShortcutHintsEnabled: Bool = true {
+        didSet { internalController.tabShortcutHintsEnabled = tabShortcutHintsEnabled }
+    }
+
+    /// Handler for file/URL drops from external apps (e.g., Finder).
+    /// Called when files are dropped onto a pane's content area.
+    /// Return `true` if the drop was handled.
+    @ObservationIgnored public var onFileDrop: ((_ urls: [URL], _ paneId: PaneID) -> Bool)? {
+        didSet { internalController.onFileDrop = onFileDrop }
+    }
+
+    /// Handler for tab drops originating from another Bonsplit controller (e.g. another workspace/window).
+    /// Return `true` when the drop has been handled by the host application.
+    @ObservationIgnored public var onExternalTabDrop: ((ExternalTabDropRequest) -> Bool)?
+
+    /// Handler for file drops from external apps, routed through pane drop zones.
+    /// Return `true` when the drop has been handled by the host application.
+    @ObservationIgnored public var onExternalFileDrop: ((ExternalFileDropRequest) -> Bool)?
+
+    /// Host-provided destinations for the tab context menu's Move Tab submenu.
+    @ObservationIgnored public var tabContextMoveDestinationsProvider: ((TabID, PaneID) -> [TabContextMoveDestination])?
+
+    /// Host-provided state evaluated when the tab context menu opens. Refreshing actions
+    /// remain visible but disabled; hidden actions are omitted.
+    @ObservationIgnored public var tabContextForkConversationAvailabilityProvider: ((TabID, PaneID) -> TabContextForkConversationAvailability)?
+
+    /// Host-provided refresh invoked when Fork Conversation availability is still loading
+    /// as the tab context menu opens. When it returns, the open menu re-evaluates the
+    /// synchronous availability provider and updates its items in place.
+    @ObservationIgnored public var tabContextForkConversationAvailabilityRefreshHandler: (@MainActor (TabID, PaneID) async -> Void)?
+
+    /// Host-provided default destination for the tab context menu's primary "Fork
+    /// Conversation" action. Return a destination-specific fork action; invalid values
+    /// fall back to `.forkConversationRight`.
+    @ObservationIgnored public var tabContextForkConversationDefaultActionProvider: ((TabID, PaneID) -> TabContextAction)?
+
+    /// Host-provided synchronous check that decides whether the tab context menu should
+    /// surface a "Disconnect SSH" action for the tab (e.g. a terminal surface attached to
+    /// a host-managed remote connection). Return `true` to show the item, `false` (or omit
+    /// the provider) to hide it.
+    @ObservationIgnored public var tabContextDisconnectRemoteAvailabilityProvider: ((TabID, PaneID) -> Bool)?
+
+    /// Called when the user explicitly requests to close a tab from the tab strip UI.
+    /// Internal host-driven closes should not use this hook.
+    @ObservationIgnored public var onTabCloseRequest: ((_ tabId: TabID, _ paneId: PaneID, _ source: TabCloseRequestSource) -> Void)?
+
+    /// Host-provided middle-click capture overlay for tab items. AppKit hosts
+    /// can supply their shared capture view here without making Bonsplit depend
+    /// on the host UI package.
+    @ObservationIgnored public var tabMiddleClickCapture: ((@escaping () -> Void) -> AnyView)?
+
+    /// Host-provided accessories for the pane tab bar that touches the top-right
+    /// corner of the split area (the zoomed pane while a pane is zoomed). Asked
+    /// only for that pane, so a window shows them once. `leading` sits left of
+    /// the split action buttons, `trailing` at the far right edge. Bonsplit
+    /// stays free of host types: hosts return type-erased views.
+    public var paneTabBarAccessoryProvider: ((_ paneId: PaneID) -> PaneTabBarAccessory?)?
+
+    /// Called when the user explicitly requests to toggle zoom from tab chrome.
+    /// When set, the host owns the full toggle and should return whether it succeeded.
+    @ObservationIgnored public var onTabZoomToggleRequest: (@MainActor (_ tabId: TabID, _ paneId: PaneID) -> Bool)?
+
+    /// Called when the user explicitly requests to toggle full-width-tab mode from tab chrome.
+    /// When set, the host owns the full toggle and should return whether it succeeded.
+    @ObservationIgnored public var onTabFullWidthToggleRequest: (@MainActor (_ tabId: TabID, _ paneId: PaneID) -> Bool)?
+
+    // MARK: - Internal State
+
+    internal var internalController: SplitViewController
+
+    // MARK: - Initialization
+
+    /// Creates an isolated controller with the specified configuration.
+    ///
+    /// Use ``init(configuration:tabDragTransferRegistry:)`` when multiple
+    /// controllers may exchange tabs.
+    ///
+    /// - Parameter configuration: The controller's behavior and appearance.
+    public init(configuration: BonsplitConfiguration = .default) {
+        self.configuration = configuration
+        self.internalController = SplitViewController()
+        configureInternalController()
+    }
+
+    /// Creates a controller with explicit ownership of its tab-drag capabilities.
+    ///
+    /// Controllers that exchange tabs must receive the same registry. Controllers
+    /// created without one are isolated, which keeps independent hosts and tests
+    /// from sharing hidden process state.
+    ///
+    /// - Parameters:
+    ///   - configuration: The controller's behavior and appearance.
+    ///   - tabDragTransferRegistry: The capability registry shared by controllers
+    ///     that may exchange tabs.
+    public init(
+        configuration: BonsplitConfiguration,
+        tabDragTransferRegistry: TabDragTransferRegistry
+    ) {
+        self.configuration = configuration
+        self.internalController = SplitViewController(
+            tabDragTransferRegistry: tabDragTransferRegistry
+        )
+        configureInternalController()
+    }
+
+    private func configureInternalController() {
+        internalController.publicController = self
+        internalController.onDividerDragSessionChange = { [weak self] active in
+            guard let self else { return }
+            if active {
+                self.delegate?.splitTabBarDividerDragDidBegin(self)
+            } else {
+                // Drag-end promises the settled geometry has already been
+                // reported when dragDidEnd runs. Deliver it here, on the
+                // session's zero crossing, and force it past the external-
+                // update suppression window: a quick flick can release
+                // within that window's ~50ms of a fromExternal call, and
+                // the gate would silently swallow the one notification the
+                // contract guarantees.
+                self.notifyGeometryChange(force: true)
+                self.delegate?.splitTabBarDividerDragDidEnd(self)
+            }
+        }
+    }
+
+    /// True while the user is dragging a divider anywhere in this tree.
+    /// Sessions bracket the divider's mouse-tracking lifecycle, so this is
+    /// authoritative — not inferred from resize callbacks. While true,
+    /// external sizing must not impose extents: the drag owns geometry.
+    public var isDividerDragActive: Bool {
+        internalController.activeDividerDragSessions > 0
+    }
+
+    /// Brackets a divider drag session from outside the built-in divider
+    /// tracking — for hosts with custom drag surfaces, and for tests that
+    /// need the session state without synthesizing mouse events. Balanced
+    /// begin/end pairs are the caller's responsibility.
+    public func noteDividerDragSession(_ active: Bool) {
+        internalController.noteDividerDragSession(active)
+    }
+
+    // MARK: - Tab Operations
+
+    /// Create a new tab in the focused pane (or specified pane)
+    /// - Parameters:
+    ///   - title: The tab title
+    ///   - icon: Optional SF Symbol name for the tab icon
+    ///   - iconImageData: Optional image data (PNG recommended) for the tab icon. When present, takes precedence over `icon`.
+    ///   - iconAsset: Optional asset-catalog image name for the tab icon. Resolved in the host app bundle.
+    ///   - kind: Consumer-defined tab kind identifier (e.g. "terminal", "browser")
+    ///   - hasCustomTitle: Whether the tab title came from a custom user override
+    ///   - isDirty: Whether the tab shows a dirty indicator
+    ///   - showsNotificationBadge: Whether the tab shows an "unread/activity" badge
+    ///   - isLoading: Whether the tab shows an activity/loading indicator (e.g. spinning icon)
+    ///   - isAudioMuted: Whether the tab shows browser audio as muted
+    ///   - isPinned: Whether the tab should be treated as pinned
+    ///   - pane: Optional pane to add the tab to (defaults to focused pane)
+    /// - Returns: The TabID of the created tab, or nil if creation was vetoed by delegate
+    @discardableResult
+    public func createTab(
+        title: String,
+        hasCustomTitle: Bool = false,
+        icon: String? = "doc.text",
+        iconImageData: Data? = nil,
+        iconAsset: String? = nil,
+        kind: String? = nil,
+        isDirty: Bool = false,
+        showsNotificationBadge: Bool = false,
+        isLoading: Bool = false,
+        isAudioMuted: Bool = false,
+        isAudioPlaying: Bool = false,
+        isPinned: Bool = false,
+        showsRemoteIndicator: Bool = false,
+        inPane pane: PaneID? = nil
+    ) -> TabID? {
+        let tabId = TabID()
+        let tab = Tab(
+            id: tabId,
+            title: title,
+            hasCustomTitle: hasCustomTitle,
+            icon: icon,
+            iconImageData: iconImageData,
+            iconAsset: iconAsset,
+            kind: kind,
+            isDirty: isDirty,
+            showsNotificationBadge: showsNotificationBadge,
+            isLoading: isLoading,
+            isAudioMuted: isAudioMuted,
+            isAudioPlaying: isAudioPlaying,
+            isPinned: isPinned,
+            showsRemoteIndicator: showsRemoteIndicator
+        )
+        let targetPane = pane ?? focusedPaneId ?? PaneID(id: internalController.rootNode.allPaneIds.first!.id)
+
+        // Check with delegate
+        if delegate?.splitTabBar(self, shouldCreateTab: tab, inPane: targetPane) == false {
+            return nil
+        }
+
+        // Calculate insertion index based on configuration
+        let insertIndex: Int?
+        switch configuration.newTabPosition {
+        case .current:
+            // Insert after the currently selected tab
+            if let paneState = internalController.paneState(for: targetPane),
+               let selectedTabId = paneState.selectedTabId,
+               let currentIndex = paneState.tabs.firstIndex(where: { $0.id == selectedTabId }) {
+                insertIndex = currentIndex + 1
+            } else {
+                // No selected tab, append to end
+                insertIndex = nil
+            }
+        case .end:
+            insertIndex = nil
+        }
+
+        // Create internal TabItem
+        let tabItem = TabItem(
+            id: tabId.id,
+            title: title,
+            hasCustomTitle: hasCustomTitle,
+            icon: icon,
+            iconImageData: iconImageData,
+            iconAsset: iconAsset,
+            kind: kind,
+            isDirty: isDirty,
+            showsNotificationBadge: showsNotificationBadge,
+            isLoading: isLoading,
+            isAudioMuted: isAudioMuted,
+            isAudioPlaying: isAudioPlaying,
+            isPinned: isPinned,
+            showsRemoteIndicator: showsRemoteIndicator
+        )
+        internalController.addTab(tabItem, toPane: PaneID(id: targetPane.id), atIndex: insertIndex)
+
+        // Notify delegate
+        delegate?.splitTabBar(self, didCreateTab: tab, inPane: targetPane)
+
+        return tabId
+    }
+
+    /// Request the delegate to create a new tab of the given kind in a pane.
+    /// The delegate is responsible for the actual creation logic.
+    public func requestNewTab(kind: String, inPane pane: PaneID) {
+        delegate?.splitTabBar(self, didRequestNewTab: kind, inPane: pane)
+    }
+
+    /// Request the delegate to handle a host-defined tab bar action.
+    public func requestCustomAction(_ identifier: String, inPane pane: PaneID) {
+        delegate?.splitTabBar(self, didRequestCustomAction: identifier, inPane: pane)
+    }
+
+    /// Request the delegate to handle a tab context-menu action.
+    public func requestTabContextAction(_ action: TabContextAction, for tabId: TabID, inPane pane: PaneID) {
+        if action == .toggleFullWidthTab {
+            _ = requestTabFullWidthToggle(for: tabId, inPane: pane)
+            return
+        }
+
+        guard let tab = tab(tabId) else { return }
+        delegate?.splitTabBar(self, didRequestTabContextAction: action, for: tab, inPane: pane)
+    }
+
+    /// Request the delegate to move a tab to a host-provided destination.
+    public func requestTabMove(toDestination destinationId: String, for tabId: TabID, inPane pane: PaneID) {
+        guard let tab = tab(tabId) else { return }
+        delegate?.splitTabBar(self, didRequestTabMoveToDestination: destinationId, for: tab, inPane: pane)
+    }
+
+    /// Update an existing tab's metadata
+    /// - Parameters:
+    ///   - tabId: The tab to update
+    ///   - title: New title (pass nil to keep current)
+    ///   - icon: New icon (pass nil to keep current, pass .some(nil) to remove icon)
+    ///   - iconImageData: New icon image data (pass nil to keep current, pass .some(nil) to remove)
+    ///   - iconAsset: New asset-catalog icon name (pass nil to keep current, pass .some(nil) to remove)
+    ///   - kind: New tab kind (pass nil to keep current, pass .some(nil) to clear)
+    ///   - hasCustomTitle: New custom-title state (pass nil to keep current)
+    ///   - isDirty: New dirty state (pass nil to keep current)
+    ///   - showsNotificationBadge: New badge state (pass nil to keep current)
+    ///   - isLoading: New loading/busy state (pass nil to keep current)
+    ///   - isAudioMuted: New browser-audio mute state (pass nil to keep current)
+    ///   - isAudioPlaying: New audible-audio state (pass nil to keep current)
+    ///   - isPinned: New pinned state (pass nil to keep current)
+    ///   - presence: New shared-terminal presence (pass nil to keep current, pass .some(nil) to remove)
+    public func updateTab(
+        _ tabId: TabID,
+        title: String? = nil,
+        icon: String?? = nil,
+        iconImageData: Data?? = nil,
+        iconAsset: String?? = nil,
+        kind: String?? = nil,
+        hasCustomTitle: Bool? = nil,
+        isDirty: Bool? = nil,
+        showsNotificationBadge: Bool? = nil,
+        isLoading: Bool? = nil,
+        isAudioMuted: Bool? = nil,
+        isAudioPlaying: Bool? = nil,
+        isPinned: Bool? = nil,
+        showsRemoteIndicator: Bool? = nil,
+        presence: TabPresence?? = nil
+    ) {
+        guard let (pane, tabIndex) = findTabInternal(tabId) else { return }
+        let currentTab = pane.tabs[tabIndex]
+        let didChange =
+            title.map { currentTab.title != $0 } ?? false ||
+            icon.map { currentTab.icon != $0 } ?? false ||
+            iconImageData.map { currentTab.iconImageData != $0 } ?? false ||
+            iconAsset.map { currentTab.iconAsset != $0 } ?? false ||
+            kind.map { currentTab.kind != $0 } ?? false ||
+            hasCustomTitle.map { currentTab.hasCustomTitle != $0 } ?? false ||
+            isDirty.map { currentTab.isDirty != $0 } ?? false ||
+            showsNotificationBadge.map { currentTab.showsNotificationBadge != $0 } ?? false ||
+            isLoading.map { currentTab.isLoading != $0 } ?? false ||
+            isAudioMuted.map { currentTab.isAudioMuted != $0 } ?? false ||
+            isAudioPlaying.map { currentTab.isAudioPlaying != $0 } ?? false ||
+            isPinned.map { currentTab.isPinned != $0 } ?? false ||
+            showsRemoteIndicator.map { currentTab.showsRemoteIndicator != $0 } ?? false ||
+            presence.map { currentTab.presence != $0 } ?? false
+        guard didChange else { return }
+
+        if let title, currentTab.title != title { currentTab.title = title }
+        if let icon, currentTab.icon != icon { currentTab.icon = icon }
+        if let iconImageData, currentTab.iconImageData != iconImageData {
+            currentTab.iconImageData = iconImageData
+        }
+        if let iconAsset, currentTab.iconAsset != iconAsset { currentTab.iconAsset = iconAsset }
+        if let kind, currentTab.kind != kind { currentTab.kind = kind }
+        if let hasCustomTitle, currentTab.hasCustomTitle != hasCustomTitle {
+            currentTab.hasCustomTitle = hasCustomTitle
+        }
+        if let isDirty, currentTab.isDirty != isDirty { currentTab.isDirty = isDirty }
+        if let showsNotificationBadge,
+           currentTab.showsNotificationBadge != showsNotificationBadge {
+            currentTab.showsNotificationBadge = showsNotificationBadge
+        }
+        if let isLoading, currentTab.isLoading != isLoading { currentTab.isLoading = isLoading }
+        if let isAudioMuted, currentTab.isAudioMuted != isAudioMuted {
+            currentTab.isAudioMuted = isAudioMuted
+        }
+        if let isAudioPlaying, currentTab.isAudioPlaying != isAudioPlaying {
+            currentTab.isAudioPlaying = isAudioPlaying
+        }
+        if let isPinned, currentTab.isPinned != isPinned { currentTab.isPinned = isPinned }
+        if let showsRemoteIndicator,
+           currentTab.showsRemoteIndicator != showsRemoteIndicator {
+            currentTab.showsRemoteIndicator = showsRemoteIndicator
+        }
+        if let presence, currentTab.presence != presence { currentTab.presence = presence }
+    }
+
+    /// Close a tab by ID
+    /// - Parameter tabId: The tab to close
+    /// - Returns: true if the tab was closed, false if vetoed by delegate
+    @discardableResult
+    public func closeTab(_ tabId: TabID) -> Bool {
+        guard let (pane, tabIndex) = findTabInternal(tabId) else { return false }
+        return closeTab(tabId, with: tabIndex, in: pane)
+    }
+    
+    /// Close a tab by ID in a specific pane.
+    /// - Parameter tabId: The tab to close
+    /// - Parameter paneId: The pane in which to close the tab
+    public func closeTab(_ tabId: TabID, inPane paneId: PaneID) -> Bool {
+        guard let pane = internalController.paneState(for: paneId),
+              let tabIndex = pane.tabs.firstIndex(where: { $0.id == tabId.id }) else {
+            return false
+        }
+        
+        return closeTab(tabId, with: tabIndex, in: pane)
+    }
+    
+    /// Internal helper to close a tab given its index in a pane
+    /// - Parameter tabId: The tab to close
+    /// - Parameter tabIndex: The position of the tab within the pane
+    /// - Parameter pane: The pane in which to close the tab
+    private func closeTab(_ tabId: TabID, with tabIndex: Int, in pane: PaneState) -> Bool {
+        let tabItem = pane.tabs[tabIndex]
+        let tab = Tab(from: tabItem)
+        let paneId = pane.id
+
+        // Check with delegate
+        if delegate?.splitTabBar(self, shouldCloseTab: tab, inPane: paneId) == false {
+            return false
+        }
+
+        internalController.closeTab(tabId.id, inPane: pane.id)
+
+        // Notify delegate
+        delegate?.splitTabBar(self, didCloseTab: tabId, fromPane: paneId)
+        notifyGeometryChange()
+
+        return true
+    }
+
+    /// Select a tab by ID
+    /// - Parameter tabId: The tab to select
+    public func selectTab(_ tabId: TabID) {
+        guard let (pane, tabIndex) = findTabInternal(tabId) else { return }
+
+        pane.selectTab(tabId.id)
+        internalController.focusPane(pane.id)
+
+        // Notify delegate
+        let tab = Tab(from: pane.tabs[tabIndex])
+        delegate?.splitTabBar(self, didSelectTab: tab, inPane: pane.id)
+    }
+
+    /// Move a tab to a specific pane (and optional index) inside this controller.
+    /// - Parameters:
+    ///   - tabId: The tab to move.
+    ///   - targetPaneId: Destination pane.
+    ///   - index: Optional destination index. When nil, appends at the end.
+    /// - Returns: true if moved.
+    @discardableResult
+    public func moveTab(_ tabId: TabID, toPane targetPaneId: PaneID, atIndex index: Int? = nil) -> Bool {
+        guard let (sourcePane, sourceIndex) = findTabInternal(tabId) else { return false }
+        guard let targetPane = internalController.paneState(for: targetPaneId) else { return false }
+
+        let tabItem = sourcePane.tabs[sourceIndex]
+        let movedTab = Tab(from: tabItem)
+        let sourcePaneId = sourcePane.id
+
+        if sourcePaneId == targetPane.id {
+            let destinationIndex: Int = {
+                if let index { return max(0, min(index, sourcePane.tabs.count)) }
+                return sourcePane.tabs.count
+            }()
+            return reorderTab(tabId, toIndex: destinationIndex)
+        }
+
+        guard configuration.allowCrossPaneTabMove else { return false }
+        internalController.moveTab(tabItem, from: sourcePaneId, to: targetPane.id, atIndex: index)
+        delegate?.splitTabBar(self, didMoveTab: movedTab, fromPane: sourcePaneId, toPane: targetPane.id)
+        notifyGeometryChange()
+        return true
+    }
+
+    /// Reorder a tab within its pane and report an actual order change to the delegate.
+    /// - Parameters:
+    ///   - tabId: The tab to reorder.
+    ///   - toIndex: Destination index.
+    /// - Returns: true if reordered.
+    @discardableResult
+    public func reorderTab(_ tabId: TabID, toIndex: Int) -> Bool {
+        guard configuration.allowTabReordering else { return false }
+        guard let (pane, sourceIndex) = findTabInternal(tabId) else { return false }
+        let destinationIndex = max(0, min(toIndex, pane.tabs.count))
+        let orderBeforeReorder = pane.tabs.map(\.id)
+        pane.moveTab(from: sourceIndex, to: destinationIndex)
+        pane.selectTab(tabId.id)
+        internalController.focusPane(pane.id)
+        let orderAfterReorder = pane.tabs.map(\.id)
+        if orderAfterReorder != orderBeforeReorder {
+            delegate?.splitTabBar(
+                self,
+                didReorderTabsInPane: pane.id,
+                orderedTabIds: orderAfterReorder.map { TabID(id: $0) }
+            )
+        }
+        if let tabIndex = pane.tabs.firstIndex(where: { $0.id == tabId.id }) {
+            let tab = Tab(from: pane.tabs[tabIndex])
+            delegate?.splitTabBar(self, didSelectTab: tab, inPane: pane.id)
+        }
+        notifyGeometryChange()
+        return true
+    }
+
+    /// Move to previous tab in focused pane
+    public func selectPreviousTab() {
+        internalController.selectPreviousTab()
+        notifyTabSelection()
+    }
+
+    /// Move to next tab in focused pane
+    public func selectNextTab() {
+        internalController.selectNextTab()
+        notifyTabSelection()
+    }
+
+    // MARK: - Split Operations
+
+    /// Splits the workspace root, keeping the existing pane tree intact.
+    ///
+    /// The new pane becomes a sibling of the complete existing tree, so a
+    /// horizontal split always creates a full-height column and a vertical
+    /// split always creates a full-width row regardless of the focused pane.
+    ///
+    /// - Parameters:
+    ///   - orientation: Direction to split (horizontal = side-by-side, vertical = stacked).
+    ///   - tab: Tab to add to the new root pane.
+    ///   - insertFirst: Whether to place the new pane before the existing tree.
+    ///   - initialDividerPosition: Optional normalized divider position.
+    /// - Returns: The new pane ID, or nil if the delegate vetoes the split.
+    @discardableResult
+    public func splitRoot(
+        orientation: SplitOrientation,
+        withTab tab: Tab,
+        insertFirst: Bool = false,
+        initialDividerPosition: CGFloat? = nil
+    ) -> PaneID? {
+        guard configuration.allowSplits,
+              let originalPaneId = internalController.rootNode.allPaneIds.first else {
+            return nil
+        }
+        if delegate?.splitTabBar(self, shouldSplitPane: originalPaneId, orientation: orientation) == false {
+            return nil
+        }
+
+        let internalTab = TabItem(
+            id: tab.id.id,
+            title: tab.title,
+            hasCustomTitle: tab.hasCustomTitle,
+            icon: tab.icon,
+            iconImageData: tab.iconImageData,
+            iconAsset: tab.iconAsset,
+            kind: tab.kind,
+            isDirty: tab.isDirty,
+            showsNotificationBadge: tab.showsNotificationBadge,
+            isLoading: tab.isLoading,
+            isAudioMuted: tab.isAudioMuted,
+            isAudioPlaying: tab.isAudioPlaying,
+            isPinned: tab.isPinned,
+            showsRemoteIndicator: tab.showsRemoteIndicator,
+            presence: tab.presence
+        )
+        let newPaneId = internalController.splitRootWithTab(
+            orientation: orientation,
+            tab: internalTab,
+            insertFirst: insertFirst,
+            initialDividerPosition: initialDividerPosition
+        )
+        delegate?.splitTabBar(self, didSplitPane: originalPaneId, newPane: newPaneId, orientation: orientation)
+        notifyGeometryChange()
+        return newPaneId
+    }
+
+    /// Split the focused pane (or specified pane)
+    /// - Parameters:
+    ///   - paneId: Optional pane to split (defaults to focused pane)
+    ///   - orientation: Direction to split (horizontal = side-by-side, vertical = stacked)
+    ///   - tab: Optional tab to add to the new pane
+    /// - Returns: The new pane ID, or nil if vetoed by delegate
+    @discardableResult
+    public func splitPane(
+        _ paneId: PaneID? = nil,
+        orientation: SplitOrientation,
+        withTab tab: Tab? = nil,
+        initialDividerPosition: CGFloat? = nil
+    ) -> PaneID? {
+        guard configuration.allowSplits else { return nil }
+
+        let targetPaneId = paneId ?? focusedPaneId
+        guard let targetPaneId else { return nil }
+
+        // Check with delegate
+        if delegate?.splitTabBar(self, shouldSplitPane: targetPaneId, orientation: orientation) == false {
+            return nil
+        }
+
+        let internalTab: TabItem?
+        if let tab {
+            internalTab = TabItem(
+                id: tab.id.id,
+                title: tab.title,
+                hasCustomTitle: tab.hasCustomTitle,
+                icon: tab.icon,
+                iconImageData: tab.iconImageData,
+                iconAsset: tab.iconAsset,
+                kind: tab.kind,
+                isDirty: tab.isDirty,
+                showsNotificationBadge: tab.showsNotificationBadge,
+                isLoading: tab.isLoading,
+                isAudioMuted: tab.isAudioMuted,
+                isAudioPlaying: tab.isAudioPlaying,
+                isPinned: tab.isPinned,
+                showsRemoteIndicator: tab.showsRemoteIndicator,
+            presence: tab.presence
+            )
+        } else {
+            internalTab = nil
+        }
+
+        // Perform split
+        let dividerPosition = normalizedInitialDividerPosition(initialDividerPosition)
+        internalController.splitPane(
+            PaneID(id: targetPaneId.id),
+            orientation: orientation,
+            with: internalTab,
+            initialDividerPosition: dividerPosition
+        )
+
+        // Find new pane (will be focused after split)
+        let newPaneId = focusedPaneId!
+
+        // Notify delegate
+        delegate?.splitTabBar(self, didSplitPane: targetPaneId, newPane: newPaneId, orientation: orientation)
+
+        notifyGeometryChange()
+
+        return newPaneId
+    }
+
+    /// Split a pane and place a specific tab in the newly created pane, choosing which side to insert on.
+    ///
+    /// This is like `splitPane(_:orientation:withTab:)`, but allows choosing left/top vs right/bottom insertion
+    /// without needing to create then move a tab.
+    ///
+    /// - Parameters:
+    ///   - paneId: Optional pane to split (defaults to focused pane).
+    ///   - orientation: Direction to split (horizontal = side-by-side, vertical = stacked).
+    ///   - tab: The tab to add to the new pane.
+    ///   - insertFirst: If true, insert the new pane first (left/top). Otherwise insert second (right/bottom).
+    /// - Returns: The new pane ID, or nil if vetoed by delegate.
+    @discardableResult
+    public func splitPane(
+        _ paneId: PaneID? = nil,
+        orientation: SplitOrientation,
+        withTab tab: Tab,
+        insertFirst: Bool,
+        initialDividerPosition: CGFloat? = nil
+    ) -> PaneID? {
+        guard configuration.allowSplits else { return nil }
+
+        let targetPaneId = paneId ?? focusedPaneId
+        guard let targetPaneId else { return nil }
+
+        // Check with delegate
+        if delegate?.splitTabBar(self, shouldSplitPane: targetPaneId, orientation: orientation) == false {
+            return nil
+        }
+
+        let internalTab = TabItem(
+            id: tab.id.id,
+            title: tab.title,
+            hasCustomTitle: tab.hasCustomTitle,
+            icon: tab.icon,
+            iconImageData: tab.iconImageData,
+            iconAsset: tab.iconAsset,
+            kind: tab.kind,
+            isDirty: tab.isDirty,
+            showsNotificationBadge: tab.showsNotificationBadge,
+            isLoading: tab.isLoading,
+            isAudioMuted: tab.isAudioMuted,
+            isAudioPlaying: tab.isAudioPlaying,
+            isPinned: tab.isPinned,
+            showsRemoteIndicator: tab.showsRemoteIndicator,
+            presence: tab.presence
+        )
+
+        // Perform split with insertion side.
+        let dividerPosition = normalizedInitialDividerPosition(initialDividerPosition)
+        internalController.splitPaneWithTab(
+            PaneID(id: targetPaneId.id),
+            orientation: orientation,
+            tab: internalTab,
+            insertFirst: insertFirst,
+            initialDividerPosition: dividerPosition
+        )
+
+        let newPaneId = focusedPaneId!
+
+        // Notify delegate
+        delegate?.splitTabBar(self, didSplitPane: targetPaneId, newPane: newPaneId, orientation: orientation)
+
+        notifyGeometryChange()
+
+        return newPaneId
+    }
+
+    /// Add a pane holding `tab` and arrange all panes in Zellij's default
+    /// tiled layout (cmux-tui's Alt-n "new pane"). Panes fill a right-hand
+    /// column of up to four before a new column opens, and every column and
+    /// row gets an equal share. Existing panes keep their tabs and identity.
+    ///
+    /// - Parameters:
+    ///   - paneId: The pane the request comes from (defaults to the focused
+    ///     pane). The delegate sees it as the split source.
+    ///   - tab: The tab to place in the new pane.
+    /// - Returns: The new pane ID, or nil if splits are disabled or vetoed.
+    @discardableResult
+    public func addPaneWithAutoLayout(from paneId: PaneID? = nil, withTab tab: Tab) -> PaneID? {
+        guard configuration.allowSplits else { return nil }
+        guard let sourcePaneId = paneId ?? focusedPaneId,
+              internalController.paneState(for: sourcePaneId) != nil else { return nil }
+
+        let columnSizes = SplitViewController.autoLayoutColumnSizes(
+            paneCount: internalController.paneCount + 1
+        )
+        let orientation: SplitOrientation = columnSizes.last == 1 ? .horizontal : .vertical
+        if delegate?.splitTabBar(self, shouldSplitPane: sourcePaneId, orientation: orientation) == false {
+            return nil
+        }
+
+        let internalTab = TabItem(
+            id: tab.id.id,
+            title: tab.title,
+            hasCustomTitle: tab.hasCustomTitle,
+            icon: tab.icon,
+            iconImageData: tab.iconImageData,
+            iconAsset: tab.iconAsset,
+            kind: tab.kind,
+            isDirty: tab.isDirty,
+            showsNotificationBadge: tab.showsNotificationBadge,
+            isLoading: tab.isLoading,
+            isAudioMuted: tab.isAudioMuted,
+            isAudioPlaying: tab.isAudioPlaying,
+            isPinned: tab.isPinned,
+            showsRemoteIndicator: tab.showsRemoteIndicator
+        )
+        let newPaneId = internalController.insertPaneWithAutoLayout(tab: internalTab)
+
+        delegate?.splitTabBar(self, didSplitPane: sourcePaneId, newPane: newPaneId, orientation: orientation)
+
+        notifyGeometryChange()
+
+        return newPaneId
+    }
+
+    private func normalizedInitialDividerPosition(_ position: CGFloat?) -> CGFloat {
+        // A nil position must not bypass the configured range: the internal
+        // controller's 0.5 fallback can sit outside a narrowed range, so the
+        // default is clamped here exactly like an explicit position.
+        min(
+            max(position ?? 0.5, configuration.dividerPositionRange.lowerBound),
+            configuration.dividerPositionRange.upperBound
+        )
+    }
+
+    /// Split a pane by moving an existing tab into the new pane.
+    ///
+    /// This mirrors the "drag a tab to a pane edge to create a split" interaction:
+    /// the tab is removed from its source pane first, then inserted into the newly
+    /// created pane on the chosen edge.
+    ///
+    /// - Parameters:
+    ///   - paneId: Optional target pane to split (defaults to the tab's current pane).
+    ///   - orientation: Direction to split (horizontal = side-by-side, vertical = stacked).
+    ///   - tabId: The existing tab to move into the new pane.
+    ///   - insertFirst: If true, the new pane is inserted first (left/top). Otherwise it is inserted second (right/bottom).
+    /// - Returns: The new pane ID, or nil if the tab couldn't be found or the split was vetoed.
+    @discardableResult
+    public func splitPane(
+        _ paneId: PaneID? = nil,
+        orientation: SplitOrientation,
+        movingTab tabId: TabID,
+        insertFirst: Bool
+    ) -> PaneID? {
+        guard configuration.allowSplits,
+              configuration.allowCrossPaneTabMove else { return nil }
+
+        // Find the existing tab and its source pane.
+        guard let (sourcePane, tabIndex) = findTabInternal(tabId) else { return nil }
+        let tabItem = sourcePane.tabs[tabIndex]
+
+        // Default target to the tab's current pane to match edge-drop behavior on the source pane.
+        let targetPaneId = paneId ?? sourcePane.id
+        guard internalController.paneState(for: targetPaneId) != nil else { return nil }
+
+        // Check with delegate
+        if delegate?.splitTabBar(self, shouldSplitPane: targetPaneId, orientation: orientation) == false {
+            return nil
+        }
+
+        // Remove from source first.
+        guard internalController.removeTab(tabItem.id, fromPane: sourcePane.id) != nil else {
+            return nil
+        }
+
+        if sourcePane.tabs.isEmpty {
+            if sourcePane.id == targetPaneId {
+                // Keep a placeholder tab so the original pane isn't left "tabless".
+                // This makes the empty side closable via tab close, and avoids apps
+                // needing to special-case empty panes.
+                internalController.addTab(
+                    TabItem(title: "Empty", icon: nil),
+                    toPane: sourcePane.id
+                )
+            } else if internalController.paneCount > 1 {
+                // If the source pane is now empty, close it (unless it's also the split target).
+                internalController.closePane(sourcePane.id)
+            }
+        }
+
+        // Perform split with the moved tab. Forward the clamped default so the
+        // moved-tab path honors dividerPositionRange like the other overloads.
+        internalController.splitPaneWithTab(
+            PaneID(id: targetPaneId.id),
+            orientation: orientation,
+            tab: tabItem,
+            insertFirst: insertFirst,
+            initialDividerPosition: normalizedInitialDividerPosition(nil)
+        )
+
+        let newPaneId = focusedPaneId!
+
+        // Notify delegate
+        delegate?.splitTabBar(self, didSplitPane: targetPaneId, newPane: newPaneId, orientation: orientation)
+
+        notifyGeometryChange()
+
+        return newPaneId
+    }
+
+    /// Close a specific pane
+    /// - Parameter paneId: The pane to close
+    /// - Returns: true if the pane was closed, false if vetoed by delegate
+    @discardableResult
+    public func closePane(_ paneId: PaneID) -> Bool {
+        // Don't close if it's the last pane and not allowed
+        if !configuration.allowCloseLastPane && internalController.paneCount <= 1 {
+            return false
+        }
+
+        // Check with delegate
+        if delegate?.splitTabBar(self, shouldClosePane: paneId) == false {
+            return false
+        }
+
+        internalController.closePane(PaneID(id: paneId.id))
+
+        // Notify delegate
+        delegate?.splitTabBar(self, didClosePane: paneId)
+
+        notifyGeometryChange()
+
+        return true
+    }
+
+    // MARK: - Focus Management
+
+    /// Currently focused pane ID
+    public var focusedPaneId: PaneID? {
+        guard let internalId = internalController.focusedPaneId else { return nil }
+        return internalId
+    }
+
+    /// Focus a specific pane
+    public func focusPane(_ paneId: PaneID) {
+        internalController.focusPane(PaneID(id: paneId.id))
+        delegate?.splitTabBar(self, didFocusPane: paneId)
+    }
+
+    /// Navigate focus in a direction
+    public func navigateFocus(direction: NavigationDirection) {
+        internalController.navigateFocus(direction: direction)
+        if let focusedPaneId {
+            delegate?.splitTabBar(self, didFocusPane: focusedPaneId)
+        }
+    }
+
+    /// The pane directional navigation from `paneId` reaches: the most
+    /// recently focused pane sharing that edge, else the one most directly
+    /// across. Nil at the outer edge.
+    public func adjacentPane(to paneId: PaneID, direction: NavigationDirection) -> PaneID? {
+        internalController.adjacentPane(to: paneId, direction: direction)
+    }
+
+    // MARK: - Split Zoom
+
+    /// Currently zoomed pane ID, if any.
+    public var zoomedPaneId: PaneID? {
+        internalController.zoomedPaneId
+    }
+
+    public var isSplitZoomed: Bool {
+        internalController.zoomedPaneId != nil
+    }
+
+    @discardableResult
+    public func clearPaneZoom() -> Bool {
+        internalController.clearPaneZoom()
+    }
+
+    /// Toggle zoom for a pane. When zoomed, only that pane is rendered in the split area.
+    /// Passing nil toggles the currently focused pane.
+    @discardableResult
+    public func togglePaneZoom(inPane paneId: PaneID? = nil) -> Bool {
+        let targetPaneId = paneId ?? focusedPaneId
+        guard let targetPaneId else { return false }
+        return internalController.togglePaneZoom(targetPaneId)
+    }
+
+    /// Request a tab-chrome zoom toggle for a specific tab.
+    /// Hosts can intercept this to run their own focus/layout reconciliation.
+    @discardableResult
+    public func requestTabZoomToggle(for tabId: TabID, inPane paneId: PaneID) -> Bool {
+        guard let (pane, _) = findTabInternal(tabId),
+              pane.id == paneId else { return false }
+        if let onTabZoomToggleRequest {
+            return onTabZoomToggleRequest(tabId, paneId)
+        }
+        return togglePaneZoom(inPane: paneId)
+    }
+
+    // MARK: - Full Width Tab Mode
+
+    /// Pane IDs whose tab chrome is currently rendered in full-width-tab mode.
+    public var fullWidthTabModePaneIds: [PaneID] {
+        internalController.rootNode.allPanes
+            .filter(\.isFullWidthTabMode)
+            .map(\.id)
+    }
+
+    /// Set full-width-tab mode for a pane.
+    ///
+    /// - Parameters:
+    ///   - enabled: Whether the pane should render the selected tab as a full-width title header.
+    ///   - pane: The pane to update.
+    /// - Returns: `true` when the pane exists and was updated; otherwise `false`.
+    @discardableResult
+    public func setFullWidthTabMode(_ enabled: Bool, inPane pane: PaneID) -> Bool {
+        guard let paneState = internalController.paneState(for: pane) else { return false }
+        paneState.isFullWidthTabMode = enabled
+        return true
+    }
+
+    /// Return whether a pane is currently in full-width-tab mode.
+    ///
+    /// Unknown panes are treated as off and return `false`.
+    public func isFullWidthTabMode(inPane pane: PaneID) -> Bool {
+        internalController.paneState(for: pane)?.isFullWidthTabMode ?? false
+    }
+
+    /// Toggle full-width-tab mode for a pane.
+    ///
+    /// - Parameter pane: The pane to toggle.
+    /// - Returns: The new mode state when the pane exists. Returns `false` without mutating state when the pane is unknown.
+    @discardableResult
+    public func toggleFullWidthTabMode(inPane pane: PaneID) -> Bool {
+        guard let paneState = internalController.paneState(for: pane) else { return false }
+        paneState.isFullWidthTabMode.toggle()
+        return paneState.isFullWidthTabMode
+    }
+
+    /// Request a tab-chrome full-width-tab toggle for a specific tab.
+    /// Hosts can intercept this to run their own focus/layout reconciliation.
+    @discardableResult
+    public func requestTabFullWidthToggle(for tabId: TabID, inPane paneId: PaneID) -> Bool {
+        guard let (pane, _) = findTabInternal(tabId),
+              pane.id == paneId else { return false }
+        if pane.selectedTabId != tabId.id {
+            selectTab(tabId)
+        }
+        if let onTabFullWidthToggleRequest {
+            return onTabFullWidthToggleRequest(tabId, paneId)
+        }
+        return toggleFullWidthTabMode(inPane: paneId)
+    }
+
+    // MARK: - Context Menu Shortcut Hints
+
+    /// Keyboard shortcuts to display in tab context menus, keyed by context action.
+    /// Set by the host app to sync with its customizable keyboard shortcut settings.
+    public var contextMenuShortcuts: [TabContextAction: KeyboardShortcut] = [:]
+
+    // MARK: - Query Methods
+
+    /// Get all tab IDs
+    public var allTabIds: [TabID] {
+        internalController.rootNode.allPanes.flatMap { pane in
+            pane.tabs.map { TabID(id: $0.id) }
+        }
+    }
+
+    /// Get all pane IDs
+    public var allPaneIds: [PaneID] {
+        internalController.rootNode.allPaneIds
+    }
+
+    /// Get tab metadata by ID
+    public func tab(_ tabId: TabID) -> Tab? {
+        guard let (pane, tabIndex) = findTabInternal(tabId) else { return nil }
+        return Tab(from: pane.tabs[tabIndex])
+    }
+
+    /// Get tabs in a specific pane
+    public func tabs(inPane paneId: PaneID) -> [Tab] {
+        guard let pane = internalController.paneState(for: paneId) else {
+            return []
+        }
+        return pane.tabs.map { Tab(from: $0) }
+    }
+
+    /// Get the tab IDs in a specific pane, in tab order.
+    ///
+    /// Prefer this over `tabs(inPane:)` when only identity or ordering is
+    /// wanted. This maps each `TabItem` directly to a `TabID` without building
+    /// a `Tab` snapshot and copying its metadata. Together with `TabItem`'s
+    /// per-tab observation, this avoids title-driven invalidation for callers
+    /// that only read IDs; this method alone does not change observation.
+    public func tabIds(inPane paneId: PaneID) -> [TabID] {
+        guard let pane = internalController.paneState(for: paneId) else {
+            return []
+        }
+        return pane.tabs.map { TabID(id: $0.id) }
+    }
+
+    /// Get the pane that currently owns a tab.
+    ///
+    /// This lookup is constant time and does not walk the split tree.
+    public func paneId(containing tabId: TabID) -> PaneID? {
+        internalController.paneId(containing: tabId.id)
+    }
+
+    /// Get the selected tab ID in a pane.
+    ///
+    /// This lookup is constant time and does not scan the pane's tabs.
+    public func selectedTabId(inPane paneId: PaneID) -> TabID? {
+        internalController.selectedTabId(inPane: paneId).map(TabID.init(id:))
+    }
+
+    /// Get selected tab in a pane
+    public func selectedTab(inPane paneId: PaneID) -> Tab? {
+        guard let pane = internalController.paneState(for: paneId),
+              let selected = pane.selectedTab else {
+            return nil
+        }
+        return Tab(from: selected)
+    }
+
+    // MARK: - Geometry Query API
+
+    /// Get current layout snapshot with pixel coordinates
+    public func layoutSnapshot() -> LayoutSnapshot {
+        let containerFrame = internalController.containerFrame
+        let paneBounds = internalController.rootNode.computePaneBounds()
+
+        let paneGeometries = paneBounds.map { bounds -> PaneGeometry in
+            let pane = internalController.paneState(for: bounds.paneId)
+            let pixelFrame = PixelRect(
+                x: Double(bounds.bounds.minX * containerFrame.width + containerFrame.origin.x),
+                y: Double(bounds.bounds.minY * containerFrame.height + containerFrame.origin.y),
+                width: Double(bounds.bounds.width * containerFrame.width),
+                height: Double(bounds.bounds.height * containerFrame.height)
+            )
+            return PaneGeometry(
+                paneId: bounds.paneId.id.uuidString,
+                frame: pixelFrame,
+                selectedTabId: pane?.selectedTabId?.uuidString,
+                tabIds: pane?.tabs.map { $0.id.uuidString } ?? []
+            )
+        }
+
+        return LayoutSnapshot(
+            containerFrame: PixelRect(from: containerFrame),
+            panes: paneGeometries,
+            focusedPaneId: focusedPaneId?.id.uuidString,
+            timestamp: Date().timeIntervalSince1970
+        )
+    }
+
+    /// Get full tree structure for external consumption
+    public func treeSnapshot() -> ExternalTreeNode {
+        let containerFrame = internalController.containerFrame
+        return buildExternalTree(from: internalController.rootNode, containerFrame: containerFrame)
+    }
+
+    private func buildExternalTree(from node: SplitNode, containerFrame: CGRect, bounds: CGRect = CGRect(x: 0, y: 0, width: 1, height: 1)) -> ExternalTreeNode {
+        switch node {
+        case .pane(let paneState):
+            let pixelFrame = PixelRect(
+                x: Double(bounds.minX * containerFrame.width + containerFrame.origin.x),
+                y: Double(bounds.minY * containerFrame.height + containerFrame.origin.y),
+                width: Double(bounds.width * containerFrame.width),
+                height: Double(bounds.height * containerFrame.height)
+            )
+            let tabs = paneState.tabs.map { ExternalTab(id: $0.id.uuidString, title: $0.title) }
+            let paneNode = ExternalPaneNode(
+                id: paneState.id.id.uuidString,
+                frame: pixelFrame,
+                tabs: tabs,
+                selectedTabId: paneState.selectedTabId?.uuidString
+            )
+            return .pane(paneNode)
+
+        case .split(let splitState):
+            let dividerPos = splitState.dividerPosition
+            let firstBounds: CGRect
+            let secondBounds: CGRect
+
+            switch splitState.orientation {
+            case .horizontal:
+                firstBounds = CGRect(x: bounds.minX, y: bounds.minY,
+                                     width: bounds.width * dividerPos, height: bounds.height)
+                secondBounds = CGRect(x: bounds.minX + bounds.width * dividerPos, y: bounds.minY,
+                                      width: bounds.width * (1 - dividerPos), height: bounds.height)
+            case .vertical:
+                firstBounds = CGRect(x: bounds.minX, y: bounds.minY,
+                                     width: bounds.width, height: bounds.height * dividerPos)
+                secondBounds = CGRect(x: bounds.minX, y: bounds.minY + bounds.height * dividerPos,
+                                      width: bounds.width, height: bounds.height * (1 - dividerPos))
+            }
+
+            let splitNode = ExternalSplitNode(
+                id: splitState.id.uuidString,
+                orientation: splitState.orientation == .horizontal ? "horizontal" : "vertical",
+                dividerPosition: Double(splitState.dividerPosition),
+                imposedFirstExtent: splitState.imposedFirstExtent.map(Double.init),
+                first: buildExternalTree(from: splitState.first, containerFrame: containerFrame, bounds: firstBounds),
+                second: buildExternalTree(from: splitState.second, containerFrame: containerFrame, bounds: secondBounds)
+            )
+            return .split(splitNode)
+        }
+    }
+
+    /// Check if a split exists by ID
+    public func findSplit(_ splitId: UUID) -> Bool {
+        return internalController.findSplit(splitId) != nil
+    }
+
+    // MARK: - Geometry Update API
+
+    /// Set divider position for a split node (0.0-1.0), clearing any exact
+    /// imposed extent so fraction-based callers take ownership of the divider.
+    /// - Parameters:
+    ///   - position: The new divider position (clamped to the configured range)
+    ///   - splitId: The UUID of the split to update
+    ///   - fromExternal: Set to true to suppress outgoing notifications (prevents loops)
+    /// - Returns: true if the split was found and updated
+    @discardableResult
+    public func setDividerPosition(_ position: CGFloat, forSplit splitId: UUID, fromExternal: Bool = false) -> Bool {
+        guard let split = internalController.findSplit(splitId) else { return false }
+
+        if fromExternal {
+            internalController.isExternalUpdateInProgress = true
+        }
+
+        let range = configuration.dividerPositionRange
+        let clampedPosition = min(max(position, range.lowerBound), range.upperBound)
+        let clearedImposition = split.imposedFirstExtent != nil
+        if clearedImposition {
+            split.imposedFirstExtent = nil
+            split.imposedEpoch &+= 1
+        }
+        split.dividerPosition = clampedPosition
+        if clearedImposition {
+            split.syncDividerNow?()
+        }
+
+        if fromExternal {
+            // Use a slight delay to allow the UI to update before re-enabling notifications
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                self?.internalController.isExternalUpdateInProgress = false
+            }
+        }
+
+        return true
+    }
+
+    /// Imposes an exact first-child extent, in points, on a split — or
+    /// clears it with nil. While imposed, layout places the divider at
+    /// exactly this many points (clamped to pane minimums) instead of
+    /// scaling `dividerPosition`, and the mirrored fraction is kept coherent
+    /// for readers. A user divider drag clears the imposition and returns
+    /// the split to fraction semantics. Use this when pane contents are
+    /// grid-quantized (terminal cells) and a normalized fraction cannot
+    /// express the required pixel size losslessly. Every explicit call
+    /// re-arms one bounded apply, including a call that repeats the stored
+    /// extent: hosts re-impose after their container resizes, and the fresh
+    /// plan often computes the SAME extent (per-pane ideals are container-
+    /// independent) while the resize moved the divider off it — deduping the
+    /// call by value would leave the divider wedged at the drifted position.
+    /// Repeating the extent stays cheap when the divider is already at the
+    /// target (the coordinator refreshes its memos without a layout pass).
+    ///
+    /// The extent is applied when set, re-applied if the divider drifts
+    /// while the split view's own size is unchanged, and re-applied once
+    /// (deferred a runloop turn, clamped to the new bounds) after the split
+    /// view itself resizes. The resize case cannot apply synchronously —
+    /// that fights AppKit from inside its own layout pass — but it cannot
+    /// just wait for the host either: a host whose per-pane ideals are
+    /// container-independent re-imposes the same extent, and only when its
+    /// own inputs change, so a divider parked at AppKit's proportional
+    /// position would stay there until some unrelated input. An apply never
+    /// terminates off-target without re-arming on the next size change.
+    public func setImposedFirstExtent(
+        _ extent: CGFloat?, forSplit splitId: UUID, fromExternal: Bool = false
+    ) -> Bool {
+        guard let split = internalController.findSplit(splitId) else { return false }
+        if fromExternal {
+            internalController.isExternalUpdateInProgress = true
+        }
+        let normalizedExtent = extent.map { max(0, $0) }
+        if split.imposedFirstExtent != normalizedExtent {
+            split.imposedFirstExtent = normalizedExtent
+            split.imposedEpoch &+= 1
+        } else if normalizedExtent != nil {
+            // Same extent, explicit call: re-arm one apply anyway. The
+            // coordinator's renudge path is memo-only when the divider is
+            // already at the target, so this cannot churn layout; when the
+            // divider drifted (a container resize rescaled it while the
+            // re-planned extent came out identical), this puts it back
+            // without waiting for the coordinator's own resize re-arm —
+            // see `syncPosition`'s "bounded by explicit calls" contract.
+            split.imposedEpoch &+= 1
+        }
+        split.syncDividerNow?()
+        if fromExternal {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                self?.internalController.isExternalUpdateInProgress = false
+            }
+        }
+        return true
+    }
+
+    /// Requests one fresh apply of a split's current imposed extent.
+    ///
+    /// Use this only after constraints that previously prevented the extent
+    /// have changed. Normal layout planning should keep calling
+    /// `setImposedFirstExtent(_:forSplit:fromExternal:)`, whose identical
+    /// updates are intentionally idempotent.
+    public func retryImposedFirstExtent(forSplit splitId: UUID) -> Bool {
+        // A live drag session owns the divider: re-asserting an imposed
+        // extent now would yank it out from under the pointer mid-gesture.
+        // Refuse instead of deferring — the host's drag-end sync imposes
+        // fresh values (or retries) once the session closes.
+        guard internalController.activeDividerDragSessions == 0 else { return false }
+        guard let split = internalController.findSplit(splitId),
+              split.imposedFirstExtent != nil
+        else { return false }
+        split.imposedEpoch &+= 1
+        split.syncDividerNow?()
+        return true
+    }
+
+    /// Update container frame (called when window moves/resizes)
+    public func setContainerFrame(_ frame: CGRect) {
+        internalController.containerFrame = frame
+    }
+
+    /// Notify geometry change to delegate (internal use)
+    /// - Parameters:
+    ///   - isDragging: Whether the change is due to active divider dragging
+    ///   - force: Deliver even inside the external-update suppression window.
+    ///     Only the drag-end path passes true: its notification is the one
+    ///     the delegate contract guarantees, so the anti-echo gate must not
+    ///     swallow it.
+    internal func notifyGeometryChange(isDragging: Bool = false, force: Bool = false) {
+        guard force || !internalController.isExternalUpdateInProgress else { return }
+
+        // If dragging, check if delegate wants notifications during drag
+        if isDragging {
+            let shouldNotify = delegate?.splitTabBar(self, shouldNotifyDuringDrag: true) ?? false
+            guard shouldNotify else { return }
+        }
+
+        if isDragging {
+            // Debounce drag updates to avoid flooding delegates during divider moves.
+            let now = Date().timeIntervalSince1970
+            let debounceInterval: TimeInterval = 0.05
+            guard now - internalController.lastGeometryNotificationTime >= debounceInterval else { return }
+            internalController.lastGeometryNotificationTime = now
+        }
+
+        let snapshot = layoutSnapshot()
+        delegate?.splitTabBar(self, didChangeGeometry: snapshot)
+    }
+
+    // MARK: - Private Helpers
+
+    private func findTabInternal(_ tabId: TabID) -> (PaneState, Int)? {
+        guard let paneId = internalController.paneId(containing: tabId.id),
+              let pane = internalController.paneState(for: paneId),
+              let index = pane.tabs.firstIndex(where: { $0.id == tabId.id }) else { return nil }
+        return (pane, index)
+    }
+
+    private func notifyTabSelection() {
+        guard let pane = internalController.focusedPane,
+              let tabItem = pane.selectedTab else { return }
+        let tab = Tab(from: tabItem)
+        delegate?.splitTabBar(self, didSelectTab: tab, inPane: pane.id)
+    }
+}

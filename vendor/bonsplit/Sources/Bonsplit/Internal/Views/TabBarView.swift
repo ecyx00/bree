@@ -1,0 +1,3775 @@
+import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
+
+public enum BonsplitTabBarHitRegionRegistry {
+    private static let lock = NSLock()
+    private static let registeredViews = NSHashTable<NSView>.weakObjects()
+
+    static func register(_ view: NSView) {
+        lock.lock()
+        registeredViews.add(view)
+        lock.unlock()
+    }
+
+    static func unregister(_ view: NSView) {
+        lock.lock()
+        registeredViews.remove(view)
+        lock.unlock()
+    }
+
+    private static func snapshot() -> [NSView] {
+        lock.lock()
+        let views = registeredViews.allObjects
+        lock.unlock()
+        return views
+    }
+
+    private static func isVisibleInHierarchy(_ view: NSView) -> Bool {
+        var current: NSView? = view
+        while let candidate = current {
+            guard !candidate.isHidden, candidate.alphaValue > 0 else { return false }
+            current = candidate.superview
+        }
+        return true
+    }
+
+    public static func containsWindowPoint(_ windowPoint: CGPoint, in window: NSWindow) -> Bool {
+        let epsilon = max(0.5, 1.0 / max(1.0, window.backingScaleFactor))
+        for view in snapshot() {
+            guard view.window === window, isVisibleInHierarchy(view) else { continue }
+            let frameInWindow = view.convert(view.bounds, to: nil).insetBy(dx: -epsilon, dy: -epsilon)
+            if frameInWindow.contains(windowPoint) {
+                return true
+            }
+        }
+        return false
+    }
+}
+
+public protocol BonsplitTabItemHitRegionProviding: AnyObject {
+    func containsBonsplitTabItemHit(localPoint: NSPoint) -> Bool
+}
+
+public enum BonsplitTabItemHitRegionRegistry {
+    private static let lock = NSLock()
+    private static let registeredViews = NSHashTable<NSView>.weakObjects()
+
+    static func register(_ view: NSView) {
+        lock.lock()
+        registeredViews.add(view)
+        lock.unlock()
+    }
+
+    static func unregister(_ view: NSView) {
+        lock.lock()
+        registeredViews.remove(view)
+        lock.unlock()
+    }
+
+    private static func snapshot() -> [NSView] {
+        lock.lock()
+        let views = registeredViews.allObjects
+        lock.unlock()
+        return views
+    }
+
+    private static func isVisibleInHierarchy(_ view: NSView) -> Bool {
+        var current: NSView? = view
+        while let candidate = current {
+            guard !candidate.isHidden, candidate.alphaValue > 0 else { return false }
+            current = candidate.superview
+        }
+        return true
+    }
+
+    public static func containsWindowPoint(_ windowPoint: CGPoint, in window: NSWindow) -> Bool {
+        for view in snapshot() {
+            guard view.window === window,
+                  isVisibleInHierarchy(view),
+                  let provider = view as? BonsplitTabItemHitRegionProviding else { continue }
+            let localPoint = view.convert(windowPoint, from: nil)
+            if provider.containsBonsplitTabItemHit(localPoint: localPoint) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Frames of the laid-out tab item views for `tabIds` in `strip`'s window,
+    /// in `strip`'s coordinates.
+    ///
+    /// SwiftUI mounts one hit-region view per tab and AppKit hit-tests that
+    /// hierarchy directly. Identity, window membership, hidden state and frame
+    /// are read from those views, so the answer matches what is on screen even
+    /// while a per-strip geometry snapshot is still catching up.
+    @MainActor
+    static func laidOutFrames(for tabIds: [UUID], in strip: NSView) -> [UUID: CGRect] {
+        guard !tabIds.isEmpty, let window = strip.window else { return [:] }
+        let wanted = Set(tabIds)
+        var frames: [UUID: CGRect] = [:]
+        for view in snapshot() {
+            guard let region = view as? TabItemHitRegionView.RegionNSView,
+                  let tabId = region.tabId,
+                  wanted.contains(tabId),
+                  frames[tabId] == nil,
+                  region.window === window,
+                  !region.isHiddenOrHasHiddenAncestor else { continue }
+            let frame = region.convert(region.bounds, to: strip)
+            guard !frame.isEmpty else { continue }
+            frames[tabId] = frame
+        }
+        return frames
+    }
+}
+
+enum BonsplitTabItemHitTesting {
+    // Hit-test rect is intentionally larger than visual chrome. Do not bump
+    // visible tab padding/width to fix drag affordance; see cmux #4290 / #4433.
+    static let horizontalSlop: CGFloat = 10
+    static let verticalSlop: CGFloat = 6
+
+    static func containsTabLaneHit(
+        localPoint: NSPoint,
+        tabFrames: [CGRect],
+        bounds: NSRect
+    ) -> Bool {
+        guard bounds.insetBy(dx: 0, dy: -verticalSlop).contains(localPoint) else {
+            return false
+        }
+        return tabFrames.contains { frame in
+            localPoint.x >= frame.minX - horizontalSlop
+                && localPoint.x <= frame.maxX + horizontalSlop
+        }
+    }
+}
+
+private struct SplitButtonLaneWidthPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct SplitButtonLaneWidthReader: View {
+    var body: some View {
+        GeometryReader { geometry in
+            Color.clear.preference(
+                key: SplitButtonLaneWidthPreferenceKey.self,
+                value: geometry.size.width
+            )
+        }
+    }
+}
+
+private struct PaneAccessoryLeadingWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+private struct PaneAccessoryTrailingWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+enum TabBarStyling {
+    struct SplitActionSystemImage: Equatable {
+        let name: String
+        let rotationDegrees: Double
+        let pointSize: CGFloat
+    }
+
+    static let maximumSplitButtonLaneWidthFraction: CGFloat = 0.25
+    static let minimumFullyVisibleSplitButtonCount = 5
+    static let splitButtonScrollFadeWidth: CGFloat = 12
+    /// Hit target: the macOS default control size (28x28); the icon keeps its size.
+    static let splitActionButtonReservedWidth: CGFloat = 28
+    static let splitButtonsSpacing: CGFloat = 2
+    static let splitButtonsLeadingPadding: CGFloat = 6
+    static let splitButtonsTrailingPadding: CGFloat = 8
+    /// Below this width the individual action buttons consume the tab lane.
+    static let narrowPaneThreshold: CGFloat = 520
+    /// Width reserved by the single overflow button in a narrow pane.
+    /// Equals the one-button lane (6 + 28 + 8), the invariant `testNarrowPanesCollapseActionLaneBeforeTabsLoseSpace` checks.
+    static let collapsedActionLaneWidth: CGFloat = 42
+
+    static var splitButtonsBackdropWidth: CGFloat {
+        splitButtonsBackdropWidth(buttonCount: BonsplitConfiguration.SplitActionButton.defaults.count)
+    }
+
+    static func splitButtonsBackdropWidth(buttonCount: Int) -> CGFloat {
+        guard buttonCount > 0 else { return 0 }
+        return splitButtonsLeadingPadding
+            + splitButtonsTrailingPadding
+            + (CGFloat(buttonCount) * splitActionButtonReservedWidth)
+            + (CGFloat(max(0, buttonCount - 1)) * splitButtonsSpacing)
+    }
+
+    /// Tab strip width kept readable (one tab title) before any action button is hidden.
+    static let minimumTabAreaWidth: CGFloat = 150
+    /// Extra width per lane for the group dividers, which `splitButtonsBackdropWidth` does not count.
+    static let splitButtonDividerSlack: CGFloat = 12
+
+    /// Fit-by-priority replacement for the old "collapse everything under `narrowPaneThreshold`" rule
+    /// (which hid every button in the ordinary two-pane layout, ~440 pt per pane).
+    /// `slotCount` is the number of action slots in priority order (the "+" menu, then custom
+    /// actions such as Wiki/Architecture, then split right/down). Returns how many slots stay
+    /// visible: `slotCount` when everything fits, otherwise the prefix that fits next to one "..." slot.
+    static func splitButtonSlotsThatFit(slotCount: Int, availableLaneWidth: CGFloat) -> Int {
+        guard slotCount > 0 else { return 0 }
+        func width(_ n: Int) -> CGFloat { splitButtonsBackdropWidth(buttonCount: n) + splitButtonDividerSlack }
+        if width(slotCount) <= availableLaneWidth { return slotCount }
+        for shown in stride(from: slotCount - 1, to: 0, by: -1) where width(shown + 1) <= availableLaneWidth {
+            return shown
+        }
+        return 0
+    }
+
+    static func isNarrowPane(width: CGFloat) -> Bool {
+        width > 0 && width < narrowPaneThreshold
+    }
+
+    static func splitActionButtonCount(
+        isNarrowPane: Bool,
+        shouldShowSplitButtons: Bool,
+        visibleButtonCount: Int
+    ) -> Int {
+        isNarrowPane && shouldShowSplitButtons ? 1 : max(0, visibleButtonCount)
+    }
+
+    static func minimumVisibleSplitButtonLaneWidth(buttonCount: Int) -> CGFloat {
+        splitButtonsBackdropWidth(
+            buttonCount: min(max(0, buttonCount), minimumFullyVisibleSplitButtonCount)
+        )
+    }
+
+    /// Resolves a configured split-button icon name to the glyph the tab bar
+    /// should draw.
+    ///
+    /// Memoized, because `splitActionButtonIcon` calls this during every tab
+    /// bar body evaluation, once per split button, and resolving is far more
+    /// expensive than it looks. See ``resolveSplitActionSystemImage(for:)``.
+    static func splitActionSystemImage(for name: String) -> SplitActionSystemImage {
+        SplitActionSystemImageCache.shared.image(for: name)
+    }
+
+    /// The uncached resolution.
+    ///
+    /// The only way to ask AppKit whether a name is a real SF Symbol is to load
+    /// the symbol image and throw it away, which walks the symbol catalog and
+    /// builds a representation. The answer cannot change while the process
+    /// runs, so it is worth remembering.
+    static func resolveSplitActionSystemImage(for name: String) -> SplitActionSystemImage {
+        if NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil {
+            return SplitActionSystemImage(name: name, rotationDegrees: 0, pointSize: 12)
+        }
+        if name == "ellipsis.vertical" {
+            return SplitActionSystemImage(name: "ellipsis", rotationDegrees: 90, pointSize: 10.5)
+        }
+        return SplitActionSystemImage(name: "questionmark.circle", rotationDegrees: 0, pointSize: 12)
+    }
+
+    static func splitButtonBackdropSolidSurfaceWidth(
+        effectSolidWidth: CGFloat,
+        visibleLaneWidth: CGFloat,
+        solidSurfaceWidthAdjustment: CGFloat
+    ) -> CGFloat {
+        let adjustedLaneWidth = max(0, visibleLaneWidth + solidSurfaceWidthAdjustment)
+        return max(max(0, effectSolidWidth), adjustedLaneWidth)
+    }
+
+    static func splitButtonContentOcclusionWidth(
+        visibleLaneWidth: CGFloat,
+        contentOcclusionFraction: CGFloat
+    ) -> CGFloat {
+        max(0, visibleLaneWidth) * min(max(0, contentOcclusionFraction), 1)
+    }
+
+    static func splitButtonScrollAffordances(
+        scrollOffset: CGFloat,
+        contentWidth: CGFloat,
+        viewportWidth: CGFloat
+    ) -> (left: Bool, right: Bool) {
+        let overflowThreshold: CGFloat = 1
+        let maxOffset = max(0, contentWidth - viewportWidth)
+        return (
+            left: scrollOffset > overflowThreshold,
+            right: scrollOffset < maxOffset - overflowThreshold
+        )
+    }
+
+    static func imageDataShouldRenderAsTemplate(_ data: Data) -> Bool {
+        let text = String(decoding: data.prefix(4096), as: UTF8.self)
+        let lowercased = text.lowercased()
+        return lowercased.contains("<svg") && lowercased.contains("currentcolor")
+    }
+
+    static func splitActionButtonImage(from data: Data) -> NSImage? {
+        SplitActionButtonImageCache.shared.image(for: data)
+    }
+
+    static func selectedTabFrame(
+        selectedTabId: UUID?,
+        tabFrames: [UUID: CGRect]
+    ) -> CGRect? {
+        guard let selectedTabId else { return nil }
+        return tabFrames[selectedTabId]
+    }
+
+    static func separatorSegments(
+        totalWidth: CGFloat,
+        gap: ClosedRange<CGFloat>?
+    ) -> (left: CGFloat, right: CGFloat) {
+        let clampedTotal = max(0, totalWidth)
+        guard let gap else {
+            return (left: clampedTotal, right: 0)
+        }
+
+        let start = min(max(gap.lowerBound, 0), clampedTotal)
+        let end = min(max(gap.upperBound, 0), clampedTotal)
+        let normalizedStart = min(start, end)
+        let normalizedEnd = max(start, end)
+        let left = max(0, normalizedStart)
+        let right = max(0, clampedTotal - normalizedEnd)
+        return (left: left, right: right)
+    }
+
+    /// Whether the split buttons stay hidden until the pointer is over the tab
+    /// bar. Only the host option
+    /// ``BonsplitConfiguration/Appearance/splitButtonsOnHover`` hides them;
+    /// minimal mode keeps them always visible.
+    static func hidesSplitButtonsUntilHover(splitButtonsOnHover: Bool) -> Bool {
+        splitButtonsOnHover
+    }
+
+    /// Whether the split buttons are visible and whether they reserve a lane in
+    /// the tab row. Hover-only buttons fade in as an overlay and reserve no lane,
+    /// so the tabs keep the full bar width while the buttons are hidden.
+    static func splitButtonLane(
+        showSplitButtons: Bool,
+        buttonCount: Int,
+        splitButtonsOnHover: Bool,
+        isHoveringTabBar: Bool
+    ) -> (visible: Bool, reservesLane: Bool) {
+        let hidesUntilHover = hidesSplitButtonsUntilHover(splitButtonsOnHover: splitButtonsOnHover)
+        let renders = showSplitButtons && buttonCount > 0
+        return (
+            visible: renders && (!hidesUntilHover || isHoveringTabBar),
+            reservesLane: showSplitButtons && !hidesUntilHover
+        )
+    }
+
+    static func trailingTabContentInset(
+        showSplitButtons: Bool,
+        buttonCount: Int = BonsplitConfiguration.SplitActionButton.defaults.count
+    ) -> CGFloat {
+        guard showSplitButtons, buttonCount > 0 else { return 0 }
+        return splitButtonsBackdropWidth(buttonCount: buttonCount)
+    }
+
+    static func shouldKeepLeadingAligned(
+        contentWidth: CGFloat,
+        containerWidth: CGFloat
+    ) -> Bool {
+        let overflowThreshold: CGFloat = 1
+        return contentWidth <= containerWidth + overflowThreshold
+    }
+
+}
+
+struct TabBarLayout: Equatable {
+    let barHeight: CGFloat
+    let availableWidth: CGFloat
+    let tabContentWidthExcludingSplitButtonLane: CGFloat?
+    let splitButtonCount: Int
+    let splitButtonLaneVisible: Bool
+    let reservesSplitButtonLane: Bool
+    let measuredSplitButtonLaneWidth: CGFloat
+    /// False when the caller already fitted the buttons to the bar (`splitButtonSlotsThatFit`),
+    /// so the 25% cap must not scroll them.
+    let capsLaneWidth: Bool
+
+    init(
+        tabBarHeight: CGFloat,
+        availableWidth: CGFloat = 0,
+        tabContentWidthExcludingSplitButtonLane: CGFloat? = nil,
+        splitButtonCount: Int,
+        splitButtonLaneVisible: Bool,
+        reservesSplitButtonLane: Bool,
+        measuredSplitButtonLaneWidth: CGFloat = 0,
+        capsLaneWidth: Bool = true
+    ) {
+        self.capsLaneWidth = capsLaneWidth
+        self.barHeight = max(1, tabBarHeight)
+        self.availableWidth = max(0, availableWidth)
+        self.tabContentWidthExcludingSplitButtonLane = tabContentWidthExcludingSplitButtonLane.map { max(0, $0) }
+        self.splitButtonCount = max(0, splitButtonCount)
+        self.splitButtonLaneVisible = splitButtonLaneVisible
+        self.reservesSplitButtonLane = reservesSplitButtonLane
+        self.measuredSplitButtonLaneWidth = self.splitButtonCount > 0
+            ? max(0, measuredSplitButtonLaneWidth)
+            : 0
+    }
+
+    var minimumSplitButtonLaneWidth: CGFloat {
+        TabBarStyling.splitButtonsBackdropWidth(buttonCount: splitButtonCount)
+    }
+
+    var fullSplitButtonLaneWidth: CGFloat {
+        max(minimumSplitButtonLaneWidth, measuredSplitButtonLaneWidth)
+    }
+
+    var maximumSplitButtonLaneWidth: CGFloat {
+        guard availableWidth > 0 else { return 0 }
+        if !capsLaneWidth { return max(fullSplitButtonLaneWidth, trailingWhitespaceBeforeSplitButtonLane) }
+        let fractionLimit = availableWidth * TabBarStyling.maximumSplitButtonLaneWidthFraction
+        return max(
+            fractionLimit,
+            trailingWhitespaceBeforeSplitButtonLane,
+            TabBarStyling.minimumVisibleSplitButtonLaneWidth(buttonCount: splitButtonCount)
+        )
+    }
+
+    var trailingWhitespaceBeforeSplitButtonLane: CGFloat {
+        guard availableWidth > 0,
+              let tabContentWidthExcludingSplitButtonLane,
+              tabContentWidthExcludingSplitButtonLane > 0 else {
+            return 0
+        }
+        return max(0, availableWidth - tabContentWidthExcludingSplitButtonLane)
+    }
+
+    var visibleSplitButtonLaneWidth: CGFloat {
+        min(fullSplitButtonLaneWidth, maximumSplitButtonLaneWidth)
+    }
+
+    var splitButtonLaneOverflowsViewport: Bool {
+        fullSplitButtonLaneWidth > visibleSplitButtonLaneWidth + 1
+    }
+
+    var trailingTabContentInset: CGFloat {
+        reservesSplitButtonLane ? visibleSplitButtonLaneWidth : 0
+    }
+
+    var splitActionButtonHeight: CGFloat {
+        barHeight
+    }
+
+    func selectedSeparatorGap(
+        selectedTabFrame: CGRect?,
+        totalWidth: CGFloat
+    ) -> ClosedRange<CGFloat>? {
+        guard let selectedTabFrame, totalWidth > 0 else { return nil }
+
+        let minX = min(max(selectedTabFrame.minX, 0), totalWidth)
+        let maxX = min(max(selectedTabFrame.maxX, 0), totalWidth)
+        guard maxX > minX else { return nil }
+        return minX...maxX
+    }
+
+    func selectedIndicatorFrame(
+        selectedTabFrame: CGRect?,
+        totalWidth: CGFloat
+    ) -> CGRect? {
+        guard let gap = selectedSeparatorGap(
+            selectedTabFrame: selectedTabFrame,
+            totalWidth: totalWidth
+        ) else { return nil }
+
+        let minX = gap.lowerBound
+        let maxX = gap.upperBound
+        let width = max(0, maxX - minX - TabBarMetrics.activeIndicatorTrailingInset)
+        guard width > 0 else { return nil }
+
+        return CGRect(
+            x: minX,
+            y: 0,
+            width: width,
+            height: TabBarMetrics.activeIndicatorHeight
+        )
+    }
+}
+
+struct TabBarActionLaneGeometry: Equatable {
+    let buttonViewportWidth: CGFloat
+    let contentFadeWidth: CGFloat
+    let contentOcclusionWidth: CGFloat
+    let backgroundFadeWidth: CGFloat
+    let backgroundSolidWidth: CGFloat
+    let separatorFadeWidth: CGFloat
+    let backgroundFadeRampStartFraction: CGFloat
+
+    init(
+        layout: TabBarLayout,
+        effect: BonsplitConfiguration.Appearance.SplitButtonBackdropEffect,
+        masksTabContent: Bool
+    ) {
+        self.buttonViewportWidth = layout.visibleSplitButtonLaneWidth
+        self.contentFadeWidth = masksTabContent ? effect.contentFadeWidth : 0
+        if masksTabContent {
+            let fractionalOcclusionWidth = TabBarStyling.splitButtonContentOcclusionWidth(
+                visibleLaneWidth: layout.visibleSplitButtonLaneWidth,
+                contentOcclusionFraction: effect.contentOcclusionFraction
+            )
+            self.contentOcclusionWidth = layout.splitButtonLaneOverflowsViewport
+                ? layout.visibleSplitButtonLaneWidth
+                : fractionalOcclusionWidth
+        } else {
+            self.contentOcclusionWidth = 0
+        }
+        self.backgroundFadeWidth = max(0, effect.fadeWidth)
+        let solidSurfaceWidthAdjustment = layout.splitButtonLaneOverflowsViewport
+            ? max(0, effect.solidSurfaceWidthAdjustment)
+            : effect.solidSurfaceWidthAdjustment
+        self.backgroundSolidWidth = TabBarStyling.splitButtonBackdropSolidSurfaceWidth(
+            effectSolidWidth: effect.solidWidth,
+            visibleLaneWidth: layout.visibleSplitButtonLaneWidth,
+            solidSurfaceWidthAdjustment: solidSurfaceWidthAdjustment
+        )
+        let rampStart = min(max(0, effect.fadeRampStartFraction), 0.95)
+        self.backgroundFadeRampStartFraction = rampStart
+        let defaultSeparatorFadeWidth = self.backgroundFadeWidth
+        self.separatorFadeWidth = min(
+            defaultSeparatorFadeWidth,
+            effect.separatorFadeWidth ?? defaultSeparatorFadeWidth
+        )
+    }
+
+    var separatorTotalWidth: CGFloat {
+        separatorFadeWidth + backgroundSolidWidth
+    }
+
+    func backgroundFadeFrame(totalWidth: CGFloat, height: CGFloat) -> CGRect {
+        let width = max(0, backgroundFadeWidth)
+        return CGRect(
+            x: totalWidth - backgroundSolidWidth - width,
+            y: 0,
+            width: width,
+            height: height
+        )
+    }
+
+    func backgroundSolidFrame(totalWidth: CGFloat, height: CGFloat) -> CGRect {
+        let width = max(0, backgroundSolidWidth)
+        return CGRect(
+            x: totalWidth - width,
+            y: 0,
+            width: width,
+            height: height
+        )
+    }
+
+    func separatorFadeFrame(totalWidth: CGFloat, height: CGFloat) -> CGRect {
+        let width = max(0, separatorFadeWidth)
+        return CGRect(
+            x: totalWidth - backgroundSolidWidth - width,
+            y: height - 1,
+            width: width,
+            height: 1
+        )
+    }
+
+    func separatorSolidFrame(totalWidth: CGFloat, height: CGFloat) -> CGRect {
+        let solid = backgroundSolidFrame(totalWidth: totalWidth, height: height)
+        return CGRect(x: solid.minX, y: height - 1, width: solid.width, height: 1)
+    }
+
+    func separatorCoverageFrame(totalWidth: CGFloat, height: CGFloat) -> CGRect {
+        let width = separatorTotalWidth
+        return CGRect(x: totalWidth - width, y: height - 1, width: width, height: 1)
+    }
+
+    func fallbackSeparatorMaskFrame(
+        totalWidth: CGFloat,
+        height: CGFloat,
+        selectedSeparatorGap: ClosedRange<CGFloat>?
+    ) -> CGRect? {
+        guard let selectedSeparatorGap else { return nil }
+        let coverage = separatorCoverageFrame(totalWidth: totalWidth, height: height)
+        let start = max(coverage.minX, selectedSeparatorGap.lowerBound)
+        let end = min(coverage.maxX, selectedSeparatorGap.upperBound)
+        guard end > start else { return nil }
+        return CGRect(x: start, y: height - 1, width: end - start, height: 1)
+    }
+}
+
+struct TabBarChromeSnapshot {
+    let layout: TabBarLayout
+    let actionLaneGeometry: TabBarActionLaneGeometry
+    let barColor: NSColor
+    let actionLaneWidth: CGFloat
+    let paintsActionLaneSurface: Bool
+    let masksTabContentUnderActionLane: Bool
+    let contentFadeWidth: CGFloat
+    let contentOcclusionWidth: CGFloat
+    let actionLaneSeparatorFadeWidth: CGFloat
+    let backdropFadeWidth: CGFloat
+    let backdropSolidWidth: CGFloat
+    let backdropFadeRampStartFraction: CGFloat
+    let backdropLeadingColor: NSColor
+    let backdropTrailingColor: NSColor
+
+    var drawsActionLaneSeparator: Bool {
+        paintsActionLaneSurface || masksTabContentUnderActionLane
+    }
+
+    var backdropVisibleFadeWidth: CGFloat {
+        backdropFadeWidth * (1 - backdropFadeRampStartFraction)
+    }
+
+    var actionLaneSeparatorSolidWidth: CGFloat {
+        actionLaneGeometry.backgroundSolidWidth
+    }
+
+    init(
+        appearance: BonsplitConfiguration.Appearance,
+        layout: TabBarLayout,
+        isFocused: Bool,
+        shouldShowSplitButtons: Bool,
+        fadeColorStyle: Int
+    ) {
+        self.layout = layout
+
+        let baseBarColor = TabBarColors.nsColorBarBackground(for: appearance)
+        self.barColor = appearance.usesSharedBackdrop || isFocused
+            ? baseBarColor
+            : baseBarColor.withAlphaComponent(baseBarColor.alphaComponent * 0.95)
+
+        let effect = Self.splitButtonBackdropEffect(
+            for: appearance,
+            fadeColorStyle: fadeColorStyle
+        )
+        let targetColor = Self.buttonBackdropColor(
+            for: appearance,
+            focused: isFocused,
+            style: effect.style
+        )
+        let colors = Self.splitButtonBackdropColors(
+            from: barColor,
+            to: targetColor,
+            leadingOpacity: effect.leadingOpacity,
+            trailingOpacity: effect.trailingOpacity,
+            usesSharedBackdrop: appearance.usesSharedBackdrop
+        )
+
+        let canUseActionLaneChrome = shouldShowSplitButtons && effect.style != .hidden
+        self.paintsActionLaneSurface = canUseActionLaneChrome
+            && TabBarColors.shouldPaintSplitButtonBackdrop(for: appearance)
+        self.masksTabContentUnderActionLane = canUseActionLaneChrome && effect.masksTabContent
+        let geometry = TabBarActionLaneGeometry(
+            layout: layout,
+            effect: effect,
+            masksTabContent: masksTabContentUnderActionLane
+        )
+        self.actionLaneGeometry = geometry
+        self.actionLaneWidth = geometry.buttonViewportWidth
+        self.contentFadeWidth = geometry.contentFadeWidth
+        self.contentOcclusionWidth = geometry.contentOcclusionWidth
+        self.backdropFadeWidth = geometry.backgroundFadeWidth
+        self.backdropSolidWidth = geometry.backgroundSolidWidth
+        self.backdropFadeRampStartFraction = min(max(0, effect.fadeRampStartFraction), 0.95)
+        self.actionLaneSeparatorFadeWidth = geometry.separatorFadeWidth
+        self.backdropLeadingColor = colors.leading
+        self.backdropTrailingColor = colors.trailing
+    }
+
+    private static func splitButtonBackdropEffect(
+        for appearance: BonsplitConfiguration.Appearance,
+        fadeColorStyle: Int
+    ) -> BonsplitConfiguration.Appearance.SplitButtonBackdropEffect {
+        if let effect = appearance.splitButtonBackdropEffect {
+            return effect
+        }
+        if let style = appearance.splitButtonBackdropStyle {
+            return .init(style: style)
+        }
+        if let debugStyle = BonsplitConfiguration.Appearance.SplitButtonBackdropStyle(rawValue: fadeColorStyle) {
+            return .init(
+                style: debugStyle,
+                fadeWidth: 136,
+                solidWidth: 2,
+                fadeRampStartFraction: 0.80,
+                leadingOpacity: 0,
+                trailingOpacity: 0.80,
+                masksTabContent: false
+            )
+        }
+        return .default
+    }
+
+    private static func buttonBackdropColor(
+        for appearance: BonsplitConfiguration.Appearance,
+        focused: Bool,
+        style: BonsplitConfiguration.Appearance.SplitButtonBackdropStyle
+    ) -> NSColor {
+        if appearance.usesSharedBackdrop {
+            return TabBarColors.nsColorSplitButtonBackdropOccludingSurface(for: appearance)
+        }
+
+        switch style {
+        case .opaquePaneBackground:
+            return TabBarColors.nsColorPaneBackground(for: appearance).withAlphaComponent(1.0)
+        case .opaqueBarBackground:
+            return TabBarColors.nsColorBarBackground(for: appearance).withAlphaComponent(1.0)
+        case .windowBackground:
+            return NSColor.windowBackgroundColor.withAlphaComponent(1.0)
+        case .controlBackground:
+            return NSColor.controlBackgroundColor.withAlphaComponent(1.0)
+        case .precompositedBarBackground:
+            let chrome = TabBarColors.nsColorBarBackground(for: appearance)
+            let winBg = NSColor.windowBackgroundColor
+            guard let fg = chrome.usingColorSpace(.sRGB),
+                  let bk = winBg.usingColorSpace(.sRGB) else {
+                return chrome.withAlphaComponent(1.0)
+            }
+            let a: CGFloat = focused ? fg.alphaComponent : fg.alphaComponent * 0.95
+            let oneMinusA = 1.0 - a
+            let r = fg.redComponent * a + bk.redComponent * oneMinusA
+            let g = fg.greenComponent * a + bk.greenComponent * oneMinusA
+            let b = fg.blueComponent * a + bk.blueComponent * oneMinusA
+            return NSColor(red: r, green: g, blue: b, alpha: 1.0)
+        case .translucentChrome:
+            let backdrop = TabBarColors.nsColorSplitButtonBackdropSurface(for: appearance)
+            let alpha = focused ? backdrop.alphaComponent : backdrop.alphaComponent * 0.95
+            return backdrop.withAlphaComponent(alpha)
+        case .hidden:
+            return .clear
+        case .precompositedPaneBackground:
+            return TabBarColors.nsColorSplitButtonBackdrop(for: appearance, focused: focused)
+        }
+    }
+
+    private static func blendedSurfaceColor(
+        from base: NSColor,
+        to target: NSColor,
+        amount: CGFloat
+    ) -> NSColor {
+        let clampedAmount = min(max(amount, 0), 1)
+        let source = base.usingColorSpace(.sRGB) ?? base
+        let destination = target.usingColorSpace(.sRGB) ?? target
+        let inverse = 1 - clampedAmount
+        return NSColor(
+            red: source.redComponent * inverse + destination.redComponent * clampedAmount,
+            green: source.greenComponent * inverse + destination.greenComponent * clampedAmount,
+            blue: source.blueComponent * inverse + destination.blueComponent * clampedAmount,
+            alpha: source.alphaComponent * inverse + destination.alphaComponent * clampedAmount
+        )
+    }
+
+    private static func splitButtonBackdropColors(
+        from base: NSColor,
+        to target: NSColor,
+        leadingOpacity: CGFloat,
+        trailingOpacity: CGFloat,
+        usesSharedBackdrop: Bool
+    ) -> (leading: NSColor, trailing: NSColor) {
+        if usesSharedBackdrop {
+            return (
+                alphaOnlySurfaceColor(target, opacity: leadingOpacity),
+                alphaOnlySurfaceColor(target, opacity: trailingOpacity)
+            )
+        }
+
+        return (
+            blendedSurfaceColor(from: base, to: target, amount: leadingOpacity),
+            blendedSurfaceColor(from: base, to: target, amount: trailingOpacity)
+        )
+    }
+
+    private static func alphaOnlySurfaceColor(
+        _ color: NSColor,
+        opacity: CGFloat
+    ) -> NSColor {
+        let clampedOpacity = min(max(opacity, 0), 1)
+        guard let source = color.usingColorSpace(.sRGB) else {
+            return color.withAlphaComponent(color.alphaComponent * clampedOpacity)
+        }
+        return NSColor(
+            red: source.redComponent,
+            green: source.greenComponent,
+            blue: source.blueComponent,
+            alpha: source.alphaComponent * clampedOpacity
+        )
+    }
+}
+
+struct TabContextMenuState {
+    let isPinned: Bool
+    let canCloseTab: Bool
+    let isUnread: Bool
+    let isBrowser: Bool
+    let isAudioMuted: Bool
+    let isTerminal: Bool
+    let hasCustomTitle: Bool
+    let canCloseToLeft: Bool
+    let canCloseToRight: Bool
+    let canCloseOthers: Bool
+    let canMoveToNewWorkspace: Bool
+    let canMoveToLeftPane: Bool
+    let canMoveToRightPane: Bool
+    let forkConversationDefaultAction: TabContextAction
+    let isZoomed: Bool
+    let isFullWidthTabMode: Bool
+    let hasSplits: Bool
+    let shortcuts: [TabContextAction: KeyboardShortcut]
+    var canDisconnectRemote: Bool = false
+    /// Shared-terminal presence; non-nil adds the terminal-size menu section.
+    var presence: TabPresence?
+
+    var canMarkAsUnread: Bool {
+        !isUnread
+    }
+
+    var canMarkAsRead: Bool {
+        isUnread
+    }
+
+    init(
+        isPinned: Bool,
+        canCloseTab: Bool = true,
+        isUnread: Bool,
+        isBrowser: Bool,
+        isAudioMuted: Bool,
+        isTerminal: Bool,
+        hasCustomTitle: Bool,
+        canCloseToLeft: Bool,
+        canCloseToRight: Bool,
+        canCloseOthers: Bool,
+        canMoveToNewWorkspace: Bool,
+        canMoveToLeftPane: Bool,
+        canMoveToRightPane: Bool,
+        forkConversationDefaultAction: TabContextAction,
+        isZoomed: Bool,
+        isFullWidthTabMode: Bool = false,
+        hasSplits: Bool,
+        shortcuts: [TabContextAction: KeyboardShortcut],
+        canDisconnectRemote: Bool = false,
+        presence: TabPresence? = nil
+    ) {
+        self.isPinned = isPinned
+        self.canCloseTab = canCloseTab
+        self.isUnread = isUnread
+        self.isBrowser = isBrowser
+        self.isAudioMuted = isAudioMuted
+        self.isTerminal = isTerminal
+        self.hasCustomTitle = hasCustomTitle
+        self.canCloseToLeft = canCloseToLeft
+        self.canCloseToRight = canCloseToRight
+        self.canCloseOthers = canCloseOthers
+        self.canMoveToNewWorkspace = canMoveToNewWorkspace
+        self.canMoveToLeftPane = canMoveToLeftPane
+        self.canMoveToRightPane = canMoveToRightPane
+        self.forkConversationDefaultAction = forkConversationDefaultAction
+        self.isZoomed = isZoomed
+        self.isFullWidthTabMode = isFullWidthTabMode
+        self.hasSplits = hasSplits
+        self.shortcuts = shortcuts
+        self.canDisconnectRemote = canDisconnectRemote
+        self.presence = presence
+    }
+
+    @MainActor
+    init(
+        tab: TabItem,
+        index: Int,
+        pane: PaneState,
+        controller: BonsplitController,
+        splitViewController: SplitViewController
+    ) {
+        let allowsCloseTabs = controller.configuration.allowCloseTabs
+        let leftTabs = pane.tabs.prefix(index)
+        let canCloseToLeft = allowsCloseTabs && leftTabs.contains(where: { !$0.isPinned })
+        let canCloseToRight: Bool
+        if (index + 1) < pane.tabs.count {
+            canCloseToRight = allowsCloseTabs && pane.tabs.suffix(from: index + 1).contains(where: { !$0.isPinned })
+        } else {
+            canCloseToRight = false
+        }
+        let canCloseOthers = allowsCloseTabs
+            && pane.tabs.enumerated().contains { itemIndex, item in
+                itemIndex != index && !item.isPinned
+            }
+        self.init(
+            isPinned: tab.isPinned,
+            canCloseTab: allowsCloseTabs && !tab.isPinned,
+            isUnread: tab.showsNotificationBadge,
+            isBrowser: tab.kind == "browser",
+            isAudioMuted: tab.isAudioMuted,
+            isTerminal: tab.kind == "terminal",
+            hasCustomTitle: tab.hasCustomTitle,
+            canCloseToLeft: canCloseToLeft,
+            canCloseToRight: canCloseToRight,
+            canCloseOthers: canCloseOthers,
+            canMoveToNewWorkspace: controller.allTabIds.count > 1,
+            canMoveToLeftPane: controller.adjacentPane(to: pane.id, direction: .left) != nil,
+            canMoveToRightPane: controller.adjacentPane(to: pane.id, direction: .right) != nil,
+            forkConversationDefaultAction: controller.tabContextForkConversationDefaultActionProvider?(TabID(id: tab.id), pane.id) ?? .defaultForkConversationDestination,
+            isZoomed: splitViewController.zoomedPaneId == pane.id,
+            isFullWidthTabMode: pane.isFullWidthTabMode,
+            hasSplits: splitViewController.rootNode.allPaneIds.count > 1,
+            shortcuts: controller.contextMenuShortcuts,
+            canDisconnectRemote: controller.tabContextDisconnectRemoteAvailabilityProvider?(TabID(id: tab.id), pane.id) ?? false,
+            presence: tab.presence
+        )
+    }
+}
+
+/// Tab bar view with scrollable tabs, drag/drop support, and split buttons
+struct TabBarView: View {
+    @Environment(BonsplitController.self) private var controller
+    @Environment(SplitViewController.self) private var splitViewController
+    
+    @Bindable var pane: PaneState
+    let isFocused: Bool
+    var showSplitButtons: Bool = true
+
+    @AppStorage("workspacePresentationMode") private var presentationMode = "minimal"
+    @AppStorage("debugFadeColorStyle") private var fadeColorStyle = -1
+    @State private var isHoveringTabBar = false
+    /// One hovered tab for the whole strip, resolved from the pointer against
+    /// the registered tab frames. Per-tab `.onHover` never fires when a tab
+    /// slides under a stationary pointer (closing the tab to its left), so the
+    /// tab under the cursor showed no hover or close button until the mouse
+    /// moved, while the tab that slid away could keep its stale hover.
+    @State private var hoveredTabId: UUID?
+    @State private var dropTargetIndex: Int?
+    @State private var scrollOffset: CGFloat = 0
+    @State private var contentWidth: CGFloat = 0
+    @State private var tabContentWidthExcludingSplitButtonLane: CGFloat?
+    @State private var containerWidth: CGFloat = 0
+    @State private var measuredSplitButtonLaneWidth: CGFloat = 0
+    @State private var accessoryLeadingNaturalWidth: CGFloat = 0
+    @State private var barWidth: CGFloat = 0
+    @State private var accessoryTrailingWidth: CGFloat = 0
+    @State private var splitButtonScrollOffset: CGFloat = 0
+    @State private var splitButtonContentWidth: CGFloat = 0
+    @State private var splitButtonViewportWidth: CGFloat = 0
+    @State private var controlKeyMonitor = TabControlShortcutKeyMonitor()
+    @State private var tabItemGeometryRegistry = TabBarItemGeometryRegistry()
+
+    /// Leading accessory (branch label) width after budgeting: it gets only what is left once the
+    /// action lane and the minimum tab area are reserved, so it truncates, then hides, before any
+    /// action button moves into the overflow menu.
+    private var accessoryLeadingWidth: CGFloat {
+        guard barWidth > 0 else { return accessoryLeadingNaturalWidth }
+        let budget = barWidth - TabBarStyling.minimumTabAreaWidth - accessoryTrailingWidth
+            - TabBarStyling.splitButtonsBackdropWidth(buttonCount: laidOutSplitSlotCount)
+        let width = min(accessoryLeadingNaturalWidth, max(0, budget))
+        return width < 28 ? 0 : width
+    }
+
+    private var canScrollLeft: Bool {
+        scrollOffset > 1
+    }
+
+    private var canScrollRight: Bool {
+        // contentWidth includes the 30pt drop zone after tabs.
+        let tabsWidth = contentWidth - 30
+        guard tabsWidth > containerWidth + 4 else { return false }
+        return scrollOffset < tabsWidth - containerWidth
+    }
+
+    private var tabBarSaturation: Double {
+        isFocused ? 1.0 : 0.0
+    }
+
+    private var appearance: BonsplitConfiguration.Appearance {
+        controller.configuration.appearance
+    }
+
+    private var isFullWidthTabMode: Bool {
+        pane.isFullWidthTabMode && !pane.tabs.isEmpty
+    }
+
+    /// Whether tabs should stretch to fill the pane's available tab-bar width.
+    /// Full-width mode uses the same flexible tab item chrome as configured fill mode.
+    private var fillsTabsToWidth: Bool {
+        appearance.tabWidthMode == .fill || isFullWidthTabMode
+    }
+
+    /// Minimum width to impose on the (already trailing-inset-padded) tab row when
+    /// filling, so the horizontal `ScrollView` hands the row the full viewport and
+    /// SwiftUI distributes the slack across the flexible tabs. `nil` in fixed mode
+    /// (and before the container width is known) leaves the historical layout intact.
+    private var fillRowMinWidth: CGFloat? {
+        guard fillsTabsToWidth, containerWidth > 0 else { return nil }
+        return containerWidth
+    }
+
+    private var tabBarHeight: CGFloat {
+        tabBarLayout.barHeight
+    }
+
+    private var tabBarLayout: TabBarLayout {
+        let actionButtonCount = TabBarStyling.splitActionButtonCount(
+            isNarrowPane: false,
+            shouldShowSplitButtons: shouldShowSplitButtons,
+            visibleButtonCount: laidOutSplitSlotCount
+        )
+        return TabBarLayout(
+            tabBarHeight: appearance.tabBarHeight,
+            availableWidth: containerWidth,
+            tabContentWidthExcludingSplitButtonLane: tabContentWidthExcludingSplitButtonLane,
+            splitButtonCount: actionButtonCount,
+            splitButtonLaneVisible: shouldShowSplitButtons,
+            reservesSplitButtonLane: splitButtonLane.reservesLane,
+            measuredSplitButtonLaneWidth: measuredSplitButtonLaneWidth,
+            capsLaneWidth: false
+        )
+    }
+
+    private var chromeSnapshot: TabBarChromeSnapshot {
+        TabBarChromeSnapshot(
+            appearance: appearance,
+            layout: tabBarLayout,
+            isFocused: isFocused,
+            shouldShowSplitButtons: shouldShowSplitButtons,
+            fadeColorStyle: fadeColorStyle
+        )
+    }
+
+    private var visibleSplitButtons: [BonsplitConfiguration.SplitActionButton] {
+        guard showSplitButtons else { return [] }
+        return appearance.splitButtons
+    }
+
+    /// Action slots in priority order: the "+" menu (new terminal/browser) first, then custom
+    /// actions (Wiki, Architecture, ...), then split right, then split down.
+    private var prioritizedSplitSlots: [[BonsplitConfiguration.SplitActionButton]] {
+        let buttons = visibleSplitButtons
+        let newTab = buttons.filter { $0.action == .newTerminal || $0.action == .newBrowser }
+        let splits = buttons.filter { $0.action == .splitRight || $0.action == .splitDown }
+        let others = buttons.filter { !newTab.contains($0) && !splits.contains($0) }
+        return ([newTab].filter { !$0.isEmpty } + others.map { [$0] } + splits.map { [$0] })
+    }
+
+    /// Slots that stay visible; the rest go into the "..." menu.
+    private var shownSplitSlotCount: Int {
+        let slots = prioritizedSplitSlots.count
+        guard barWidth > 0 else { return slots }
+        let lane = barWidth - TabBarStyling.minimumTabAreaWidth - (paneAccessory == nil ? 0 : accessoryTrailingWidth)
+        return TabBarStyling.splitButtonSlotsThatFit(slotCount: slots, availableLaneWidth: lane)
+    }
+
+    private var hiddenSplitButtons: [BonsplitConfiguration.SplitActionButton] {
+        prioritizedSplitSlots.dropFirst(shownSplitSlotCount).flatMap { $0 }
+    }
+
+    /// Slots drawn in the lane, counting the "..." slot when something overflows.
+    private var laidOutSplitSlotCount: Int {
+        guard shouldRenderSplitButtons else { return 0 }
+        return shownSplitSlotCount + (hiddenSplitButtons.isEmpty ? 0 : 1)
+    }
+
+    private var shouldRenderSplitButtons: Bool {
+        !visibleSplitButtons.isEmpty
+    }
+
+    private var shouldShowSplitButtons: Bool {
+        splitButtonLane.visible
+    }
+
+    private var splitButtonLane: (visible: Bool, reservesLane: Bool) {
+        TabBarStyling.splitButtonLane(
+            showSplitButtons: showSplitButtons,
+            buttonCount: visibleSplitButtons.count,
+            splitButtonsOnHover: appearance.splitButtonsOnHover,
+            isHoveringTabBar: isHoveringTabBar
+        )
+    }
+
+    private var splitButtonsBackdropWidth: CGFloat {
+        chromeSnapshot.actionLaneWidth
+    }
+
+    /// Host accessories, only for the pane touching the top-right corner of the split area.
+    private var paneAccessory: PaneTabBarAccessory? {
+        guard let provider = controller.paneTabBarAccessoryProvider else { return nil }
+        let split = splitViewController
+        guard (split.zoomedPaneId ?? split.rootNode.topTrailingPaneId) == pane.id else { return nil }
+        return provider(pane.id)
+    }
+
+    /// Width the split action lane takes even while it is hover-hidden (splitButtonsOnHover),
+    /// so the accessories never slide under the buttons when they fade in.
+    private var splitButtonLaneReserveWidth: CGFloat {
+        guard shouldRenderSplitButtons else { return 0 }
+        let count = TabBarStyling.splitActionButtonCount(
+            isNarrowPane: false,
+            shouldShowSplitButtons: true,
+            visibleButtonCount: laidOutSplitSlotCount
+        )
+        return TabBarStyling.splitButtonsBackdropWidth(buttonCount: count)
+    }
+
+    /// Viewport width taken from the tab strip by the accessories. When the split lane is
+    /// not reserved inside the tab content (hover-only buttons), it is added here; otherwise
+    /// the tab content inset already covers it.
+    private func accessoryViewportReservation(_ accessory: PaneTabBarAccessory?) -> CGFloat {
+        guard accessory != nil, accessoryLeadingWidth + accessoryTrailingWidth > 0 else { return 0 }
+        return accessoryLeadingWidth + accessoryTrailingWidth + (splitButtonLane.reservesLane ? 0 : splitButtonLaneReserveWidth)
+    }
+
+    private var showsControlShortcutHints: Bool {
+        isFocused && splitViewController.tabShortcutHintsEnabled && controlKeyMonitor.isShortcutHintVisible
+    }
+
+    private var isMinimalMode: Bool {
+        presentationMode == "minimal"
+    }
+
+    private var trailingTabContentInset: CGFloat {
+        tabBarLayout.trailingTabContentInset
+    }
+
+    private var splitButtonScrollCoordinateSpaceName: String {
+        "split-button-scroll-\(pane.id.id.uuidString)"
+    }
+
+    private var splitButtonScrollAffordances: (left: Bool, right: Bool) {
+        TabBarStyling.splitButtonScrollAffordances(
+            scrollOffset: splitButtonScrollOffset,
+            contentWidth: splitButtonContentWidth,
+            viewportWidth: splitButtonViewportWidth
+        )
+    }
+
+    private var selectionChromeMask: TabBarSelectionChromeMask {
+        let fadeWidth: CGFloat = 24
+        let snapshot = chromeSnapshot
+        if snapshot.masksTabContentUnderActionLane {
+            return TabBarSelectionChromeMask(
+                leftFadeWidth: canScrollLeft ? fadeWidth : 0,
+                rightFadeWidth: snapshot.contentFadeWidth,
+                rightOcclusionWidth: snapshot.contentOcclusionWidth,
+                actionLaneSeparatorFadeWidth: snapshot.drawsActionLaneSeparator
+                    ? snapshot.actionLaneGeometry.separatorFadeWidth
+                    : 0,
+                actionLaneSeparatorSolidWidth: snapshot.drawsActionLaneSeparator
+                    ? snapshot.actionLaneGeometry.backgroundSolidWidth
+                    : 0,
+                actionLaneSeparatorFadeRampStartFraction: snapshot.backdropFadeRampStartFraction
+            )
+        }
+        return TabBarSelectionChromeMask(
+            leftFadeWidth: canScrollLeft ? fadeWidth : 0,
+            rightFadeWidth: canScrollRight ? fadeWidth : 0,
+            rightOcclusionWidth: 0,
+            actionLaneSeparatorFadeWidth: snapshot.drawsActionLaneSeparator
+                ? snapshot.actionLaneGeometry.separatorFadeWidth
+                : 0,
+            actionLaneSeparatorSolidWidth: snapshot.drawsActionLaneSeparator
+                ? snapshot.actionLaneGeometry.backgroundSolidWidth
+                : 0,
+            actionLaneSeparatorFadeRampStartFraction: snapshot.backdropFadeRampStartFraction
+        )
+    }
+
+    private var visibleTabEntries: [(index: Int, tab: TabItem)] {
+        if isFullWidthTabMode {
+            let selectedTab = pane.selectedTab ?? pane.tabs.first
+            if let selectedTab,
+               let selectedIndex = pane.tabs.firstIndex(where: { $0.id == selectedTab.id }) {
+                return [(selectedIndex, selectedTab)]
+            }
+        }
+
+        return pane.tabs.enumerated().map { index, tab in
+            (index, tab)
+        }
+    }
+
+    private var pinnedTabEntries: [(index: Int, tab: TabItem)] {
+        visibleTabEntries.filter { $0.tab.isPinned }
+    }
+
+    private var scrollableTabEntries: [(index: Int, tab: TabItem)] {
+        visibleTabEntries.filter { !$0.tab.isPinned }
+    }
+
+    private var tabIds: [UUID] {
+        pane.tabs.map(\.id)
+    }
+
+    @ViewBuilder
+    private var selectionChrome: some View {
+        TabBarSelectionChromeView(
+            selectedTabId: pane.selectedTabId,
+            geometryRegistry: tabItemGeometryRegistry,
+            indicatorColor: TabBarColors.nsColorActiveIndicator(for: appearance, saturation: tabBarSaturation),
+            separatorColor: TabBarColors.nsColorSeparator(for: appearance),
+            mask: selectionChromeMask,
+            showsIndicator: isFocused && splitViewController.rootNode.allPaneIds.count > 1
+        )
+        .allowsHitTesting(false)
+    }
+
+    @ViewBuilder
+    private var trailingEmptyChromeDragZone: some View {
+        TabBarDragZoneView(
+            hitRegion: .registeredTrailingEmptyChrome(
+                geometryRegistry: tabItemGeometryRegistry,
+                tabIds: tabIds,
+                reservedTrailingWidth: (shouldRenderSplitButtons ? splitButtonsBackdropWidth : 0)
+                    + (paneAccessory == nil ? 0 : accessoryTrailingWidth)
+            ),
+            isMinimalMode: isMinimalMode,
+            isFocusedPane: isFocused,
+            onSingleClick: focusPaneFromTabBarChrome
+        ) {
+            performNewTerminalSplitButtonAction()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var dragAndHoverBackground: some View {
+        TabBarDragAndHoverView(
+            isMinimalMode: isMinimalMode,
+            geometryRegistry: tabItemGeometryRegistry,
+            pane: pane,
+            onBeginTabDrag: { tabId, sourceView, event, draggingFrame, dragImage in
+                guard let tab = pane.tabs.first(where: { $0.id == tabId }) else {
+                    return false
+                }
+                dropTargetIndex = nil
+                return splitViewController.beginNativeTabDrag(
+                    tab,
+                    from: pane.id,
+                    sourceView: sourceView,
+                    event: event,
+                    draggingFrame: draggingFrame,
+                    dragImage: dragImage
+                )
+            },
+            onDoubleClick: {
+                performNewTerminalSplitButtonAction()
+            },
+            onHoverChanged: { updateTabBarHover($0) }
+        )
+    }
+
+    private var tabDropDestination: some View {
+        TabBarDropDestinationView(
+            pane: pane,
+            bonsplitController: controller,
+            splitViewController: splitViewController,
+            geometryRegistry: tabItemGeometryRegistry
+        ) { targetIndex in
+            guard dropTargetIndex != targetIndex else { return }
+            withTransaction(Transaction(animation: nil)) {
+                dropTargetIndex = targetIndex
+            }
+        }
+    }
+
+    private func focusPaneFromTabBarChrome() -> Bool {
+        guard !isFocused else { return false }
+        withTransaction(Transaction(animation: nil)) {
+            controller.focusPane(pane.id)
+        }
+        return true
+    }
+
+    /// The horizontally-scrolling tab row hosted inside the tab strip's `ScrollView`.
+    ///
+    /// Extracted from `body` so the SwiftUI type-checker can resolve the surrounding
+    /// view tree in reasonable time. In fill/full-width mode `tabRowFillMinWidth`
+    /// forces the row to the viewport width so the flexible tabs distribute the slack.
+    @ViewBuilder
+    private var tabScrollContent: some View {
+        HStack(spacing: TabBarMetrics.tabSpacing) {
+            ForEach(scrollableTabEntries, id: \.tab.id) { entry in
+                tabItem(for: entry.tab, at: entry.index)
+                    .id(entry.tab.id)
+            }
+
+            if !isFullWidthTabMode {
+                // Unified drop zone after the last tab.
+                dropZoneAfterTabs
+            }
+        }
+        .padding(.horizontal, TabBarMetrics.barPadding)
+        .padding(.trailing, trailingTabContentInset)
+        .tabRowFillMinWidth(fillRowMinWidth)
+        .frame(height: tabBarHeight, alignment: .top)
+        .animation(nil, value: pane.tabs.map(\.id))
+        .background(
+            GeometryReader { contentGeo in
+                Color.clear
+                    .onChange(of: contentGeo.frame(in: .named("tabScroll"))) { _, newFrame in
+                        updateTabScrollContent(frame: newFrame)
+                    }
+                    .onAppear {
+                        let frame = contentGeo.frame(in: .named("tabScroll"))
+                        updateTabScrollContent(frame: frame)
+                    }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var pinnedTabContent: some View {
+        HStack(spacing: TabBarMetrics.tabSpacing) {
+            ForEach(pinnedTabEntries, id: \.tab.id) { entry in
+                tabItem(for: entry.tab, at: entry.index, fillsWidth: false)
+                    .id(entry.tab.id)
+            }
+        }
+        .padding(.leading, TabBarMetrics.barPadding)
+        .frame(height: tabBarHeight, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private func paneAccessoryLayer(_ accessory: PaneTabBarAccessory) -> some View {
+        HStack(spacing: 0) {
+            if let leading = accessory.leading {
+                // Visible copy gets the budgeted width (truncates, then hides); a hidden copy
+                // measures the natural width the budget is derived from.
+                leading
+                    .frame(width: accessoryLeadingWidth, alignment: .leading)
+                    .clipped()
+                    .opacity(accessoryLeadingWidth > 0 ? 1 : 0)
+                    .allowsHitTesting(accessoryLeadingWidth > 0)
+                    .background {
+                        leading
+                            .fixedSize()
+                            .hidden()
+                            .accessibilityHidden(true)
+                            .allowsHitTesting(false)
+                            .background(GeometryReader { geo in
+                                Color.clear.preference(key: PaneAccessoryLeadingWidthKey.self, value: geo.size.width)
+                            })
+                    }
+            }
+            // Space the split lane keeps even while it is hover-hidden.
+            Color.clear.frame(width: splitButtonLaneReserveWidth, height: 1)
+            if let trailing = accessory.trailing {
+                trailing
+                    .fixedSize()
+                    .background(GeometryReader { geo in
+                        Color.clear.preference(key: PaneAccessoryTrailingWidthKey.self, value: geo.size.width)
+                    })
+            }
+        }
+        .frame(height: tabBarHeight)
+    }
+
+    var body: some View {
+        let accessory = paneAccessory
+        return HStack(spacing: 0) {
+            if appearance.tabBarLeadingInset > 0 && controller.internalController.rootNode.allPaneIds.first == pane.id {
+                TabBarDragZoneView(
+                    isMinimalMode: isMinimalMode,
+                    isFocusedPane: isFocused,
+                    onSingleClick: focusPaneFromTabBarChrome
+                ) { return false }
+                    .frame(width: appearance.tabBarLeadingInset)
+            }
+            // Pinned tabs stay outside the scroll view so their frames remain fixed
+            // while the unpinned tab row moves through the remaining viewport.
+            if !pinnedTabEntries.isEmpty {
+                pinnedTabContent
+            }
+            // Scrollable tabs with fade overlays
+            GeometryReader { containerGeo in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    tabScrollContent
+                }
+                    // When the tab strip is shorter than the visible area, place a single
+                    // drag zone over both the empty trailing space AND the 30pt inline
+                    // dropZoneAfterTabs (extended leftward by 30pt). The inline zone's
+                    // DragNSView is then visually covered, so all clicks in this region land
+                    // on this overlay's single DragNSView. AppKit tracks `clickCount` per
+                    // view, so without this an unlucky shift in the inline/overlay boundary
+                    // between two clicks would split a double-click into two clickCount=1
+                    // events and the new-tab action would never fire.
+                    .overlay(alignment: .trailing) {
+                        let trailing = max(0, containerGeo.size.width - contentWidth)
+                        if trailing >= 1 {
+                            TabBarDragZoneView(
+                                isMinimalMode: isMinimalMode,
+                                isFocusedPane: isFocused,
+                                onSingleClick: focusPaneFromTabBarChrome
+                            ) {
+                                performNewTerminalSplitButtonAction()
+                            }
+                            .frame(width: trailing + 30, height: tabBarHeight)
+                        }
+                    }
+                .coordinateSpace(name: "tabScroll")
+                .onAppear {
+                    containerWidth = containerGeo.size.width
+                    tabItemGeometryRegistry.setTrailingObscuredWidth(trailingTabContentInset)
+                    tabItemGeometryRegistry.revealSelection(pane.selectedTabId)
+                }
+                .onChange(of: containerGeo.size.width) { _, newWidth in
+                    containerWidth = newWidth
+                    tabItemGeometryRegistry.viewportLayoutDidChange()
+                }
+                .onChange(of: pane.selectedTabId) { _, newTabId in
+                    tabItemGeometryRegistry.revealSelection(newTabId)
+                }
+                .onChange(of: trailingTabContentInset) { _, newWidth in
+                    tabItemGeometryRegistry.setTrailingObscuredWidth(newWidth)
+                }
+                .frame(height: tabBarHeight)
+                .mask(combinedMask)
+            }
+            Color.clear.frame(width: accessoryViewportReservation(accessory), height: 1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: tabBarHeight)
+        .coordinateSpace(name: "tabBar")
+        .background(GeometryReader { geo in
+            Color.clear
+                .onAppear { barWidth = geo.size.width }
+                .onChange(of: geo.size.width) { _, width in barWidth = width }
+        })
+        .background(tabBarSurface)
+        .overlay(alignment: .trailing) {
+            splitButtonBackdropChrome
+                .opacity(shouldShowSplitButtons ? 1 : 0)
+                .allowsHitTesting(false)
+                .tabBarButtonAnimationsDisabled()
+                .padding(.trailing, accessory == nil ? 0 : accessoryTrailingWidth)
+        }
+        .overlay(selectionChrome)
+        .overlay(trailingEmptyChromeDragZone)
+        .overlay(alignment: .trailing) {
+            splitButtonChrome
+                .frame(width: splitButtonsBackdropWidth, height: tabBarHeight, alignment: .trailing)
+                .mask {
+                    Rectangle()
+                        .frame(width: splitButtonsBackdropWidth, height: tabBarHeight)
+                }
+                .clipped()
+                .padding(.trailing, accessory == nil ? 0 : accessoryTrailingWidth)
+        }
+        .overlay(alignment: .trailing) {
+            if let accessory {
+                paneAccessoryLayer(accessory)
+            }
+        }
+        .background(dragAndHoverBackground)
+        .overlay(
+            TabBarHoverTrackingView(
+                geometryRegistry: tabItemGeometryRegistry,
+                tabIds: pane.tabs.map(\.id),
+                isDraggingTab: splitViewController.tabDragSession != nil,
+                onHoverChanged: { updateTabBarHover($0) },
+                onHoveredTabChanged: { updateHoveredTab($0) }
+            )
+        )
+        .overlay(tabDropDestination)
+        .background {
+            if splitViewController.tabShortcutHintsEnabled {
+                TabBarHostWindowReader { window in
+                    controlKeyMonitor.setHostWindow(window)
+                }
+                .frame(width: 0, height: 0)
+            }
+        }
+        // Clear drop state when drag ends elsewhere (cancelled, dropped in another pane, etc.)
+        .onChange(of: splitViewController.tabDragSession?.generation) { _, newValue in
+#if DEBUG
+            dlog(
+                "tab.dragState pane=\(pane.id.id.uuidString.prefix(5)) " +
+                "tabDragSession=\(newValue != nil ? 1 : 0)"
+            )
+#endif
+            if newValue == nil {
+                dropTargetIndex = nil
+            }
+        }
+        .onAppear {
+            if splitViewController.tabShortcutHintsEnabled {
+                controlKeyMonitor.start()
+            }
+        }
+        .onChange(of: splitViewController.tabShortcutHintsEnabled) { _, enabled in
+            if enabled {
+                controlKeyMonitor.start()
+            } else {
+                controlKeyMonitor.stop()
+            }
+        }
+        .onPreferenceChange(SplitButtonLaneWidthPreferenceKey.self) { width in
+            measuredSplitButtonLaneWidth = width
+        }
+        .onPreferenceChange(PaneAccessoryLeadingWidthKey.self) { accessoryLeadingNaturalWidth = $0 }
+        .onPreferenceChange(PaneAccessoryTrailingWidthKey.self) { accessoryTrailingWidth = $0 }
+        .onDisappear {
+            controlKeyMonitor.stop()
+        }
+    }
+
+    // MARK: - Tab Item
+
+    private func updateTabBarHover(_ hovering: Bool) {
+        withTransaction(Transaction(animation: nil)) {
+            isHoveringTabBar = hovering
+        }
+    }
+
+    private func updateHoveredTab(_ tabId: UUID?) {
+        withTransaction(Transaction(animation: nil)) {
+            hoveredTabId = tabId
+        }
+    }
+
+    @ViewBuilder
+    private func tabItem(
+        for tab: TabItem,
+        at index: Int,
+        fillsWidth: Bool? = nil
+    ) -> some View {
+        let tabFillsWidth = fillsWidth ?? fillsTabsToWidth
+        let contextMenuState = contextMenuState(for: tab, at: index)
+        let showsZoomIndicator = splitViewController.zoomedPaneId == pane.id && pane.selectedTabId == tab.id
+        let isImmediatelyBeforeSelected = pane.tabs.indices.contains(index + 1)
+            && pane.tabs[index + 1].id == pane.selectedTabId
+        TabItemView(
+            tab: tab,
+            isSelected: pane.selectedTabId == tab.id,
+            isHovered: hoveredTabId == tab.id,
+            showsZoomIndicator: showsZoomIndicator,
+            appearance: appearance,
+            fillsWidth: tabFillsWidth,
+            saturation: tabBarSaturation,
+            trailingSeparatorBottomInset: isImmediatelyBeforeSelected
+                ? TabBarMetrics.selectedTabLeftSeparatorBottomInset
+                : 0,
+            controlShortcutDigit: tabControlShortcutDigit(for: index, tabCount: pane.tabs.count),
+            tabShortcutHintsEnabled: splitViewController.tabShortcutHintsEnabled,
+            isFocused: isFocused,
+            showsControlShortcutHint: showsControlShortcutHints,
+            shortcutModifierSymbol: controlKeyMonitor.shortcutModifierSymbol,
+            allowsClose: controller.configuration.allowCloseTabs,
+            middleClickCapture: controller.tabMiddleClickCapture,
+            allowsContextMenu: controller.configuration.allowsTabContextMenu,
+            contextMenuState: contextMenuState,
+            moveDestinationsProvider: {
+                controller.tabContextMoveDestinationsProvider?(TabID(id: tab.id), pane.id) ?? []
+            },
+            forkConversationAvailabilityProvider: {
+                controller.tabContextForkConversationAvailabilityProvider?(TabID(id: tab.id), pane.id) ?? .hidden
+            },
+            forkConversationAvailabilityRefreshHandler: {
+                await controller.tabContextForkConversationAvailabilityRefreshHandler?(
+                    TabID(id: tab.id),
+                    pane.id
+                )
+            },
+            onSelect: {
+                // Tab selection must be instant. Animating this transaction causes the pane
+                // content (often swapped via opacity) to crossfade, which is undesirable for
+                // terminal/browser surfaces.
+#if DEBUG
+                dlog("tab.select pane=\(pane.id.id.uuidString.prefix(5)) tab=\(tab.id.uuidString.prefix(5)) title=\"\(tab.title)\"")
+#endif
+                withTransaction(Transaction(animation: nil)) {
+                    pane.selectTab(tab.id)
+                    controller.focusPane(pane.id)
+                }
+            },
+            onClose: { source in
+                guard !tab.isPinned else { return }
+                // Close should be instant (no fade-out/removal animation).
+#if DEBUG
+                dlog("tab.close pane=\(pane.id.id.uuidString.prefix(5)) tab=\(tab.id.uuidString.prefix(5)) title=\"\(tab.title)\"")
+#endif
+                withTransaction(Transaction(animation: nil)) {
+                    controller.onTabCloseRequest?(TabID(id: tab.id), pane.id, source)
+                    _ = controller.closeTab(TabID(id: tab.id), inPane: pane.id)
+                }
+            },
+            onZoomToggle: {
+                _ = controller.requestTabZoomToggle(for: TabID(id: tab.id), inPane: pane.id)
+            },
+            onContextAction: { action in
+                controller.requestTabContextAction(action, for: TabID(id: tab.id), inPane: pane.id)
+            },
+            onMoveDestination: { destinationId in
+                controller.requestTabMove(toDestination: destinationId, for: TabID(id: tab.id), inPane: pane.id)
+            }
+        )
+        .background(
+            TabItemHitRegionView(
+                tabId: tab.id,
+                geometryRegistry: tabItemGeometryRegistry
+            )
+        )
+        .overlay(alignment: .leading) {
+            if dropTargetIndex == index {
+                dropIndicator
+                    .accessibilityIdentifier("paneTabBar.dropIndicator")
+                    .saturation(tabBarSaturation)
+            }
+        }
+    }
+
+    private func contextMenuState(for tab: TabItem, at index: Int) -> TabContextMenuState {
+        return TabContextMenuState(
+            tab: tab,
+            index: index,
+            pane: pane,
+            controller: controller,
+            splitViewController: splitViewController
+        )
+    }
+
+    private func tabControlShortcutDigit(for index: Int, tabCount: Int) -> Int? {
+        for digit in 1...9 {
+            if tabIndexForControlShortcutDigit(digit, tabCount: tabCount) == index {
+                return digit
+            }
+        }
+        return nil
+    }
+
+    private func tabIndexForControlShortcutDigit(_ digit: Int, tabCount: Int) -> Int? {
+        guard tabCount > 0, digit >= 1, digit <= 9 else { return nil }
+        if digit == 9 {
+            return tabCount - 1
+        }
+        let index = digit - 1
+        return index < tabCount ? index : nil
+    }
+
+    // MARK: - Drop Zone at End
+
+    @ViewBuilder
+    private var dropZoneAfterTabs: some View {
+        TabBarDragZoneView(
+            isMinimalMode: isMinimalMode,
+            isFocusedPane: isFocused,
+            onSingleClick: focusPaneFromTabBarChrome
+        ) {
+            performNewTerminalSplitButtonAction()
+        }
+        .frame(width: 30, height: tabBarHeight)
+        .overlay(alignment: .leading) {
+            if dropTargetIndex == pane.tabs.count {
+                dropIndicator
+                    .accessibilityIdentifier("paneTabBar.dropIndicator")
+                    .saturation(tabBarSaturation)
+            }
+        }
+    }
+
+    // MARK: - Drop Indicator
+
+    @ViewBuilder
+    private var dropIndicator: some View {
+        Capsule()
+            .fill(TabBarColors.dropIndicator(for: appearance))
+            .frame(width: TabBarMetrics.dropIndicatorWidth, height: TabBarMetrics.dropIndicatorHeight)
+            .offset(x: -1)
+    }
+
+    // MARK: - Split Buttons
+
+    @ViewBuilder
+    private var splitButtonChrome: some View {
+        if shouldRenderSplitButtons {
+            splitButtons
+                .frame(width: splitButtonsBackdropWidth, height: tabBarHeight, alignment: .trailing)
+                .mask {
+                    Rectangle()
+                        .frame(width: splitButtonsBackdropWidth, height: tabBarHeight)
+                }
+                .clipped()
+                .saturation(tabBarSaturation)
+                .opacity(shouldShowSplitButtons ? 1 : 0)
+                .allowsHitTesting(shouldShowSplitButtons)
+                .frame(height: tabBarHeight, alignment: .trailing)
+                .tabBarButtonAnimationsDisabled()
+        }
+    }
+
+    @ViewBuilder
+    private func overflowSplitButtonMenu(_ buttons: [BonsplitConfiguration.SplitActionButton]) -> some View {
+        Menu {
+            ForEach(buttons) { button in
+                Button {
+                    performSplitActionButton(button)
+                } label: {
+                    Text(splitActionButtonTooltip(button, tooltips: appearance.splitButtonTooltips))
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 13, weight: .regular))
+                .frame(width: TabBarStyling.splitActionButtonReservedWidth, height: tabBarHeight)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .frame(minWidth: TabBarStyling.splitActionButtonReservedWidth, minHeight: TabBarStyling.splitActionButtonReservedWidth)
+        .contentShape(Rectangle())
+        .accessibilityLabel(String(localized: "tabBar.moreActions", defaultValue: "More Tab Actions"))
+        .accessibilityHint(String(localized: "tabBar.moreActions", defaultValue: "More Tab Actions"))
+        .accessibilityIdentifier("paneTabBarControl.moreActions")
+    }
+
+    @ViewBuilder
+    private var splitButtonBackdropChrome: some View {
+        let snapshot = chromeSnapshot
+        if snapshot.drawsActionLaneSeparator {
+            GeometryReader { geometry in
+                ZStack(alignment: .topLeading) {
+                    if snapshot.paintsActionLaneSurface {
+                        splitButtonBackdropSurface(snapshot: snapshot, totalWidth: geometry.size.width)
+                    }
+                }
+                .frame(width: geometry.size.width, height: tabBarHeight, alignment: .topLeading)
+            }
+            .frame(height: tabBarHeight)
+        }
+    }
+
+    @ViewBuilder
+    private func splitButtonBackdropSurface(snapshot: TabBarChromeSnapshot, totalWidth: CGFloat) -> some View {
+        let geometry = snapshot.actionLaneGeometry
+        let fadeFrame = geometry.backgroundFadeFrame(totalWidth: totalWidth, height: tabBarHeight)
+        let solidFrame = geometry.backgroundSolidFrame(totalWidth: totalWidth, height: tabBarHeight)
+        ZStack(alignment: .topLeading) {
+            if fadeFrame.width > 0 {
+                splitButtonBackdropFadeSegment(snapshot: snapshot)
+                    .frame(width: fadeFrame.width, height: fadeFrame.height)
+                    .offset(x: fadeFrame.minX, y: fadeFrame.minY)
+            }
+            if solidFrame.width > 0 {
+                TabBarLayerBackedColor(color: snapshot.backdropTrailingColor)
+                    .frame(width: solidFrame.width, height: solidFrame.height)
+                    .offset(x: solidFrame.minX, y: solidFrame.minY)
+            }
+        }
+        .frame(width: totalWidth, height: tabBarHeight, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private func splitButtonBackdropFadeSegment(snapshot: TabBarChromeSnapshot) -> some View {
+        let rampStart = snapshot.backdropFadeRampStartFraction
+        LinearGradient(
+            stops: [
+                .init(color: Color(nsColor: snapshot.backdropLeadingColor), location: 0),
+                .init(color: Color(nsColor: snapshot.backdropLeadingColor), location: rampStart),
+                .init(color: Color(nsColor: snapshot.backdropTrailingColor), location: 1)
+            ],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
+    @ViewBuilder
+    private var splitButtons: some View {
+        let laneWidth = splitButtonsBackdropWidth
+        ZStack(alignment: .trailing) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                splitButtonRow
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(minWidth: laneWidth, alignment: .trailing)
+                    .background(SplitButtonLaneWidthReader())
+                    .background(
+                        GeometryReader { contentGeo in
+                            Color.clear
+                                .onChange(
+                                    of: contentGeo.frame(in: .named(splitButtonScrollCoordinateSpaceName))
+                                ) { _, newFrame in
+                                    updateSplitButtonScrollContent(frame: newFrame)
+                                }
+                                .onAppear {
+                                    updateSplitButtonScrollContent(
+                                        frame: contentGeo.frame(in: .named(splitButtonScrollCoordinateSpaceName))
+                                    )
+                                }
+                        }
+                    )
+            }
+            .coordinateSpace(name: splitButtonScrollCoordinateSpaceName)
+            .frame(width: laneWidth, height: tabBarHeight, alignment: .trailing)
+            .background(
+                GeometryReader { viewportGeo in
+                    Color.clear
+                        .onChange(of: viewportGeo.size.width) { _, newWidth in
+                            splitButtonViewportWidth = newWidth
+                        }
+                        .onAppear {
+                            splitButtonViewportWidth = viewportGeo.size.width
+                        }
+                }
+            )
+            .mask(
+                splitButtonScrollMask
+                    .frame(width: laneWidth, height: tabBarHeight)
+            )
+        }
+        .frame(width: laneWidth, height: tabBarHeight, alignment: .trailing)
+        .contentShape(Rectangle())
+        .compositingGroup()
+        .clipped()
+    }
+
+    @ViewBuilder
+    private var splitButtonScrollMask: some View {
+        let affordances = splitButtonScrollAffordances
+        let fadeWidth = TabBarStyling.splitButtonScrollFadeWidth
+        HStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: affordances.left ? fadeWidth : 0, height: tabBarHeight)
+            Rectangle().fill(Color.black)
+                .frame(height: tabBarHeight)
+            LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                .frame(width: affordances.right ? fadeWidth : 0, height: tabBarHeight)
+        }
+        .frame(height: tabBarHeight)
+    }
+
+    private func updateSplitButtonScrollContent(frame: CGRect) {
+        splitButtonScrollOffset = max(0, -frame.minX)
+        splitButtonContentWidth = frame.width
+    }
+
+    private func updateTabScrollContent(frame: CGRect) {
+        scrollOffset = -frame.minX
+        contentWidth = frame.width
+        tabContentWidthExcludingSplitButtonLane = max(0, frame.width - tabBarLayout.trailingTabContentInset)
+    }
+
+    @ViewBuilder
+    private var splitButtonRow: some View {
+        let tooltips = controller.configuration.appearance.splitButtonTooltips
+        // Groups: one "+" pull-down (new terminal / new browser), the split pair, then custom actions.
+        let hidden = hiddenSplitButtons
+        let buttons = visibleSplitButtons.filter { !hidden.contains($0) }
+        let newTabButtons = buttons.filter { $0.action == .newTerminal || $0.action == .newBrowser }
+        let splitButtons = buttons.filter { $0.action == .splitRight || $0.action == .splitDown }
+        let otherButtons = buttons.filter { button in
+            !newTabButtons.contains(button) && !splitButtons.contains(button)
+        }
+        let groupCount = [newTabButtons, splitButtons, otherButtons].filter { !$0.isEmpty }.count
+        HStack(spacing: TabBarStyling.splitButtonsSpacing) {
+            if !newTabButtons.isEmpty {
+                newTabPullDown(newTabButtons, tooltips: tooltips)
+                if groupCount > 1 && (!splitButtons.isEmpty || !otherButtons.isEmpty) { splitButtonDivider }
+            }
+            ForEach(splitButtons) { button in
+                splitActionButton(button, tooltips: tooltips)
+                    .accessibilityIdentifier(splitActionButtonAccessibilityIdentifier(button))
+                    .safeHelp(splitActionButtonTooltip(button, tooltips: tooltips))
+            }
+            if !splitButtons.isEmpty && !otherButtons.isEmpty { splitButtonDivider }
+            ForEach(otherButtons) { button in
+                splitActionButton(button, tooltips: tooltips)
+                    .accessibilityIdentifier(splitActionButtonAccessibilityIdentifier(button))
+                    .safeHelp(splitActionButtonTooltip(button, tooltips: tooltips))
+            }
+            if !hidden.isEmpty { overflowSplitButtonMenu(hidden) }
+        }
+        .padding(.leading, TabBarStyling.splitButtonsLeadingPadding)
+        .padding(.trailing, TabBarStyling.splitButtonsTrailingPadding)
+        .frame(height: tabBarHeight, alignment: .center)
+    }
+
+    private var splitButtonDivider: some View {
+        Rectangle()
+            .fill(TabBarColors.splitActionIcon(for: appearance, isPressed: false).opacity(0.25))
+            .frame(width: 1, height: 14)
+            .padding(.horizontal, 2)
+            .accessibilityHidden(true)
+    }
+
+    private func newTabPullDown(
+        _ buttons: [BonsplitConfiguration.SplitActionButton],
+        tooltips: BonsplitConfiguration.SplitButtonTooltips
+    ) -> some View {
+        Menu {
+            ForEach(buttons) { button in
+                Button {
+                    performSplitActionButton(button)
+                } label: {
+                    Text(splitActionButtonTooltip(button, tooltips: tooltips))
+                }
+            }
+        } label: {
+            splitActionButtonIcon(.systemImage("plus"))
+                .foregroundStyle(TabBarColors.splitActionIcon(for: appearance, isPressed: false))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .frame(minWidth: TabBarStyling.splitActionButtonReservedWidth, minHeight: TabBarStyling.splitActionButtonReservedWidth)
+        .frame(height: tabBarLayout.splitActionButtonHeight)
+        .contentShape(Rectangle())
+        .safeHelp(buttons.first.map { splitActionButtonTooltip($0, tooltips: tooltips) } ?? "")
+        .accessibilityIdentifier("paneTabBarControl.newTabMenu")
+        .accessibilityLabel(buttons.first.map { splitActionButtonTooltip($0, tooltips: tooltips) } ?? "")
+    }
+
+    @ViewBuilder
+    private func splitActionButton(
+        _ button: BonsplitConfiguration.SplitActionButton,
+        tooltips: BonsplitConfiguration.SplitButtonTooltips
+    ) -> some View {
+        if button.activatesOnMouseDown {
+            splitActionButtonIcon(button.icon)
+                .frame(minWidth: TabBarStyling.splitActionButtonReservedWidth, minHeight: TabBarStyling.splitActionButtonReservedWidth)
+                .frame(height: tabBarLayout.splitActionButtonHeight)
+                .contentShape(Rectangle())
+                .foregroundStyle(TabBarColors.splitActionIcon(for: appearance, isPressed: button.isActive))
+                .splitActionActiveBackground(button.isActive, appearance: appearance)
+                .tabBarButtonAnimationsDisabled()
+                .overlay(
+                    SplitActionMouseDownOverlay {
+                        performSplitActionButton(button)
+                    }
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(button.accessibilityName ?? splitActionButtonTooltip(button, tooltips: tooltips))
+                .accessibilityHint(splitActionButtonTooltip(button, tooltips: tooltips))
+                .accessibilityAddTraits(.isButton)
+        } else {
+            Button {
+                performSplitActionButton(button)
+            } label: {
+                // The label inside the content is what AppKit exposes as the button's AXDescription.
+                splitActionButtonIcon(button.icon)
+                    .accessibilityLabel(button.accessibilityName ?? splitActionButtonTooltip(button, tooltips: tooltips))
+            }
+            .buttonStyle(SplitActionButtonStyle(appearance: appearance, layout: tabBarLayout, isActive: button.isActive))
+            .accessibilityLabel(button.accessibilityName ?? splitActionButtonTooltip(button, tooltips: tooltips))
+            .accessibilityHint(splitActionButtonTooltip(button, tooltips: tooltips))
+            .accessibilityAddTraits(button.isActive ? .isSelected : [])
+        }
+    }
+
+    private func splitActionButtonAccessibilityIdentifier(_ button: BonsplitConfiguration.SplitActionButton) -> String {
+        switch button.action {
+        case .newTerminal:
+            return "paneTabBarControl.newTerminal"
+        case .newBrowser:
+            return "paneTabBarControl.newBrowser"
+        case .splitRight:
+            return "paneTabBarControl.splitRight"
+        case .splitDown:
+            return "paneTabBarControl.splitDown"
+        case .custom(let identifier):
+            return "paneTabBarControl.custom.\(identifier)"
+        }
+    }
+
+    /// Scale factor of the configured tab title font relative to the default,
+    /// so the trailing split / new-tab control icons grow and shrink together
+    /// with the tab title text instead of staying pinned at their default size.
+    private var controlIconFontScale: CGFloat {
+        max(0.1, appearance.tabTitleFontSize / TabBarMetrics.titleFontSize)
+    }
+
+    @ViewBuilder
+    private func splitActionButtonIcon(_ icon: BonsplitConfiguration.SplitActionButton.Icon) -> some View {
+        let scale = controlIconFontScale
+        switch icon {
+        case .systemImage(let name):
+            // Per-action glyph mapping (size/rotation) composed with the tab
+            // title font scale so action icons keep tracking the title size.
+            let image = TabBarStyling.splitActionSystemImage(for: name)
+            Image(systemName: image.name)
+                .font(.system(size: image.pointSize * scale))
+                .rotationEffect(.degrees(image.rotationDegrees))
+        case .emoji(let value, let emojiScale):
+            Text(value)
+                .font(.system(size: emojiIconFontSize(scale: emojiScale) * scale))
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+        case .imageData(let data):
+            if let image = splitActionButtonImage(from: data) {
+                Image(nsImage: image)
+                    .renderingMode(image.isTemplate ? .template : .original)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(width: 14 * scale, height: 14 * scale)
+            } else {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 12 * scale))
+            }
+        }
+    }
+
+    private func emojiIconFontSize(scale: Double) -> CGFloat {
+        let safeScale: CGFloat
+        if scale.isFinite, scale > 0 {
+            safeScale = CGFloat(scale)
+        } else {
+            safeScale = 1
+        }
+        return 13 * safeScale
+    }
+
+    private func splitActionButtonImage(from data: Data) -> NSImage? {
+        TabBarStyling.splitActionButtonImage(from: data)
+    }
+
+    private func splitActionButtonTooltip(
+        _ button: BonsplitConfiguration.SplitActionButton,
+        tooltips: BonsplitConfiguration.SplitButtonTooltips
+    ) -> String {
+        if let tooltip = button.tooltip?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !tooltip.isEmpty {
+            return tooltip
+        }
+
+        switch button.action {
+        case .newTerminal:
+            return tooltips.newTerminal
+        case .newBrowser:
+            return tooltips.newBrowser
+        case .splitRight:
+            return tooltips.splitRight
+        case .splitDown:
+            return tooltips.splitDown
+        case .custom(let identifier):
+            return identifier
+        }
+    }
+
+    private func performSplitActionButton(_ button: BonsplitConfiguration.SplitActionButton) {
+        guard splitViewController.isInteractive else { return }
+
+        switch button.action {
+        case .newTerminal:
+            controller.requestNewTab(kind: "terminal", inPane: pane.id)
+        case .newBrowser:
+            controller.requestNewTab(kind: "browser", inPane: pane.id)
+        case .splitRight:
+            // 120fps animation handled by SplitAnimator
+            controller.splitPane(pane.id, orientation: .horizontal)
+        case .splitDown:
+            // 120fps animation handled by SplitAnimator
+            controller.splitPane(pane.id, orientation: .vertical)
+        case .custom(let identifier):
+            controller.requestCustomAction(identifier, inPane: pane.id)
+        }
+    }
+
+    private func performNewTerminalSplitButtonAction() -> Bool {
+        guard splitViewController.isInteractive else { return false }
+        guard let button = visibleSplitButtons.first(where: { $0.action == .newTerminal }) else {
+            return false
+        }
+        performSplitActionButton(button)
+        return true
+    }
+
+
+    // MARK: - Combined Mask (scroll fades + button area)
+    //
+    // The split-button backdrop is responsible for occluding content under the controls.
+    // When enabled, tab content fades out before the backdrop ramp starts. This keeps the
+    // transparent start of the backdrop fade from blending over bright tab text/icons.
+
+    @ViewBuilder
+    private var combinedMask: some View {
+        let fadeWidth: CGFloat = 24
+        let snapshot = chromeSnapshot
+        HStack(spacing: 0) {
+            // Left scroll fade
+            LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: canScrollLeft ? fadeWidth : 0, height: tabBarHeight)
+
+            // Visible content area (always opaque so hit testing reaches the tabs)
+            Rectangle().fill(Color.black)
+                .frame(height: tabBarHeight)
+
+            if snapshot.masksTabContentUnderActionLane {
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: snapshot.contentFadeWidth, height: tabBarHeight)
+                // Action-lane content is always fully removed from the tab layer.
+                // Backdrop softness belongs to the foreground chrome snapshot, not the mask width.
+                Color.clear
+                    .frame(width: snapshot.contentOcclusionWidth, height: tabBarHeight)
+            } else {
+                // Right scroll fade only when scroll content actually overflows.
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: canScrollRight ? fadeWidth : 0, height: tabBarHeight)
+            }
+        }
+        .frame(height: tabBarHeight)
+    }
+
+    // MARK: - Chrome
+
+    @ViewBuilder
+    private var tabBarSurface: some View {
+        TabBarLayerBackedColor(color: chromeSnapshot.barColor)
+            .frame(maxWidth: .infinity)
+            .frame(height: tabBarHeight)
+    }
+
+}
+
+private struct TabBarLayerBackedColor: NSViewRepresentable {
+    let color: NSColor
+
+    func makeNSView(context _: Context) -> NSView {
+        let view = View()
+        view.setColor(color)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context _: Context) {
+        (nsView as? View)?.setColor(color)
+    }
+
+    private final class View: NSView {
+        override init(frame frameRect: NSRect) {
+            super.init(frame: frameRect)
+            setup()
+        }
+
+        required init?(coder: NSCoder) {
+            super.init(coder: coder)
+            setup()
+        }
+
+        override var isOpaque: Bool { false }
+
+        override func hitTest(_ point: NSPoint) -> NSView? {
+            nil
+        }
+
+        private func setup() {
+            wantsLayer = true
+            layer?.masksToBounds = true
+            layer?.isOpaque = false
+        }
+
+        func setColor(_ color: NSColor) {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            layer?.backgroundColor = color.cgColor
+            layer?.isOpaque = color.alphaComponent >= 1
+            CATransaction.commit()
+        }
+    }
+}
+
+/// Remembers ``TabBarStyling/splitActionSystemImage(for:)`` results by name.
+///
+/// Names come from host configuration, so the live set is a handful of entries
+/// and never turns over. The bound exists so a pathological host cannot grow
+/// this without limit.
+final class SplitActionSystemImageCache {
+    /// The instance the tab bar uses. Tests build their own so they never race
+    /// each other through shared state.
+    static let shared = SplitActionSystemImageCache()
+
+    private static let capacity = 256
+
+    private let lock = NSLock()
+    private var resolved: [String: TabBarStyling.SplitActionSystemImage] = [:]
+    private var resolutions = 0
+
+    init() {}
+
+    func image(for name: String) -> TabBarStyling.SplitActionSystemImage {
+        lock.lock()
+        if let hit = resolved[name] {
+            lock.unlock()
+            return hit
+        }
+        lock.unlock()
+
+        // Resolved outside the lock so a symbol lookup never blocks another
+        // caller. Two threads racing on the same name both resolve and agree.
+        let image = TabBarStyling.resolveSplitActionSystemImage(for: name)
+
+        lock.lock()
+        resolutions += 1
+        if resolved.count < Self.capacity {
+            resolved[name] = image
+        }
+        lock.unlock()
+        return image
+    }
+
+    /// How many times the uncached resolution has run. Tests only.
+    var resolutionCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return resolutions
+    }
+}
+
+private final class SplitActionButtonImageCache {
+    static let shared = SplitActionButtonImageCache()
+
+    private let images = NSCache<NSData, NSImage>()
+    private let invalidImageData = NSCache<NSData, NSNumber>()
+
+    private init() {
+        images.countLimit = 128
+        images.totalCostLimit = 8 * 1024 * 1024
+        invalidImageData.countLimit = 256
+        invalidImageData.totalCostLimit = 512 * 1024
+    }
+
+    func image(for data: Data) -> NSImage? {
+        let key = data as NSData
+        if let image = images.object(forKey: key) {
+            return image
+        }
+        if invalidImageData.object(forKey: key) != nil {
+            return nil
+        }
+
+        guard let image = NSImage(data: data) else {
+            invalidImageData.setObject(
+                NSNumber(value: true),
+                forKey: key,
+                cost: max(1, min(data.count, 1024))
+            )
+            return nil
+        }
+        image.isTemplate = TabBarStyling.imageDataShouldRenderAsTemplate(data)
+
+        images.setObject(image, forKey: key, cost: max(1, data.count))
+        return image
+    }
+}
+
+private struct SplitActionButtonStyle: ButtonStyle {
+    let appearance: BonsplitConfiguration.Appearance
+    let layout: TabBarLayout
+    var isActive = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(minWidth: TabBarStyling.splitActionButtonReservedWidth, minHeight: TabBarStyling.splitActionButtonReservedWidth)
+            .frame(height: layout.splitActionButtonHeight)
+            .contentShape(Rectangle())
+            .foregroundStyle(TabBarColors.splitActionIcon(for: appearance, isPressed: configuration.isPressed || isActive))
+            .splitActionActiveBackground(isActive, appearance: appearance)
+            .opacity(configuration.isPressed ? 0.72 : 1.0)
+            .tabBarButtonAnimationsDisabled()
+    }
+}
+
+private extension View {
+    /// Hover fill for every action button, and a soft pill plus a 2 pt accent
+    /// bar under a toggle whose panel is open, so "on" is not only an icon tint.
+    func splitActionActiveBackground(_ isActive: Bool, appearance: BonsplitConfiguration.Appearance) -> some View {
+        modifier(SplitActionChromeModifier(isActive: isActive, appearance: appearance))
+    }
+}
+
+private struct SplitActionChromeModifier: ViewModifier {
+    let isActive: Bool
+    let appearance: BonsplitConfiguration.Appearance
+    @State private var isHovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                // 4 mirrors BreeMetrics.radiusSmall (bonsplit cannot import CmuxFoundation).
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(TabBarColors.splitActionFill(for: appearance, isActive: isActive, isHovering: isHovering))
+                    .padding(.horizontal, -1)
+            )
+            .overlay(alignment: .bottom) {
+                // The accent bar is the 3:1 non-text indicator (system accent
+                // on the bar: about 4.6:1 dark, 4.0:1 light).
+                Capsule()
+                    .fill(appearance.palette.map { Color(nsColor: $0.activeIndicator.nsColor) } ?? Color(nsColor: .controlAccentColor))
+                    .frame(width: 14, height: 2)
+                    .padding(.bottom, 2)
+                    .opacity(isActive ? 1 : 0)
+            }
+            .onHover { isHovering = $0 }
+    }
+}
+
+private struct SplitActionMouseDownOverlay: NSViewRepresentable {
+    let onMouseDown: () -> Void
+
+    func makeNSView(context: Context) -> SplitActionMouseDownNSView {
+        let view = SplitActionMouseDownNSView()
+        view.onMouseDown = onMouseDown
+        return view
+    }
+
+    func updateNSView(_ nsView: SplitActionMouseDownNSView, context: Context) {
+        nsView.onMouseDown = onMouseDown
+    }
+}
+
+private final class SplitActionMouseDownNSView: NSView {
+    var onMouseDown: (() -> Void)?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        onMouseDown?()
+    }
+}
+
+/// Resolves which tab the pointer is over from the strip's registered tab
+/// frames. Pure so the stationary-pointer cases are unit testable.
+struct TabBarHoveredTabResolver {
+    func hoveredTabId(
+        pointInView: NSPoint?,
+        barBounds: CGRect,
+        tabIds: [UUID],
+        frames: [UUID: CGRect],
+        trailingObscuredWidth: CGFloat = 0
+    ) -> UUID? {
+        guard let pointInView, barBounds.insetBy(dx: -1, dy: -1).contains(pointInView) else {
+            return nil
+        }
+        // Tabs scrolled under the trailing action lane are masked out; the
+        // pointer there is over the split buttons, not a tab.
+        guard pointInView.x < barBounds.maxX - trailingObscuredWidth else { return nil }
+        return tabIds.first { frames[$0]?.contains(pointInView) == true }
+    }
+}
+
+private struct TabBarHoverTrackingView: NSViewRepresentable {
+    let geometryRegistry: TabBarItemGeometryRegistry
+    let tabIds: [UUID]
+    let isDraggingTab: Bool
+    let onHoverChanged: (Bool) -> Void
+    let onHoveredTabChanged: (UUID?) -> Void
+
+    func makeNSView(context: Context) -> HoverNSView {
+        let view = HoverNSView()
+        update(view)
+        return view
+    }
+
+    func updateNSView(_ nsView: HoverNSView, context: Context) {
+        update(nsView)
+    }
+
+    static func dismantleNSView(_ nsView: HoverNSView, coordinator: ()) {
+        nsView.geometryRegistry?.unregisterObserver(nsView)
+    }
+
+    private func update(_ view: HoverNSView) {
+        view.onHoverChanged = onHoverChanged
+        view.onHoveredTabChanged = onHoveredTabChanged
+        if view.geometryRegistry !== geometryRegistry {
+            view.geometryRegistry?.unregisterObserver(view)
+            view.geometryRegistry = geometryRegistry
+            geometryRegistry.registerObserver(view)
+        }
+        view.tabIds = tabIds
+        view.isDraggingTab = isDraggingTab
+    }
+
+    final class HoverNSView: NSView, TabBarItemGeometryObserving {
+        var onHoverChanged: ((Bool) -> Void)?
+        var onHoveredTabChanged: ((UUID?) -> Void)?
+        weak var geometryRegistry: TabBarItemGeometryRegistry?
+        var tabIds: [UUID] = [] {
+            didSet {
+                guard tabIds != oldValue else { return }
+                schedulePointerRecheck()
+            }
+        }
+        private var trackingArea: NSTrackingArea?
+        private var localMouseMonitor: Any?
+        private var isHovering = false
+        private var hoveredTabId: UUID?
+        private var pointerRecheckScheduled = false
+        /// A tab drag gets no move events here, but its autoscroll still
+        /// changes geometry; resolving hover then would reveal the close
+        /// button on the drop target under the drag.
+        var isDraggingTab = false {
+            didSet {
+                guard isDraggingTab != oldValue else { return }
+                schedulePointerRecheck()
+            }
+        }
+
+        deinit {
+            removeLocalMouseMonitor()
+        }
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let window {
+                window.acceptsMouseMovedEvents = true
+                installLocalMouseMonitorIfNeeded()
+                schedulePointerRecheck()
+            } else {
+                removeLocalMouseMonitor()
+                emitHover(pointInView: nil)
+            }
+        }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let trackingArea {
+                removeTrackingArea(trackingArea)
+            }
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .mouseMoved, .activeInActiveApp, .inVisibleRect],
+                owner: self
+            )
+            addTrackingArea(area)
+            trackingArea = area
+        }
+
+        override func mouseEntered(with event: NSEvent) {
+            updateHover(from: event)
+        }
+
+        override func mouseExited(with event: NSEvent) {
+            updateHover(from: event)
+        }
+
+        override func mouseMoved(with event: NSEvent) {
+            updateHover(from: event)
+        }
+
+        /// Tabs were added, removed, resized, or scrolled: the pointer may now
+        /// sit over a different tab without having moved.
+        func tabBarItemGeometryDidChange() {
+            schedulePointerRecheck()
+        }
+
+        /// Tab-set and geometry changes arrive inside SwiftUI view updates
+        /// (updateNSView, hit-region registration), where publishing hover
+        /// would modify TabBarView state mid-update. Coalesce them into one
+        /// recheck on the next main-queue turn, resolved against the state at
+        /// that time so a superseded change never publishes.
+        private func schedulePointerRecheck() {
+            guard !pointerRecheckScheduled else { return }
+            pointerRecheckScheduled = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.pointerRecheckScheduled = false
+                self.updateHoverFromCurrentMouseLocation()
+            }
+        }
+
+        private func installLocalMouseMonitorIfNeeded() {
+            guard localMouseMonitor == nil else { return }
+            localMouseMonitor = NSEvent.addLocalMonitorForEvents(
+                matching: [.mouseMoved, .mouseEntered, .mouseExited, .leftMouseDown, .leftMouseDragged]
+            ) { [weak self] event in
+                self?.updateHover(from: event)
+                return event
+            }
+        }
+
+        private func removeLocalMouseMonitor() {
+            if let localMouseMonitor {
+                NSEvent.removeMonitor(localMouseMonitor)
+                self.localMouseMonitor = nil
+            }
+        }
+
+        private func updateHover(from event: NSEvent) {
+            guard let window else {
+                emitHover(pointInView: nil)
+                return
+            }
+            guard event.window == nil || event.window === window else {
+                emitHover(pointInView: nil)
+                return
+            }
+
+            let pointInWindow = event.window === window
+                ? event.locationInWindow
+                : window.mouseLocationOutsideOfEventStream
+            emitHover(pointInView: convert(pointInWindow, from: nil))
+        }
+
+        private func updateHoverFromCurrentMouseLocation() {
+            guard let window,
+                  NSWindow.windowNumber(at: NSEvent.mouseLocation, belowWindowWithWindowNumber: 0)
+                    == window.windowNumber else {
+                emitHover(pointInView: nil)
+                return
+            }
+            emitHover(pointInView: convert(window.mouseLocationOutsideOfEventStream, from: nil))
+        }
+
+        private func emitHover(pointInView: NSPoint?) {
+            let hovering = pointInView.map { bounds.insetBy(dx: -1, dy: -1).contains($0) } ?? false
+            if isHovering != hovering {
+                isHovering = hovering
+                onHoverChanged?(hovering)
+            }
+            let tabId: UUID?
+            if isDraggingTab {
+                tabId = nil
+            } else {
+                tabId = TabBarHoveredTabResolver().hoveredTabId(
+                    pointInView: pointInView,
+                    barBounds: bounds,
+                    tabIds: tabIds,
+                    frames: geometryRegistry?.visibleFrames(for: tabIds, in: self) ?? [:],
+                    trailingObscuredWidth: geometryRegistry?.trailingObscuredWidth ?? 0
+                )
+            }
+            if hoveredTabId != tabId {
+                hoveredTabId = tabId
+                onHoveredTabChanged?(tabId)
+            }
+        }
+    }
+}
+
+/// Background view that provides window dragging from empty space, hover
+/// tracking, and one geometry-routed tab-drag source monitor. The monitor does
+/// not replace normal click dispatch; it starts an AppKit session when a drag
+/// crosses the reorder threshold and forwards that event so SwiftUI can cancel
+/// the pending tab press.
+struct TabBarDragAndHoverView: NSViewRepresentable {
+    typealias BeginTabDrag = @MainActor (
+        _ tabId: UUID,
+        _ sourceView: NSView,
+        _ dragEvent: NSEvent,
+        _ draggingFrame: NSRect,
+        _ dragImage: NSImage
+    ) -> Bool
+
+    let isMinimalMode: Bool
+    let geometryRegistry: TabBarItemGeometryRegistry
+    let pane: PaneState
+    let onBeginTabDrag: BeginTabDrag
+    let onDoubleClick: () -> Bool
+    let onHoverChanged: (Bool) -> Void
+
+    func makeNSView(context: Context) -> TabBarBackgroundNSView {
+        let view = TabBarBackgroundNSView()
+        view.isMinimalMode = isMinimalMode
+        view.geometryRegistry = geometryRegistry
+        view.pane = pane
+        view.onBeginTabDrag = onBeginTabDrag
+        view.onDoubleClick = onDoubleClick
+        view.onHoverChanged = onHoverChanged
+        return view
+    }
+
+    func updateNSView(_ nsView: TabBarBackgroundNSView, context: Context) {
+        nsView.isMinimalMode = isMinimalMode
+        nsView.geometryRegistry = geometryRegistry
+        nsView.pane = pane
+        nsView.onBeginTabDrag = onBeginTabDrag
+        nsView.onDoubleClick = onDoubleClick
+        nsView.onHoverChanged = onHoverChanged
+    }
+
+    final class TabBarBackgroundNSView: NSView, BonsplitTabItemHitRegionProviding {
+        private struct PendingTabDrag {
+            let tabId: UUID
+            let startPoint: NSPoint
+            let frame: NSRect
+        }
+
+        private enum TabItemFrameSource {
+            case registry
+            case laidOut
+        }
+
+        var isMinimalMode = false
+        /// The pane whose tabs this strip renders. Presses resolve tab
+        /// membership from this live model, never from an id list pushed
+        /// through SwiftUI, which can trail the model by a commit.
+        weak var pane: PaneState?
+        weak var geometryRegistry: TabBarItemGeometryRegistry?
+        var onBeginTabDrag: BeginTabDrag?
+        var onDoubleClick: (() -> Bool)?
+        var onHoverChanged: ((Bool) -> Void)?
+        private var hoverTrackingArea: NSTrackingArea?
+        private var windowDidBecomeKeyObserver: NSObjectProtocol?
+        private var windowDidResignKeyObserver: NSObjectProtocol?
+        private var localMouseMonitor: Any?
+        private var isHovering = false
+        private var pendingTabDrag: PendingTabDrag?
+        private let tabDragThresholdSquared: CGFloat = 16
+
+        override var mouseDownCanMoveWindow: Bool { false }
+
+        deinit {
+            removeLocalMouseMonitor()
+            removeWindowObservers()
+            BonsplitTabBarHitRegionRegistry.unregister(self)
+            BonsplitTabItemHitRegionRegistry.unregister(self)
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            BonsplitTabBarHitRegionRegistry.unregister(self)
+            BonsplitTabItemHitRegionRegistry.unregister(self)
+            removeWindowObservers()
+            if let window {
+                window.acceptsMouseMovedEvents = true
+                BonsplitTabBarHitRegionRegistry.register(self)
+                BonsplitTabItemHitRegionRegistry.register(self)
+                installWindowObservers()
+                installLocalMouseMonitorIfNeeded()
+                syncHoverStateToCurrentMouseLocation()
+            } else {
+                removeLocalMouseMonitor()
+                pendingTabDrag = nil
+                emitHoverChanged(false)
+            }
+        }
+
+        override func viewDidMoveToSuperview() {
+            super.viewDidMoveToSuperview()
+            if superview == nil {
+                BonsplitTabBarHitRegionRegistry.unregister(self)
+                BonsplitTabItemHitRegionRegistry.unregister(self)
+            } else if window != nil {
+                BonsplitTabBarHitRegionRegistry.register(self)
+                BonsplitTabItemHitRegionRegistry.register(self)
+            }
+        }
+
+        nonisolated func containsBonsplitTabItemHit(localPoint: NSPoint) -> Bool {
+            MainActor.assumeIsolated {
+                BonsplitTabItemHitTesting.containsTabLaneHit(
+                    localPoint: localPoint,
+                    tabFrames: tabItemFrames(for: liveTabIds).values.map { $0 },
+                    bounds: bounds
+                )
+            }
+        }
+
+        private var liveTabIds: [UUID] {
+            pane?.tabs.map(\.id) ?? []
+        }
+
+        /// Frames for `tabIds` in local coordinates: the geometry registry
+        /// where it has caught up, otherwise the tab item views AppKit has
+        /// laid out in this window. Only tabs the pane owns are consulted, so
+        /// another strip's laid-out views never answer for this one.
+        private func tabItemFrames(for tabIds: [UUID]) -> [UUID: CGRect] {
+            var frames = geometryRegistry?.frames(for: tabIds, in: self) ?? [:]
+            guard frames.count < tabIds.count else { return frames }
+            let missing = tabIds.filter { frames[$0] == nil }
+            let laidOut = BonsplitTabItemHitRegionRegistry.laidOutFrames(for: missing, in: self)
+            frames.merge(laidOut) { registered, _ in registered }
+            return frames
+        }
+
+        /// The tab under `point`, in the pane's tab order, with the source that
+        /// supplied its frame.
+        private func resolveTabItem(
+            at point: NSPoint
+        ) -> (tabId: UUID, frame: CGRect, source: TabItemFrameSource)? {
+            let tabIds = liveTabIds
+            guard !tabIds.isEmpty else { return nil }
+            let registered = geometryRegistry?.frames(for: tabIds, in: self) ?? [:]
+            if let tabId = tabIds.first(where: { registered[$0]?.contains(point) == true }),
+               let frame = registered[tabId] {
+                return (tabId, frame, .registry)
+            }
+            let laidOut = BonsplitTabItemHitRegionRegistry.laidOutFrames(
+                for: tabIds.filter { registered[$0] == nil },
+                in: self
+            )
+            if let tabId = tabIds.first(where: { laidOut[$0]?.contains(point) == true }),
+               let frame = laidOut[tabId] {
+                return (tabId, frame, .laidOut)
+            }
+            return nil
+        }
+
+        private func tabItemFrame(for tabId: UUID) -> CGRect? {
+            if let frame = geometryRegistry?.frame(for: tabId, in: self) {
+                return frame
+            }
+            return BonsplitTabItemHitRegionRegistry.laidOutFrames(for: [tabId], in: self)[tabId]
+        }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let existing = hoverTrackingArea {
+                removeTrackingArea(existing)
+            }
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.mouseEnteredAndExited, .mouseMoved, .activeInActiveApp, .inVisibleRect],
+                owner: self
+            )
+            addTrackingArea(area)
+            hoverTrackingArea = area
+        }
+
+        override func mouseEntered(with event: NSEvent) {
+            emitHoverChanged(true)
+        }
+
+        override func mouseExited(with event: NSEvent) {
+            emitHoverChanged(false)
+        }
+
+        override func mouseMoved(with event: NSEvent) {
+            updateHover(from: event)
+        }
+
+        override func mouseDown(with event: NSEvent) {
+#if DEBUG
+            dlog("tab.bar.bg.mouseDown isMinimal=\(isMinimalMode ? 1 : 0) clickCount=\(event.clickCount)")
+#endif
+            guard let window else {
+                super.mouseDown(with: event)
+                return
+            }
+            if containsBonsplitTabItemHit(localPoint: convert(event.locationInWindow, from: nil)) {
+#if DEBUG
+                dlog("tab.bar.bg.mouseDown skipped reason=tabItem")
+#endif
+                super.mouseDown(with: event)
+                return
+            }
+            if event.clickCount >= 2 {
+                if isMinimalMode {
+                    let action = UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?["AppleActionOnDoubleClick"] as? String
+                    switch action {
+                    case "Minimize": window.miniaturize(nil)
+                    default: window.zoom(nil)
+                    }
+                    return
+                }
+                if onDoubleClick?() == true {
+                    return
+                }
+            }
+            guard isMinimalMode else {
+                super.mouseDown(with: event)
+                return
+            }
+            let wasMovable = window.isMovable
+            window.isMovable = true
+            window.performDrag(with: event)
+            window.isMovable = wasMovable
+        }
+
+        func syncHoverStateToCurrentMouseLocation() {
+            guard let window else {
+                emitHoverChanged(false)
+                return
+            }
+            let point = convert(window.mouseLocationOutsideOfEventStream, from: nil)
+            emitHoverChanged(bounds.contains(point))
+        }
+
+        private func installLocalMouseMonitorIfNeeded() {
+            guard localMouseMonitor == nil else { return }
+            localMouseMonitor = NSEvent.addLocalMonitorForEvents(
+                matching: [
+                    .mouseMoved,
+                    .mouseEntered,
+                    .mouseExited,
+                    .leftMouseDown,
+                    .leftMouseDragged,
+                    .leftMouseUp,
+                ]
+            ) { [weak self] event in
+                guard let self else { return event }
+                updateHover(from: event)
+                return handleTabDragEvent(event)
+            }
+        }
+
+        private func removeLocalMouseMonitor() {
+            if let localMouseMonitor {
+                NSEvent.removeMonitor(localMouseMonitor)
+                self.localMouseMonitor = nil
+            }
+            pendingTabDrag = nil
+        }
+
+        func handleTabDragEvent(_ event: NSEvent) -> NSEvent? {
+            switch event.type {
+            case .leftMouseDown:
+                trackTabMouseDown(event)
+                return event
+            case .leftMouseDragged:
+                return handleTabMouseDragged(event)
+            case .leftMouseUp:
+                pendingTabDrag = nil
+                return event
+            default:
+                return event
+            }
+        }
+
+        private func trackTabMouseDown(_ event: NSEvent) {
+            pendingTabDrag = nil
+            // Accept any clickCount: AppKit keeps counting presses that land
+            // near the same point inside the double-click interval, so the
+            // common "click to select, then drag" flow arrives as clickCount 2.
+            // A stationary double-click is unaffected because the drag only
+            // begins once the pointer crosses the movement threshold.
+            guard !event.modifierFlags.contains(.control),
+                  let window,
+                  event.windowNumber == window.windowNumber else {
+                return
+            }
+            let point = convert(event.locationInWindow, from: nil)
+            guard bounds.contains(point) else { return }
+            guard !isNativeInteraction(at: event.locationInWindow, in: window) else {
+#if DEBUG
+                logArmMiss(reason: "nativeInteraction", point: point)
+                logNativeInteractionChain(at: event.locationInWindow, in: window, event: event)
+#endif
+                return
+            }
+            guard let tabItem = resolveTabItem(at: point) else {
+#if DEBUG
+                logArmMiss(reason: "noTabAtPoint", point: point)
+#endif
+                return
+            }
+#if DEBUG
+            if tabItem.source == .laidOut {
+                dlog(
+                    "tab.drag.arm registryLag tab=\(tabItem.tabId.uuidString.prefix(5)) " +
+                    "point=\(point.x.rounded()),\(point.y.rounded())"
+                )
+            }
+#endif
+            pendingTabDrag = PendingTabDrag(
+                tabId: tabItem.tabId,
+                startPoint: point,
+                frame: tabItem.frame
+            )
+        }
+
+#if DEBUG
+        /// Records the exact AppKit answer behind a native-interaction veto:
+        /// the hit view under the press, every ancestor up to the root with
+        /// its window-space frame, and the event context, so a veto can be
+        /// attributed from the debug log alone.
+        private func logNativeInteractionChain(at windowPoint: NSPoint, in window: NSWindow, event: NSEvent) {
+            guard let contentView = window.contentView else { return }
+            let currentType = NSApp.currentEvent.map { String(describing: $0.type) } ?? "nil"
+            let contentFrame = contentView.frame
+            let contentBounds = contentView.bounds
+            let themeFlipped = contentView.superview?.isFlipped ?? false
+            dlog(
+                "tab.drag.arm.veto context event=\(String(describing: event.type)) current=\(currentType) " +
+                "windowPoint=\(windowPoint.x.rounded()),\(windowPoint.y.rounded()) " +
+                "contentFrame=\(contentFrame.origin.x.rounded()),\(contentFrame.origin.y.rounded()),\(contentFrame.width.rounded()),\(contentFrame.height.rounded()) " +
+                "contentBounds=\(contentBounds.origin.x.rounded()),\(contentBounds.origin.y.rounded()) " +
+                "contentFlipped=\(contentView.isFlipped) themeFlipped=\(themeFlipped)"
+            )
+            var candidate = Self.hitTest(windowPoint: windowPoint, in: contentView)
+            var depth = 0
+            while let view = candidate, depth < 12 {
+                let frame = view.convert(view.bounds, to: nil)
+                var flags: [String] = []
+                if let control = view as? NSControl {
+                    flags.append("control enabled=\(control.isEnabled) target=\(control.target != nil) action=\(control.action != nil)")
+                }
+                if let textView = view as? NSTextView {
+                    flags.append("textView editable=\(textView.isEditable) firstResponder=\(window.firstResponder === textView)")
+                }
+                if let textField = view as? NSTextField {
+                    flags.append("textField editable=\(textField.isEditable)")
+                }
+                dlog(
+                    "tab.drag.arm.veto chain[\(depth)] \(NSStringFromClass(type(of: view))) " +
+                    "frame=\(frame.origin.x.rounded()),\(frame.origin.y.rounded()),\(frame.width.rounded()),\(frame.height.rounded()) " +
+                    "hidden=\(view.isHiddenOrHasHiddenAncestor) \(flags.joined(separator: " "))"
+                )
+                candidate = view.superview
+                depth += 1
+            }
+        }
+
+        /// Records why a press inside the strip did not arm a tab drag, with
+        /// the model and geometry counts needed to attribute the miss.
+        private func logArmMiss(reason: String, point: NSPoint) {
+            let tabIds = liveTabIds
+            let registered = geometryRegistry?.frames(for: tabIds, in: self).count ?? 0
+            let laidOut = BonsplitTabItemHitRegionRegistry.laidOutFrames(for: tabIds, in: self).count
+            dlog(
+                "tab.drag.arm.miss reason=\(reason) tabs=\(tabIds.count) registered=\(registered) " +
+                "laidOut=\(laidOut) point=\(point.x.rounded()),\(point.y.rounded())"
+            )
+        }
+#endif
+
+        private func handleTabMouseDragged(_ event: NSEvent) -> NSEvent? {
+            guard let pendingTabDrag,
+                  let window,
+                  event.windowNumber == window.windowNumber else {
+                self.pendingTabDrag = nil
+                return event
+            }
+            let point = convert(event.locationInWindow, from: nil)
+            let deltaX = point.x - pendingTabDrag.startPoint.x
+            let deltaY = point.y - pendingTabDrag.startPoint.y
+            guard (deltaX * deltaX) + (deltaY * deltaY) >= tabDragThresholdSquared else {
+                return event
+            }
+            self.pendingTabDrag = nil
+
+            // Focus/hover can reveal an accessory or scroll the strip between
+            // the press and the threshold event. Refresh the source frame so
+            // AppKit's item and the destination's geometry snapshot agree at
+            // the moment the session starts.
+            let draggingFrame = tabItemFrame(for: pendingTabDrag.tabId) ?? pendingTabDrag.frame
+            guard let dragImage = dragImage(for: draggingFrame),
+                  let onBeginTabDrag else {
+#if DEBUG
+                dlog(
+                    "tab.drag.begin.miss reason=\(onBeginTabDrag == nil ? "noHandler" : "dragImage") " +
+                    "tab=\(pendingTabDrag.tabId.uuidString.prefix(5))"
+                )
+#endif
+                return event
+            }
+            if !onBeginTabDrag(
+                pendingTabDrag.tabId,
+                self,
+                event,
+                draggingFrame,
+                dragImage
+            ) {
+#if DEBUG
+                dlog("tab.drag.begin.miss reason=controller tab=\(pendingTabDrag.tabId.uuidString.prefix(5))")
+#endif
+            }
+            // SwiftUI already received the mouse-down. Forward the threshold-
+            // crossing move so its pending tap/press fails before AppKit owns
+            // the native drag session and terminal mouse-up.
+            return event
+        }
+
+        private func dragImage(for frame: NSRect) -> NSImage? {
+            guard frame.width > 0,
+                  frame.height > 0,
+                  let contentView = window?.contentView else {
+                return nil
+            }
+            let contentFrame = convert(frame, to: contentView)
+            guard let representation = contentView.bitmapImageRepForCachingDisplay(in: contentFrame) else {
+                return nil
+            }
+            contentView.cacheDisplay(in: contentFrame, to: representation)
+            let image = NSImage(size: frame.size)
+            image.addRepresentation(representation)
+            return image
+        }
+
+        /// Returns whether the pointer is over a native control that owns its
+        /// own gesture. SwiftUI renders static tab titles through AppKit text
+        /// controls too; treating every ``NSControl`` as interactive therefore
+        /// made drag arming depend on title width and renderer details. Only
+        /// controls that can actually consume the press veto the tab source,
+        /// and only when the press is inside that control and the control
+        /// sits in this strip. A host window's hit-test can answer a view the
+        /// pointer is not in (cmux resolved the focused file editor for presses
+        /// on the pane tab strip); such a view owns nothing about the press.
+        private func isNativeInteraction(
+            at windowPoint: NSPoint,
+            in window: NSWindow
+        ) -> Bool {
+            guard let contentView = window.contentView,
+                  var candidate = Self.hitTest(windowPoint: windowPoint, in: contentView) else {
+                return false
+            }
+            let stripFrame = convert(bounds, to: nil)
+            while true {
+                if Self.canConsumePress(candidate) {
+                    let frame = candidate.convert(candidate.bounds, to: nil)
+                    return frame.contains(windowPoint) && frame.intersects(stripFrame)
+                }
+                guard let parent = candidate.superview else { return false }
+                candidate = parent
+            }
+        }
+
+        /// `NSView.hitTest(_:)` takes a point in the receiver's superview
+        /// coordinate space. A host's content view can be flipped while its
+        /// window frame is not (cmux's main window hosts SwiftUI directly), so
+        /// a point converted into the content view itself is mirrored
+        /// vertically when handed to `hitTest`, and a press on the strip at
+        /// the top of the window is answered by whatever sits at the bottom.
+        private static func hitTest(windowPoint: NSPoint, in view: NSView) -> NSView? {
+            let reference = view.superview ?? view
+            return view.hitTest(reference.convert(windowPoint, from: nil))
+        }
+
+        private static func canConsumePress(_ view: NSView) -> Bool {
+            if let button = view as? NSButton, button.isEnabled {
+                return true
+            }
+            if let textField = view as? NSTextField, textField.isEditable {
+                return true
+            }
+            if let textView = view as? NSTextView, textView.isEditable {
+                return true
+            }
+            if let control = view as? NSControl,
+               control.isEnabled,
+               control.target != nil,
+               control.action != nil {
+                return true
+            }
+            return false
+        }
+
+        private func updateHover(from event: NSEvent) {
+            guard let window else {
+                emitHoverChanged(false)
+                return
+            }
+            guard event.window == nil || event.window === window else {
+                emitHoverChanged(false)
+                return
+            }
+
+            let pointInWindow = event.window === window
+                ? event.locationInWindow
+                : window.mouseLocationOutsideOfEventStream
+            let pointInView = convert(pointInWindow, from: nil)
+            emitHoverChanged(bounds.insetBy(dx: -1, dy: -1).contains(pointInView))
+        }
+
+        private func emitHoverChanged(_ newValue: Bool) {
+            guard isHovering != newValue else { return }
+            isHovering = newValue
+            onHoverChanged?(newValue)
+        }
+
+        private func installWindowObservers() {
+            guard let window else { return }
+            windowDidBecomeKeyObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didBecomeKeyNotification,
+                object: window,
+                queue: .main
+            ) { [weak self] _ in
+                self?.syncHoverStateToCurrentMouseLocation()
+            }
+            windowDidResignKeyObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didResignKeyNotification,
+                object: window,
+                queue: .main
+            ) { [weak self] _ in
+                self?.syncHoverStateToCurrentMouseLocation()
+            }
+        }
+
+        private func removeWindowObservers() {
+            if let windowDidBecomeKeyObserver {
+                NotificationCenter.default.removeObserver(windowDidBecomeKeyObserver)
+                self.windowDidBecomeKeyObserver = nil
+            }
+            if let windowDidResignKeyObserver {
+                NotificationCenter.default.removeObserver(windowDidResignKeyObserver)
+                self.windowDidResignKeyObserver = nil
+            }
+        }
+    }
+}
+
+struct TabBarDragZoneView: NSViewRepresentable {
+    enum HitRegion {
+        case entireBounds
+        case trailingEmptyChrome(tabFrames: [CGRect], reservedTrailingWidth: CGFloat)
+        case registeredTrailingEmptyChrome(
+            geometryRegistry: TabBarItemGeometryRegistry,
+            tabIds: [UUID],
+            reservedTrailingWidth: CGFloat
+        )
+    }
+
+    var hitRegion: HitRegion = .entireBounds
+    let isMinimalMode: Bool
+    let isFocusedPane: Bool
+    let onSingleClick: () -> Bool
+    let onDoubleClick: () -> Bool
+
+    func makeNSView(context: Context) -> DragNSView {
+        let view = DragNSView()
+        view.hitRegion = hitRegion
+        view.isMinimalMode = isMinimalMode
+        view.isFocusedPane = isFocusedPane
+        view.onSingleClick = onSingleClick
+        view.onDoubleClick = onDoubleClick
+        view.wantsLayer = true
+        view.layer?.backgroundColor = NSColor.clear.cgColor
+        return view
+    }
+
+    func updateNSView(_ nsView: DragNSView, context: Context) {
+        nsView.hitRegion = hitRegion
+        nsView.isMinimalMode = isMinimalMode
+        nsView.isFocusedPane = isFocusedPane
+        nsView.onSingleClick = onSingleClick
+        nsView.onDoubleClick = onDoubleClick
+    }
+
+    final class DragNSView: NSView, TabBarItemGeometryObserving {
+        var hitRegion = HitRegion.entireBounds {
+            didSet {
+                unregisterGeometryObserver(from: oldValue)
+                registerGeometryObserver(from: hitRegion)
+                invalidateWindowDragCursorRects()
+            }
+        }
+        var hitTestEventTypeOverride: NSEvent.EventType?
+        var isMinimalMode = false {
+            didSet { invalidateWindowDragCursorRects() }
+        }
+        var isFocusedPane = false
+        var onSingleClick: (() -> Bool)?
+        var onDoubleClick: (() -> Bool)?
+        var performWindowDrag: ((NSEvent) -> Bool)?
+        private var pendingWindowDragEvent: NSEvent?
+        private var pendingWindowDragStart: NSPoint?
+
+        private static let windowDragStartDistanceSquared: CGFloat = 16
+
+        deinit {
+            unregisterGeometryObserver(from: hitRegion)
+        }
+
+        // Must stay false so AppKit does not intercept mouseUp as part of its
+        // own window-drag tracking. When AppKit steals mouseUp from the first
+        // click, the second click of a double-click is registered as a fresh
+        // clickCount=1 instead of 2, making new-tab double-clicks flaky. We
+        // still support window dragging via the custom mouseDragged →
+        // window.performDrag flow below. See `NonDraggableHostingView` in
+        // SplitNodeView.swift for the same class of bug on pane tab clicks.
+        override var mouseDownCanMoveWindow: Bool { false }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            invalidateWindowDragCursorRects()
+        }
+
+        override func layout() {
+            super.layout()
+            invalidateWindowDragCursorRects()
+        }
+
+        func tabBarItemGeometryDidChange() {
+            invalidateWindowDragCursorRects()
+        }
+
+        override func resetCursorRects() {
+            super.resetCursorRects()
+            for rect in windowDragCursorRectsForCurrentState() {
+                addCursorRect(rect, cursor: .openHand)
+            }
+        }
+
+        override func hitTest(_ point: NSPoint) -> NSView? {
+            guard shouldCaptureHit(at: point) else { return nil }
+            return self
+        }
+
+        override func mouseDown(with event: NSEvent) {
+#if DEBUG
+            let point = convert(event.locationInWindow, from: nil)
+            dlog(
+                "tab.bar.dragZone.mouseDown isMinimal=\(isMinimalMode ? 1 : 0) " +
+                "focused=\(isFocusedPane ? 1 : 0) clickCount=\(event.clickCount) " +
+                "point=\(point.x.rounded()),\(point.y.rounded()) " +
+                "bounds=\(bounds.width.rounded())x\(bounds.height.rounded())"
+            )
+#endif
+            guard let window = self.window else {
+                super.mouseDown(with: event)
+                return
+            }
+
+            if !isMinimalMode {
+                clearPendingWindowDrag()
+                if event.clickCount == 1 {
+                    if !isFocusedPane, onSingleClick?() == true {
+#if DEBUG
+                        dlog("tab.bar.dragZone.focusPane")
+#endif
+                    } else {
+#if DEBUG
+                        dlog("tab.bar.dragZone.click skipped reason=standardSingleClick clickCount=\(event.clickCount)")
+#endif
+                    }
+                    return
+                }
+                if event.clickCount >= 2 {
+                    if onDoubleClick?() == true {
+#if DEBUG
+                        dlog("tab.bar.dragZone.doubleClick action=newTab")
+#endif
+                        return
+                    }
+                }
+#if DEBUG
+                dlog("tab.bar.dragZone.click skipped reason=standardUnhandledClick clickCount=\(event.clickCount)")
+#endif
+                return
+            }
+
+            if event.clickCount >= 2 {
+                clearPendingWindowDrag()
+#if DEBUG
+                dlog("tab.bar.dragZone.doubleClick action=titlebar")
+#endif
+                performTitlebarDoubleClickAction(in: window)
+                return
+            }
+
+            if !isFocusedPane, onSingleClick?() == true {
+                clearPendingWindowDrag()
+#if DEBUG
+                dlog("tab.bar.dragZone.focusPane")
+#endif
+                return
+            }
+
+            pendingWindowDragEvent = event
+            pendingWindowDragStart = event.locationInWindow
+        }
+
+        private func shouldCaptureHit(at point: NSPoint) -> Bool {
+            guard bounds.contains(point) else { return false }
+            if let window,
+               BonsplitTabItemHitRegionRegistry.containsWindowPoint(convert(point, to: nil), in: window) {
+#if DEBUG
+                dlog(
+                    "tab.bar.dragZone.hitTest capture=false reason=registeredTabItem " +
+                    "point=\(point.x.rounded()),\(point.y.rounded())"
+                )
+#endif
+                return false
+            }
+            switch hitRegion {
+            case .entireBounds:
+                return true
+            case .trailingEmptyChrome(let tabFrames, let reservedTrailingWidth):
+                guard isMouseDownOrDragCandidate else { return false }
+                return shouldCaptureTrailingEmptyChrome(
+                    at: point,
+                    tabFrames: tabFrames,
+                    reservedTrailingWidth: reservedTrailingWidth
+                )
+            case .registeredTrailingEmptyChrome(let geometryRegistry, let tabIds, let reservedTrailingWidth):
+                guard isMouseDownOrDragCandidate else { return false }
+                return shouldCaptureTrailingEmptyChrome(
+                    at: point,
+                    tabFrames: geometryRegistry.frames(for: tabIds, in: self).values.map { $0 },
+                    reservedTrailingWidth: reservedTrailingWidth
+                )
+            }
+        }
+
+        private func shouldCaptureTrailingEmptyChrome(
+            at point: NSPoint,
+            tabFrames: [CGRect],
+            reservedTrailingWidth: CGFloat
+        ) -> Bool {
+            let trailingLimit = bounds.maxX - max(0, reservedTrailingWidth)
+            guard point.x < trailingLimit else { return false }
+            let paddedFrames = tabFrames.map {
+                $0.insetBy(dx: -BonsplitTabItemHitTesting.horizontalSlop, dy: -2)
+            }
+            guard !paddedFrames.contains(where: { $0.contains(point) }) else { return false }
+            let startX = paddedFrames.map(\.maxX).max() ?? bounds.minX
+            return point.x >= startX
+        }
+
+        func windowDragCursorRectsForCurrentState() -> [NSRect] {
+            guard isMinimalMode, !bounds.isEmpty else { return [] }
+
+            switch hitRegion {
+            case .entireBounds:
+                return [bounds]
+            case .trailingEmptyChrome(let tabFrames, let reservedTrailingWidth):
+                return trailingEmptyChromeCursorRects(
+                    tabFrames: tabFrames,
+                    reservedTrailingWidth: reservedTrailingWidth
+                )
+            case .registeredTrailingEmptyChrome(let geometryRegistry, let tabIds, let reservedTrailingWidth):
+                return trailingEmptyChromeCursorRects(
+                    tabFrames: geometryRegistry.frames(for: tabIds, in: self).values.map { $0 },
+                    reservedTrailingWidth: reservedTrailingWidth
+                )
+            }
+        }
+
+        private func trailingEmptyChromeCursorRects(
+            tabFrames: [CGRect],
+            reservedTrailingWidth: CGFloat
+        ) -> [NSRect] {
+            let trailingLimit = bounds.maxX - max(0, reservedTrailingWidth)
+            guard trailingLimit > bounds.minX else { return [] }
+
+            let paddedFrames = tabFrames.map {
+                $0.insetBy(dx: -BonsplitTabItemHitTesting.horizontalSlop, dy: -2)
+            }
+            let startX = max(bounds.minX, paddedFrames.map(\.maxX).max() ?? bounds.minX)
+            guard trailingLimit > startX else { return [] }
+
+            return [
+                NSRect(
+                    x: startX,
+                    y: bounds.minY,
+                    width: trailingLimit - startX,
+                    height: bounds.height
+                )
+            ]
+        }
+
+        private func invalidateWindowDragCursorRects() {
+            guard let window else { return }
+            window.invalidateCursorRects(for: self)
+        }
+
+        private func registerGeometryObserver(from hitRegion: HitRegion) {
+            guard case .registeredTrailingEmptyChrome(let registry, _, _) = hitRegion else { return }
+            registry.registerObserver(self)
+        }
+
+        private func unregisterGeometryObserver(from hitRegion: HitRegion) {
+            guard case .registeredTrailingEmptyChrome(let registry, _, _) = hitRegion else { return }
+            registry.unregisterObserver(self)
+        }
+
+        private var isMouseDownOrDragCandidate: Bool {
+            switch hitTestEventTypeOverride ?? NSApp.currentEvent?.type {
+            case .leftMouseDown, .leftMouseDragged, .leftMouseUp:
+                return true
+            default:
+                return false
+            }
+        }
+
+        override func mouseDragged(with event: NSEvent) {
+            guard isMinimalMode,
+                  let window,
+                  let pendingEvent = pendingWindowDragEvent,
+                  let start = pendingWindowDragStart else {
+                super.mouseDragged(with: event)
+                return
+            }
+
+            let dx = event.locationInWindow.x - start.x
+            let dy = event.locationInWindow.y - start.y
+            guard dx * dx + dy * dy >= Self.windowDragStartDistanceSquared else {
+                return
+            }
+
+#if DEBUG
+            dlog(
+                "tab.bar.dragZone.dragStart " +
+                "dx=\(dx.rounded()) dy=\(dy.rounded())"
+            )
+#endif
+            clearPendingWindowDrag()
+            startWindowDrag(with: pendingEvent, in: window)
+        }
+
+        override func mouseUp(with event: NSEvent) {
+            clearPendingWindowDrag()
+            super.mouseUp(with: event)
+        }
+
+        private func clearPendingWindowDrag() {
+            pendingWindowDragEvent = nil
+            pendingWindowDragStart = nil
+        }
+
+        private func startWindowDrag(with event: NSEvent, in window: NSWindow) {
+            if let performWindowDrag, performWindowDrag(event) {
+#if DEBUG
+                dlog("tab.bar.dragZone.dragStart action=testHook")
+#endif
+                return
+            }
+            let wasMovable = window.isMovable
+            window.isMovable = true
+            defer { window.isMovable = wasMovable }
+            window.performDrag(with: event)
+#if DEBUG
+            dlog("tab.bar.dragZone.dragStart action=windowPerformDrag")
+#endif
+        }
+
+        private func performTitlebarDoubleClickAction(in window: NSWindow) {
+            let action = UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?["AppleActionOnDoubleClick"] as? String
+            switch action {
+            case "Minimize": window.miniaturize(nil)
+            default: window.zoom(nil)
+            }
+        }
+    }
+}
+
+private struct TabControlShortcutStoredShortcut: Decodable {
+    let key: String
+    let command: Bool
+    let shift: Bool
+    let option: Bool
+    let control: Bool
+
+    init(
+        key: String,
+        command: Bool,
+        shift: Bool,
+        option: Bool,
+        control: Bool
+    ) {
+        self.key = key
+        self.command = command
+        self.shift = shift
+        self.option = option
+        self.control = control
+    }
+
+    var modifierFlags: NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if command { flags.insert(.command) }
+        if shift { flags.insert(.shift) }
+        if option { flags.insert(.option) }
+        if control { flags.insert(.control) }
+        return flags
+    }
+
+    var modifierSymbol: String {
+        var parts: [String] = []
+        if control { parts.append("⌃") }
+        if option { parts.append("⌥") }
+        if shift { parts.append("⇧") }
+        if command { parts.append("⌘") }
+        return parts.joined()
+    }
+}
+
+private enum TabControlShortcutSettings {
+    static let surfaceByNumberKey = "shortcut.selectSurfaceByNumber"
+    static let defaultShortcut = TabControlShortcutStoredShortcut(
+        key: "1",
+        command: false,
+        shift: false,
+        option: false,
+        control: true
+    )
+
+    static func surfaceByNumberShortcut(defaults: UserDefaults = .standard) -> TabControlShortcutStoredShortcut {
+        guard let data = defaults.data(forKey: surfaceByNumberKey),
+              let shortcut = try? JSONDecoder().decode(TabControlShortcutStoredShortcut.self, from: data) else {
+            return defaultShortcut
+        }
+        return shortcut
+    }
+}
+
+struct TabControlShortcutModifier: Equatable {
+    let modifierFlags: NSEvent.ModifierFlags
+    let symbol: String
+}
+
+enum TabControlShortcutHintPolicy {
+    static let intentionalHoldDelay: TimeInterval = 0.30
+    static let showHintsOnCommandHoldKey = "shortcutHintShowOnCommandHold"
+    static let showHintsOnControlHoldKey = "shortcutHintShowOnControlHold"
+    static let defaultShowHintsOnCommandHold = true
+    static let defaultShowHintsOnControlHold = true
+
+    static func showHintsOnCommandHoldEnabled(defaults: UserDefaults = .standard) -> Bool {
+        guard defaults.object(forKey: showHintsOnCommandHoldKey) != nil else {
+            return defaultShowHintsOnCommandHold
+        }
+        return defaults.bool(forKey: showHintsOnCommandHoldKey)
+    }
+
+    static func showHintsOnControlHoldEnabled(defaults: UserDefaults = .standard) -> Bool {
+        guard defaults.object(forKey: showHintsOnControlHoldKey) != nil else {
+            return defaultShowHintsOnControlHold
+        }
+        return defaults.bool(forKey: showHintsOnControlHoldKey)
+    }
+
+    static func configuredShortcutModifierSymbol(defaults: UserDefaults = .standard) -> String {
+        TabControlShortcutSettings.surfaceByNumberShortcut(defaults: defaults).modifierSymbol
+    }
+
+    private static func triggerAllowsHintReveal(
+        for modifierFlags: NSEvent.ModifierFlags,
+        defaults: UserDefaults = .standard
+    ) -> Bool {
+        let flags = modifierFlags.intersection(.deviceIndependentFlagsMask)
+            .subtracting([.numericPad, .function, .capsLock])
+        switch flags {
+        case [.command]:
+            return showHintsOnCommandHoldEnabled(defaults: defaults)
+        case [.control]:
+            return showHintsOnControlHoldEnabled(defaults: defaults)
+        default:
+            return false
+        }
+    }
+
+    static func hintModifier(
+        for modifierFlags: NSEvent.ModifierFlags,
+        defaults: UserDefaults = .standard
+    ) -> TabControlShortcutModifier? {
+        guard triggerAllowsHintReveal(for: modifierFlags, defaults: defaults) else { return nil }
+        let shortcut = TabControlShortcutSettings.surfaceByNumberShortcut(defaults: defaults)
+        return TabControlShortcutModifier(
+            modifierFlags: shortcut.modifierFlags,
+            symbol: shortcut.modifierSymbol
+        )
+    }
+
+    static func isCurrentWindow(
+        hostWindowNumber: Int?,
+        hostWindowIsKey: Bool,
+        eventWindowNumber: Int?,
+        keyWindowNumber: Int?
+    ) -> Bool {
+        guard let hostWindowNumber, hostWindowIsKey else { return false }
+        if let eventWindowNumber {
+            return eventWindowNumber == hostWindowNumber
+        }
+        return keyWindowNumber == hostWindowNumber
+    }
+
+    static func shouldShowHints(
+        for modifierFlags: NSEvent.ModifierFlags,
+        hostWindowNumber: Int?,
+        hostWindowIsKey: Bool,
+        eventWindowNumber: Int?,
+        keyWindowNumber: Int?,
+        defaults: UserDefaults = .standard
+    ) -> Bool {
+        triggerAllowsHintReveal(for: modifierFlags, defaults: defaults) &&
+            isCurrentWindow(
+                hostWindowNumber: hostWindowNumber,
+                hostWindowIsKey: hostWindowIsKey,
+                eventWindowNumber: eventWindowNumber,
+                keyWindowNumber: keyWindowNumber
+            )
+    }
+}
+
+private struct TabBarHostWindowReader: NSViewRepresentable {
+    let onResolve: (NSWindow?) -> Void
+
+    func makeNSView(context: Context) -> WindowTrackingView {
+        let view = WindowTrackingView()
+        Task { @MainActor [weak view] in
+            onResolve(view?.trackedWindow)
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: WindowTrackingView, context: Context) {
+        Task { @MainActor [weak nsView] in
+            onResolve(nsView?.trackedWindow)
+        }
+    }
+
+    final class WindowTrackingView: NSView {
+        // NSView.window can still return a deallocating window. Capture it
+        // while AppKit attaches the view so deferred lookups safely read nil
+        // during teardown, before the shortcut monitor forms another weak ref.
+        private(set) weak var trackedWindow: NSWindow?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            trackedWindow = window
+        }
+    }
+}
+
+@MainActor
+@Observable
+private final class TabControlShortcutKeyMonitor {
+    private(set) var isShortcutHintVisible = false
+    private(set) var shortcutModifierSymbol = TabControlShortcutHintPolicy.configuredShortcutModifierSymbol()
+
+    @ObservationIgnored private weak var hostWindow: NSWindow?
+    @ObservationIgnored private var hostWindowDidBecomeKeyObserver: NSObjectProtocol?
+    @ObservationIgnored private var hostWindowDidResignKeyObserver: NSObjectProtocol?
+    @ObservationIgnored private var flagsMonitor: Any?
+    @ObservationIgnored private var keyDownMonitor: Any?
+    @ObservationIgnored private var resignObserver: NSObjectProtocol?
+    @ObservationIgnored private var pendingShowTask: Task<Void, Never>?
+    @ObservationIgnored private var pendingModifier: TabControlShortcutModifier?
+
+    func setHostWindow(_ window: NSWindow?) {
+        guard hostWindow !== window else { return }
+        removeHostWindowObservers()
+        hostWindow = window
+        guard let window else {
+            cancelPendingHintShow(resetVisible: true)
+            return
+        }
+
+        hostWindowDidBecomeKeyObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.update(from: NSEvent.modifierFlags, eventWindow: nil)
+            }
+        }
+
+        hostWindowDidResignKeyObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.cancelPendingHintShow(resetVisible: true)
+            }
+        }
+
+        update(from: NSEvent.modifierFlags, eventWindow: nil)
+    }
+
+    func start() {
+        guard flagsMonitor == nil else {
+            update(from: NSEvent.modifierFlags, eventWindow: nil)
+            return
+        }
+
+        flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            self?.update(from: event.modifierFlags, eventWindow: event.window)
+            return event
+        }
+
+        keyDownMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard self?.isCurrentWindow(eventWindow: event.window) == true else { return event }
+            self?.cancelPendingHintShow(resetVisible: true)
+            return event
+        }
+
+        resignObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.cancelPendingHintShow(resetVisible: true)
+            }
+        }
+
+        update(from: NSEvent.modifierFlags, eventWindow: nil)
+    }
+
+    func stop() {
+        if let flagsMonitor {
+            NSEvent.removeMonitor(flagsMonitor)
+            self.flagsMonitor = nil
+        }
+        if let keyDownMonitor {
+            NSEvent.removeMonitor(keyDownMonitor)
+            self.keyDownMonitor = nil
+        }
+        if let resignObserver {
+            NotificationCenter.default.removeObserver(resignObserver)
+            self.resignObserver = nil
+        }
+        removeHostWindowObservers()
+        cancelPendingHintShow(resetVisible: true)
+    }
+
+    private func isCurrentWindow(eventWindow: NSWindow?) -> Bool {
+        TabControlShortcutHintPolicy.isCurrentWindow(
+            hostWindowNumber: hostWindow?.windowNumber,
+            hostWindowIsKey: hostWindow?.isKeyWindow ?? false,
+            eventWindowNumber: eventWindow?.windowNumber,
+            keyWindowNumber: NSApp.keyWindow?.windowNumber
+        )
+    }
+
+    private func update(from modifierFlags: NSEvent.ModifierFlags, eventWindow: NSWindow?) {
+        guard TabControlShortcutHintPolicy.shouldShowHints(
+            for: modifierFlags,
+            hostWindowNumber: hostWindow?.windowNumber,
+            hostWindowIsKey: hostWindow?.isKeyWindow ?? false,
+            eventWindowNumber: eventWindow?.windowNumber,
+            keyWindowNumber: NSApp.keyWindow?.windowNumber
+        ) else {
+            cancelPendingHintShow(resetVisible: true)
+            return
+        }
+
+        guard let modifier = TabControlShortcutHintPolicy.hintModifier(for: modifierFlags) else {
+            cancelPendingHintShow(resetVisible: true)
+            return
+        }
+
+        if isShortcutHintVisible {
+            shortcutModifierSymbol = modifier.symbol
+            return
+        }
+
+        queueHintShow(for: modifier)
+    }
+
+    private func queueHintShow(for modifier: TabControlShortcutModifier) {
+        if pendingModifier == modifier, pendingShowTask != nil {
+            return
+        }
+
+        pendingShowTask?.cancel()
+
+        pendingModifier = modifier
+        pendingShowTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(TabControlShortcutHintPolicy.intentionalHoldDelay))
+            guard !Task.isCancelled, let self else { return }
+            self.pendingShowTask = nil
+            self.pendingModifier = nil
+            guard TabControlShortcutHintPolicy.shouldShowHints(
+                for: NSEvent.modifierFlags,
+                hostWindowNumber: self.hostWindow?.windowNumber,
+                hostWindowIsKey: self.hostWindow?.isKeyWindow ?? false,
+                eventWindowNumber: nil,
+                keyWindowNumber: NSApp.keyWindow?.windowNumber
+            ) else { return }
+            guard let currentModifier = TabControlShortcutHintPolicy.hintModifier(for: NSEvent.modifierFlags) else { return }
+            self.shortcutModifierSymbol = currentModifier.symbol
+            withAnimation(TabControlShortcutHintAnimation.visibility) {
+                self.isShortcutHintVisible = true
+            }
+        }
+    }
+
+    private func cancelPendingHintShow(resetVisible: Bool) {
+        pendingShowTask?.cancel()
+        pendingShowTask = nil
+        pendingModifier = nil
+        if resetVisible {
+            shortcutModifierSymbol = TabControlShortcutHintPolicy.configuredShortcutModifierSymbol()
+            withAnimation(TabControlShortcutHintAnimation.visibility) {
+                isShortcutHintVisible = false
+            }
+        }
+    }
+
+    private func removeHostWindowObservers() {
+        if let hostWindowDidBecomeKeyObserver {
+            NotificationCenter.default.removeObserver(hostWindowDidBecomeKeyObserver)
+            self.hostWindowDidBecomeKeyObserver = nil
+        }
+        if let hostWindowDidResignKeyObserver {
+            NotificationCenter.default.removeObserver(hostWindowDidResignKeyObserver)
+            self.hostWindowDidResignKeyObserver = nil
+        }
+    }
+}

@@ -1,0 +1,5861 @@
+//! Application runtime for the embedded version of Ghostty. The embedded
+//! version is when Ghostty is embedded within a parent host application,
+//! rather than owning the application lifecycle itself. This is used for
+//! example for the macOS build of Ghostty so that we can use a native
+//! Swift+XCode-based application.
+
+const std = @import("std");
+const builtin = @import("builtin");
+const terminal_options = @import("terminal_options");
+const kitty_graphics = @import("../terminal/kitty/graphics_storage.zig");
+const assert = @import("../quirks.zig").inlineAssert;
+const Allocator = std.mem.Allocator;
+const objc = @import("objc");
+const apprt = @import("../apprt.zig");
+const font = @import("../font/main.zig");
+const global = @import("../global.zig");
+const input = @import("../input.zig");
+const internal_os = @import("../os/main.zig");
+const renderer = @import("../renderer.zig");
+const terminal = @import("../terminal/main.zig");
+const terminal_style = @import("../terminal/style.zig");
+const termio = @import("../termio.zig");
+const CoreApp = @import("../App.zig");
+const CoreInspector = @import("../inspector/main.zig").Inspector;
+const CoreSurface = @import("../Surface.zig");
+const configpkg = @import("../config.zig");
+const Config = configpkg.Config;
+const String = @import("../main_c.zig").String;
+
+const log = std.log.scoped(.embedded_window);
+
+pub const resourcesDir = internal_os.resourcesDir;
+
+/// The external presenter either drops its borrowed frame immediately or
+/// acquires a Ghostty-owned lease that must later be released by token.
+pub const ExternalFrameDisposition = renderer.external_frame.Disposition;
+
+/// The color space attached to the exported IOSurface.
+pub const ExternalFrameColorSpace = renderer.external_frame.ColorSpace;
+
+/// One completed Metal frame offered to an external compositor.
+pub const ExternalFrame = renderer.external_frame.Frame;
+
+pub const App = struct {
+    /// Because we only expect the embedding API to be used in embedded
+    /// environments, the options are extern so that we can expose it
+    /// directly to a C callconv and not pay for any translation costs.
+    ///
+    /// C type: ghostty_runtime_config_s
+    pub const Options = extern struct {
+        /// These are just aliases to make the function signatures below
+        /// more obvious what values will be sent.
+        const AppUD = ?*anyopaque;
+        const SurfaceUD = ?*anyopaque;
+
+        /// Userdata that is passed to all the callbacks.
+        userdata: AppUD = null,
+
+        /// True if the selection clipboard is supported.
+        supports_selection_clipboard: bool = false,
+
+        /// Callback called to wakeup the event loop. This should trigger
+        /// a full tick of the app loop.
+        wakeup: *const fn (AppUD) callconv(.c) void,
+
+        /// Callback called to handle an action.
+        action: *const fn (*App, apprt.Target.C, apprt.Action.C) callconv(.c) bool,
+
+        /// Read the clipboard value. Returns true if the clipboard request
+        /// was started and complete_clipboard_request may be called with the
+        /// given state pointer. Returns false if the clipboard request couldn't
+        /// be started (such as when no text is available for a paste request).
+        read_clipboard: *const fn (SurfaceUD, c_int, *apprt.ClipboardRequest) callconv(.c) bool,
+
+        /// This may be called after a read clipboard call to request
+        /// confirmation that the clipboard value is safe to read. The embedder
+        /// must call complete_clipboard_request with the given request.
+        confirm_read_clipboard: *const fn (
+            SurfaceUD,
+            [*:0]const u8,
+            *apprt.ClipboardRequest,
+            apprt.ClipboardRequestType,
+        ) callconv(.c) void,
+
+        /// Write the clipboard value.
+        write_clipboard: *const fn (
+            SurfaceUD,
+            c_int,
+            [*]const CAPI.ClipboardContent,
+            usize,
+            bool,
+        ) callconv(.c) void,
+
+        /// Close the current surface given by this function.
+        close_surface: ?*const fn (SurfaceUD, bool) callconv(.c) void = null,
+
+        /// Report read-only tmux control-mode state for the surface.
+        tmux_control: ?*const fn (
+            SurfaceUD,
+            apprt.surface.Message.TmuxControlMsg.Event,
+            u32,
+            [*]const u8,
+            usize,
+        ) callconv(.c) void = null,
+    };
+
+    /// This is the key event sent for ghostty_surface_key and
+    /// ghostty_app_key.
+    pub const KeyEvent = struct {
+        action: input.Action,
+        mods: input.Mods,
+        consumed_mods: input.Mods,
+        keycode: u32,
+        text: ?[:0]const u8,
+        unshifted_codepoint: u32,
+        composing: bool,
+
+        /// Convert a libghostty key event into a core key event.
+        fn core(self: KeyEvent) ?input.KeyEvent {
+            const text: []const u8 = if (self.text) |v| v else "";
+            const unshifted_codepoint: u21 = std.math.cast(
+                u21,
+                self.unshifted_codepoint,
+            ) orelse 0;
+
+            // We want to get the physical unmapped key to process keybinds.
+            const physical_key = keycode: for (input.keycodes.entries) |entry| {
+                if (entry.native == self.keycode) break :keycode entry.key;
+            } else .unidentified;
+
+            // Build our final key event
+            return .{
+                .action = self.action,
+                .key = physical_key,
+                .mods = self.mods,
+                .consumed_mods = self.consumed_mods,
+                .composing = self.composing,
+                .utf8 = text,
+                .unshifted_codepoint = unshifted_codepoint,
+            };
+        }
+    };
+
+    core_app: *CoreApp,
+    opts: Options,
+
+    /// The keyboard layout keymap. This is lazily initialized on first
+    /// use because creating it requires talking to the text input
+    /// system (TIS on macOS), and the first such call in a process is
+    /// slow (multiple milliseconds). It is only needed once keyboard
+    /// events start flowing, at which point the system is warm.
+    keymap: ?input.Keymap,
+
+    /// The configuration for the app. This is owned by this structure.
+    config: Config,
+
+    pub fn init(
+        self: *App,
+        core_app: *CoreApp,
+        config: *const Config,
+        opts: Options,
+    ) !void {
+        // We have to clone the config.
+        const alloc = core_app.alloc;
+        var config_clone = try config.clone(alloc);
+        errdefer config_clone.deinit();
+
+        self.* = .{
+            .core_app = core_app,
+            .config = config_clone,
+            .opts = opts,
+            .keymap = null,
+        };
+    }
+
+    pub fn terminate(self: *App) void {
+        if (self.keymap) |*v| v.deinit();
+        self.config.deinit();
+    }
+
+    /// Returns true if there are any global keybinds in the configuration.
+    pub fn hasGlobalKeybinds(self: *const App) bool {
+        var it = self.config.keybind.set.bindings.iterator();
+        while (it.next()) |entry| {
+            switch (entry.value_ptr.*) {
+                .leader => {},
+                inline .leaf, .leaf_chained => |leaf| if (leaf.flags.global) return true,
+            }
+        }
+
+        return false;
+    }
+
+    /// The target of a key event. This is used to determine some subtly
+    /// different behavior between app and surface key events.
+    pub const KeyTarget = union(enum) {
+        app,
+        surface: *Surface,
+    };
+
+    /// See CoreApp.focusEvent
+    pub fn focusEvent(self: *App, focused: bool) void {
+        self.core_app.focusEvent(focused);
+    }
+
+    /// See CoreApp.keyEvent.
+    pub fn keyEvent(
+        self: *App,
+        target: KeyTarget,
+        event: KeyEvent,
+    ) !bool {
+        // Convert our C key event into a Zig one.
+        const input_event: input.KeyEvent = event.core() orelse
+            return false;
+
+        // Invoke the core Ghostty logic to handle this input.
+        const effect: CoreSurface.InputEffect = switch (target) {
+            .app => if (self.core_app.keyEvent(
+                self,
+                input_event,
+            )) .consumed else .ignored,
+
+            .surface => |surface| try surface.core_surface.keyCallback(
+                input_event,
+            ),
+        };
+
+        return switch (effect) {
+            .closed => true,
+            .ignored => false,
+            .consumed => true,
+        };
+    }
+
+    /// This should be called whenever the keyboard layout was changed.
+    pub fn reloadKeymap(self: *App) !void {
+        // Reload the keymap. If it was never initialized we don't need
+        // to do anything since lazy initialization will pick up the
+        // current layout.
+        if (self.keymap) |*v| try v.reload();
+    }
+
+    /// Loads the keyboard layout.
+    ///
+    /// Kind of expensive so this should be avoided if possible. When I say
+    /// "kind of expensive" I mean that its not something you probably want
+    /// to run on every keypress.
+    pub fn keyboardLayout(self: *App) input.KeyboardLayout {
+        // We only support keyboard layout detection on macOS.
+        if (comptime builtin.os.tag != .macos) return .unknown;
+
+        // Lazily initialize the keymap.
+        const keymap: *input.Keymap = keymap: {
+            if (self.keymap == null) {
+                self.keymap = input.Keymap.init() catch |err| {
+                    log.warn("error initializing keymap err={}", .{err});
+                    return .unknown;
+                };
+            }
+
+            break :keymap &self.keymap.?;
+        };
+
+        // Any layout larger than this is not something we can handle.
+        var buf: [256]u8 = undefined;
+        const id = keymap.sourceId(&buf) catch |err| {
+            comptime assert(@TypeOf(err) == error{OutOfMemory});
+            return .unknown;
+        };
+
+        return input.KeyboardLayout.mapAppleId(id) orelse .unknown;
+    }
+
+    pub fn wakeup(self: *const App) void {
+        self.opts.wakeup(self.opts.userdata);
+    }
+
+    pub fn wait(self: *const App) !void {
+        _ = self;
+    }
+
+    /// Create a new surface for the app.
+    fn newSurface(
+        self: *App,
+        opts: Surface.Options,
+        scrollback_limit_bytes: usize,
+    ) !*Surface {
+        // Grab a surface allocation because we're going to need it.
+        var surface = try self.core_app.alloc.create(Surface);
+        errdefer self.core_app.alloc.destroy(surface);
+
+        // Create the surface
+        try surface.init(self, opts, scrollback_limit_bytes);
+        return surface;
+    }
+
+    /// Close the given surface.
+    pub fn closeSurface(_: *App, surface: *Surface) void {
+        surface.deinit();
+    }
+
+    pub fn redrawInspector(self: *App, surface: *Surface) void {
+        _ = self;
+        surface.queueInspectorRender();
+    }
+
+    /// Perform a given action. Returns `true` if the action was able to be
+    /// performed, `false` otherwise.
+    pub fn performAction(
+        self: *App,
+        target: apprt.Target,
+        comptime action: apprt.Action.Key,
+        value: apprt.Action.Value(action),
+    ) !bool {
+        // Special case certain actions before they are sent to the
+        // embedded apprt.
+        self.performPreAction(target, action, value);
+
+        log.debug("dispatching action target={t} action={} value={any}", .{
+            target,
+            action,
+            value,
+        });
+        return self.opts.action(
+            self,
+            target.cval(),
+            @unionInit(apprt.Action, @tagName(action), value).cval(),
+        );
+    }
+
+    fn performPreAction(
+        self: *App,
+        target: apprt.Target,
+        comptime action: apprt.Action.Key,
+        value: apprt.Action.Value(action),
+    ) void {
+        // Special case certain actions before they are sent to the embedder
+        switch (action) {
+            .set_title => switch (target) {
+                .app => {},
+                .surface => |surface| {
+                    // Dupe the title so that we can store it. If we get an allocation
+                    // error we just ignore it, since this only breaks a few minor things.
+                    const alloc = self.core_app.alloc;
+                    if (surface.rt_surface.title) |v| alloc.free(v);
+                    surface.rt_surface.title = alloc.dupeZ(u8, value.title) catch null;
+                },
+            },
+
+            .config_change => switch (target) {
+                .surface => {},
+
+                // For app updates, we update our core config. We need to
+                // clone it because the caller owns the param.
+                .app => if (value.config.clone(self.core_app.alloc)) |config| {
+                    self.config.deinit();
+                    self.config = config;
+                } else |err| {
+                    log.err("error updating app config err={}", .{err});
+                },
+            },
+
+            else => {},
+        }
+    }
+
+    /// Send the given IPC to a running Ghostty. Returns `true` if the action was
+    /// able to be performed, `false` otherwise.
+    ///
+    /// Note that this is a static function. Since this is called from a CLI app (or
+    /// some other process that is not Ghostty) there is no full-featured apprt App
+    /// to use.
+    pub fn performIpc(
+        _: Allocator,
+        _: apprt.ipc.Target,
+        comptime action: apprt.ipc.Action.Key,
+        _: apprt.ipc.Action.Value(action),
+    ) (Allocator.Error || apprt.ipc.Errors)!bool {
+        switch (action) {
+            .new_window => return false,
+            .toggle_quick_terminal => return false,
+        }
+    }
+};
+
+/// Platform-specific configuration for libghostty.
+pub const Platform = union(PlatformTag) {
+    macos: MacOS,
+    ios: IOS,
+    opengl: OpenGL,
+    metal_external: MetalExternal,
+    metal_external_leased: MetalExternalLeased,
+
+    // If our build target for libghostty is not darwin then we do
+    // not include macos support at all.
+    pub const MacOS = if (builtin.target.os.tag.isDarwin()) struct {
+        /// The view to render the surface on.
+        nsview: objc.Object,
+    } else void;
+
+    pub const IOS = if (builtin.target.os.tag.isDarwin()) struct {
+        /// The view to render the surface on.
+        uiview: objc.Object,
+    } else void;
+
+    /// An embedder-owned presenter for Metal IOSurfaces. This platform never
+    /// accesses an NSView, UIView, or CALayer. The callback runs on a Metal
+    /// command-buffer completion thread after the GPU finishes the frame.
+    pub const MetalExternal = if (builtin.target.os.tag.isDarwin()) struct {
+        userdata: ?*anyopaque,
+
+        /// `iosurface` is borrowed and valid only for the callback duration.
+        /// Retain it or create its transport handle before returning if the
+        /// embedder needs to extend its lifetime. The callback must be
+        /// thread-safe and must not block the renderer thread.
+        present: *const fn (
+            userdata: ?*anyopaque,
+            iosurface: *anyopaque,
+            width_px: u32,
+            height_px: u32,
+        ) callconv(.c) void,
+    } else void;
+
+    /// An embedder-owned IOSurface presenter with explicit, token-addressed
+    /// ownership. Returning `.acquire` keeps the exact swap-chain slot alive
+    /// until `ghostty_surface_release_external_frame` releases its token.
+    pub const MetalExternalLeased = if (builtin.target.os.tag.isDarwin()) struct {
+        userdata: ?*anyopaque,
+        present: *const fn (
+            userdata: ?*anyopaque,
+            frame: *const ExternalFrame,
+        ) callconv(.c) ExternalFrameDisposition,
+    } else void;
+
+    /// An embedder-owned OpenGL context and presentation surface. The
+    /// callbacks may be invoked from Ghostty's renderer thread.
+    pub const OpenGL = struct {
+        userdata: ?*anyopaque,
+        make_current: *const fn (?*anyopaque) callconv(.c) bool,
+        clear_current: *const fn (?*anyopaque) callconv(.c) void,
+        get_proc_address: *const fn (?*anyopaque, [*:0]const u8) callconv(.c) ?*anyopaque,
+        swap_buffers: *const fn (?*anyopaque) callconv(.c) void,
+    };
+
+    // The C ABI compatible version of this union. The tag is expected
+    // to be stored elsewhere.
+    pub const C = extern union {
+        macos: extern struct {
+            nsview: ?*anyopaque,
+        },
+
+        ios: extern struct {
+            uiview: ?*anyopaque,
+        },
+
+        metal_external: extern struct {
+            userdata: ?*anyopaque,
+            present: ?*const fn (
+                userdata: ?*anyopaque,
+                iosurface: *anyopaque,
+                width_px: u32,
+                height_px: u32,
+            ) callconv(.c) void,
+        },
+
+        metal_external_leased: extern struct {
+            userdata: ?*anyopaque,
+            present: ?*const fn (
+                userdata: ?*anyopaque,
+                frame: *const ExternalFrame,
+            ) callconv(.c) ExternalFrameDisposition,
+        },
+
+        opengl: extern struct {
+            userdata: ?*anyopaque,
+            make_current: ?*const fn (?*anyopaque) callconv(.c) bool,
+            clear_current: ?*const fn (?*anyopaque) callconv(.c) void,
+            get_proc_address: ?*const fn (?*anyopaque, [*:0]const u8) callconv(.c) ?*anyopaque,
+            swap_buffers: ?*const fn (?*anyopaque) callconv(.c) void,
+        },
+    };
+
+    /// Initialize a Platform a tag and configuration from the C ABI.
+    pub fn init(tag_int: c_int, c_platform: C) !Platform {
+        const tag = std.enums.fromInt(PlatformTag, tag_int) orelse return error.InvalidEnumTag;
+        return switch (tag) {
+            .macos => if (MacOS != void) macos: {
+                const config = c_platform.macos;
+                const nsview = objc.Object.fromId(config.nsview orelse
+                    break :macos error.NSViewMustBeSet);
+                break :macos .{ .macos = .{ .nsview = nsview } };
+            } else error.UnsupportedPlatform,
+
+            .ios => if (IOS != void) ios: {
+                const config = c_platform.ios;
+                const uiview = objc.Object.fromId(config.uiview orelse
+                    break :ios error.UIViewMustBeSet);
+                break :ios .{ .ios = .{ .uiview = uiview } };
+            } else error.UnsupportedPlatform,
+
+            .metal_external => if (MetalExternal != void) metal_external: {
+                const config = c_platform.metal_external;
+                break :metal_external .{ .metal_external = .{
+                    .userdata = config.userdata,
+                    .present = config.present orelse
+                        return error.MetalExternalPresentMustBeSet,
+                } };
+            } else error.UnsupportedPlatform,
+
+            .metal_external_leased => if (MetalExternalLeased != void) leased: {
+                const config = c_platform.metal_external_leased;
+                break :leased .{ .metal_external_leased = .{
+                    .userdata = config.userdata,
+                    .present = config.present orelse
+                        return error.MetalExternalLeasedPresentMustBeSet,
+                } };
+            } else error.UnsupportedPlatform,
+
+            .opengl => opengl: {
+                const config = c_platform.opengl;
+                break :opengl .{ .opengl = .{
+                    .userdata = config.userdata,
+                    .make_current = config.make_current orelse
+                        return error.OpenGLMakeCurrentMustBeSet,
+                    .clear_current = config.clear_current orelse
+                        return error.OpenGLClearCurrentMustBeSet,
+                    .get_proc_address = config.get_proc_address orelse
+                        return error.OpenGLGetProcAddressMustBeSet,
+                    .swap_buffers = config.swap_buffers orelse
+                        return error.OpenGLSwapBuffersMustBeSet,
+                } };
+            },
+        };
+    }
+};
+
+pub const PlatformTag = enum(c_int) {
+    // "0" is reserved for invalid so we can detect unset values
+    // from the C API.
+
+    macos = 1,
+    ios = 2,
+    opengl = 3,
+    metal_external = 4,
+    metal_external_leased = 5,
+};
+
+comptime {
+    if (@intFromEnum(PlatformTag.metal_external) != 4 or
+        @intFromEnum(PlatformTag.metal_external_leased) != 5)
+        @compileError("external Metal platform tags changed ABI");
+    if (@sizeOf(ExternalFrame) != 40)
+        @compileError("external Metal frame changed ABI");
+    // OpenGL remains the largest platform variant, so adding the leased
+    // presenter must not change ghostty_surface_config_s.
+    if (@sizeOf(Platform.C) != 40)
+        @compileError("embedded platform union changed ABI");
+}
+
+test "embedded metal external platform validates presentation callback" {
+    if (Platform.MetalExternal == void) return error.SkipZigTest;
+
+    var c_platform: Platform.C = undefined;
+    c_platform.metal_external = .{
+        .userdata = null,
+        .present = null,
+    };
+    try std.testing.expectError(
+        error.MetalExternalPresentMustBeSet,
+        Platform.init(@intFromEnum(PlatformTag.metal_external), c_platform),
+    );
+
+    const Callback = struct {
+        fn present(
+            _: ?*anyopaque,
+            _: *anyopaque,
+            _: u32,
+            _: u32,
+        ) callconv(.c) void {}
+    };
+    c_platform.metal_external.present = &Callback.present;
+
+    const platform = try Platform.init(
+        @intFromEnum(PlatformTag.metal_external),
+        c_platform,
+    );
+    try std.testing.expectEqual(
+        PlatformTag.metal_external,
+        std.meta.activeTag(platform),
+    );
+    try std.testing.expectEqual(
+        @as(c_int, 4),
+        @intFromEnum(PlatformTag.metal_external),
+    );
+}
+
+test "embedded leased metal platform preserves ABI and validates callback" {
+    if (Platform.MetalExternalLeased == void) return error.SkipZigTest;
+
+    var c_platform: Platform.C = undefined;
+    c_platform.metal_external_leased = .{
+        .userdata = null,
+        .present = null,
+    };
+    try std.testing.expectError(
+        error.MetalExternalLeasedPresentMustBeSet,
+        Platform.init(
+            @intFromEnum(PlatformTag.metal_external_leased),
+            c_platform,
+        ),
+    );
+
+    const Callback = struct {
+        fn present(
+            _: ?*anyopaque,
+            _: *const ExternalFrame,
+        ) callconv(.c) ExternalFrameDisposition {
+            return .drop;
+        }
+    };
+    c_platform.metal_external_leased.present = &Callback.present;
+
+    const platform = try Platform.init(
+        @intFromEnum(PlatformTag.metal_external_leased),
+        c_platform,
+    );
+    try std.testing.expectEqual(
+        PlatformTag.metal_external_leased,
+        std.meta.activeTag(platform),
+    );
+    try std.testing.expectEqual(
+        @as(c_int, 5),
+        @intFromEnum(PlatformTag.metal_external_leased),
+    );
+    try std.testing.expectEqual(@as(usize, 40), @sizeOf(ExternalFrame));
+    try std.testing.expectEqual(@as(usize, 40), @sizeOf(Platform.C));
+
+    const c = @import("ghostty.h");
+    try std.testing.expectEqual(
+        @as(c_int, @intFromEnum(ExternalFrameDisposition.drop)),
+        @as(c_int, c.GHOSTTY_METAL_EXTERNAL_FRAME_DROP),
+    );
+    try std.testing.expectEqual(
+        @as(c_int, @intFromEnum(ExternalFrameDisposition.acquire)),
+        @as(c_int, c.GHOSTTY_METAL_EXTERNAL_FRAME_ACQUIRE),
+    );
+    try std.testing.expectEqual(
+        @sizeOf(ExternalFrame),
+        @sizeOf(c.ghostty_metal_external_frame_s),
+    );
+}
+
+pub const EnvVar = extern struct {
+    /// The name of the environment variable.
+    key: [*:0]const u8,
+
+    /// The value of the environment variable.
+    value: [*:0]const u8,
+};
+
+// cmux fork: delete when upstream libghostty exposes equivalent surface IO
+// ownership. iOS uses this so Rust owns the session while Ghostty renders it.
+pub const IoMode = enum(c_int) {
+    exec = 0,
+    manual = 1,
+    manual_mirror = 2,
+
+    pub fn usesManualIo(self: IoMode) bool {
+        return switch (self) {
+            .exec => false,
+            .manual, .manual_mirror => true,
+        };
+    }
+
+    pub fn suppressesTerminalResponses(self: IoMode) bool {
+        return self == .manual_mirror;
+    }
+};
+
+pub const IoWriteCallback = *const fn (?*anyopaque, [*]const u8, usize) callconv(.c) void;
+pub const PtyTeeCallback = *const fn (?*anyopaque, [*]const u8, usize) callconv(.c) void;
+pub const RendererEventCallback = renderer.InstrumentationCallback;
+pub const RenderPresentedCallback = *const fn (?*anyopaque, u64) callconv(.c) void;
+pub const RenderFailedCallback = *const fn (
+    ?*anyopaque,
+    u64,
+    renderer.RenderPresentationStatus,
+) callconv(.c) void;
+pub const FontSizeActionCallback = *const fn (
+    ?*anyopaque,
+    CoreSurface.FontSizeActionKind,
+    f32,
+    f32,
+    bool,
+    bool,
+) callconv(.c) void;
+
+const SurfaceActionLifetime = struct {
+    const ReleasePauseForTesting = struct {
+        reached: *std.Io.Event,
+        continue_release: *std.Io.Event,
+    };
+
+    references: std.atomic.Value(usize) = .{ .raw = 1 },
+    mutex: std.Io.Mutex = .init,
+    drained: std.Io.Condition = .init,
+    active_actions: usize = 0,
+    active_thread: ?std.Thread.Id = null,
+    teardown_started: bool = false,
+    release_pause_for_testing: if (builtin.is_test) ?ReleasePauseForTesting else void =
+        if (builtin.is_test) null else {},
+
+    fn retain(self: *SurfaceActionLifetime) void {
+        self.mutex.lockUncancelable(global.io());
+        defer self.mutex.unlock(global.io());
+
+        assert(!self.teardown_started);
+        const current_thread = std.Thread.getCurrentId();
+        if (self.active_thread) |active_thread| {
+            // App mailbox actions are serialized. Nested actions are valid,
+            // but concurrent action dispatch from another thread is not.
+            assert(active_thread == current_thread);
+        } else {
+            self.active_thread = current_thread;
+        }
+        self.active_actions += 1;
+
+        const previous = self.references.fetchAdd(1, .seq_cst);
+        assert(previous > 0);
+        assert(previous < std.math.maxInt(usize));
+    }
+
+    /// Wait for an action running on another thread. A free re-entering from
+    /// the current host callback must continue immediately to avoid deadlock;
+    /// that callback's lease still keeps the outer allocation alive.
+    fn waitForActionsBeforeTeardown(self: *SurfaceActionLifetime) void {
+        self.mutex.lockUncancelable(global.io());
+        defer self.mutex.unlock(global.io());
+
+        self.teardown_started = true;
+        const current_thread = std.Thread.getCurrentId();
+        while (self.active_actions > 0 and
+            self.active_thread.? != current_thread)
+        {
+            self.drained.waitUncancelable(global.io(), &self.mutex);
+        }
+    }
+
+    /// Returns true when an action released the final allocation reference.
+    fn releaseAction(self: *SurfaceActionLifetime) bool {
+        self.mutex.lockUncancelable(global.io());
+        assert(self.active_actions > 0);
+        assert(self.active_thread.? == std.Thread.getCurrentId());
+
+        // Release the allocation reference before publishing that all actions
+        // drained. A teardown waiter may destroy the app as soon as it observes
+        // zero active actions, so the action must not touch the surface or app
+        // after that wake becomes visible.
+        const previous = self.references.fetchSub(1, .seq_cst);
+        assert(previous > 0);
+
+        if (builtin.is_test) {
+            if (self.release_pause_for_testing) |pause| {
+                pause.reached.set(global.io());
+                pause.continue_release.waitUncancelable(global.io());
+            }
+        }
+
+        self.active_actions -= 1;
+        if (self.active_actions == 0) {
+            self.active_thread = null;
+            self.drained.broadcast(global.io());
+        }
+        self.mutex.unlock(global.io());
+
+        return previous == 1;
+    }
+
+    /// Returns true when the surface owner released the final reference.
+    fn releaseOwner(self: *SurfaceActionLifetime) bool {
+        const previous = self.references.fetchSub(1, .seq_cst);
+        assert(previous > 0);
+        return previous == 1;
+    }
+
+    pub fn countForTesting(self: *const SurfaceActionLifetime) usize {
+        if (!builtin.is_test) @compileError("testing only");
+        return self.references.load(.seq_cst);
+    }
+};
+
+test "embedded surface teardown completes before a retained action returns" {
+    if (comptime !@hasDecl(Surface, "deinitWith")) {
+        try std.testing.expect(false);
+        return;
+    }
+
+    const Callbacks = struct {
+        fn wakeup(_: ?*anyopaque) callconv(.c) void {}
+
+        fn action(
+            _: *App,
+            _: apprt.Target.C,
+            _: apprt.Action.C,
+        ) callconv(.c) bool {
+            return true;
+        }
+
+        fn teardown(surface: *Surface) void {
+            const completed: *bool = @ptrCast(@alignCast(surface.userdata.?));
+            completed.* = true;
+        }
+    };
+
+    var core_app: CoreApp = undefined;
+    try core_app.init(std.testing.allocator);
+    defer {
+        core_app.surfaces.deinit(std.testing.allocator);
+        core_app.font_grid_set.deinit();
+    }
+
+    var rt_app: App = undefined;
+    rt_app.core_app = &core_app;
+    rt_app.opts = undefined;
+    rt_app.opts.action = Callbacks.action;
+    rt_app.opts.wakeup = Callbacks.wakeup;
+
+    var teardown_completed = false;
+    var surface: Surface = undefined;
+    surface.app = &rt_app;
+    surface.userdata = &teardown_completed;
+    surface.core_surface.id = 22;
+    surface.app_action_lifetime = .{};
+    surface.process_termination_requested = .{ .raw = false };
+    try core_app.surfaces.append(std.testing.allocator, &surface);
+
+    surface.retainForAppAction();
+    surface.deinitWith(Callbacks.teardown);
+
+    try std.testing.expect(teardown_completed);
+    try std.testing.expectEqual(@as(usize, 0), core_app.surfaces.items.len);
+    try std.testing.expectEqual(
+        @as(usize, 1),
+        surface.app_action_lifetime.countForTesting(),
+    );
+}
+
+pub const Surface = struct {
+    app: *App,
+    platform: Platform,
+    userdata: ?*anyopaque = null,
+    core_surface: CoreSurface,
+    app_action_lifetime: SurfaceActionLifetime = .{},
+    process_termination_requested: std.atomic.Value(bool) = .{ .raw = false },
+    content_scale: apprt.ContentScale,
+    size: apprt.SurfaceSize,
+    cursor_pos: apprt.CursorPos,
+    cursor_pos_mods: input.Mods,
+    inspector: ?*Inspector = null,
+    io_mode: IoMode = .exec,
+    io_write_cb: ?IoWriteCallback = null,
+    io_write_userdata: ?*anyopaque = null,
+    pty_tee_cb: ?PtyTeeCallback = null,
+    pty_tee_userdata: ?*anyopaque = null,
+    renderer_event_cb: ?RendererEventCallback = null,
+    scrollback_limit_bytes: usize = 0,
+    /// Opaque embedder value captured into each leased frame at draw time.
+    external_frame_context: std.atomic.Value(u64) = .{ .raw = 0 },
+    // Presentation userdata belongs to this exact embedded surface. Install
+    // it through the post-construction setter instead of inheriting it through
+    // the public by-value Options ABI.
+    render_presented_cb: ?RenderPresentedCallback = null,
+    render_presented_userdata: ?*anyopaque = null,
+    render_failed_cb: ?RenderFailedCallback = null,
+    render_failed_userdata: ?*anyopaque = null,
+    // Binding callbacks run on the GUI thread. These fields belong to this
+    // exact embedded surface and are never inherited by child surfaces.
+    font_size_action_cb: ?FontSizeActionCallback = null,
+    font_size_action_userdata: ?*anyopaque = null,
+
+    /// The current title of the surface. The embedded apprt saves this so
+    /// that getTitle works without the implementer needing to save it.
+    title: ?[:0]const u8 = null,
+
+    /// Surface initialization options.
+    pub const Options = extern struct {
+        /// The platform that this surface is being initialized for and
+        /// the associated platform-specific configuration.
+        platform_tag: c_int = 0,
+        platform: Platform.C = undefined,
+
+        /// Userdata passed to some of the callbacks.
+        userdata: ?*anyopaque = null,
+
+        /// The scale factor of the screen.
+        scale_factor: f64 = 1,
+
+        /// The font size to inherit. If 0, default font size will be used.
+        font_size: f32 = 0,
+
+        /// The working directory to load into.
+        working_directory: ?[*:0]const u8 = null,
+
+        /// The command to run in the new surface. If this is set then
+        /// the "wait-after-command" option is also automatically set to true,
+        /// since this is used for scripting.
+        ///
+        /// This command always run in a shell (e.g. via `/bin/sh -c`),
+        /// despite Ghostty allowing directly executed commands via config.
+        /// This is a legacy thing and we should probably change it in the
+        /// future once we have a concrete use case.
+        command: ?[*:0]const u8 = null,
+
+        /// Extra environment variables to set for the surface.
+        env_vars: ?[*]EnvVar = null,
+        env_var_count: usize = 0,
+
+        /// Input to send to the command after it is started.
+        initial_input: ?[*:0]const u8 = null,
+
+        /// Wait after the command exits
+        wait_after_command: bool = false,
+
+        /// Context for the new surface
+        context: apprt.surface.NewSurfaceContext = .window,
+
+        /// IO mode for the surface.
+        io_mode: IoMode = .exec,
+
+        /// Callback invoked when Ghostty wants to write to the backend.
+        io_write_cb: ?IoWriteCallback = null,
+
+        /// Userdata passed to io_write_cb.
+        io_write_userdata: ?*anyopaque = null,
+
+        /// Optional content-free renderer activity callback. This receives the
+        /// surface `userdata` and runs synchronously on the renderer thread.
+        renderer_event_cb: ?RendererEventCallback = null,
+
+        /// Optional tee for every PTY-output byte slice before parsing. Unlike
+        /// the post-create setter, this is installed before the IO thread can
+        /// emit startup bytes.
+        pty_tee_cb: ?PtyTeeCallback = null,
+
+        /// Userdata passed to pty_tee_cb.
+        pty_tee_userdata: ?*anyopaque = null,
+    };
+
+    pub fn init(
+        self: *Surface,
+        app: *App,
+        opts: Options,
+        scrollback_limit_bytes: usize,
+    ) !void {
+        self.* = .{
+            .app = app,
+            .platform = try .init(opts.platform_tag, opts.platform),
+            .userdata = opts.userdata,
+            .core_surface = undefined,
+            .content_scale = .{
+                .x = @floatCast(opts.scale_factor),
+                .y = @floatCast(opts.scale_factor),
+            },
+            .size = .{ .width = 800, .height = 600 },
+            .cursor_pos = .{ .x = -1, .y = -1 },
+            .cursor_pos_mods = .{},
+            .io_mode = opts.io_mode,
+            .io_write_cb = opts.io_write_cb,
+            .io_write_userdata = opts.io_write_userdata,
+            .pty_tee_cb = opts.pty_tee_cb,
+            .pty_tee_userdata = opts.pty_tee_userdata,
+            .renderer_event_cb = opts.renderer_event_cb,
+            .scrollback_limit_bytes = scrollback_limit_bytes,
+            .external_frame_context = .{ .raw = 0 },
+        };
+
+        // Add ourselves to the list of surfaces on the app.
+        try app.core_app.addSurface(self);
+        errdefer app.core_app.deleteSurface(self);
+
+        // Shallow copy the config so that we can modify it.
+        var config = try apprt.surface.newConfig(app.core_app, &app.config, opts.context);
+        defer config.deinit();
+        config.@"scrollback-limit" = effectiveScrollbackLimit(
+            config.@"scrollback-limit",
+            scrollback_limit_bytes,
+        );
+
+        // If we have a working directory from the options then we set it.
+        if (opts.working_directory) |c_wd| {
+            const wd = std.mem.sliceTo(c_wd, 0);
+            if (wd.len > 0) wd: {
+                var dir = std.Io.Dir.openDirAbsolute(global.io(), wd, .{}) catch |err| {
+                    log.warn(
+                        "error opening requested working directory dir={s} err={}",
+                        .{ wd, err },
+                    );
+                    break :wd;
+                };
+                defer dir.close(global.io());
+
+                const stat = dir.stat(global.io()) catch |err| {
+                    log.warn(
+                        "failed to stat requested working directory dir={s} err={}",
+                        .{ wd, err },
+                    );
+                    break :wd;
+                };
+
+                if (stat.kind != .directory) {
+                    log.warn(
+                        "requested working directory is not a directory dir={s}",
+                        .{wd},
+                    );
+                    break :wd;
+                }
+
+                var wd_val: configpkg.WorkingDirectory = .{ .path = wd };
+                if (wd_val.finalize(config.arenaAlloc())) |_| {
+                    config.@"working-directory" = wd_val;
+                } else |err| {
+                    log.warn(
+                        "error finalizing working directory config dir={s} err={}",
+                        .{ wd_val.path, err },
+                    );
+                }
+            }
+        }
+
+        // If we have a command from the options then we set it.
+        if (opts.command) |c_command| {
+            const cmd = std.mem.sliceTo(c_command, 0);
+            if (cmd.len > 0) {
+                config.command = .{ .shell = cmd };
+                config.@"wait-after-command" = true;
+            }
+        }
+
+        // Apply any environment variables that were requested.
+        if (opts.env_var_count > 0) {
+            const alloc = config.arenaAlloc();
+            for (opts.env_vars.?[0..opts.env_var_count]) |env_var| {
+                const key = std.mem.sliceTo(env_var.key, 0);
+                const value = std.mem.sliceTo(env_var.value, 0);
+                try config.env.map.put(
+                    alloc,
+                    try alloc.dupeZ(u8, key),
+                    try alloc.dupeZ(u8, value),
+                );
+            }
+        }
+
+        // If we have an initial input then we set it.
+        if (opts.initial_input) |c_input| {
+            const alloc = config.arenaAlloc();
+
+            // We need to escape the string because the "raw" field
+            // expects a Zig string.
+            var buf: std.Io.Writer.Allocating = .init(alloc);
+            defer buf.deinit();
+            try std.zig.stringEscape(
+                std.mem.sliceTo(c_input, 0),
+                &buf.writer,
+            );
+
+            config.input.list.clearRetainingCapacity();
+            try config.input.list.append(
+                alloc,
+                .{ .raw = try buf.toOwnedSliceSentinel(0) },
+            );
+        }
+
+        // Wait after command
+        if (opts.wait_after_command) {
+            config.@"wait-after-command" = true;
+        }
+
+        // Initialize our surface right away. We're given a view that is
+        // ready to use.
+        try self.core_surface.init(
+            app.core_app.alloc,
+            &config,
+            app.core_app,
+            app,
+            self,
+        );
+        errdefer self.core_surface.deinit();
+
+        // If our options requested a specific font-size, set that.
+        if (opts.font_size != 0) {
+            var font_size = self.core_surface.font_size;
+            font_size.points = opts.font_size;
+            try self.core_surface.setFontSize(font_size);
+        }
+    }
+
+    pub fn fontSizeActionDidPerform(
+        self: *Surface,
+        event: CoreSurface.FontSizeActionEvent,
+    ) void {
+        const callback = self.font_size_action_cb orelse return;
+        callback(
+            self.font_size_action_userdata,
+            event.kind,
+            event.previous_points,
+            event.current_points,
+            event.previous_adjusted,
+            event.current_adjusted,
+        );
+    }
+
+    /// Applies an optional embedder cap without ever raising the user's
+    /// configured lower scrollback limit.
+    fn effectiveScrollbackLimit(configured: usize, embedder_cap: usize) usize {
+        if (embedder_cap == 0) return configured;
+        return @min(configured, embedder_cap);
+    }
+
+    test "embedded surface scrollback cap inherits when unset" {
+        // The expanded OpenGL presenter is the largest Platform.C union member.
+        // Keep the public Zig options layout in lockstep with the C header.
+        try std.testing.expectEqual(@as(usize, 168), @sizeOf(Options));
+        const c = @import("ghostty.h");
+        try std.testing.expectEqual(
+            @sizeOf(c.ghostty_surface_config_s),
+            @sizeOf(Options),
+        );
+        try std.testing.expectEqual(
+            @as(usize, 50_000_000),
+            effectiveScrollbackLimit(50_000_000, 0),
+        );
+    }
+
+    test "embedded surface options include initial PTY tee" {
+        const options: Options = .{};
+        try std.testing.expect(options.pty_tee_cb == null);
+        try std.testing.expect(options.pty_tee_userdata == null);
+        try std.testing.expect(
+            @offsetOf(Options, "pty_tee_cb") <
+                @offsetOf(Options, "pty_tee_userdata"),
+        );
+    }
+
+    test "embedded surface scrollback cap only lowers configured limit" {
+        try std.testing.expectEqual(
+            @as(usize, 8_388_608),
+            effectiveScrollbackLimit(50_000_000, 8_388_608),
+        );
+        try std.testing.expectEqual(
+            @as(usize, 2_000_000),
+            effectiveScrollbackLimit(2_000_000, 8_388_608),
+        );
+        try std.testing.expectEqual(
+            @as(usize, 0),
+            effectiveScrollbackLimit(0, 8_388_608),
+        );
+    }
+
+    pub fn deinit(self: *Surface) void {
+        self.requestProcessTermination();
+        self.deinitWith(destroyContents);
+    }
+
+    /// Retire the surface from app routing and ask its IO thread to terminate
+    /// the owned child process without waiting for the native surface free.
+    pub fn requestProcessTermination(self: *Surface) void {
+        if (self.process_termination_requested.swap(true, .acq_rel)) return;
+
+        // Registry removal and redraw-lease acquisition share one lock, so no
+        // new app action can retain this surface after deletion returns.
+        self.app.core_app.deleteSurface(self);
+        self.core_surface.requestProcessTermination();
+    }
+
+    fn deinitWith(
+        self: *Surface,
+        comptime deinit_contents: fn (*Surface) void,
+    ) void {
+        const alloc = self.app.core_app.alloc;
+
+        // requestProcessTermination normally removed the surface already.
+        // deinitWith is also used by a focused lifetime test, so preserve the
+        // standalone removal behavior when no process request preceded it.
+        if (!self.process_termination_requested.load(.acquire)) {
+            self.app.core_app.deleteSurface(self);
+        }
+
+        // Wait for an action on another thread; a reentrant action on this
+        // thread retains the outer allocation while renderer, IO, and callback
+        // state are torn down.
+        self.app_action_lifetime.waitForActionsBeforeTeardown();
+        deinit_contents(self);
+        if (self.app_action_lifetime.releaseOwner()) alloc.destroy(self);
+    }
+
+    /// Retain the opaque embedded surface allocation while an app action is
+    /// dispatched. Core teardown remains synchronous so host-owned callback
+    /// userdata may still be released when ghostty_surface_free returns.
+    pub fn retainForAppAction(self: *Surface) void {
+        self.app_action_lifetime.retain();
+    }
+
+    pub fn releaseForAppAction(self: *Surface) void {
+        if (self.app_action_lifetime.releaseAction()) {
+            self.app.core_app.alloc.destroy(self);
+        }
+    }
+
+    fn destroyContents(self: *Surface) void {
+        const alloc = self.app.core_app.alloc;
+
+        // Shut down our inspector
+        self.freeInspector();
+
+        // Free our title
+        if (self.title) |v| alloc.free(v);
+
+        // Clean up our core surface so that all the rendering and IO stop.
+        self.core_surface.deinit();
+    }
+
+    /// Initialize the inspector instance. A surface can only have one
+    /// inspector at any given time, so this will return the previous inspector
+    /// if it was already initialized.
+    pub fn initInspector(self: *Surface) !*Inspector {
+        if (self.inspector) |v| return v;
+
+        const alloc = self.app.core_app.alloc;
+        const inspector = try alloc.create(Inspector);
+        errdefer alloc.destroy(inspector);
+        inspector.* = try .init(self);
+        self.inspector = inspector;
+        return inspector;
+    }
+
+    pub fn freeInspector(self: *Surface) void {
+        if (self.inspector) |v| {
+            v.deinit();
+            self.app.core_app.alloc.destroy(v);
+            self.inspector = null;
+        }
+    }
+
+    pub fn core(self: *Surface) *CoreSurface {
+        return &self.core_surface;
+    }
+
+    pub fn rtApp(self: *const Surface) *App {
+        return self.app;
+    }
+
+    pub fn close(self: *const Surface, process_alive: bool) void {
+        const func = self.app.opts.close_surface orelse {
+            log.info("runtime embedder does not support closing a surface", .{});
+            return;
+        };
+
+        func(self.userdata, process_alive);
+    }
+
+    pub fn tmuxControl(
+        self: *const Surface,
+        event: apprt.surface.Message.TmuxControlMsg.Event,
+        id: u32,
+        data: []const u8,
+    ) void {
+        const func = self.app.opts.tmux_control orelse return;
+        func(self.userdata, event, id, data.ptr, data.len);
+    }
+
+    pub fn getContentScale(self: *const Surface) !apprt.ContentScale {
+        return self.content_scale;
+    }
+
+    pub fn getSize(self: *const Surface) !apprt.SurfaceSize {
+        return self.size;
+    }
+
+    pub fn externalFrameContext(self: *const Surface) u64 {
+        return self.external_frame_context.load(.acquire);
+    }
+
+    pub fn setExternalFrameContext(self: *Surface, value: u64) void {
+        self.external_frame_context.store(value, .release);
+    }
+
+    pub fn ioMode(self: *const Surface) IoMode {
+        return self.io_mode;
+    }
+
+    pub fn usesManualIo(self: *const Surface) bool {
+        return self.io_mode.usesManualIo();
+    }
+
+    pub fn ioWriteCallback(self: *const Surface) ?IoWriteCallback {
+        return self.io_write_cb;
+    }
+
+    pub fn ioWriteUserdata(self: *const Surface) ?*anyopaque {
+        return self.io_write_userdata;
+    }
+
+    pub fn ptyTeeCallback(self: *const Surface) ?PtyTeeCallback {
+        return self.pty_tee_cb;
+    }
+
+    pub fn ptyTeeUserdata(self: *const Surface) ?*anyopaque {
+        return self.pty_tee_userdata;
+    }
+
+    pub fn suppressTerminalResponses(self: *const Surface) bool {
+        return self.io_mode.suppressesTerminalResponses();
+    }
+
+    pub fn rendererInstrumentation(self: *const Surface) renderer.Instrumentation {
+        return .{
+            .callback = self.renderer_event_cb,
+            .userdata = self.userdata,
+        };
+    }
+
+    pub fn getTitle(self: *Surface) ?[:0]const u8 {
+        return self.title;
+    }
+
+    pub fn supportsClipboard(
+        self: *const Surface,
+        clipboard_type: apprt.Clipboard,
+    ) bool {
+        return switch (clipboard_type) {
+            .standard => true,
+            .selection, .primary => self.app.opts.supports_selection_clipboard,
+        };
+    }
+
+    pub fn clipboardRequest(
+        self: *Surface,
+        clipboard_type: apprt.Clipboard,
+        state: apprt.ClipboardRequest,
+    ) !bool {
+        // We need to allocate to get a pointer to store our clipboard request
+        // so that it is stable until the read_clipboard callback and call
+        // complete_clipboard_request. This sucks but clipboard requests aren't
+        // high throughput so it's probably fine.
+        const alloc = self.app.core_app.alloc;
+        const state_ptr = try alloc.create(apprt.ClipboardRequest);
+        errdefer alloc.destroy(state_ptr);
+        state_ptr.* = state;
+
+        const started = self.app.opts.read_clipboard(
+            self.userdata,
+            @intCast(@intFromEnum(clipboard_type)),
+            state_ptr,
+        );
+        if (!started) {
+            alloc.destroy(state_ptr);
+            return false;
+        }
+
+        return true;
+    }
+
+    fn completeClipboardRequest(
+        self: *Surface,
+        str: [:0]const u8,
+        state: *apprt.ClipboardRequest,
+        confirmed: bool,
+    ) void {
+        const alloc = self.app.core_app.alloc;
+
+        // Attempt to complete the request, but we may request
+        // confirmation.
+        self.core_surface.completeClipboardRequest(
+            state.*,
+            str,
+            confirmed,
+        ) catch |err| switch (err) {
+            error.UnsafePaste,
+            error.UnauthorizedPaste,
+            => {
+                self.app.opts.confirm_read_clipboard(
+                    self.userdata,
+                    str.ptr,
+                    state,
+                    state.*,
+                );
+
+                return;
+            },
+
+            else => log.err("error completing clipboard request err={}", .{err}),
+        };
+
+        // We don't defer this because the clipboard confirmation route
+        // preserves the clipboard request.
+        alloc.destroy(state);
+    }
+
+    pub fn setClipboard(
+        self: *const Surface,
+        clipboard_type: apprt.Clipboard,
+        contents: []const apprt.ClipboardContent,
+        confirm: bool,
+    ) !void {
+        const alloc = self.app.core_app.alloc;
+        const array = try alloc.alloc(CAPI.ClipboardContent, contents.len);
+        defer alloc.free(array);
+        for (contents, 0..) |content, i| {
+            array[i] = .{
+                .mime = content.mime,
+                .data = content.data,
+            };
+        }
+
+        self.app.opts.write_clipboard(
+            self.userdata,
+            @intCast(@intFromEnum(clipboard_type)),
+            array.ptr,
+            array.len,
+            confirm,
+        );
+    }
+
+    pub fn getCursorPos(self: *const Surface) !apprt.CursorPos {
+        return self.cursor_pos;
+    }
+
+    pub fn refresh(self: *Surface) void {
+        self.core_surface.refreshCallback() catch |err| {
+            log.err("error in refresh callback err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn draw(self: *Surface) void {
+        self.core_surface.draw() catch |err| {
+            log.err("error in draw err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn renderNow(self: *Surface) void {
+        self.core_surface.applyPendingResizeIfNeeded();
+        self.core_surface.renderer_thread.renderNow();
+    }
+
+    pub fn renderNowWithToken(self: *Surface, token: u64) void {
+        const callback = self.render_presented_cb orelse {
+            self.renderNow();
+            return;
+        };
+        const failure_callback = self.render_failed_cb;
+        self.core_surface.applyPendingResizeIfNeeded();
+        self.core_surface.renderer_thread.renderNowWithPresentation(.{
+            .callback = callback,
+            .userdata = self.render_presented_userdata,
+            .token = token,
+            .failure_callback = failure_callback,
+            .failure_userdata = self.render_failed_userdata,
+        });
+    }
+
+    /// cmux fork: queue one tokened forced render executed on the renderer
+    /// thread. Safe to call from any thread while the renderer OS thread is
+    /// live (unlike `renderNowWithToken`, which renders on the calling thread
+    /// and requires embedder-owned renderer state). The installed
+    /// render-presented callback fires only after the exact frame is
+    /// presented to the platform layer (Metal: after the main-thread
+    /// IOSurface assignment). Returns false when no callback is installed or
+    /// another tokened draw is still pending.
+    pub fn requestRenderWithToken(self: *Surface, token: u64) bool {
+        const callback = self.render_presented_cb orelse return false;
+        const failure_callback = self.render_failed_cb;
+        return self.core_surface.renderer_thread.requestDrawWithPresentation(.{
+            .callback = callback,
+            .userdata = self.render_presented_userdata,
+            .token = token,
+            .failure_callback = failure_callback,
+            .failure_userdata = self.render_failed_userdata,
+        });
+    }
+
+    pub fn updateContentScale(self: *Surface, x: f64, y: f64) void {
+        // We are an embedded API so the caller can send us all sorts of
+        // garbage. We want to make sure that the float values are valid
+        // and we don't want to support fractional scaling below 1.
+        const x_scaled = @max(1, if (std.math.isNan(x)) 1 else x);
+        const y_scaled = @max(1, if (std.math.isNan(y)) 1 else y);
+
+        self.content_scale = .{
+            .x = @floatCast(x_scaled),
+            .y = @floatCast(y_scaled),
+        };
+
+        self.core_surface.contentScaleCallback(self.content_scale) catch |err| {
+            log.err("error in content scale callback err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn updateSize(self: *Surface, width: u32, height: u32) void {
+        // Runtimes sometimes generate superfluous resize events even
+        // if the size did not actually change (SwiftUI). We check
+        // that the size actually changed from what we last recorded
+        // since resizes are expensive.
+        if (self.size.width == width and self.size.height == height) return;
+
+        self.size = .{
+            .width = width,
+            .height = height,
+        };
+
+        // Call the primary callback.
+        self.core_surface.sizeCallback(self.size) catch |err| {
+            log.err("error in size callback err={}", .{err});
+            return;
+        };
+    }
+
+    /// Set an authoritative logical grid by resolving its exact pixel size
+    /// from the live cell metrics and padding. The renderer and PTY still flow
+    /// through the normal resize path, so all existing ordering is preserved.
+    pub fn updateGridSize(self: *Surface, columns: u16, rows: u16) bool {
+        const requested: renderer.GridSize = .{
+            .columns = columns,
+            .rows = rows,
+        };
+        const screen = self.core_surface.size.screenForGrid(requested) orelse
+            return false;
+        self.updateSize(screen.width, screen.height);
+
+        // Padding balancing may be recomputed by the core resize. Re-resolve
+        // once with that authoritative padding if necessary.
+        if (!self.core_surface.size.grid().equals(requested)) {
+            const adjusted = self.core_surface.size.screenForGrid(requested) orelse
+                return false;
+            self.updateSize(adjusted.width, adjusted.height);
+        }
+
+        return self.core_surface.size.grid().equals(requested);
+    }
+
+    pub fn colorSchemeCallback(self: *Surface, scheme: apprt.ColorScheme) void {
+        self.core_surface.colorSchemeCallback(scheme) catch |err| {
+            log.err("error setting color scheme err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn mouseButtonCallback(
+        self: *Surface,
+        action: input.MouseButtonState,
+        button: input.MouseButton,
+        mods: input.Mods,
+    ) bool {
+        return self.core_surface.mouseButtonCallback(action, button, mods) catch |err| {
+            log.err("error in mouse button callback err={}", .{err});
+            return false;
+        };
+    }
+
+    pub fn mousePressureCallback(
+        self: *Surface,
+        stage: input.MousePressureStage,
+        pressure: f64,
+    ) void {
+        self.core_surface.mousePressureCallback(stage, pressure) catch |err| {
+            log.err("error in mouse pressure callback err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn scrollCallback(
+        self: *Surface,
+        xoff: f64,
+        yoff: f64,
+        mods: input.ScrollMods,
+    ) void {
+        self.core_surface.scrollCallback(xoff, yoff, mods) catch |err| {
+            log.err("error in scroll callback err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn cursorPosCallback(
+        self: *Surface,
+        x: f64,
+        y: f64,
+        mods: input.Mods,
+    ) void {
+        // Convert our unscaled x/y to scaled.
+        const pos = self.cursorPosToPixels(.{
+            .x = @floatCast(x),
+            .y = @floatCast(y),
+        }) catch |err| {
+            log.err(
+                "error converting cursor pos to scaled pixels in cursor pos callback err={}",
+                .{err},
+            );
+            return;
+        };
+
+        // There are cases where the platform reports a mouse motion event
+        // without the cursor actually moving. For example, on macOS, updating
+        // the window title can trigger a phantom mouse-move event at the same
+        // coordinates. This can cause the mouse to incorrectly unhide when
+        // mouse-hide-while-typing is enabled (commonly seen with TUI apps
+        // like Zellij that frequently update the title). To prevent incorrect
+        // behavior, we only continue with callback logic if the cursor has
+        // actually moved.
+        if (@abs(self.cursor_pos.x - pos.x) < 1 and
+            @abs(self.cursor_pos.y - pos.y) < 1 and
+            self.cursor_pos_mods.equal(mods)) return;
+
+        self.cursor_pos = pos;
+        self.cursor_pos_mods = mods;
+
+        self.core_surface.cursorPosCallback(self.cursor_pos, mods) catch |err| {
+            log.err("error in cursor pos callback err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn preeditCallback(self: *Surface, preedit_: ?[]const u8) void {
+        _ = self.core_surface.preeditCallback(preedit_) catch |err| {
+            log.err("error in preedit callback err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn textCallback(self: *Surface, text: []const u8) void {
+        _ = self.core_surface.textCallback(text) catch |err| {
+            log.err("error in key callback err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn textInputCallback(self: *Surface, text: []const u8) void {
+        _ = self.core_surface.textInputCallback(text) catch |err| {
+            log.err("error in text input callback err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn focusCallback(self: *Surface, focused: bool) void {
+        self.core_surface.focusCallback(focused) catch |err| {
+            log.err("error in focus callback err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn occlusionCallback(self: *Surface, visible: bool) void {
+        self.core_surface.occlusionCallback(visible) catch |err| {
+            log.err("error in occlusion callback err={}", .{err});
+            return;
+        };
+    }
+
+    fn queueInspectorRender(self: *Surface) void {
+        _ = self.app.performAction(
+            .{ .surface = &self.core_surface },
+            .render_inspector,
+            {},
+        ) catch |err| {
+            log.err("error rendering the inspector err={}", .{err});
+            return;
+        };
+    }
+
+    pub fn newSurfaceOptions(self: *const Surface, context: apprt.surface.NewSurfaceContext) apprt.Surface.Options {
+        const font_size: f32 = font_size: {
+            if (!self.app.config.@"window-inherit-font-size") break :font_size 0;
+            break :font_size self.core_surface.font_size.points;
+        };
+
+        const working_directory: ?[*:0]const u8 = wd: {
+            if (!apprt.surface.shouldInheritWorkingDirectory(context, &self.app.config)) break :wd null;
+            const cwd = self.core_surface.pwd(self.app.core_app.alloc) catch null orelse break :wd null;
+            defer self.app.core_app.alloc.free(cwd);
+            break :wd self.app.core_app.alloc.dupeZ(u8, cwd) catch null;
+        };
+
+        return .{
+            .font_size = font_size,
+            .working_directory = working_directory,
+            .context = context,
+            .io_mode = self.io_mode,
+            .io_write_cb = self.io_write_cb,
+            .io_write_userdata = self.io_write_userdata,
+            .renderer_event_cb = self.renderer_event_cb,
+        };
+    }
+
+    pub fn defaultTermioEnv(self: *const Surface) !std.process.Environ.Map {
+        _ = self;
+        var env = try global.environMap();
+        errdefer env.deinit();
+
+        if (comptime builtin.target.os.tag.isDarwin()) {
+            if (env.get("__XCODE_BUILT_PRODUCTS_DIR_PATHS") != null) {
+                _ = env.orderedRemove("__XCODE_BUILT_PRODUCTS_DIR_PATHS");
+                _ = env.orderedRemove("__XPC_DYLD_LIBRARY_PATH");
+                _ = env.orderedRemove("DYLD_FRAMEWORK_PATH");
+                _ = env.orderedRemove("DYLD_INSERT_LIBRARIES");
+                _ = env.orderedRemove("DYLD_LIBRARY_PATH");
+                _ = env.orderedRemove("LD_LIBRARY_PATH");
+                _ = env.orderedRemove("SECURITYSESSIONID");
+                _ = env.orderedRemove("XPC_SERVICE_NAME");
+            }
+
+            // Remove this so that running `ghostty` within Ghostty works.
+            _ = env.orderedRemove("GHOSTTY_MAC_LAUNCH_SOURCE");
+
+            // If we were launched from the desktop then we want to
+            // remove the LANGUAGE env var so that we don't inherit
+            // our translation settings for Ghostty. If we aren't from
+            // the desktop then we didn't set our LANGUAGE var so we
+            // don't need to remove it.
+            if (internal_os.launchedFromDesktop()) _ = env.orderedRemove("LANGUAGE");
+        }
+
+        return env;
+    }
+
+    /// The cursor position from the host directly is in screen coordinates but
+    /// all our interface works in pixels.
+    fn cursorPosToPixels(self: *const Surface, pos: apprt.CursorPos) !apprt.CursorPos {
+        const scale = try self.getContentScale();
+        return .{ .x = pos.x * scale.x, .y = pos.y * scale.y };
+    }
+};
+
+test "surface action lifetime defers owner destruction until lease release" {
+    const Lifetime = if (@hasDecl(@This(), "SurfaceActionLifetime"))
+        @field(@This(), "SurfaceActionLifetime")
+    else
+        struct {
+            fn retain(_: *@This()) void {}
+            fn waitForActionsBeforeTeardown(_: *@This()) void {}
+            fn releaseOwner(_: *@This()) bool {
+                return false;
+            }
+            fn releaseAction(_: *@This()) bool {
+                return false;
+            }
+        };
+
+    var lifetime: Lifetime = .{};
+    lifetime.retain();
+    lifetime.waitForActionsBeforeTeardown();
+    try std.testing.expect(!lifetime.releaseOwner());
+    try std.testing.expect(lifetime.releaseAction());
+}
+
+test "surface teardown waits for a cross-thread action lease" {
+    const Lifetime = if (@hasDecl(@This(), "SurfaceActionLifetime"))
+        @field(@This(), "SurfaceActionLifetime")
+    else
+        struct {};
+
+    if (comptime @hasDecl(Lifetime, "waitForActionsBeforeTeardown") and
+        @hasDecl(Lifetime, "releaseAction"))
+    {
+        const Context = struct {
+            lifetime: *Lifetime,
+            action_ready: std.Io.Event = .unset,
+            allow_action_return: std.Io.Event = .unset,
+            action_finished: std.Io.Event = .unset,
+            release_action_reached: std.Io.Event = .unset,
+            allow_release_completion: std.Io.Event = .unset,
+            teardown_started: std.Io.Event = .unset,
+            teardown_finished: std.Io.Event = .unset,
+            action_released_final: std.atomic.Value(bool) = .{ .raw = true },
+
+            fn runAction(self: *@This()) void {
+                self.lifetime.retain();
+                self.action_ready.set(global.io());
+                self.allow_action_return.waitUncancelable(global.io());
+                self.action_released_final.store(
+                    self.lifetime.releaseAction(),
+                    .release,
+                );
+                self.action_finished.set(global.io());
+            }
+
+            fn runTeardown(self: *@This()) void {
+                self.action_ready.waitUncancelable(global.io());
+                self.teardown_started.set(global.io());
+                self.lifetime.waitForActionsBeforeTeardown();
+                self.teardown_finished.set(global.io());
+            }
+        };
+
+        var lifetime: Lifetime = .{};
+        var context: Context = .{ .lifetime = &lifetime };
+        lifetime.release_pause_for_testing = .{
+            .reached = &context.release_action_reached,
+            .continue_release = &context.allow_release_completion,
+        };
+        const action_thread = try std.Thread.spawn(.{}, Context.runAction, .{&context});
+        defer action_thread.join();
+        const teardown_thread = try std.Thread.spawn(.{}, Context.runTeardown, .{&context});
+        defer teardown_thread.join();
+        defer context.allow_action_return.set(global.io());
+        defer context.allow_release_completion.set(global.io());
+
+        context.teardown_started.waitUncancelable(global.io());
+        try std.testing.expectError(
+            error.Timeout,
+            context.teardown_finished.waitTimeout(global.io(), .{ .duration = .{
+                .clock = .awake,
+                .raw = .fromMilliseconds(20),
+            } }),
+        );
+
+        context.allow_action_return.set(global.io());
+        context.release_action_reached.waitUncancelable(global.io());
+        try std.testing.expectError(
+            error.Timeout,
+            context.teardown_finished.waitTimeout(global.io(), .{ .duration = .{
+                .clock = .awake,
+                .raw = .fromMilliseconds(100),
+            } }),
+        );
+        context.allow_release_completion.set(global.io());
+        context.teardown_finished.waitUncancelable(global.io());
+        context.action_finished.waitUncancelable(global.io());
+        try std.testing.expect(
+            !context.action_released_final.load(.acquire),
+        );
+        try std.testing.expectEqual(
+            @as(usize, 1),
+            lifetime.countForTesting(),
+        );
+    } else {
+        try std.testing.expect(false);
+    }
+}
+
+// The cmux integration combines the OpenGL platform payload (the largest
+// Platform.C variant) with the startup PTY tee fields. Keep the resulting C
+// layout pinned so every exact-revision consumer fails loudly on drift.
+const surface_config_abi_size = 168;
+
+test "embedded surface config ABI is pinned" {
+    const defaults: Surface.Options = .{};
+    try std.testing.expectEqual(
+        @as(usize, surface_config_abi_size),
+        @sizeOf(Surface.Options),
+    );
+    try std.testing.expectEqual(IoMode.exec, defaults.io_mode);
+    try std.testing.expectEqual(@as(c_int, 2), @intFromEnum(IoMode.manual_mirror));
+    try std.testing.expect(!IoMode.exec.usesManualIo());
+    try std.testing.expect(IoMode.manual.usesManualIo());
+    try std.testing.expect(IoMode.manual_mirror.usesManualIo());
+    try std.testing.expect(!IoMode.manual.suppressesTerminalResponses());
+    try std.testing.expect(IoMode.manual_mirror.suppressesTerminalResponses());
+}
+
+comptime {
+    const defaults: Surface.Options = .{};
+    if (@sizeOf(Surface.Options) != surface_config_abi_size)
+        @compileError("embedded surface config ABI changed; update all pinned consumers");
+    if (defaults.io_mode != .exec)
+        @compileError("surface IO must default to exec mode");
+    if (@intFromEnum(IoMode.manual_mirror) != 2)
+        @compileError("manual mirror IO mode must preserve its C ABI value");
+    if (!IoMode.manual.usesManualIo() or !IoMode.manual_mirror.usesManualIo())
+        @compileError("both manual IO modes must use the embedder backend");
+    if (IoMode.manual.suppressesTerminalResponses() or
+        !IoMode.manual_mirror.suppressesTerminalResponses())
+        @compileError("only manual mirror mode may suppress terminal responses");
+}
+
+/// Inspector is the state required for the terminal inspector. A terminal
+/// inspector is 1:1 with a Surface.
+pub const Inspector = struct {
+    const cimgui = @import("dcimgui");
+
+    surface: *Surface,
+    ig_ctx: *cimgui.c.ImGuiContext,
+    backend: ?Backend = null,
+    content_scale: f64 = 1,
+
+    /// Our previous instant used to calculate delta time for animations.
+    instant: ?std.Io.Timestamp = null,
+
+    const Backend = enum {
+        metal,
+
+        pub fn deinit(self: Backend) void {
+            switch (self) {
+                .metal => if (builtin.target.os.tag.isDarwin()) cimgui.ImGui_ImplMetal_Shutdown(),
+            }
+        }
+    };
+
+    pub fn init(surface: *Surface) !Inspector {
+        const ig_ctx = cimgui.c.ImGui_CreateContext(null) orelse return error.OutOfMemory;
+        errdefer cimgui.c.ImGui_DestroyContext(ig_ctx);
+        cimgui.c.ImGui_SetCurrentContext(ig_ctx);
+        const io: *cimgui.c.ImGuiIO = cimgui.c.ImGui_GetIO();
+        io.BackendPlatformName = "ghostty_embedded";
+
+        // Setup our core inspector
+        CoreInspector.setup();
+        surface.core_surface.activateInspector() catch |err| {
+            log.err("failed to activate inspector err={}", .{err});
+        };
+
+        return .{
+            .surface = surface,
+            .ig_ctx = ig_ctx,
+        };
+    }
+
+    pub fn deinit(self: *Inspector) void {
+        self.surface.core_surface.deactivateInspector();
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+        if (self.backend) |v| v.deinit();
+        cimgui.c.ImGui_DestroyContext(self.ig_ctx);
+    }
+
+    /// Queue a render for the next frame.
+    pub fn queueRender(self: *Inspector) void {
+        self.surface.queueInspectorRender();
+    }
+
+    /// Initialize the inspector for a metal backend.
+    pub fn initMetal(self: *Inspector, device: objc.Object) bool {
+        defer device.msgSend(void, objc.sel("release"), .{});
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+
+        if (self.backend) |v| {
+            v.deinit();
+            self.backend = null;
+        }
+
+        if (!cimgui.ImGui_ImplMetal_Init(device.value)) {
+            log.warn("failed to initialize metal backend", .{});
+            return false;
+        }
+        self.backend = .metal;
+
+        log.debug("initialized metal backend", .{});
+        return true;
+    }
+
+    pub fn renderMetal(
+        self: *Inspector,
+        command_buffer: objc.Object,
+        desc: objc.Object,
+    ) !void {
+        defer {
+            command_buffer.msgSend(void, objc.sel("release"), .{});
+            desc.msgSend(void, objc.sel("release"), .{});
+        }
+        assert(self.backend == .metal);
+        //log.debug("render", .{});
+
+        // Setup our imgui frame. We need to render multiple frames to ensure
+        // ImGui completes all its state processing. I don't know how to fix
+        // this.
+        for (0..2) |_| {
+            cimgui.ImGui_ImplMetal_NewFrame(desc.value);
+            try self.newFrame();
+            cimgui.c.ImGui_NewFrame();
+
+            // Build our UI
+            render: {
+                const surface = &self.surface.core_surface;
+                const inspector = surface.inspector orelse break :render;
+                inspector.render(surface);
+            }
+
+            // Render
+            cimgui.c.ImGui_Render();
+        }
+
+        // MTLRenderCommandEncoder
+        const encoder = command_buffer.msgSend(
+            objc.Object,
+            objc.sel("renderCommandEncoderWithDescriptor:"),
+            .{desc.value},
+        );
+        defer encoder.msgSend(void, objc.sel("endEncoding"), .{});
+        cimgui.ImGui_ImplMetal_RenderDrawData(
+            cimgui.c.ImGui_GetDrawData(),
+            command_buffer.value,
+            encoder.value,
+        );
+    }
+
+    pub fn updateContentScale(self: *Inspector, x: f64, y: f64) void {
+        _ = y;
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+
+        // Cache our scale because we use it for cursor position calculations.
+        self.content_scale = x;
+
+        // Setup a new style and scale it appropriately. We must use the
+        // ImGuiStyle constructor to get proper default values (e.g.,
+        // CurveTessellationTol) rather than zero-initialized values.
+        var style: cimgui.c.ImGuiStyle = undefined;
+        cimgui.ext.ImGuiStyle_ImGuiStyle(&style);
+        cimgui.c.ImGuiStyle_ScaleAllSizes(&style, @floatCast(x));
+        const active_style = cimgui.c.ImGui_GetStyle();
+        active_style.* = style;
+    }
+
+    pub fn updateSize(self: *Inspector, width: u32, height: u32) void {
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+        const io: *cimgui.c.ImGuiIO = cimgui.c.ImGui_GetIO();
+        io.DisplaySize = .{ .x = @floatFromInt(width), .y = @floatFromInt(height) };
+    }
+
+    pub fn mouseButtonCallback(
+        self: *Inspector,
+        action: input.MouseButtonState,
+        button: input.MouseButton,
+        mods: input.Mods,
+    ) void {
+        _ = mods;
+
+        self.queueRender();
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+        const io: *cimgui.c.ImGuiIO = cimgui.c.ImGui_GetIO();
+
+        const imgui_button = switch (button) {
+            .left => cimgui.c.ImGuiMouseButton_Left,
+            .middle => cimgui.c.ImGuiMouseButton_Middle,
+            .right => cimgui.c.ImGuiMouseButton_Right,
+            else => return, // unsupported
+        };
+
+        cimgui.c.ImGuiIO_AddMouseButtonEvent(io, imgui_button, action == .press);
+    }
+
+    pub fn scrollCallback(
+        self: *Inspector,
+        xoff: f64,
+        yoff: f64,
+        mods: input.ScrollMods,
+    ) void {
+        self.queueRender();
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+        const io: *cimgui.c.ImGuiIO = cimgui.c.ImGui_GetIO();
+
+        // For precision scrolling (trackpads), the values are in pixels which
+        // scroll way too fast. Scale them down to approximate discrete wheel
+        // notches. imgui expects 1.0 to scroll ~5 lines of text.
+        const scale: f64 = if (mods.precision) 0.1 else 1.0;
+        cimgui.c.ImGuiIO_AddMouseWheelEvent(
+            io,
+            @floatCast(xoff * scale),
+            @floatCast(yoff * scale),
+        );
+    }
+
+    pub fn cursorPosCallback(self: *Inspector, x: f64, y: f64) void {
+        self.queueRender();
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+        const io: *cimgui.c.ImGuiIO = cimgui.c.ImGui_GetIO();
+        cimgui.c.ImGuiIO_AddMousePosEvent(
+            io,
+            @floatCast(x * self.content_scale),
+            @floatCast(y * self.content_scale),
+        );
+    }
+
+    pub fn focusCallback(self: *Inspector, focused: bool) void {
+        self.queueRender();
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+        const io: *cimgui.c.ImGuiIO = cimgui.c.ImGui_GetIO();
+        cimgui.c.ImGuiIO_AddFocusEvent(io, focused);
+    }
+
+    pub fn textCallback(self: *Inspector, text: [:0]const u8) void {
+        self.queueRender();
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+        const io: *cimgui.c.ImGuiIO = cimgui.c.ImGui_GetIO();
+        cimgui.c.ImGuiIO_AddInputCharactersUTF8(io, text.ptr);
+    }
+
+    pub fn keyCallback(
+        self: *Inspector,
+        action: input.Action,
+        key: input.Key,
+        mods: input.Mods,
+    ) !void {
+        self.queueRender();
+        cimgui.c.ImGui_SetCurrentContext(self.ig_ctx);
+        const io: *cimgui.c.ImGuiIO = cimgui.c.ImGui_GetIO();
+
+        // Update all our modifiers
+        cimgui.c.ImGuiIO_AddKeyEvent(io, cimgui.c.ImGuiKey_LeftShift, mods.shift);
+        cimgui.c.ImGuiIO_AddKeyEvent(io, cimgui.c.ImGuiKey_LeftCtrl, mods.ctrl);
+        cimgui.c.ImGuiIO_AddKeyEvent(io, cimgui.c.ImGuiKey_LeftAlt, mods.alt);
+        cimgui.c.ImGuiIO_AddKeyEvent(io, cimgui.c.ImGuiKey_LeftSuper, mods.super);
+
+        // Send our keypress
+        if (key.imguiKey()) |imgui_key| {
+            cimgui.c.ImGuiIO_AddKeyEvent(
+                io,
+                imgui_key,
+                action == .press or action == .repeat,
+            );
+        }
+    }
+
+    fn newFrame(self: *Inspector) !void {
+        const io: *cimgui.c.ImGuiIO = cimgui.c.ImGui_GetIO();
+
+        // Determine our delta time
+        const now: std.Io.Timestamp = .now(global.io(), .awake);
+        io.DeltaTime = if (self.instant) |prev| delta: {
+            const since_ns: f64 = @floatFromInt(prev.durationTo(now).toNanoseconds());
+            const ns_per_s: f64 = @floatFromInt(std.time.ns_per_s);
+            const since_s: f32 = @floatCast(since_ns / ns_per_s);
+            break :delta @max(0.00001, since_s);
+        } else (1.0 / 60.0);
+        self.instant = now;
+    }
+};
+
+// C API
+pub const CAPI = struct {
+    const max_kitty_replay_aliases: usize = 65_536;
+
+    const KittyReplayAlias = extern struct {
+        image_id: u32,
+        image_number: u32,
+    };
+
+    fn kittyReplayAliasesAreValid(
+        alloc: Allocator,
+        aliases: []const KittyReplayAlias,
+    ) bool {
+        if (aliases.len > max_kitty_replay_aliases) return false;
+
+        var image_ids: std.AutoHashMapUnmanaged(u32, void) = .empty;
+        defer image_ids.deinit(alloc);
+        image_ids.ensureTotalCapacity(
+            alloc,
+            @intCast(aliases.len),
+        ) catch return false;
+
+        for (aliases) |alias| {
+            if (alias.image_id == 0 or alias.image_number == 0) return false;
+            const result = image_ids.getOrPutAssumeCapacity(alias.image_id);
+            if (result.found_existing) return false;
+            result.value_ptr.* = {};
+        }
+        return true;
+    }
+
+    /// This is the same as Surface.KeyEvent but this is the raw C API version.
+    const KeyEvent = extern struct {
+        action: input.Action,
+        mods: c_int,
+        consumed_mods: c_int,
+        keycode: u32,
+        text: ?[*:0]const u8,
+        unshifted_codepoint: u32,
+        composing: bool,
+
+        /// Convert to Zig key event.
+        fn keyEvent(self: KeyEvent) App.KeyEvent {
+            return .{
+                .action = self.action,
+                .mods = @bitCast(@as(
+                    input.Mods.Backing,
+                    @truncate(@as(c_uint, @bitCast(self.mods))),
+                )),
+                .consumed_mods = @bitCast(@as(
+                    input.Mods.Backing,
+                    @truncate(@as(c_uint, @bitCast(self.consumed_mods))),
+                )),
+                .keycode = self.keycode,
+                .text = if (self.text) |ptr| std.mem.sliceTo(ptr, 0) else null,
+                .unshifted_codepoint = self.unshifted_codepoint,
+                .composing = self.composing,
+            };
+        }
+    };
+
+    const SurfaceSize = extern struct {
+        columns: u16,
+        rows: u16,
+        width_px: u32,
+        height_px: u32,
+        cell_width_px: u32,
+        cell_height_px: u32,
+    };
+
+    const SurfaceGridMetrics = extern struct {
+        columns: u16,
+        rows: u16,
+        cursor_column: u16,
+        cursor_row: u16,
+        cursor_width_cells: u16,
+        cursor_in_viewport: bool,
+        cell_width: f64,
+        cell_height: f64,
+        padding_left: f64,
+        padding_top: f64,
+    };
+
+    fn surfaceGridMetricsSnapshot(
+        size: renderer.Size,
+        scale: apprt.ContentScale,
+        screen: *terminal.Screen,
+    ) ?SurfaceGridMetrics {
+        const size_grid = size.grid();
+        if (screen.pages.cols == 0 or
+            screen.pages.rows == 0 or
+            size_grid.columns != screen.pages.cols or
+            size_grid.rows != screen.pages.rows or
+            size.cell.width == 0 or
+            size.cell.height == 0 or
+            !std.math.isFinite(scale.x) or
+            !std.math.isFinite(scale.y) or
+            scale.x <= 0 or
+            scale.y <= 0) return null;
+
+        const cursor_cell = terminal.Selection.canonicalCell(
+            screen.cursor.page_pin.*,
+        );
+        const cursor = if (cursor_cell) |cell|
+            if (screen.pages.pointFromPin(.viewport, cell.pin)) |point|
+                if (point.viewport.x < screen.pages.cols and
+                    point.viewport.y < screen.pages.rows)
+                    point
+                else
+                    null
+            else
+                null
+        else
+            null;
+        return .{
+            .columns = @intCast(screen.pages.cols),
+            .rows = @intCast(screen.pages.rows),
+            .cursor_column = if (cursor) |point|
+                @intCast(point.viewport.x)
+            else
+                0,
+            .cursor_row = if (cursor) |point|
+                @intCast(point.viewport.y)
+            else
+                0,
+            .cursor_width_cells = if (cursor != null)
+                cursor_cell.?.width_cells
+            else
+                0,
+            .cursor_in_viewport = cursor != null,
+            .cell_width = @as(f64, @floatFromInt(size.cell.width)) / scale.x,
+            .cell_height = @as(f64, @floatFromInt(size.cell.height)) / scale.y,
+            .padding_left = @as(f64, @floatFromInt(size.padding.left)) / scale.x,
+            .padding_top = @as(f64, @floatFromInt(size.padding.top)) / scale.y,
+        };
+    }
+
+    const SurfaceScrollbar = extern struct {
+        total: u64,
+        offset: u64,
+        len: u64,
+        row_space_revision: u64,
+    };
+
+    // ghostty_clipboard_content_s
+    const ClipboardContent = extern struct {
+        mime: [*:0]const u8,
+        data: [*:0]const u8,
+    };
+
+    // ghostty_text_s
+    const Text = extern struct {
+        tl_px_x: f64,
+        tl_px_y: f64,
+        offset_start: u32,
+        offset_len: u32,
+        text: ?[*:0]const u8,
+        text_len: usize,
+
+        pub fn deinit(self: *Text) void {
+            if (self.text) |ptr| {
+                global.alloc().free(ptr[0..self.text_len :0]);
+            }
+        }
+    };
+
+    // ghostty_point_s
+    const Point = extern struct {
+        tag: Tag,
+        coord_tag: CoordTag,
+        x: u32,
+        y: u32,
+
+        const Tag = enum(c_int) {
+            active = 0,
+            viewport = 1,
+            screen = 2,
+            history = 3,
+        };
+
+        const CoordTag = enum(c_int) {
+            exact = 0,
+            top_left = 1,
+            bottom_right = 2,
+        };
+
+        fn pin(
+            self: Point,
+            screen: *const terminal.Screen,
+        ) ?terminal.Pin {
+            // The core point tag.
+            const tag: terminal.point.Tag = switch (self.tag) {
+                inline else => |tag| @field(
+                    terminal.point.Tag,
+                    @tagName(tag),
+                ),
+            };
+
+            // Clamp our point to the screen bounds.
+            const clamped_x = @min(self.x, screen.pages.cols -| 1);
+            const clamped_y = @min(self.y, screen.pages.rows -| 1);
+
+            return switch (self.coord_tag) {
+                // Exact coordinates require a specific pin.
+                .exact => exact: {
+                    const pt_x = std.math.cast(
+                        terminal.size.CellCountInt,
+                        clamped_x,
+                    ) orelse std.math.maxInt(terminal.size.CellCountInt);
+
+                    const pt: terminal.Point = switch (tag) {
+                        inline else => |v| @unionInit(
+                            terminal.Point,
+                            @tagName(v),
+                            .{ .x = pt_x, .y = clamped_y },
+                        ),
+                    };
+
+                    break :exact screen.pages.pin(pt) orelse null;
+                },
+
+                .top_left => screen.pages.getTopLeft(tag),
+
+                .bottom_right => screen.pages.getBottomRight(tag),
+            };
+        }
+    };
+
+    // ghostty_selection_s
+    const Selection = extern struct {
+        tl: Point,
+        br: Point,
+        rectangle: bool,
+
+        fn core(
+            self: Selection,
+            screen: *const terminal.Screen,
+        ) ?terminal.Selection {
+            return .{
+                .bounds = .{ .untracked = .{
+                    .start = self.tl.pin(screen) orelse return null,
+                    .end = self.br.pin(screen) orelse return null,
+                } },
+                .rectangle = self.rectangle,
+            };
+        }
+    };
+
+    // Reference the conditional exports based on target platform
+    // so they're included in the C API.
+    comptime {
+        if (builtin.target.os.tag.isDarwin()) {
+            _ = Darwin;
+        }
+    }
+
+    /// Create a new app.
+    export fn ghostty_app_new(
+        opts: *const apprt.runtime.App.Options,
+        config: *const Config,
+    ) ?*App {
+        return app_new_(opts, config) catch |err| {
+            log.err("error initializing app err={}", .{err});
+            return null;
+        };
+    }
+
+    fn app_new_(
+        opts: *const apprt.runtime.App.Options,
+        config: *const Config,
+    ) !*App {
+        const core_app = try CoreApp.create(global.alloc());
+        errdefer core_app.destroy();
+
+        // Create our runtime app
+        var app = try global.alloc().create(App);
+        errdefer global.alloc().destroy(app);
+        try app.init(core_app, config, opts.*);
+        errdefer app.terminate();
+
+        return app;
+    }
+
+    /// Tick the event loop. This should be called whenever the "wakeup"
+    /// callback is invoked for the runtime.
+    export fn ghostty_app_tick(v: *App) void {
+        v.core_app.tick(v) catch |err| {
+            log.err("error app tick err={}", .{err});
+        };
+    }
+
+    /// Return the userdata associated with the app.
+    export fn ghostty_app_userdata(v: *App) ?*anyopaque {
+        return v.opts.userdata;
+    }
+
+    export fn ghostty_app_free(v: *App) void {
+        const core_app = v.core_app;
+        v.terminate();
+        global.alloc().destroy(v);
+        core_app.destroy();
+    }
+
+    /// Update the focused state of the app.
+    export fn ghostty_app_set_focus(
+        app: *App,
+        focused: bool,
+    ) void {
+        app.focusEvent(focused);
+    }
+
+    /// Notify the app of a global keypress capture. This will return
+    /// true if the key was captured by the app, in which case the caller
+    /// should not process the key.
+    export fn ghostty_app_key(
+        app: *App,
+        event: KeyEvent,
+    ) bool {
+        return app.keyEvent(.app, event.keyEvent()) catch |err| {
+            log.warn("error processing key event err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Returns true if the given key event would trigger a binding
+    /// if it were sent to the surface right now. The "right now"
+    /// is important because things like trigger sequences are only
+    /// valid until the next key event.
+    export fn ghostty_config_key_is_binding(
+        config: *Config,
+        event: KeyEvent,
+    ) bool {
+        const core_event = event.keyEvent().core() orelse {
+            log.warn("error processing key event", .{});
+            return false;
+        };
+
+        return config.keyEventIsBinding(core_event);
+    }
+
+    /// Notify the app that the keyboard was changed. This causes the
+    /// keyboard layout to be reloaded from the OS.
+    export fn ghostty_app_keyboard_changed(v: *App) void {
+        v.reloadKeymap() catch |err| {
+            log.err("error reloading keyboard map err={}", .{err});
+            return;
+        };
+    }
+
+    /// Open the configuration.
+    export fn ghostty_app_open_config(v: *App) void {
+        _ = v.performAction(.app, .open_config, {}) catch |err| {
+            log.err("error reloading config err={}", .{err});
+            return;
+        };
+    }
+
+    /// Update the configuration to the provided config. This will propagate
+    /// to all surfaces as well.
+    export fn ghostty_app_update_config(
+        v: *App,
+        config: *const Config,
+    ) void {
+        v.core_app.updateConfig(v, config) catch |err| {
+            log.err("error updating config err={}", .{err});
+            return;
+        };
+    }
+
+    /// Update app-scoped configuration state without synchronously walking
+    /// surfaces. The embedder must propagate `config` to every live surface.
+    export fn ghostty_app_update_config_without_surface_propagation(
+        v: *App,
+        config: *const Config,
+    ) void {
+        v.core_app.updateConfigWithoutSurfacePropagation(v, config) catch |err| {
+            log.err("error updating app config err={}", .{err});
+            return;
+        };
+    }
+
+    /// Returns true if the app needs to confirm quitting.
+    export fn ghostty_app_needs_confirm_quit(v: *App) bool {
+        return v.core_app.needsConfirmQuit();
+    }
+
+    /// Returns true if the app has global keybinds.
+    export fn ghostty_app_has_global_keybinds(v: *App) bool {
+        return v.hasGlobalKeybinds();
+    }
+
+    /// Update the color scheme of the app.
+    export fn ghostty_app_set_color_scheme(v: *App, scheme_raw: c_int) void {
+        const scheme = std.enums.fromInt(apprt.ColorScheme, scheme_raw) orelse return;
+
+        v.core_app.colorSchemeEvent(v, scheme) catch |err| {
+            log.err("error setting color scheme err={}", .{err});
+            return;
+        };
+    }
+
+    /// Returns initial surface options.
+    export fn ghostty_surface_config_new() apprt.Surface.Options {
+        return .{};
+    }
+
+    /// Create a new surface as part of an app.
+    export fn ghostty_surface_new(
+        app: *App,
+        opts: *const apprt.Surface.Options,
+    ) ?*Surface {
+        return surface_new_(app, opts, 0) catch |err| {
+            log.err("error initializing surface err={}", .{err});
+            return null;
+        };
+    }
+
+    /// Create a surface with an embedder-owned upper bound for scrollback
+    /// while preserving the byte layout of Surface.Options.
+    export fn ghostty_surface_new_with_scrollback_limit(
+        app: *App,
+        opts: *const apprt.Surface.Options,
+        scrollback_limit_bytes: usize,
+    ) ?*Surface {
+        return surface_new_(app, opts, scrollback_limit_bytes) catch |err| {
+            log.err("error initializing surface err={}", .{err});
+            return null;
+        };
+    }
+
+    fn surface_new_(
+        app: *App,
+        opts: *const apprt.Surface.Options,
+        scrollback_limit_bytes: usize,
+    ) !*Surface {
+        return try app.newSurface(opts.*, scrollback_limit_bytes);
+    }
+
+    export fn ghostty_surface_free(ptr: *Surface) void {
+        ptr.app.closeSurface(ptr);
+    }
+
+    /// Begin child-process shutdown without waiting for surface destruction.
+    export fn ghostty_surface_request_process_termination(ptr: *Surface) void {
+        ptr.requestProcessTermination();
+    }
+
+    /// Returns the userdata associated with the surface.
+    export fn ghostty_surface_userdata(surface: *Surface) ?*anyopaque {
+        return surface.userdata;
+    }
+
+    /// Returns the app associated with a surface.
+    export fn ghostty_surface_app(surface: *Surface) *App {
+        return surface.app;
+    }
+
+    /// Returns the separate embedder cap so inherited surface creation can
+    /// preserve it without adding a field to Surface.Options.
+    export fn ghostty_surface_scrollback_limit_bytes(surface: *Surface) usize {
+        return surface.scrollback_limit_bytes;
+    }
+
+    /// Returns the config to use for surfaces that inherit from this one.
+    export fn ghostty_surface_inherited_config(
+        surface: *Surface,
+        source: apprt.surface.NewSurfaceContext,
+    ) Surface.Options {
+        return surface.newSurfaceOptions(source);
+    }
+
+    /// Update the configuration to the provided config for only this surface.
+    export fn ghostty_surface_update_config(
+        surface: *Surface,
+        config: *const Config,
+    ) void {
+        surface.core_surface.updateConfig(config) catch |err| {
+            log.err("error updating config err={}", .{err});
+            return;
+        };
+    }
+
+    /// Update only the terminal color defaults used by OSC reset sequences.
+    /// Manual-IO embedders must serialize this with process_output.
+    export fn ghostty_surface_update_theme_config(
+        surface: *Surface,
+        config: *const Config,
+    ) void {
+        var derived = termio.Termio.DerivedConfig.init(
+            surface.core_surface.alloc,
+            config,
+        ) catch |err| {
+            log.err("error deriving theme config err={}", .{err});
+            return;
+        };
+        defer derived.deinit();
+        surface.core_surface.io.changeColorConfig(&derived);
+        surface.core_surface.renderer.changeColorConfig(config);
+    }
+
+    /// Returns true if the surface needs to confirm quitting.
+    export fn ghostty_surface_needs_confirm_quit(surface: *Surface) bool {
+        return surface.core_surface.needsConfirmQuit();
+    }
+
+    /// Returns true if the surface process has exited.
+    export fn ghostty_surface_process_exited(surface: *Surface) bool {
+        return surface.core_surface.child_exited;
+    }
+
+    /// Returns the live app-thread-owned font size without touching renderer state.
+    export fn ghostty_surface_font_size(surface: *Surface) f32 {
+        return surface.core_surface.font_size.points;
+    }
+
+    /// Returns whether the live font size has explicit surface-local ownership.
+    export fn ghostty_surface_font_size_adjusted(surface: *Surface) bool {
+        return surface.core_surface.font_size_adjusted;
+    }
+
+    /// Returns true if the surface has a selection.
+    export fn ghostty_surface_has_selection(surface: *Surface) bool {
+        return surface.core_surface.hasSelection();
+    }
+
+    /// Select the cell under the cursor (cmux-specific).
+    export fn ghostty_surface_select_cursor_cell(surface: *Surface) bool {
+        return surface.core_surface.selectCursorCell() catch |err| {
+            log.warn("error selecting cursor cell err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Select the semantic line under the cursor (cmux-specific).
+    export fn ghostty_surface_select_cursor_line(surface: *Surface) bool {
+        return surface.core_surface.selectCursorLine() catch |err| {
+            log.warn("error selecting cursor line err={}", .{err});
+            return false;
+        };
+    }
+
+    /// C ABI mirror of `terminal.Screen.PromptInput` (cmux-specific).
+    pub const PromptInput = extern struct {
+        length: u32 = 0,
+        caret: u32 = 0,
+        has_selection: bool = false,
+        selection_start: u32 = 0,
+        selection_end: u32 = 0,
+    };
+
+    /// Describe the shell input the cursor is editing (cmux-specific).
+    /// Returns false when not at an OSC 133 input prompt on the primary
+    /// screen, in which case `result` is left untouched.
+    export fn ghostty_surface_prompt_input(
+        surface: *Surface,
+        result: *PromptInput,
+    ) bool {
+        const prompt = surface.core_surface.promptInput() orelse return false;
+        result.* = .{ .length = prompt.len, .caret = prompt.caret };
+        if (prompt.selection) |range| {
+            result.has_selection = true;
+            result.selection_start = range.start;
+            result.selection_end = range.end;
+        }
+        return true;
+    }
+
+    /// Select caret stops `[start, end)` of the shell input the cursor is
+    /// editing (cmux-specific). Never writes a clipboard.
+    export fn ghostty_surface_select_prompt_input(
+        surface: *Surface,
+        start: u32,
+        end: u32,
+    ) bool {
+        return surface.core_surface.selectPromptInput(start, end) catch |err| {
+            log.warn("error selecting prompt input err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Clear the active selection (cmux-specific).
+    export fn ghostty_surface_clear_selection(surface: *Surface) bool {
+        return surface.core_surface.clearSelection() catch |err| {
+            log.warn("error clearing selection err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Select one visible cell without synthesizing a mouse gesture.
+    export fn ghostty_surface_select_viewport_cell(
+        surface: *Surface,
+        column: u16,
+        row: u16,
+    ) bool {
+        return surface.core_surface.selectViewportCell(column, row) catch |err| {
+            log.warn("error selecting viewport cell err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Select inclusive visible rows with tracked full-line endpoints.
+    export fn ghostty_surface_select_viewport_rows(
+        surface: *Surface,
+        top_row: u16,
+        bottom_row: u16,
+    ) bool {
+        return surface.core_surface.selectViewportRows(
+            top_row,
+            bottom_row,
+        ) catch |err| {
+            log.warn("error selecting viewport rows err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Move the active tracked selection endpoint to a visible cell.
+    export fn ghostty_surface_set_selection_endpoint_viewport(
+        surface: *Surface,
+        column: u16,
+        row: u16,
+        linewise: bool,
+    ) bool {
+        return surface.core_surface.setSelectionEndpointViewport(
+            column,
+            row,
+            linewise,
+        ) catch |err| {
+            log.warn("error setting selection endpoint err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Resolve a visible coordinate to its glyph's leading cell and width.
+    export fn ghostty_surface_resolve_viewport_cell(
+        surface: *Surface,
+        column: u16,
+        row: u16,
+        resolved_column: *u16,
+        resolved_row: *u16,
+        width_cells: *u16,
+    ) bool {
+        return surface.core_surface.resolveViewportCell(
+            column,
+            row,
+            resolved_column,
+            resolved_row,
+            width_cells,
+        );
+    }
+
+    /// Query the active selection's logical endpoint in viewport cells.
+    export fn ghostty_surface_selection_endpoint_viewport(
+        surface: *Surface,
+        column: *u16,
+        row: *u16,
+    ) bool {
+        return surface.core_surface.selectionEndpointViewport(column, row);
+    }
+
+    /// Start or stop Ghostty's tracked keyboard-copy cursor.
+    export fn ghostty_surface_keyboard_copy_cursor_set(
+        surface: *Surface,
+        active: bool,
+        resolved_column: *u16,
+        resolved_row: *u16,
+        width_cells: *u16,
+    ) bool {
+        return surface.core_surface.keyboardCopyCursorSet(
+            active,
+            resolved_column,
+            resolved_row,
+            width_cells,
+        ) catch |err| {
+            log.warn("error setting keyboard copy cursor err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Query Ghostty's tracked keyboard-copy cursor in viewport cells.
+    export fn ghostty_surface_keyboard_copy_cursor_viewport(
+        surface: *Surface,
+        resolved_column: *u16,
+        resolved_row: *u16,
+        width_cells: *u16,
+    ) bool {
+        return surface.core_surface.keyboardCopyCursorViewport(
+            resolved_column,
+            resolved_row,
+            width_cells,
+        ) catch |err| {
+            log.warn("error querying keyboard copy cursor err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Query tracked copy cursor geometry and effective runtime color.
+    export fn ghostty_surface_keyboard_copy_cursor_snapshot(
+        surface: *Surface,
+        snapshot: *CoreSurface.KeyboardCopyCursorSnapshot,
+    ) bool {
+        return surface.core_surface.keyboardCopyCursorSnapshot(
+            snapshot,
+        ) catch |err| {
+            log.warn("error querying keyboard copy cursor snapshot err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Return the selection still owned by keyboard copy mode.
+    export fn ghostty_surface_keyboard_copy_selection_kind(
+        surface: *Surface,
+    ) CoreSurface.KeyboardCopySelectionKind {
+        return surface.core_surface.keyboardCopySelectionKind() catch |err| {
+            log.warn("error querying keyboard copy selection err={}", .{err});
+            return .none;
+        };
+    }
+
+    /// Start a selection at Ghostty's tracked keyboard-copy cursor.
+    export fn ghostty_surface_keyboard_copy_selection_start(
+        surface: *Surface,
+        linewise: bool,
+        line_count: u16,
+        resolved_column: *u16,
+        resolved_row: *u16,
+        width_cells: *u16,
+    ) bool {
+        return surface.core_surface.keyboardCopySelectionStart(
+            linewise,
+            line_count,
+            resolved_column,
+            resolved_row,
+            width_cells,
+        ) catch |err| {
+            log.warn("error starting keyboard copy selection err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Move the tracked copy cursor and optional selection endpoint.
+    export fn ghostty_surface_keyboard_selection_move(
+        surface: *Surface,
+        movement: CoreSurface.KeyboardSelectionMove,
+        count: u16,
+        extend_selection: bool,
+        linewise: bool,
+        resolved_column: *u16,
+        resolved_row: *u16,
+        width_cells: *u16,
+    ) bool {
+        return surface.core_surface.keyboardSelectionMove(
+            movement,
+            count,
+            extend_selection,
+            linewise,
+            resolved_column,
+            resolved_row,
+            width_cells,
+        ) catch |err| {
+            log.warn("error moving keyboard selection err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Apply a synchronous copy-mode viewport mutation.
+    export fn ghostty_surface_keyboard_copy_scroll(
+        surface: *Surface,
+        action: CoreSurface.KeyboardCopyScroll,
+        amount: i32,
+        resolved_column: *u16,
+        resolved_row: *u16,
+        width_cells: *u16,
+    ) bool {
+        return surface.core_surface.keyboardCopyScroll(
+            action,
+            amount,
+            resolved_column,
+            resolved_row,
+            width_cells,
+        ) catch |err| {
+            log.warn("error scrolling keyboard copy viewport err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Select inclusive absolute screen rows without writing clipboards
+    /// (cmux-specific).
+    export fn ghostty_surface_select_screen_rows(
+        surface: *Surface,
+        top_y: u32,
+        bottom_y: u32,
+    ) bool {
+        return surface.core_surface.selectScreenRows(top_y, bottom_y) catch |err| {
+            log.warn("error selecting screen rows err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Query the active tracked selection as inclusive absolute screen rows
+    /// (cmux-specific).
+    export fn ghostty_surface_selection_screen_rows(
+        surface: *Surface,
+        top_y: *u32,
+        bottom_y: *u32,
+    ) bool {
+        return surface.core_surface.selectionScreenRows(top_y, bottom_y);
+    }
+
+    /// Same as ghostty_surface_read_text but reads from the user selection,
+    /// if any.
+    export fn ghostty_surface_read_selection(
+        surface: *Surface,
+        result: *Text,
+    ) bool {
+        const core_surface = &surface.core_surface;
+        core_surface.renderer_state.mutex.lockUncancelable(global.io());
+        defer core_surface.renderer_state.mutex.unlock(global.io());
+
+        // If we don't have a selection, do nothing.
+        const core_sel = core_surface.io.terminal.screens.active.selection orelse return false;
+
+        // Read the text from the selection.
+        return readTextLocked(surface, core_sel, result);
+    }
+
+    /// Read clipboard-formatted plain text from the active selection while
+    /// bounding both temporary and returned allocation size.
+    export fn ghostty_surface_read_selection_clipboard_text(
+        surface: *Surface,
+        max_bytes: usize,
+        result: *Text,
+    ) bool {
+        const core_surface = &surface.core_surface;
+        core_surface.renderer_state.lockDemand(global.io());
+        defer core_surface.renderer_state.unlockDemand(global.io());
+
+        const core_sel = core_surface.io.terminal.screens.active.selection orelse
+            return false;
+        return readClipboardTextLocked(surface, core_sel, max_bytes, result);
+    }
+
+    /// Always publish bounded plain text and add HTML when rich formatting fits.
+    /// Plain text remains published when HTML exceeds max_bytes.
+    export fn ghostty_surface_copy_selection_to_clipboard_bounded(
+        surface: *Surface,
+        max_bytes: usize,
+    ) bool {
+        return surface.core_surface.copySelectionToClipboardBounded(
+            max_bytes,
+        ) catch |err| {
+            log.warn("error copying bounded selection err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Read some arbitrary text from the surface.
+    ///
+    /// This is an expensive operation so it shouldn't be called too
+    /// often. We recommend that callers cache the result and throttle
+    /// calls to this function.
+    export fn ghostty_surface_read_text(
+        surface: *Surface,
+        sel: Selection,
+        result: *Text,
+    ) bool {
+        surface.core_surface.renderer_state.mutex.lockUncancelable(global.io());
+        defer surface.core_surface.renderer_state.mutex.unlock(global.io());
+
+        const core_sel = sel.core(
+            surface.core_surface.renderer_state.terminal.screens.active,
+        ) orelse return false;
+
+        return readTextLocked(surface, core_sel, result);
+    }
+
+    /// cmux fork: read clipboard-formatted plain text from inclusive absolute
+    /// screen rows without mutating the active selection.
+    export fn ghostty_surface_read_screen_clipboard_text(
+        surface: *Surface,
+        top_y: u32,
+        bottom_y: u32,
+        max_bytes: usize,
+        result: *Text,
+    ) bool {
+        surface.core_surface.renderer_state.mutex.lockUncancelable(global.io());
+        defer surface.core_surface.renderer_state.mutex.unlock(global.io());
+
+        if (top_y > bottom_y) return false;
+
+        const screen = surface.core_surface.renderer_state.terminal.screens.active;
+        const pages = &screen.pages;
+        if (pages.cols == 0) return false;
+
+        const top_left = pages.pin(.{
+            .screen = .{ .x = 0, .y = top_y },
+        }) orelse return false;
+        const bottom_right = pages.pin(.{
+            .screen = .{ .x = pages.cols -| 1, .y = bottom_y },
+        }) orelse return false;
+        const core_sel = terminal.Selection.init(top_left, bottom_right, false);
+
+        return readClipboardTextLocked(surface, core_sel, max_bytes, result);
+    }
+
+    /// cmux fork: read a byte-bounded VT reconstruction of the most recent
+    /// physical screen/history rows without flattening Ghostty's cell model.
+    export fn ghostty_surface_read_screen_tail_vt(
+        surface: *Surface,
+        max_rows: usize,
+        max_bytes: usize,
+        result: *Text,
+    ) bool {
+        surface.core_surface.renderer_state.mutex.lockUncancelable(global.io());
+        defer surface.core_surface.renderer_state.mutex.unlock(global.io());
+
+        return readScreenTailVTLocked(surface, max_rows, max_bytes, result);
+    }
+
+    /// Atomically capture a VT tail and the modulo-u64 position immediately
+    /// after every PTY-output byte represented by that terminal snapshot.
+    export fn ghostty_surface_read_screen_tail_vt_with_output_sequence(
+        surface: *Surface,
+        max_rows: usize,
+        max_bytes: usize,
+        result: *Text,
+        next_sequence: *u64,
+    ) bool {
+        surface.core_surface.renderer_state.mutex.lockUncancelable(global.io());
+        defer surface.core_surface.renderer_state.mutex.unlock(global.io());
+
+        const snapshot_succeeded = readScreenTailVTLocked(
+            surface,
+            max_rows,
+            max_bytes,
+            result,
+        );
+        return publishOutputSnapshotSequenceLocked(
+            snapshot_succeeded,
+            surface.core_surface.io.processed_output_bytes,
+            next_sequence,
+        );
+    }
+
+    fn readScreenTailVTLocked(
+        surface: *Surface,
+        max_rows: usize,
+        max_bytes: usize,
+        result: *Text,
+    ) bool {
+        if (max_rows == 0 or max_bytes == 0) return false;
+        const core_surface = &surface.core_surface;
+        const opts: terminal.formatter.Options = .{
+            .emit = .vt,
+            .unwrap = false,
+            .trim = false,
+            .background = core_surface.io.terminal.colors.background.get(),
+            .foreground = core_surface.io.terminal.colors.foreground.get(),
+            .palette = &core_surface.io.terminal.colors.palette.current,
+        };
+        const formatter: terminal.formatter.ScreenFormatter = .init(
+            core_surface.io.terminal.screens.active,
+            opts,
+        );
+
+        const scratch = global.alloc().alloc(u8, max_bytes) catch |err| {
+            log.warn("error allocating bounded screen tail buffer err={}", .{err});
+            return false;
+        };
+        defer global.alloc().free(scratch);
+
+        const formatted = formatter.formatTailBounded(scratch, max_rows) catch |err| {
+            log.warn("error formatting bounded screen tail err={}", .{err});
+            return false;
+        };
+        const owned = global.alloc().dupeZ(u8, formatted) catch |err| {
+            log.warn("error allocating bounded screen tail result err={}", .{err});
+            return false;
+        };
+
+        result.* = .{
+            .tl_px_x = -1,
+            .tl_px_y = -1,
+            .offset_start = 0,
+            .offset_len = 0,
+            .text = owned.ptr,
+            .text_len = owned.len,
+        };
+        return true;
+    }
+
+    fn publishOutputSnapshotSequenceLocked(
+        snapshot_succeeded: bool,
+        processed_output_bytes: u64,
+        next_sequence: *u64,
+    ) bool {
+        if (!snapshot_succeeded) return false;
+        next_sequence.* = processed_output_bytes;
+        return true;
+    }
+
+    fn readTextLocked(
+        surface: *Surface,
+        core_sel: terminal.Selection,
+        result: *Text,
+    ) bool {
+        const core_surface = &surface.core_surface;
+
+        // Get our text directly from the core surface.
+        const text = core_surface.dumpTextLocked(
+            global.alloc(),
+            core_sel,
+        ) catch |err| {
+            log.warn("error reading text err={}", .{err});
+            return false;
+        };
+
+        const vp: CoreSurface.Text.Viewport = text.viewport orelse .{
+            .tl_px_x = -1,
+            .tl_px_y = -1,
+            .offset_start = 0,
+            .offset_len = 0,
+        };
+
+        result.* = .{
+            .tl_px_x = vp.tl_px_x,
+            .tl_px_y = vp.tl_px_y,
+            .offset_start = vp.offset_start,
+            .offset_len = vp.offset_len,
+            .text = text.text.ptr,
+            .text_len = text.text.len,
+        };
+
+        return true;
+    }
+
+    fn readClipboardTextLocked(
+        surface: *Surface,
+        core_sel: terminal.Selection,
+        max_bytes: usize,
+        result: *Text,
+    ) bool {
+        const core_surface = &surface.core_surface;
+        const screen = core_surface.io.terminal.screens.active;
+        const max_work_cells = max_bytes / 4;
+        if (!CoreSurface.selectionWithinClipboardWorkBudget(
+            screen,
+            core_sel,
+            max_work_cells,
+        )) {
+            log.warn(
+                "clipboard selection exceeds work budget max_cells={}",
+                .{max_work_cells},
+            );
+            return false;
+        }
+        const opts: terminal.formatter.Options = .{
+            .emit = .plain,
+            .unwrap = true,
+            .trim = core_surface.config.clipboard_trim_trailing_spaces,
+            .codepoint_map = core_surface.config.clipboard_codepoint_map.map.list,
+            .background = core_surface.io.terminal.colors.background.get(),
+            .foreground = core_surface.io.terminal.colors.foreground.get(),
+            .palette = &core_surface.io.terminal.colors.palette.current,
+        };
+
+        var formatter: terminal.formatter.ScreenFormatter = .init(
+            screen,
+            opts,
+        );
+        formatter.content = .{ .selection = core_sel };
+
+        const scratch = global.alloc().alloc(u8, max_bytes) catch |err| {
+            log.warn("error allocating bounded clipboard text buffer err={}", .{err});
+            return false;
+        };
+        defer global.alloc().free(scratch);
+
+        var writer = std.Io.Writer.fixed(scratch);
+        formatter.format(&writer) catch |err| {
+            log.warn("error formatting clipboard text err={}", .{err});
+            return false;
+        };
+        const formatted = global.alloc().dupeZ(u8, writer.buffered()) catch |err| {
+            log.warn("error allocating clipboard text err={}", .{err});
+            return false;
+        };
+
+        result.* = .{
+            .tl_px_x = -1,
+            .tl_px_y = -1,
+            .offset_start = 0,
+            .offset_len = 0,
+            .text = formatted.ptr,
+            .text_len = formatted.len,
+        };
+
+        return true;
+    }
+
+    export fn ghostty_surface_free_text(_: *Surface, ptr: *Text) void {
+        ptr.deinit();
+    }
+
+    /// Tell the surface that it needs to schedule a render
+    export fn ghostty_surface_refresh(surface: *Surface) void {
+        surface.refresh();
+    }
+
+    /// Tell the surface that it needs to schedule a render
+    /// call as soon as possible (NOW if possible).
+    export fn ghostty_surface_draw(surface: *Surface) void {
+        surface.draw();
+    }
+
+    /// Perform a full render cycle synchronously from the calling thread.
+    export fn ghostty_surface_render_now(surface: *Surface) void {
+        surface.renderNow();
+    }
+
+    /// Install the completion callback for this surface only. Registration is
+    /// one-shot because submitted frames snapshot this userdata. Call before
+    /// sharing the surface or submitting tokened work. Inherited surfaces have
+    /// distinct embedder userdata and install their own callback after
+    /// construction. The embedder keeps userdata alive until surface
+    /// destruction returns.
+    export fn ghostty_surface_set_render_presented_callback(
+        surface: *Surface,
+        callback: ?RenderPresentedCallback,
+        userdata: ?*anyopaque,
+    ) bool {
+        const registered_callback = callback orelse return false;
+        if (surface.render_presented_cb != null) return false;
+
+        surface.render_presented_cb = registered_callback;
+        surface.render_presented_userdata = userdata;
+        return true;
+    }
+
+    /// Install the one-shot callback for an explicitly tokened render that did
+    /// not reach the host layer. The callback receives the exact token and a
+    /// terminal disposition, so an embedder never has to infer a dropped
+    /// frame from a watchdog timeout.
+    export fn ghostty_surface_set_render_failed_callback(
+        surface: *Surface,
+        callback: ?RenderFailedCallback,
+        userdata: ?*anyopaque,
+    ) bool {
+        const registered_callback = callback orelse return false;
+        if (surface.render_failed_cb != null) return false;
+
+        surface.render_failed_cb = registered_callback;
+        surface.render_failed_userdata = userdata;
+        return true;
+    }
+
+    /// Install a callback for resolved font binding actions on this surface.
+    /// Registration is one-shot and the embedder keeps userdata alive until
+    /// surface destruction returns.
+    export fn ghostty_surface_set_font_size_action_callback(
+        surface: *Surface,
+        callback: ?FontSizeActionCallback,
+        userdata: ?*anyopaque,
+    ) bool {
+        const registered_callback = callback orelse return false;
+        if (surface.font_size_action_cb != null) return false;
+
+        surface.font_size_action_cb = registered_callback;
+        surface.font_size_action_userdata = userdata;
+        return true;
+    }
+
+    /// Force a render whose exact layer presentation is acknowledged with the
+    /// caller-provided token.
+    export fn ghostty_surface_render_now_with_token(surface: *Surface, token: u64) void {
+        surface.renderNowWithToken(token);
+    }
+
+    /// Queue a tokened forced render executed on the renderer thread. See
+    /// `Surface.requestRenderWithToken`.
+    export fn ghostty_surface_request_render_with_token(
+        surface: *Surface,
+        token: u64,
+    ) bool {
+        return surface.requestRenderWithToken(token);
+    }
+
+    /// Update the size of a surface. This will trigger resize notifications
+    /// to the pty and the renderer.
+    export fn ghostty_surface_set_size(surface: *Surface, w: u32, h: u32) void {
+        surface.updateSize(w, h);
+    }
+
+    /// cmux fork: reserve extra drawable pixels above and below the padded
+    /// grid for render-only scrollback overscan (the iOS scroll-edge-effect
+    /// bands under the navigation bar and the bottom chrome). The
+    /// app-facing size round-trip (ghostty_surface_set_size /
+    /// ghostty_surface_size) and the mouse coordinate space are unchanged;
+    /// the drawable simply grows by the insets and the renderer fills the
+    /// bands with the rows directly above and below the viewport,
+    /// translated in the same critical section as the pixel scroll offset.
+    /// The terminal grid and PTY size never change from this call.
+    export fn ghostty_surface_set_render_insets(
+        surface: *Surface,
+        top_px: u32,
+        bottom_px: u32,
+    ) void {
+        surface.core_surface.setRenderInsets(top_px, bottom_px) catch |err| {
+            log.err("error setting render insets err={}", .{err});
+        };
+    }
+
+    fn surfaceSize(surface: *Surface) SurfaceSize {
+        const grid_size = surface.core_surface.size.grid();
+        return .{
+            .columns = grid_size.columns,
+            .rows = grid_size.rows,
+            .width_px = surface.core_surface.size.screen.width,
+            // cmux fork: report the app-facing height so set_size/size
+            // round-trips; the render insets are drawable-internal.
+            .height_px = surface.core_surface.size.screen.height -|
+                (@as(u32, surface.core_surface.size.top_inset) +
+                    surface.core_surface.size.bottom_inset),
+            .cell_width_px = surface.core_surface.size.cell.width,
+            .cell_height_px = surface.core_surface.size.cell.height,
+        };
+    }
+
+    /// Return the size information a surface has.
+    export fn ghostty_surface_size(surface: *Surface) SurfaceSize {
+        return surfaceSize(surface);
+    }
+
+    /// Return exact renderer grid geometry in logical embedder coordinates.
+    export fn ghostty_surface_grid_metrics(
+        surface: *Surface,
+        result: *SurfaceGridMetrics,
+    ) bool {
+        surface.core_surface.renderer_state.lockDemand(global.io());
+        defer surface.core_surface.renderer_state.unlockDemand(global.io());
+        const screen = surface.core_surface
+            .renderer_state
+            .terminal
+            .screens
+            .active;
+        result.* = surfaceGridMetricsSnapshot(
+            surface.core_surface.size,
+            surface.content_scale,
+            screen,
+        ) orelse return false;
+        return true;
+    }
+
+    /// Set an authoritative grid and return the pixel size Ghostty resolved.
+    export fn ghostty_surface_set_grid_size(
+        surface: *Surface,
+        columns: u16,
+        rows: u16,
+        resolved: ?*SurfaceSize,
+    ) bool {
+        if (!surface.updateGridSize(columns, rows)) return false;
+        if (resolved) |result| result.* = surfaceSize(surface);
+        return true;
+    }
+
+    /// Set an opaque context captured into subsequently submitted frames.
+    export fn ghostty_surface_set_external_frame_context(
+        surface: *Surface,
+        context: u64,
+    ) void {
+        surface.setExternalFrameContext(context);
+    }
+
+    /// Release one exact IOSurface slot acquired by the leased callback.
+    export fn ghostty_surface_release_external_frame(
+        surface: *Surface,
+        frame_token: u64,
+    ) bool {
+        switch (surface.platform) {
+            .metal_external_leased => {},
+            else => return false,
+        }
+        return surface.core_surface.renderer.releaseExternalFrame(frame_token);
+    }
+
+    const RenderGridColorSource = enum {
+        default_color,
+        palette,
+        rgb,
+    };
+
+    const RenderGridColorSemantics = struct {
+        source: RenderGridColorSource,
+        palette_index: ?u8 = null,
+    };
+
+    /// Read current scrollbar geometry and its absolute row-space identity
+    /// directly from the terminal, independent of renderer publication.
+    export fn ghostty_surface_scrollbar(
+        surface: *Surface,
+        result: *SurfaceScrollbar,
+    ) bool {
+        const core_surface = &surface.core_surface;
+        core_surface.renderer_state.lockDemand(global.io());
+        defer core_surface.renderer_state.unlockDemand(global.io());
+
+        const screens = &core_surface.renderer_state.terminal.screens;
+        const screen_key = screens.active_key;
+        const scrollbar = screens.active.pages.scrollbar();
+        result.* = .{
+            .total = @intCast(scrollbar.total),
+            .offset = @intCast(scrollbar.offset),
+            .len = @intCast(scrollbar.len),
+            .row_space_revision = core_surface.rowSpaceIdentity(
+                screen_key,
+                screens.generation(screen_key),
+                scrollbar.row_space_revision,
+            ),
+        };
+        return true;
+    }
+
+    /// Atomically validate an absolute row-space identity and scroll within it.
+    export fn ghostty_surface_scroll_to_row_if_revision(
+        surface: *Surface,
+        row: u64,
+        expected_row_space_revision: u64,
+        result: *SurfaceScrollbar,
+    ) bool {
+        const target_row = std.math.cast(usize, row) orelse return false;
+        const maybe_snapshot = surface.core_surface.scrollToRowIfRevision(
+            target_row,
+            expected_row_space_revision,
+        ) catch return false;
+        const snapshot = maybe_snapshot orelse return false;
+        result.* = .{
+            .total = snapshot.total,
+            .offset = snapshot.offset,
+            .len = snapshot.len,
+            .row_space_revision = snapshot.row_space_revision,
+        };
+        return true;
+    }
+
+    /// Pixel-precise variant of `ghostty_surface_scroll_to_row_if_revision`:
+    /// atomically scroll the viewport to `row` and apply a fractional
+    /// vertical pixel offset in the same critical section. Positive offsets
+    /// shift rendered content up, revealing the top sliver of the next row
+    /// (the renderer overscans one row). The offset is a render-space
+    /// translation only; terminal state and the PTY-visible grid are
+    /// unaffected, and it is forced to zero on the alternate screen. Any
+    /// other viewport move (mouse wheel, keyboard scroll, scroll-to-bottom
+    /// on output) resets the offset to zero.
+    export fn ghostty_surface_scroll_to_row_pixel_if_revision(
+        surface: *Surface,
+        row: u64,
+        pixel_offset: f32,
+        expected_row_space_revision: u64,
+        result: *SurfaceScrollbar,
+    ) bool {
+        const target_row = std.math.cast(usize, row) orelse return false;
+        const maybe_snapshot = surface.core_surface.scrollToRowPixelIfRevision(
+            target_row,
+            pixel_offset,
+            expected_row_space_revision,
+        ) catch return false;
+        const snapshot = maybe_snapshot orelse return false;
+        result.* = .{
+            .total = snapshot.total,
+            .offset = snapshot.offset,
+            .len = snapshot.len,
+            .row_space_revision = snapshot.row_space_revision,
+        };
+        return true;
+    }
+
+    const RenderGridStyle = struct {
+        id: u32,
+        foreground: terminal.color.RGB,
+        background: terminal.color.RGB,
+        foreground_source: RenderGridColorSource,
+        foreground_palette_index: ?u8 = null,
+        background_source: RenderGridColorSource,
+        background_palette_index: ?u8 = null,
+        bold: bool = false,
+        faint: bool = false,
+        italic: bool = false,
+        underline: bool = false,
+        blink: bool = false,
+        inverse: bool = false,
+        invisible: bool = false,
+        strikethrough: bool = false,
+        overline: bool = false,
+
+        fn visualEql(self: RenderGridStyle, other: RenderGridStyle) bool {
+            return self.foreground.eql(other.foreground) and
+                self.background.eql(other.background) and
+                self.foreground_source == other.foreground_source and
+                self.foreground_palette_index == other.foreground_palette_index and
+                self.background_source == other.background_source and
+                self.background_palette_index == other.background_palette_index and
+                self.bold == other.bold and
+                self.faint == other.faint and
+                self.italic == other.italic and
+                self.underline == other.underline and
+                self.blink == other.blink and
+                self.inverse == other.inverse and
+                self.invisible == other.invisible and
+                self.strikethrough == other.strikethrough and
+                self.overline == other.overline;
+        }
+    };
+
+    const RenderGridSpan = struct {
+        row: u32,
+        column: u32,
+        style_id: u32,
+        cell_width: u32,
+        text: []const u8,
+    };
+
+    const RenderGridMode = struct {
+        code: u16,
+        ansi: bool,
+        on: bool,
+    };
+
+    /// DEC private mode codes excluded from the render-grid `modes` list:
+    /// screen switching and save-cursor (restored via `active_screen`), cursor
+    /// visibility/blink (restored via the cursor object), column width (causes
+    /// a resize), and transient negotiation/report modes.
+    fn renderGridModeIsExcluded(value: u16, ansi: bool) bool {
+        if (ansi) return false;
+        return switch (value) {
+            3, 12, 25, 47, 1047, 1048, 1049, 2026, 2048, 2031 => true,
+            else => false,
+        };
+    }
+
+    const RenderGridSpanBuilder = struct {
+        alloc: Allocator,
+        spans: *std.ArrayListUnmanaged(RenderGridSpan),
+        text: std.Io.Writer.Allocating,
+        active: bool = false,
+        row: u32 = 0,
+        column: u32 = 0,
+        style_id: u32 = 0,
+        cell_width: u32 = 0,
+
+        fn init(
+            alloc: Allocator,
+            spans: *std.ArrayListUnmanaged(RenderGridSpan),
+        ) RenderGridSpanBuilder {
+            return .{
+                .alloc = alloc,
+                .spans = spans,
+                .text = .init(alloc),
+            };
+        }
+
+        fn deinit(self: *RenderGridSpanBuilder) void {
+            self.text.deinit();
+        }
+
+        fn ensure(
+            self: *RenderGridSpanBuilder,
+            row: u32,
+            column: u32,
+            style_id: u32,
+        ) !void {
+            if (self.active and
+                self.row == row and
+                self.style_id == style_id and
+                self.column + self.cell_width == column)
+            {
+                return;
+            }
+
+            try self.close();
+            self.active = true;
+            self.row = row;
+            self.column = column;
+            self.style_id = style_id;
+            self.cell_width = 0;
+        }
+
+        fn appendCellWidth(self: *RenderGridSpanBuilder, width: u32) void {
+            self.cell_width += width;
+        }
+
+        fn close(self: *RenderGridSpanBuilder) !void {
+            if (!self.active) return;
+            const text = try self.text.toOwnedSlice();
+            errdefer self.alloc.free(text);
+            try self.spans.append(self.alloc, .{
+                .row = self.row,
+                .column = self.column,
+                .style_id = self.style_id,
+                .cell_width = self.cell_width,
+                .text = text,
+            });
+            self.text = .init(self.alloc);
+            self.active = false;
+            self.cell_width = 0;
+        }
+    };
+
+    fn renderGridStyleID(
+        styles: *std.ArrayListUnmanaged(RenderGridStyle),
+        style: RenderGridStyle,
+    ) !u32 {
+        for (styles.items) |existing| {
+            if (existing.visualEql(style)) return existing.id;
+        }
+
+        var next = style;
+        next.id = @intCast(styles.items.len);
+        try styles.append(global.alloc(), next);
+        return next.id;
+    }
+
+    fn resolvedRenderGridStyle(
+        p: *const terminal.Page,
+        cell: *const terminal.Cell,
+        foreground: terminal.color.RGB,
+        background: terminal.color.RGB,
+        palette: *const terminal.color.Palette,
+        bold_color: ?terminal.Style.BoldColor,
+    ) RenderGridStyle {
+        const style: terminal.Style = if (cell.style_id == terminal_style.default_id)
+            .{}
+        else
+            p.styles.get(p.memory, cell.style_id).*;
+        const foreground_semantics = renderGridColorSemantics(style.fg_color);
+        const background_semantics: RenderGridColorSemantics = switch (cell.content_tag) {
+            .bg_color_palette => .{
+                .source = .palette,
+                .palette_index = cell.content.color_palette.data,
+            },
+            .bg_color_rgb => .{ .source = .rgb },
+            else => renderGridColorSemantics(style.bg_color),
+        };
+        return .{
+            .id = 0,
+            .foreground = style.fg(.{
+                .default = foreground,
+                .palette = palette,
+                .bold = bold_color,
+            }),
+            .background = style.bg(cell, palette) orelse background,
+            .foreground_source = foreground_semantics.source,
+            .foreground_palette_index = foreground_semantics.palette_index,
+            .background_source = background_semantics.source,
+            .background_palette_index = background_semantics.palette_index,
+            .bold = style.flags.bold,
+            .faint = style.flags.faint,
+            .italic = style.flags.italic,
+            .underline = style.flags.underline != .none,
+            .blink = style.flags.blink,
+            .inverse = style.flags.inverse,
+            .invisible = style.flags.invisible,
+            .strikethrough = style.flags.strikethrough,
+            .overline = style.flags.overline,
+        };
+    }
+
+    fn renderGridColorSemantics(color: terminal.Style.Color) RenderGridColorSemantics {
+        return switch (color) {
+            .none => .{ .source = .default_color },
+            .palette => |index| .{ .source = .palette, .palette_index = index },
+            .rgb => .{ .source = .rgb },
+        };
+    }
+
+    fn renderGridColorSourceName(source: RenderGridColorSource) []const u8 {
+        return switch (source) {
+            .default_color => "default",
+            .palette => "palette",
+            .rgb => "rgb",
+        };
+    }
+
+    fn appendRenderGridCellText(
+        builder: *RenderGridSpanBuilder,
+        p: *const terminal.Page,
+        cell: *const terminal.Cell,
+    ) !void {
+        try builder.text.writer.print("{u}", .{cell.codepoint()});
+        if (cell.hasGrapheme()) {
+            if (p.lookupGrapheme(cell)) |graphemes| {
+                for (graphemes) |cp| {
+                    try builder.text.writer.print("{u}", .{cp});
+                }
+            }
+        }
+    }
+
+    fn renderGridCellNeedsOwnSpan(cell: *const terminal.Cell) bool {
+        return cell.gridWidth() != 1 or cell.hasGrapheme();
+    }
+
+    fn writeRenderGridColor(
+        jw: *std.json.Stringify,
+        color: terminal.color.RGB,
+    ) !void {
+        const digits = "0123456789ABCDEF";
+        var buf: [7]u8 = undefined;
+        buf[0] = '#';
+        buf[1] = digits[@intCast(color.r >> 4)];
+        buf[2] = digits[@intCast(color.r & 0x0F)];
+        buf[3] = digits[@intCast(color.g >> 4)];
+        buf[4] = digits[@intCast(color.g & 0x0F)];
+        buf[5] = digits[@intCast(color.b >> 4)];
+        buf[6] = digits[@intCast(color.b & 0x0F)];
+        try jw.write(buf[0..]);
+    }
+
+    fn cursorStyleName(style: terminal.CursorStyle) []const u8 {
+        return switch (style) {
+            .bar => "bar",
+            .block => "block",
+            .underline => "underline",
+            .block_hollow => "block_hollow",
+        };
+    }
+
+    fn resolveRenderGridThemeColor(
+        value: ?configpkg.Config.TerminalColor,
+        foreground: terminal.color.RGB,
+        background: terminal.color.RGB,
+        fallback: terminal.color.RGB,
+    ) terminal.color.RGB {
+        const configured = value orelse return fallback;
+        return switch (configured) {
+            .color => |color| color.toTerminalRGB(),
+            .@"cell-foreground" => foreground,
+            .@"cell-background" => background,
+        };
+    }
+
+    fn writeRenderGridSemanticColor(
+        jw: *std.json.Stringify,
+        field: []const u8,
+        value: ?configpkg.Config.TerminalColor,
+    ) !void {
+        const configured = value orelse return;
+        const semantic = switch (configured) {
+            .color => return,
+            .@"cell-foreground" => "cell-foreground",
+            .@"cell-background" => "cell-background",
+        };
+        try jw.objectField(field);
+        try jw.write(semantic);
+    }
+
+    fn buildRenderGridJson(
+        surface: *Surface,
+        surface_id: []const u8,
+        state_seq: u64,
+        scrollback_lines: usize,
+        include_theme: bool,
+        anchor_active: bool,
+    ) !String {
+        const alloc = global.alloc();
+        const core_surface = &surface.core_surface;
+        var config_background: terminal.color.RGB = undefined;
+        var config_foreground: terminal.color.RGB = undefined;
+        var config_cursor_color: ?configpkg.Config.TerminalColor = null;
+        var config_cursor_text: ?configpkg.Config.TerminalColor = null;
+        var config_selection_background: ?configpkg.Config.TerminalColor = null;
+        var config_selection_foreground: ?configpkg.Config.TerminalColor = null;
+        var bold_color: ?terminal.Style.BoldColor = null;
+        {
+            core_surface.renderer.draw_mutex.lockUncancelable(global.io());
+            defer core_surface.renderer.draw_mutex.unlock(global.io());
+            const config = &core_surface.renderer.config;
+            config_background = config.background;
+            config_foreground = config.foreground;
+            if (include_theme) {
+                config_cursor_color = config.cursor_color;
+                config_cursor_text = config.cursor_text;
+                config_selection_background = config.selection_background;
+                config_selection_foreground = config.selection_foreground;
+            }
+            bold_color = config.bold_color;
+        }
+
+        var styles: std.ArrayListUnmanaged(RenderGridStyle) = .empty;
+        defer styles.deinit(alloc);
+        var spans: std.ArrayListUnmanaged(RenderGridSpan) = .empty;
+        defer {
+            for (spans.items) |span| alloc.free(span.text);
+            spans.deinit(alloc);
+        }
+        var scrollback_spans: std.ArrayListUnmanaged(RenderGridSpan) = .empty;
+        defer {
+            for (scrollback_spans.items) |span| alloc.free(span.text);
+            scrollback_spans.deinit(alloc);
+        }
+        var modes_out: std.ArrayListUnmanaged(RenderGridMode) = .empty;
+        defer modes_out.deinit(alloc);
+
+        var cursor_row: ?u32 = null;
+        var cursor_column: u32 = 0;
+        var cursor_visible = false;
+        var cursor_blinking = false;
+        var cursor_style: terminal.CursorStyle = .block;
+        var columns: u32 = 0;
+        var rows: u32 = 0;
+        var is_alternate = false;
+        var cursor_color_override: ?terminal.color.RGB = null;
+        var effective_background: terminal.color.RGB = undefined;
+        var effective_foreground: terminal.color.RGB = undefined;
+        var theme_cursor: terminal.color.RGB = undefined;
+        var theme_cursor_text: ?terminal.color.RGB = null;
+        var theme_selection_background: terminal.color.RGB = undefined;
+        var theme_selection_foreground: terminal.color.RGB = undefined;
+        var theme_palette: [256]terminal.color.RGB = undefined;
+        var config_palette: [256]terminal.color.RGB = undefined;
+        var theme_cursor_color_semantic: ?configpkg.Config.TerminalColor = null;
+        var theme_cursor_text_semantic: ?configpkg.Config.TerminalColor = null;
+        var theme_selection_background_semantic: ?configpkg.Config.TerminalColor = null;
+        var theme_selection_foreground_semantic: ?configpkg.Config.TerminalColor = null;
+        var scrollback_rows: u32 = 0;
+        var history_rows: u64 = 0;
+        var row_space_revision: u64 = 0;
+
+        {
+            core_surface.renderer_state.mutex.lockUncancelable(global.io());
+            defer core_surface.renderer_state.mutex.unlock(global.io());
+
+            const t: *terminal.Terminal = core_surface.renderer_state.terminal;
+            const s: *terminal.Screen = t.screens.active;
+            const palette = &t.colors.palette.current;
+            var background = t.colors.background.get() orelse config_background;
+            var foreground = t.colors.foreground.get() orelse config_foreground;
+            if (t.modes.get(.reverse_colors)) {
+                std.mem.swap(terminal.color.RGB, &background, &foreground);
+            }
+
+            columns = @intCast(s.pages.cols);
+            rows = @intCast(s.pages.rows);
+            cursor_column = @intCast(@min(s.cursor.x, s.pages.cols - 1));
+            cursor_visible = t.modes.get(.cursor_visible);
+            cursor_blinking = t.modes.get(.cursor_blinking);
+            cursor_style = s.cursor.cursor_style;
+            is_alternate = t.screens.active_key == .alternate;
+            effective_background = background;
+            effective_foreground = foreground;
+            cursor_color_override = t.colors.cursor.override;
+            if (include_theme) {
+                theme_cursor = t.colors.cursor.get() orelse resolveRenderGridThemeColor(
+                    config_cursor_color,
+                    foreground,
+                    background,
+                    foreground,
+                );
+                if (config_cursor_text) |cursor_text| {
+                    theme_cursor_text = resolveRenderGridThemeColor(
+                        cursor_text,
+                        foreground,
+                        background,
+                        background,
+                    );
+                }
+                theme_selection_background = resolveRenderGridThemeColor(
+                    config_selection_background,
+                    foreground,
+                    background,
+                    foreground,
+                );
+                theme_selection_foreground = resolveRenderGridThemeColor(
+                    config_selection_foreground,
+                    foreground,
+                    background,
+                    background,
+                );
+                @memcpy(&theme_palette, palette[0..theme_palette.len]);
+                @memcpy(&config_palette, t.colors.palette.original[0..config_palette.len]);
+                if (cursor_color_override == null) theme_cursor_color_semantic = config_cursor_color;
+                theme_cursor_text_semantic = config_cursor_text;
+                theme_selection_background_semantic = config_selection_background;
+                theme_selection_foreground_semantic = config_selection_foreground;
+            }
+
+            // Capture every non-default-handled DEC/ANSI mode so the client can
+            // restore mouse tracking, bracketed paste, application keys, origin,
+            // autowrap, etc. exactly.
+            inline for (@typeInfo(terminal.modes.Mode).@"enum".fields) |field| {
+                const mode: terminal.modes.Mode = @enumFromInt(field.value);
+                const tag = terminal.modes.ModeTag.fromMode(mode);
+                if (!renderGridModeIsExcluded(tag.value, tag.ansi)) {
+                    try modes_out.append(alloc, .{
+                        .code = tag.value,
+                        .ansi = tag.ansi,
+                        .on = t.modes.get(mode),
+                    });
+                }
+            }
+
+            const default_style: RenderGridStyle = .{
+                .id = 0,
+                .foreground = foreground,
+                .background = background,
+                .foreground_source = .default_color,
+                .background_source = .default_color,
+            };
+            try styles.append(alloc, default_style);
+
+            var vp_builder = RenderGridSpanBuilder.init(alloc, &spans);
+            defer vp_builder.deinit();
+            var sb_builder = RenderGridSpanBuilder.init(alloc, &scrollback_spans);
+            defer sb_builder.deinit();
+
+            // History metrics for screen-anchored consumers: the retained row
+            // count above the active area plus the monotonic revision that
+            // changes whenever retained rows can move to different absolute
+            // offsets (trim/eviction, reflow, erase). Consumers use the pair to
+            // turn history growth into exact scroll deltas and to invalidate
+            // that arithmetic when the row space shifted underneath them.
+            if (s.pages.explicit_max_size != 0) {
+                history_rows = @intCast(s.pages.total_rows - s.pages.rows);
+            }
+            row_space_revision = s.pages.row_space_revision;
+
+            // Iterate the (bounded) scrollback above the anchor plus the
+            // anchored grid itself in one pass. The anchor is the viewport
+            // (v1 mirror semantics) or the active area (screen-anchored
+            // consumers that keep their own viewport). The alternate screen
+            // has no scrollback, so `up` clamps to the anchor top and no
+            // scrollback rows are emitted.
+            const vp_top = if (anchor_active)
+                s.pages.getTopLeft(.active)
+            else
+                s.pages.getTopLeft(.viewport);
+            const start = if (scrollback_lines == 0)
+                vp_top
+            else
+                (vp_top.up(scrollback_lines) orelse s.pages.getTopLeft(.screen));
+            const vp_bottom = (if (anchor_active)
+                s.pages.getBottomRight(.active)
+            else
+                s.pages.getBottomRight(.viewport)) orelse vp_top;
+
+            var row_it = start.rowIterator(.right_down, vp_bottom);
+            var vp_y: u32 = 0;
+            var sb_y: u32 = 0;
+            var in_viewport = false;
+            var preserved_node: ?*terminal.PageList.List.Node = null;
+            var preserved_page: ?terminal.PageList.List.Node.PreservedPage = null;
+            defer if (preserved_page) |*page_| page_.deinit();
+            while (row_it.next()) |row_pin| {
+                if (!in_viewport and row_pin.eql(vp_top)) in_viewport = true;
+                const builder = if (in_viewport) &vp_builder else &sb_builder;
+                const out_row = if (in_viewport) vp_y else sb_y;
+
+                if (in_viewport and cursor_row == null and
+                    row_pin.node == s.cursor.page_pin.node and
+                    row_pin.y == s.cursor.page_pin.y)
+                {
+                    cursor_row = vp_y;
+                }
+
+                // Render-grid snapshots must not make compressed scrollback
+                // resident again. Decode each compressed node once into a
+                // temporary page and reuse it for every row from that node.
+                if (preserved_node != row_pin.node) {
+                    const next_page = try row_pin.node.pagePreservingState(alloc);
+                    if (preserved_page) |*page_| page_.deinit();
+                    preserved_page = next_page;
+                    preserved_node = row_pin.node;
+                }
+                const p = if (preserved_page) |*page_| page_.page() else unreachable;
+                const page_rac = p.getRowAndCell(row_pin.x, row_pin.y);
+                const page_cells: []const terminal.Cell = p.getCells(page_rac.row);
+                for (page_cells, 0..) |*cell, x| {
+                    if (cell.wide == .spacer_tail) {
+                        continue;
+                    }
+
+                    const style = resolvedRenderGridStyle(
+                        p,
+                        cell,
+                        foreground,
+                        background,
+                        palette,
+                        bold_color,
+                    );
+                    const has_text = cell.hasText();
+                    const style_id = try renderGridStyleID(&styles, style);
+                    const is_default_blank = !has_text and style_id == 0;
+                    if (is_default_blank) {
+                        try builder.close();
+                        continue;
+                    }
+
+                    const owns_span = has_text and renderGridCellNeedsOwnSpan(cell);
+                    if (owns_span) try builder.close();
+                    try builder.ensure(out_row, @intCast(x), style_id);
+                    if (has_text) {
+                        try appendRenderGridCellText(builder, p, cell);
+                        builder.appendCellWidth(@intCast(cell.gridWidth()));
+                    } else {
+                        try builder.text.writer.writeByte(' ');
+                        builder.appendCellWidth(1);
+                    }
+                    if (owns_span) try builder.close();
+                }
+                try builder.close();
+                if (in_viewport) {
+                    vp_y += 1;
+                } else {
+                    sb_y += 1;
+                }
+            }
+            try vp_builder.close();
+            try sb_builder.close();
+            scrollback_rows = sb_y;
+        }
+
+        var buf: std.Io.Writer.Allocating = .init(alloc);
+        errdefer buf.deinit();
+        var jw: std.json.Stringify = .{ .writer = &buf.writer };
+        try jw.beginObject();
+
+        try jw.objectField("format");
+        try jw.write("cmux.render-grid.v1");
+        try jw.objectField("surface_id");
+        try jw.write(surface_id);
+        try jw.objectField("state_seq");
+        try jw.write(state_seq);
+        try jw.objectField("columns");
+        try jw.write(columns);
+        try jw.objectField("rows");
+        try jw.write(rows);
+        try jw.objectField("full");
+        try jw.write(true);
+
+        try jw.objectField("cursor");
+        try jw.beginObject();
+        try jw.objectField("row");
+        try jw.write(cursor_row orelse 0);
+        try jw.objectField("column");
+        try jw.write(cursor_column);
+        try jw.objectField("visible");
+        try jw.write(cursor_visible and cursor_row != null);
+        try jw.objectField("style");
+        try jw.write(cursorStyleName(cursor_style));
+        try jw.objectField("blinking");
+        try jw.write(cursor_blinking);
+        try jw.endObject();
+
+        try jw.objectField("styles");
+        try jw.beginArray();
+        for (styles.items) |style| {
+            try jw.beginObject();
+            try jw.objectField("id");
+            try jw.write(style.id);
+            try jw.objectField("foreground");
+            try writeRenderGridColor(&jw, style.foreground);
+            try jw.objectField("background");
+            try writeRenderGridColor(&jw, style.background);
+            try jw.objectField("foreground_source");
+            try jw.write(renderGridColorSourceName(style.foreground_source));
+            if (style.foreground_palette_index) |index| {
+                try jw.objectField("foreground_palette_index");
+                try jw.write(index);
+            }
+            try jw.objectField("background_source");
+            try jw.write(renderGridColorSourceName(style.background_source));
+            if (style.background_palette_index) |index| {
+                try jw.objectField("background_palette_index");
+                try jw.write(index);
+            }
+            try jw.objectField("bold");
+            try jw.write(style.bold);
+            try jw.objectField("faint");
+            try jw.write(style.faint);
+            try jw.objectField("italic");
+            try jw.write(style.italic);
+            try jw.objectField("underline");
+            try jw.write(style.underline);
+            try jw.objectField("blink");
+            try jw.write(style.blink);
+            try jw.objectField("inverse");
+            try jw.write(style.inverse);
+            try jw.objectField("invisible");
+            try jw.write(style.invisible);
+            try jw.objectField("strikethrough");
+            try jw.write(style.strikethrough);
+            try jw.objectField("overline");
+            try jw.write(style.overline);
+            try jw.endObject();
+        }
+        try jw.endArray();
+
+        try jw.objectField("row_spans");
+        try jw.beginArray();
+        for (spans.items) |span| {
+            try jw.beginObject();
+            try jw.objectField("row");
+            try jw.write(span.row);
+            try jw.objectField("column");
+            try jw.write(span.column);
+            try jw.objectField("style_id");
+            try jw.write(span.style_id);
+            try jw.objectField("cell_width");
+            try jw.write(span.cell_width);
+            try jw.objectField("text");
+            try jw.write(span.text);
+            try jw.endObject();
+        }
+        try jw.endArray();
+
+        try jw.objectField("active_screen");
+        try jw.write(if (is_alternate) "alternate" else "primary");
+
+        try jw.objectField("anchor");
+        try jw.write(if (anchor_active) "screen" else "viewport");
+        try jw.objectField("history_rows");
+        try jw.write(history_rows);
+        try jw.objectField("row_space_revision");
+        try jw.write(row_space_revision);
+
+        if (include_theme) {
+            try jw.objectField("terminal_config_theme");
+            try jw.beginObject();
+            try jw.objectField("background");
+            try writeRenderGridColor(&jw, config_background);
+            try jw.objectField("foreground");
+            try writeRenderGridColor(&jw, config_foreground);
+            try jw.objectField("cursor");
+            try writeRenderGridColor(
+                &jw,
+                resolveRenderGridThemeColor(
+                    config_cursor_color,
+                    config_foreground,
+                    config_background,
+                    config_foreground,
+                ),
+            );
+            try writeRenderGridSemanticColor(&jw, "cursorColorSemantic", config_cursor_color);
+            if (config_cursor_text) |cursor_text| {
+                try jw.objectField("cursorText");
+                try writeRenderGridColor(
+                    &jw,
+                    resolveRenderGridThemeColor(
+                        cursor_text,
+                        config_foreground,
+                        config_background,
+                        config_background,
+                    ),
+                );
+            }
+            try writeRenderGridSemanticColor(&jw, "cursorTextSemantic", config_cursor_text);
+            try jw.objectField("selectionBackground");
+            try writeRenderGridColor(
+                &jw,
+                resolveRenderGridThemeColor(
+                    config_selection_background,
+                    config_foreground,
+                    config_background,
+                    config_foreground,
+                ),
+            );
+            try writeRenderGridSemanticColor(
+                &jw,
+                "selectionBackgroundSemantic",
+                config_selection_background,
+            );
+            try jw.objectField("selectionForeground");
+            try writeRenderGridColor(
+                &jw,
+                resolveRenderGridThemeColor(
+                    config_selection_foreground,
+                    config_foreground,
+                    config_background,
+                    config_background,
+                ),
+            );
+            try writeRenderGridSemanticColor(
+                &jw,
+                "selectionForegroundSemantic",
+                config_selection_foreground,
+            );
+            try jw.objectField("palette");
+            try jw.beginArray();
+            for (config_palette) |color| try writeRenderGridColor(&jw, color);
+            try jw.endArray();
+            try jw.endObject();
+
+            try jw.objectField("terminal_theme");
+            try jw.beginObject();
+            try jw.objectField("background");
+            try writeRenderGridColor(&jw, effective_background);
+            try jw.objectField("foreground");
+            try writeRenderGridColor(&jw, effective_foreground);
+            try jw.objectField("cursor");
+            try writeRenderGridColor(&jw, theme_cursor);
+            try writeRenderGridSemanticColor(&jw, "cursorColorSemantic", theme_cursor_color_semantic);
+            if (theme_cursor_text) |cursor_text| {
+                try jw.objectField("cursorText");
+                try writeRenderGridColor(&jw, cursor_text);
+            }
+            try writeRenderGridSemanticColor(&jw, "cursorTextSemantic", theme_cursor_text_semantic);
+            try jw.objectField("selectionBackground");
+            try writeRenderGridColor(&jw, theme_selection_background);
+            try writeRenderGridSemanticColor(
+                &jw,
+                "selectionBackgroundSemantic",
+                theme_selection_background_semantic,
+            );
+            try jw.objectField("selectionForeground");
+            try writeRenderGridColor(&jw, theme_selection_foreground);
+            try writeRenderGridSemanticColor(
+                &jw,
+                "selectionForegroundSemantic",
+                theme_selection_foreground_semantic,
+            );
+            try jw.objectField("palette");
+            try jw.beginArray();
+            for (theme_palette) |color| try writeRenderGridColor(&jw, color);
+            try jw.endArray();
+            try jw.endObject();
+        }
+
+        // Always export the small effective default colors. These include OSC
+        // overrides and DECSCNM reverse-video, so clients can keep chrome in sync
+        // without requesting the full 256-color terminal_theme on every tick.
+        try jw.objectField("terminal_foreground");
+        try writeRenderGridColor(&jw, effective_foreground);
+        try jw.objectField("terminal_background");
+        try writeRenderGridColor(&jw, effective_background);
+        if (cursor_color_override) |c| {
+            try jw.objectField("terminal_cursor_color");
+            try writeRenderGridColor(&jw, c);
+        }
+
+        try jw.objectField("modes");
+        try jw.beginArray();
+        for (modes_out.items) |mode| {
+            try jw.beginObject();
+            try jw.objectField("code");
+            try jw.write(mode.code);
+            try jw.objectField("ansi");
+            try jw.write(mode.ansi);
+            try jw.objectField("on");
+            try jw.write(mode.on);
+            try jw.endObject();
+        }
+        try jw.endArray();
+
+        try jw.objectField("scrollback_rows");
+        try jw.write(scrollback_rows);
+
+        try jw.objectField("scrollback_spans");
+        try jw.beginArray();
+        for (scrollback_spans.items) |span| {
+            try jw.beginObject();
+            try jw.objectField("row");
+            try jw.write(span.row);
+            try jw.objectField("column");
+            try jw.write(span.column);
+            try jw.objectField("style_id");
+            try jw.write(span.style_id);
+            try jw.objectField("cell_width");
+            try jw.write(span.cell_width);
+            try jw.objectField("text");
+            try jw.write(span.text);
+            try jw.endObject();
+        }
+        try jw.endArray();
+
+        try jw.endObject();
+        return .fromSlice(try buf.toOwnedSlice());
+    }
+
+    /// Export the Ghostty grid as cmux mobile render-grid JSON: the visible
+    /// viewport plus full restore state (active screen, DEC/ANSI modes, dynamic
+    /// colors, cursor) and up to `scrollback_lines` rows of scrollback history.
+    /// This reads the terminal page grid directly instead of consuming renderer
+    /// dirty state, so it does not interfere with desktop drawing.
+    export fn ghostty_surface_render_grid_json(
+        surface: *Surface,
+        surface_id_ptr: [*]const u8,
+        surface_id_len: usize,
+        state_seq: u64,
+        scrollback_lines: usize,
+    ) String {
+        return buildRenderGridJson(
+            surface,
+            surface_id_ptr[0..surface_id_len],
+            state_seq,
+            scrollback_lines,
+            false,
+            false,
+        ) catch |err| {
+            log.warn("error exporting render grid err={}", .{err});
+            return .empty;
+        };
+    }
+
+    export fn ghostty_surface_render_grid_json_with_theme(
+        surface: *Surface,
+        surface_id_ptr: [*]const u8,
+        surface_id_len: usize,
+        state_seq: u64,
+        scrollback_lines: usize,
+        include_theme: bool,
+    ) String {
+        return buildRenderGridJson(
+            surface,
+            surface_id_ptr[0..surface_id_len],
+            state_seq,
+            scrollback_lines,
+            include_theme,
+            false,
+        ) catch |err| {
+            log.warn("error exporting render grid err={}", .{err});
+            return .empty;
+        };
+    }
+
+    /// Like `ghostty_surface_render_grid_json_with_theme`, but the exported
+    /// grid can be anchored to the ACTIVE area instead of the viewport.
+    /// Screen-anchored consumers keep their own local viewport/scrollback and
+    /// need frames that are independent of this surface's scroll position;
+    /// `scrollback_lines` then bounds history rows above the active area.
+    export fn ghostty_surface_render_grid_json_v2(
+        surface: *Surface,
+        surface_id_ptr: [*]const u8,
+        surface_id_len: usize,
+        state_seq: u64,
+        scrollback_lines: usize,
+        include_theme: bool,
+        anchor_active: bool,
+    ) String {
+        return buildRenderGridJson(
+            surface,
+            surface_id_ptr[0..surface_id_len],
+            state_seq,
+            scrollback_lines,
+            include_theme,
+            anchor_active,
+        ) catch |err| {
+            log.warn("error exporting render grid err={}", .{err});
+            return .empty;
+        };
+    }
+
+    // ------------------------------------------------------------------
+    // cmux fork: font resolution / rasterization debug API (ghostty-web
+    // parity D3 service). Given a UTF-8 grapheme cluster and a style, run
+    // the surface's REAL font pipeline — a scratch terminal for grapheme
+    // clustering and SGR styling, the surface's live SharedGrid
+    // (CodepointResolver + Collection, including any fallback faces that
+    // dynamic CoreText discovery already added this session), and a
+    // private CoreText shaper with the surface's font features — and
+    // report the resolved face identity and glyph indices, optionally
+    // rasterizing each glyph through the app's own Face/sprite render
+    // path. Everything here is read-mostly against the shared grid (its
+    // own RwLock protects it, exactly as concurrent renderer threads for
+    // split surfaces do) and safe to call from any thread.
+
+    /// Classify where a resolved collection entry came from. Embedded
+    /// faces are loaded from in-binary bytes and have no CTFont URL
+    /// attribute; discovered faces come from CoreText descriptors with a
+    /// file URL; on-demand OS font assets live under /AssetsV2/.
+    fn fontFaceSourceLabel(
+        fallback: bool,
+        url_path: ?[]const u8,
+    ) []const u8 {
+        if (!fallback) return "primary";
+        const path = url_path orelse return "embedded";
+        if (std.mem.indexOf(u8, path, "/AssetsV2/") != null) return "asset";
+        return "discovered";
+    }
+
+    fn fontClusterQueryJson(
+        surface: *Surface,
+        cluster: []const u8,
+        bold: bool,
+        italic: bool,
+        constraint_width_raw: u8,
+        include_pixels: bool,
+    ) !String {
+        const getConstraint = @import("../font/nerd_font_attributes.zig").getConstraint;
+        const cellpkg = @import("../renderer/cell.zig");
+
+        const alloc = global.alloc();
+        const core = &surface.core_surface;
+        const constraint_width: u2 = switch (constraint_width_raw) {
+            1 => 1,
+            2 => 2,
+            else => return error.InvalidConstraintWidth,
+        };
+        if (cluster.len == 0 or cluster.len > 128) return error.InvalidCluster;
+
+        // The identical SharedGrid the renderer uses: SharedGridSet is
+        // keyed by font config, so ref() returns the same grid and holds
+        // a reference for the duration of the query.
+        const key, const grid = try core.app.font_grid_set.ref(
+            &core.config.font,
+            core.font_size,
+        );
+        defer core.app.font_grid_set.deref(key);
+
+        // Scratch terminal: the app's real grapheme clustering, wide char
+        // and spacer handling, isolated from the surface's terminal.
+        var t: terminal.Terminal = try .init(global.io(), alloc, .{
+            .cols = 16,
+            .rows = 2,
+        });
+        defer t.deinit(alloc);
+        {
+            var s = t.vtStream();
+            defer s.deinit();
+            if (bold) s.nextSlice("\x1b[1m");
+            if (italic) s.nextSlice("\x1b[3m");
+            s.nextSlice(cluster);
+        }
+
+        var state: terminal.RenderState = .empty;
+        defer state.deinit(alloc);
+        try state.update(alloc, &t);
+
+        // Private shaper with the surface's shaping features; the
+        // renderer-owned shaper must never be touched from here.
+        var shaper = try font.Shaper.init(alloc, .{
+            .features = core.renderer.config.font_features.items,
+        });
+        defer shaper.deinit();
+        defer shaper.endFrame();
+
+        const row = state.row_data.get(0);
+        const cells_slice = row.cells.slice();
+        const cells_raw = cells_slice.items(.raw);
+
+        var buf: std.Io.Writer.Allocating = .init(alloc);
+        errdefer buf.deinit();
+        var jw: std.json.Stringify = .{ .writer = &buf.writer };
+
+        try jw.beginObject();
+        try jw.objectField("format");
+        try jw.write("cmux.font-query.v1");
+        try jw.objectField("cluster");
+        try jw.write(cluster);
+        try jw.objectField("bold");
+        try jw.write(bold);
+        try jw.objectField("italic");
+        try jw.write(italic);
+        try jw.objectField("constraint_width");
+        try jw.write(constraint_width);
+        try jw.objectField("metrics");
+        try jw.beginObject();
+        try jw.objectField("cell_width");
+        try jw.write(grid.metrics.cell_width);
+        try jw.objectField("cell_height");
+        try jw.write(grid.metrics.cell_height);
+        try jw.objectField("cell_baseline");
+        try jw.write(grid.metrics.cell_baseline);
+        try jw.endObject();
+        try jw.objectField("runs");
+        try jw.beginArray();
+
+        var it = shaper.runIterator(.{
+            .grid = grid,
+            .cells = cells_slice,
+        });
+        while (try it.next(alloc)) |run| {
+            const shaped = try shaper.shape(run);
+            try jw.beginObject();
+            try jw.objectField("offset");
+            try jw.write(run.offset);
+            try jw.objectField("cells_covered");
+            try jw.write(run.cells);
+            try jw.objectField("font_index");
+            try jw.write(run.font_index.int());
+            try jw.objectField("style");
+            try jw.write(@tagName(run.font_index.style));
+
+            var run_is_color = false;
+            if (run.font_index.special()) |special| {
+                try jw.objectField("source");
+                try jw.write(@tagName(special));
+                try jw.objectField("ps_name");
+                try jw.write("");
+                try jw.objectField("family");
+                try jw.write("");
+            } else {
+                // A config-driven `font-codepoint-map` entry (e.g. cmux's
+                // auto-injected CJK mappings) wins over every fallback path
+                // in CodepointResolver.getIndex, and its face is added as a
+                // NON-fallback entry, so classify it explicitly instead of
+                // letting it masquerade as the primary family. The map is
+                // immutable after grid creation; no lock needed.
+                const codepoint_map_hit: bool = hit: {
+                    const map = grid.resolver.codepoint_map orelse break :hit false;
+                    const first_cell = cells_raw[run.offset];
+                    const cp0 = std.math.cast(u21, first_cell.codepoint()) orelse break :hit false;
+                    break :hit map.get(cp0) != null;
+                };
+                grid.lock.lockSharedUncancelable(global.io());
+                defer grid.lock.unlockShared(global.io());
+                // Safe: the run iterator resolved this index through
+                // SharedGrid.getIndex, which force-loads deferred faces
+                // under the exclusive lock.
+                const entry = try grid.resolver.collection.getEntry(run.font_index);
+                const face = try grid.resolver.collection.getFace(run.font_index);
+
+                var ps_buf: [256]u8 = undefined;
+                const ps_name: []const u8 = blk: {
+                    const s = face.font.copyPostScriptName();
+                    defer s.release();
+                    break :blk s.cstring(&ps_buf, .utf8) orelse "";
+                };
+                var family_buf: [256]u8 = undefined;
+                const family: []const u8 = face.name(&family_buf) catch "";
+                var url_buf: [1024]u8 = undefined;
+                const url_path: ?[]const u8 = blk: {
+                    const url = face.font.copyAttribute(.url) orelse break :blk null;
+                    defer url.release();
+                    const path = url.copyPath() orelse break :blk null;
+                    defer path.release();
+                    break :blk path.cstring(&url_buf, .utf8);
+                };
+                if (shaped.len > 0) {
+                    run_is_color = face.isColorGlyph(shaped[0].glyph_index);
+                }
+
+                try jw.objectField("source");
+                try jw.write(if (codepoint_map_hit)
+                    "codepoint-map"
+                else
+                    fontFaceSourceLabel(entry.fallback, url_path));
+                try jw.objectField("ps_name");
+                try jw.write(ps_name);
+                try jw.objectField("family");
+                try jw.write(family);
+                if (url_path) |path| {
+                    try jw.objectField("url_path");
+                    try jw.write(path);
+                }
+            }
+            try jw.objectField("color");
+            try jw.write(run_is_color);
+
+            try jw.objectField("glyphs");
+            try jw.beginArray();
+            for (shaped) |shaper_cell| {
+                const abs_x: usize = @as(usize, run.offset) + shaper_cell.x;
+                if (abs_x >= cells_raw.len) continue;
+                const raw_cell = cells_raw[abs_x];
+                const cp = raw_cell.codepoint();
+
+                try jw.beginObject();
+                try jw.objectField("x");
+                try jw.write(shaper_cell.x);
+                try jw.objectField("glyph_index");
+                try jw.write(shaper_cell.glyph_index);
+                try jw.objectField("x_offset");
+                try jw.write(shaper_cell.x_offset);
+                try jw.objectField("y_offset");
+                try jw.write(shaper_cell.y_offset);
+                try jw.objectField("cp");
+                try jw.write(cp);
+                try jw.objectField("grid_width");
+                try jw.write(raw_cell.gridWidth());
+
+                if (include_pixels) {
+                    const render_opts: font.Glyph.RenderOptions = .{
+                        .grid_metrics = grid.metrics,
+                        .thicken = core.renderer.config.font_thicken,
+                        .thicken_strength = core.renderer.config.font_thicken_strength,
+                        .cell_width = raw_cell.gridWidth(),
+                        .constraint = getConstraint(@intCast(cp)) orelse
+                            if (cellpkg.isSymbol(@intCast(cp)))
+                                .{ .size = .fit }
+                            else
+                                .none,
+                        .constraint_width = constraint_width,
+                    };
+                    try fontEmitGlyphPixels(
+                        &jw,
+                        alloc,
+                        grid,
+                        run.font_index,
+                        shaper_cell.glyph_index,
+                        render_opts,
+                    );
+                }
+                try jw.endObject();
+            }
+            try jw.endArray();
+            try jw.endObject();
+        }
+        try jw.endArray();
+        try jw.endObject();
+        return .fromSlice(try buf.toOwnedSlice());
+    }
+
+    /// Rasterize one glyph through the app's own pipeline into a PRIVATE
+    /// atlas (never the shared one, so the renderer's glyph cache cannot
+    /// be poisoned by caller-supplied constraint variants) and append the
+    /// pixel fields to the currently open JSON object. Monochrome glyphs
+    /// come out of the exact CoreText render path as 8-bit coverage and
+    /// are emitted losslessly widened to 16-bit (v16 = v8 * 257,
+    /// little-endian), matching the sprite convention used by atlasgen;
+    /// color glyphs (Apple Color Emoji) are premultiplied BGRA in
+    /// Display P3, emitted verbatim.
+    fn fontEmitGlyphPixels(
+        jw: *std.json.Stringify,
+        alloc: Allocator,
+        grid: *font.SharedGrid,
+        index: font.Collection.Index,
+        glyph_index: u32,
+        opts: font.Glyph.RenderOptions,
+    ) !void {
+        var glyph: font.Glyph = undefined;
+        var is_color = false;
+        var atlas: font.Atlas = undefined;
+        var atlas_ready = false;
+        defer if (atlas_ready) atlas.deinit(alloc);
+
+        if (index.special() != null) {
+            const sprite = grid.resolver.sprite orelse return error.SpriteFaceUnavailable;
+            atlas = try font.Atlas.init(alloc, 512, .grayscale);
+            atlas_ready = true;
+            glyph = sprite.renderGlyph(alloc, &atlas, glyph_index, opts) catch |err| switch (err) {
+                error.AtlasFull => blk: {
+                    try atlas.grow(alloc, 2048);
+                    break :blk try sprite.renderGlyph(alloc, &atlas, glyph_index, opts);
+                },
+                else => return err,
+            };
+        } else {
+            grid.lock.lockSharedUncancelable(global.io());
+            defer grid.lock.unlockShared(global.io());
+            const face = try grid.resolver.collection.getFace(index);
+            is_color = face.isColorGlyph(glyph_index);
+            atlas = try font.Atlas.init(alloc, 512, if (is_color) .bgra else .grayscale);
+            atlas_ready = true;
+            glyph = face.renderGlyph(alloc, &atlas, glyph_index, opts) catch |err| switch (err) {
+                error.AtlasFull => blk: {
+                    try atlas.grow(alloc, 2048);
+                    break :blk try face.renderGlyph(alloc, &atlas, glyph_index, opts);
+                },
+                else => return err,
+            };
+        }
+
+        try jw.objectField("width");
+        try jw.write(glyph.width);
+        try jw.objectField("height");
+        try jw.write(glyph.height);
+        try jw.objectField("glyph_offset_x");
+        try jw.write(glyph.offset_x);
+        try jw.objectField("glyph_offset_y");
+        try jw.write(glyph.offset_y);
+        try jw.objectField("pixel_format");
+        try jw.write(if (is_color) "bgra8-premul-p3" else "coverage16-le");
+
+        if (glyph.width == 0 or glyph.height == 0) {
+            try jw.objectField("data_b64");
+            try jw.write("");
+            return;
+        }
+
+        const depth: usize = if (is_color) 4 else 1;
+        const out_depth: usize = if (is_color) 4 else 2;
+        const out = try alloc.alloc(u8, glyph.width * glyph.height * out_depth);
+        defer alloc.free(out);
+        var y: u32 = 0;
+        while (y < glyph.height) : (y += 1) {
+            const src_off = ((@as(usize, glyph.atlas_y + y) * atlas.size) + glyph.atlas_x) * depth;
+            const src_row = atlas.data[src_off..][0 .. @as(usize, glyph.width) * depth];
+            if (is_color) {
+                @memcpy(out[y * glyph.width * 4 ..][0 .. glyph.width * 4], src_row);
+            } else {
+                var x: usize = 0;
+                while (x < glyph.width) : (x += 1) {
+                    const v16: u16 = @as(u16, src_row[x]) * 257;
+                    const dst = (@as(usize, y) * glyph.width + x) * 2;
+                    out[dst] = @truncate(v16);
+                    out[dst + 1] = @truncate(v16 >> 8);
+                }
+            }
+        }
+
+        const b64_len = std.base64.standard.Encoder.calcSize(out.len);
+        const b64 = try alloc.alloc(u8, b64_len);
+        defer alloc.free(b64);
+        try jw.objectField("data_b64");
+        try jw.write(std.base64.standard.Encoder.encode(b64, out));
+    }
+
+    /// cmux fork: resolve a UTF-8 grapheme cluster + style through this
+    /// surface's live font pipeline (CodepointResolver, collection with
+    /// session fallback state, CoreText shaper). Returns a JSON document
+    /// (`cmux.font-query.v1`) with the resolved face identity per shaper
+    /// run: PostScript name, source (primary / embedded / discovered /
+    /// asset / sprite), glyph indices and shaper offsets. Free the result
+    /// with ghostty_string_free. Empty string on failure.
+    export fn ghostty_surface_font_resolve_json(
+        surface: *Surface,
+        cluster_ptr: [*]const u8,
+        cluster_len: usize,
+        bold: bool,
+        italic: bool,
+        constraint_width: u8,
+    ) String {
+        return fontClusterQueryJson(
+            surface,
+            cluster_ptr[0..cluster_len],
+            bold,
+            italic,
+            constraint_width,
+            false,
+        ) catch |err| {
+            log.warn("font resolve failed err={}", .{err});
+            return .empty;
+        };
+    }
+
+    /// cmux fork: like ghostty_surface_font_resolve_json, but additionally
+    /// rasterizes every resolved glyph through the app's own render path
+    /// (CoreText Face.renderGlyph or the sprite face) into a private
+    /// atlas, returning per-glyph pixels base64-encoded in the JSON:
+    /// 16-bit little-endian coverage for monochrome glyphs (losslessly
+    /// widened from the pipeline's 8-bit coverage, v16 = v8 * 257) or
+    /// premultiplied Display-P3 BGRA for color glyphs. Free the result
+    /// with ghostty_string_free. Empty string on failure.
+    export fn ghostty_surface_font_rasterize_json(
+        surface: *Surface,
+        cluster_ptr: [*]const u8,
+        cluster_len: usize,
+        bold: bool,
+        italic: bool,
+        constraint_width: u8,
+    ) String {
+        return fontClusterQueryJson(
+            surface,
+            cluster_ptr[0..cluster_len],
+            bold,
+            italic,
+            constraint_width,
+            true,
+        ) catch |err| {
+            log.warn("font rasterize failed err={}", .{err});
+            return .empty;
+        };
+    }
+
+    /// Returns the PID of the foreground process for the surface PTY.
+    export fn ghostty_surface_foreground_pid(surface: *Surface) u64 {
+        return surface.core_surface.getProcessInfo(.foreground_pid) orelse 0;
+    }
+
+    /// Returns the PTY name for the surface. The returned string must be
+    /// freed by the caller via ghostty_string_free.
+    export fn ghostty_surface_tty_name(surface: *Surface) String {
+        const tty_name = surface.core_surface.getProcessInfo(.tty_name) orelse return .empty;
+        const copy = surface.app.core_app.alloc.dupeZ(u8, tty_name) catch |err| {
+            log.err("error allocating tty name err={}", .{err});
+            return .empty;
+        };
+
+        return .fromSlice(copy);
+    }
+
+    /// Update the color scheme of the surface.
+    export fn ghostty_surface_set_color_scheme(surface: *Surface, scheme_raw: c_int) void {
+        const scheme = std.enums.fromInt(apprt.ColorScheme, scheme_raw) orelse return;
+        surface.colorSchemeCallback(scheme);
+    }
+
+    /// Update the content scale of the surface.
+    export fn ghostty_surface_set_content_scale(surface: *Surface, x: f64, y: f64) void {
+        surface.updateContentScale(x, y);
+    }
+
+    /// Update the focused state of a surface.
+    export fn ghostty_surface_set_focus(surface: *Surface, focused: bool) void {
+        surface.focusCallback(focused);
+    }
+
+    /// Update the occlusion state of a surface.
+    export fn ghostty_surface_set_occlusion(surface: *Surface, visible: bool) void {
+        surface.occlusionCallback(visible);
+    }
+
+    /// Filter the mods if necessary. This handles settings such as
+    /// `macos-option-as-alt`. The filtered mods should be used for
+    /// key translation but should NOT be sent back via the `_key`
+    /// function -- the original mods should be used for that.
+    export fn ghostty_surface_key_translation_mods(
+        surface: *Surface,
+        mods_raw: c_int,
+    ) c_int {
+        const mods: input.Mods = @bitCast(@as(
+            input.Mods.Backing,
+            @truncate(@as(c_uint, @bitCast(mods_raw))),
+        ));
+        const result = mods.translation(
+            surface.core_surface.config.macos_option_as_alt orelse
+                surface.app.keyboardLayout().detectOptionAsAlt(),
+        );
+        return @intCast(@as(input.Mods.Backing, @bitCast(result)));
+    }
+
+    /// Send this for raw keypresses (i.e. the keyDown event on macOS).
+    /// This will handle the keymap translation and send the appropriate
+    /// key and char events.
+    export fn ghostty_surface_key(
+        surface: *Surface,
+        event: KeyEvent,
+    ) bool {
+        return surface.app.keyEvent(
+            .{ .surface = surface },
+            event.keyEvent(),
+        ) catch |err| {
+            log.warn("error processing key event err={}", .{err});
+            return false;
+        };
+    }
+
+    /// Returns true if the given key event would trigger a binding
+    /// if it were sent to the surface right now. The "right now"
+    /// is important because things like trigger sequences are only
+    /// valid until the next key event.
+    export fn ghostty_surface_key_is_binding(
+        surface: *Surface,
+        event: KeyEvent,
+        c_flags: ?*input.Binding.Flags.C,
+    ) bool {
+        const core_event = event.keyEvent().core() orelse {
+            log.warn("error processing key event", .{});
+            return false;
+        };
+
+        const flags = surface.core_surface.keyEventIsBinding(
+            core_event,
+        ) orelse return false;
+        if (c_flags) |ptr| ptr.* = flags.cval();
+        return true;
+    }
+
+    /// Consumes a safe menu-owned binding after the corresponding native menu
+    /// action declined the key event.
+    export fn ghostty_surface_key_consume_if_menu_action(
+        surface: *Surface,
+        event: KeyEvent,
+        action_ptr: [*]const u8,
+        action_len: usize,
+    ) bool {
+        const core_event = event.keyEvent().core() orelse {
+            log.warn("error processing key event", .{});
+            return false;
+        };
+        const action_str = action_ptr[0..action_len];
+        const action = input.Binding.Action.parse(action_str) catch |err| {
+            log.warn(
+                "error parsing binding action action={s} err={}",
+                .{ action_str, err },
+            );
+            return false;
+        };
+
+        return surface.core_surface.keyEventConsumeIfMenuAction(
+            core_event,
+            action,
+        );
+    }
+
+    /// Send raw text to the terminal. This is treated like a paste
+    /// so this isn't useful for sending escape sequences. For that,
+    /// individual key input should be used.
+    export fn ghostty_surface_text(
+        surface: *Surface,
+        ptr: [*]const u8,
+        len: usize,
+    ) void {
+        surface.textCallback(ptr[0..len]);
+    }
+
+    /// Send committed text input to the terminal. This is treated like
+    /// typed text, not a paste. Newlines are normalized to carriage
+    /// returns and bracketed paste mode is not used.
+    export fn ghostty_surface_text_input(
+        surface: *Surface,
+        ptr: [*]const u8,
+        len: usize,
+    ) void {
+        surface.textInputCallback(ptr[0..len]);
+    }
+
+    /// Set the preedit text for the surface. This is used for IME
+    /// composition. If the length is 0, then the preedit text is cleared.
+    export fn ghostty_surface_preedit(
+        surface: *Surface,
+        ptr: [*]const u8,
+        len: usize,
+    ) void {
+        surface.preeditCallback(if (len == 0) null else ptr[0..len]);
+    }
+
+    /// Process output bytes as if they were read from the PTY.
+    export fn ghostty_surface_process_output(
+        surface: *Surface,
+        ptr: [*]const u8,
+        len: usize,
+    ) void {
+        if (len == 0) return;
+        surface.core_surface.io.processOutput(ptr[0..len]);
+    }
+
+    export fn ghostty_surface_restore_kitty_replay(
+        surface: *Surface,
+        replay_ptr: ?[*]const u8,
+        replay_len: usize,
+        replay_cursor_offset: u32,
+        limits: extern struct { image_bytes: u64, inflight_bytes: u64, images: u64, placements: u64 },
+        cursors: extern struct {
+            replay: extern struct { primary: u32, alternate: u32 },
+            next: extern struct { primary: u32, alternate: u32 },
+        },
+        aliases: ?[*]const KittyReplayAlias,
+        alias_count: usize,
+    ) bool {
+        if (replay_cursor_offset > replay_len) return false;
+        if (replay_len != 0 and replay_ptr == null) return false;
+        if (alias_count != 0 and aliases == null) return false;
+        if (alias_count > max_kitty_replay_aliases) return false;
+        const replay: []const u8 = if (replay_len == 0) &[_]u8{} else replay_ptr.?[0..replay_len];
+        const core_surface = &surface.core_surface;
+        core_surface.renderer_state.mutex.lockUncancelable(global.io());
+        defer core_surface.renderer_state.mutex.unlock(global.io());
+        const io = &core_surface.io;
+        if (!io.beginKittyReplayRestoreLocked()) return false;
+        var tracking_replay = true;
+        defer if (tracking_replay) io.cancelKittyReplayRestoreLocked();
+        if (comptime !terminal_options.kitty_graphics) {
+            io.processKittyReplayOutputLocked(replay);
+            const replay_succeeded = io.finishKittyReplayRestoreLocked();
+            tracking_replay = false;
+            return replay_succeeded;
+        }
+        // inflight_bytes is the producer's encoded replay-retention bound.
+        // Validate its platform representation, but do not apply it to
+        // Ghostty's decoded LoadingImage storage, which image_bytes governs.
+        if (limits.image_bytes > std.math.maxInt(usize) or limits.inflight_bytes > std.math.maxInt(usize) or
+            limits.images > std.math.maxInt(usize) or limits.placements > std.math.maxInt(usize)) return false;
+        if (replay_cursor_offset > std.math.maxInt(usize)) return false;
+        if (cursors.replay.primary == 0 or cursors.replay.alternate == 0 or
+            cursors.next.primary == 0 or cursors.next.alternate == 0) return false;
+        const t = &io.terminal;
+        if (alias_count > 0) {
+            const items = aliases.?[0..alias_count];
+            if (!kittyReplayAliasesAreValid(t.gpa(), items)) return false;
+        }
+        t.setKittyGraphicsSizeLimit(t.gpa(), @intCast(limits.image_bytes)) catch return false;
+        t.setKittyGraphicsImageCountLimit(t.gpa(), @intCast(limits.images)) catch return false;
+        if (!t.setKittyGraphicsPlacementCountLimit(@intCast(limits.placements))) return false;
+        const primary = t.screens.get(.primary) orelse return false;
+        io.processKittyReplayOutputLocked(replay[0..replay_cursor_offset]);
+        if ((cursors.replay.alternate != kitty_graphics.default_image_id or
+            cursors.next.alternate != kitty_graphics.default_image_id) and t.screens.get(.alternate) == null)
+        {
+            _ = t.screens.getInit(t.io(), primary.alloc, .alternate, .{
+                .cols = t.cols,
+                .rows = t.rows,
+                .max_scrollback = 0,
+                .kitty_image_storage_limit = primary.kitty_images.total_limit,
+                .kitty_image_count_limit = primary.kitty_images.image_count_limit,
+                .kitty_placement_count_limit = primary.kitty_images.placement_count_limit,
+                .kitty_image_loading_limits = primary.kitty_images.image_limits,
+            }) catch return false;
+        }
+        primary.kitty_images.next_image_id = cursors.replay.primary;
+        if (t.screens.get(.alternate)) |alternate| alternate.kitty_images.next_image_id = cursors.replay.alternate;
+        io.processKittyReplayOutputLocked(replay[replay_cursor_offset..]);
+        const replay_succeeded = io.finishKittyReplayRestoreLocked();
+        tracking_replay = false;
+        if (!replay_succeeded) return false;
+        if (aliases) |items| {
+            // Validate every active-screen image before changing any alias, so a
+            // malformed sidecar cannot leave a partially restored mapping.
+            for (items[0..alias_count]) |alias| {
+                if (t.screens.active.kitty_images.images.getPtr(alias.image_id) == null) return false;
+            }
+            for (items[0..alias_count]) |alias| {
+                if (!t.screens.active.kitty_images.setImageNumber(alias.image_id, alias.image_number)) return false;
+            }
+        }
+        primary.kitty_images.next_image_id = cursors.next.primary;
+        if (t.screens.get(.alternate)) |alternate| alternate.kitty_images.next_image_id = cursors.next.alternate;
+        return true;
+    }
+
+    /// Install a callback that fires on every PTY-output byte slice
+    /// before the VT parser sees it. Pass `cb = null` to clear.
+    ///
+    /// The callback runs on the IO read thread (or whoever calls
+    /// `ghostty_surface_process_output`). The embedder owns thread
+    /// safety for any cross-thread hand-off; the typical pattern is a
+    /// non-blocking memcpy into a ring buffer + an async wakeup.
+    ///
+    /// userdata is opaque to libghostty; the embedder owns its lifetime
+    /// (usually tied to the surface).
+    ///
+    /// cmux fork: the Mac sync server uses this to broadcast raw PTY
+    /// bytes to paired iPhones so the phone can feed identical bytes
+    /// into its own libghostty surface, producing a byte-for-byte
+    /// matching grid. Upstream candidate.
+    export fn ghostty_surface_set_pty_tee_cb(
+        surface: *Surface,
+        cb: ?PtyTeeCallback,
+        userdata: ?*anyopaque,
+    ) void {
+        surface.pty_tee_cb = cb;
+        surface.pty_tee_userdata = userdata;
+        surface.core_surface.io.pty_tee_cb = cb;
+        surface.core_surface.io.pty_tee_userdata = userdata;
+    }
+
+    /// Returns true if the surface currently has mouse capturing
+    /// enabled.
+    export fn ghostty_surface_mouse_captured(surface: *Surface) bool {
+        return surface.core_surface.mouseCaptured();
+    }
+
+    /// Returns true if the terminal's active screen is the alternate
+    /// screen (cmux-specific).
+    export fn ghostty_surface_is_alternate_screen(surface: *Surface) bool {
+        return surface.core_surface.isAlternateScreen();
+    }
+
+    /// Tell the surface that it needs to schedule a render
+    export fn ghostty_surface_mouse_button(
+        surface: *Surface,
+        action: input.MouseButtonState,
+        button: input.MouseButton,
+        mods: c_int,
+    ) bool {
+        return surface.mouseButtonCallback(
+            action,
+            button,
+            @bitCast(@as(
+                input.Mods.Backing,
+                @truncate(@as(c_uint, @bitCast(mods))),
+            )),
+        );
+    }
+
+    /// Update the mouse position within the view.
+    export fn ghostty_surface_mouse_pos(
+        surface: *Surface,
+        x: f64,
+        y: f64,
+        mods: c_int,
+    ) void {
+        surface.cursorPosCallback(
+            x,
+            y,
+            @bitCast(@as(
+                input.Mods.Backing,
+                @truncate(@as(c_uint, @bitCast(mods))),
+            )),
+        );
+    }
+
+    export fn ghostty_surface_mouse_scroll(
+        surface: *Surface,
+        x: f64,
+        y: f64,
+        scroll_mods: c_int,
+    ) void {
+        surface.scrollCallback(
+            x,
+            y,
+            @bitCast(@as(u8, @truncate(@as(c_uint, @bitCast(scroll_mods))))),
+        );
+    }
+
+    export fn ghostty_surface_mouse_pressure(
+        surface: *Surface,
+        stage_raw: u32,
+        pressure: f64,
+    ) void {
+        const stage = std.enums.fromInt(input.MousePressureStage, stage_raw) orelse return;
+        surface.mousePressureCallback(stage, pressure);
+    }
+
+    export fn ghostty_surface_ime_point(
+        surface: *Surface,
+        x: *f64,
+        y: *f64,
+        width: *f64,
+        height: *f64,
+    ) void {
+        const pos = surface.core_surface.imePoint();
+        x.* = pos.x;
+        y.* = pos.y;
+        width.* = pos.width;
+        height.* = pos.height;
+    }
+
+    /// Request that the surface become closed. This will go through the
+    /// normal trigger process that a close surface input binding would.
+    export fn ghostty_surface_request_close(ptr: *Surface) void {
+        ptr.core_surface.close();
+    }
+
+    /// Request that the surface split in the given direction.
+    export fn ghostty_surface_split(ptr: *Surface, direction: apprt.action.SplitDirection) void {
+        _ = ptr.app.performAction(
+            .{ .surface = &ptr.core_surface },
+            .new_split,
+            direction,
+        ) catch |err| {
+            log.err("error creating new split err={}", .{err});
+            return;
+        };
+    }
+
+    /// Focus on the next split (if any).
+    export fn ghostty_surface_split_focus(
+        ptr: *Surface,
+        direction: apprt.action.GotoSplit,
+    ) void {
+        _ = ptr.app.performAction(
+            .{ .surface = &ptr.core_surface },
+            .goto_split,
+            direction,
+        ) catch |err| {
+            log.err("error creating new split err={}", .{err});
+            return;
+        };
+    }
+
+    /// Resize the current split by moving the split divider in the given
+    /// direction. `direction` specifies which direction the split divider will
+    /// move relative to the focused split. `amount` is a fractional value
+    /// between 0 and 1 that specifies by how much the divider will move.
+    export fn ghostty_surface_split_resize(
+        ptr: *Surface,
+        direction: apprt.action.ResizeSplit.Direction,
+        amount: u16,
+    ) void {
+        _ = ptr.app.performAction(
+            .{ .surface = &ptr.core_surface },
+            .resize_split,
+            .{ .direction = direction, .amount = amount },
+        ) catch |err| {
+            log.err("error resizing split err={}", .{err});
+            return;
+        };
+    }
+
+    /// Equalize the size of all splits in the current window.
+    export fn ghostty_surface_split_equalize(ptr: *Surface) void {
+        _ = ptr.app.performAction(
+            .{ .surface = &ptr.core_surface },
+            .equalize_splits,
+            {},
+        ) catch |err| {
+            log.err("error equalizing splits err={}", .{err});
+            return;
+        };
+    }
+
+    /// Invoke an action on the surface.
+    export fn ghostty_surface_binding_action(
+        ptr: *Surface,
+        action_ptr: [*]const u8,
+        action_len: usize,
+    ) bool {
+        const action_str = action_ptr[0..action_len];
+        const action = input.Binding.Action.parse(action_str) catch |err| {
+            log.err("error parsing binding action action={s} err={}", .{ action_str, err });
+            return false;
+        };
+
+        return ptr.core_surface.performBindingAction(action) catch |err| {
+            log.err("error performing binding action action={f} err={}", .{ action, err });
+            return false;
+        };
+    }
+
+    /// Try to reveal the terminal prompt without waiting on the renderer-state
+    /// mutex. Embedded display-driven clients retry a false result on their
+    /// next frame instead of blocking the queue that also drains output.
+    export fn ghostty_surface_try_scroll_to_bottom(surface: *Surface) bool {
+        return surface.core_surface.tryScrollToBottom();
+    }
+
+    /// Complete a clipboard read request started via the read callback.
+    /// This can only be called once for a given request. Once it is called
+    /// with a request the request pointer will be invalidated.
+    export fn ghostty_surface_complete_clipboard_request(
+        ptr: *Surface,
+        str: [*:0]const u8,
+        state: *apprt.ClipboardRequest,
+        confirmed: bool,
+    ) void {
+        ptr.completeClipboardRequest(
+            std.mem.sliceTo(str, 0),
+            state,
+            confirmed,
+        );
+    }
+
+    export fn ghostty_surface_inspector(ptr: *Surface) ?*Inspector {
+        return ptr.initInspector() catch |err| {
+            log.err("error initializing inspector err={}", .{err});
+            return null;
+        };
+    }
+
+    export fn ghostty_inspector_free(ptr: *Surface) void {
+        ptr.freeInspector();
+    }
+
+    export fn ghostty_inspector_set_size(ptr: *Inspector, w: u32, h: u32) void {
+        ptr.updateSize(w, h);
+    }
+
+    export fn ghostty_inspector_set_content_scale(ptr: *Inspector, x: f64, y: f64) void {
+        ptr.updateContentScale(x, y);
+    }
+
+    export fn ghostty_inspector_mouse_button(
+        ptr: *Inspector,
+        action: input.MouseButtonState,
+        button: input.MouseButton,
+        mods: c_int,
+    ) void {
+        ptr.mouseButtonCallback(
+            action,
+            button,
+            @bitCast(@as(
+                input.Mods.Backing,
+                @truncate(@as(c_uint, @bitCast(mods))),
+            )),
+        );
+    }
+
+    export fn ghostty_inspector_mouse_pos(ptr: *Inspector, x: f64, y: f64) void {
+        ptr.cursorPosCallback(x, y);
+    }
+
+    export fn ghostty_inspector_mouse_scroll(
+        ptr: *Inspector,
+        x: f64,
+        y: f64,
+        scroll_mods: c_int,
+    ) void {
+        ptr.scrollCallback(
+            x,
+            y,
+            @bitCast(@as(u8, @truncate(@as(c_uint, @bitCast(scroll_mods))))),
+        );
+    }
+
+    export fn ghostty_inspector_key(
+        ptr: *Inspector,
+        action: input.Action,
+        key: input.Key,
+        c_mods: c_int,
+    ) void {
+        ptr.keyCallback(
+            action,
+            key,
+            @bitCast(@as(
+                input.Mods.Backing,
+                @truncate(@as(c_uint, @bitCast(c_mods))),
+            )),
+        ) catch |err| {
+            log.err("error processing key event err={}", .{err});
+            return;
+        };
+    }
+
+    export fn ghostty_inspector_text(
+        ptr: *Inspector,
+        str: [*:0]const u8,
+    ) void {
+        ptr.textCallback(std.mem.sliceTo(str, 0));
+    }
+
+    export fn ghostty_inspector_set_focus(ptr: *Inspector, focused: bool) void {
+        ptr.focusCallback(focused);
+    }
+
+    /// Sets the window background blur on macOS to the desired value.
+    /// I do this in Zig as an extern function because I don't know how to
+    /// call these functions in Swift.
+    ///
+    /// This uses an undocumented, non-public API because this is what
+    /// every terminal appears to use, including Terminal.app.
+    export fn ghostty_set_window_background_blur(
+        app: *App,
+        window: *anyopaque,
+    ) void {
+        // This is only supported on macOS
+        if (comptime builtin.target.os.tag != .macos) return;
+
+        const config = &app.config;
+
+        // Do nothing if we don't have background transparency enabled
+        if (config.@"background-opacity" >= 1.0) return;
+
+        const nswindow = objc.Object.fromId(window);
+        _ = CGSSetWindowBackgroundBlurRadius(
+            CGSDefaultConnectionForThread(),
+            nswindow.msgSend(usize, objc.sel("windowNumber"), .{}),
+            @intCast(config.@"background-blur".cval()),
+        );
+    }
+
+    /// See ghostty_set_window_background_blur
+    extern "c" fn CGSSetWindowBackgroundBlurRadius(*anyopaque, usize, c_int) i32;
+    extern "c" fn CGSDefaultConnectionForThread() *anyopaque;
+
+    // Darwin-only C APIs.
+    const Darwin = struct {
+        export fn ghostty_surface_set_display_id(ptr: *Surface, display_id: u32) void {
+            const surface = &ptr.core_surface;
+            surface.renderer_thread.publishDisplayID(display_id);
+            surface.renderer_thread.wakeup.notify() catch {};
+        }
+
+        /// cmux fork: release (realized=false) or recreate (realized=true) the
+        /// renderer's GPU resources (Metal swap chain / IOSurface) for a surface
+        /// without freeing the surface itself. Lets cmux reclaim the ~40MB
+        /// IOSurface of an occluded terminal while keeping its PTY/io thread and
+        /// terminal state alive; the swap chain is rebuilt on re-show.
+        ///
+        /// Darwin-only by placement: iOS owns occlusion via `renderingSuspended`
+        /// and must not be driven through this path. The request is idempotent
+        /// latest-value state rather than ordered mailbox work. Publishing never
+        /// blocks or drops when the renderer mailbox is full, and the renderer
+        /// retries a failed GPU recreation without requiring the caller to mirror
+        /// delivery state. The return value remains for source compatibility and
+        /// means the request was accepted.
+        export fn ghostty_surface_set_renderer_realized(ptr: *Surface, realized: bool) bool {
+            const surface = &ptr.core_surface;
+            surface.renderer_thread.publishRendererRealized(realized);
+            surface.renderer_thread.wakeup.notify() catch {};
+            return true;
+        }
+
+        /// Force one unrealize/realize transaction on the renderer thread.
+        /// Unlike two latest-value boolean publications, this cannot lose the
+        /// unrealize step when a surface becomes presentable before the renderer
+        /// consumes its earlier state.
+        export fn ghostty_surface_rebuild_renderer(ptr: *Surface) bool {
+            const surface = &ptr.core_surface;
+            surface.renderer_thread.publishRendererRebuild();
+            surface.renderer_thread.wakeup.notify() catch {};
+            return true;
+        }
+
+        /// This returns a CTFontRef that should be used for quicklook
+        /// highlighted text. This is always the primary font in use
+        /// regardless of the selected text. If coretext is not in use
+        /// then this will return nothing.
+        export fn ghostty_surface_quicklook_font(ptr: *Surface) ?*anyopaque {
+            // For non-CoreText we just return null.
+            if (comptime font.options.backend != .coretext) {
+                return null;
+            }
+
+            // We'll need content scale so fail early if we can't get it.
+            const content_scale = ptr.getContentScale() catch return null;
+
+            // Get the shared font grid. We acquire a read lock to
+            // read the font face. It should not be deferred since
+            // we're loading the primary face.
+            const grid = ptr.core_surface.renderer.font_grid;
+            grid.lock.lockSharedUncancelable(global.io());
+            defer grid.lock.unlockShared(global.io());
+
+            const collection = &grid.resolver.collection;
+            const face = collection.getFace(.{}) catch return null;
+
+            // We need to unscale the content scale. We apply the
+            // content scale to our font stack because we are rendering
+            // at 1x but callers of this should be using scaled or apply
+            // scale themselves.
+            const size: f32 = size: {
+                const num = face.font.copyAttribute(.size) orelse
+                    break :size 12;
+                defer num.release();
+                var v: f32 = 12;
+                _ = num.getValue(.float, &v);
+                break :size v;
+            };
+
+            const copy = face.font.copyWithAttributes(
+                size / content_scale.y,
+                null,
+                null,
+            ) catch return null;
+
+            return copy;
+        }
+
+        /// This returns the selected word for quicklook. This will populate
+        /// the buffer with the word under the cursor and the selection
+        /// info so that quicklook can be rendered.
+        ///
+        /// This does not modify the selection active on the surface (if any).
+        export fn ghostty_surface_quicklook_word(
+            ptr: *Surface,
+            result: *Text,
+        ) bool {
+            const surface = &ptr.core_surface;
+            surface.renderer_state.mutex.lockUncancelable(global.io());
+            defer surface.renderer_state.mutex.unlock(global.io());
+
+            // Get our word selection
+            const sel = sel: {
+                const screen: *terminal.Screen = surface.renderer_state.terminal.screens.active;
+                const pos = try ptr.getCursorPos();
+                const pt_viewport = surface.posToViewport(pos.x, pos.y);
+                const pin = screen.pages.pin(.{
+                    .viewport = .{
+                        .x = pt_viewport.x,
+                        .y = pt_viewport.y,
+                    },
+                }) orelse {
+                    if (comptime std.debug.runtime_safety) unreachable;
+                    return false;
+                };
+                break :sel surface.io.terminal.screens.active.selectWord(
+                    pin,
+                    surface.config.selection_word_chars,
+                ) orelse return false;
+            };
+
+            // Read the selection
+            return readTextLocked(ptr, sel, result);
+        }
+
+        export fn ghostty_inspector_metal_init(ptr: *Inspector, device: objc.c.id) bool {
+            return ptr.initMetal(.fromId(device));
+        }
+
+        export fn ghostty_inspector_metal_render(
+            ptr: *Inspector,
+            command_buffer: objc.c.id,
+            descriptor: objc.c.id,
+        ) void {
+            return ptr.renderMetal(
+                .fromId(command_buffer),
+                .fromId(descriptor),
+            ) catch |err| {
+                log.err("error rendering inspector err={}", .{err});
+                return;
+            };
+        }
+
+        export fn ghostty_inspector_metal_shutdown(ptr: *Inspector) void {
+            if (ptr.backend) |v| {
+                v.deinit();
+                ptr.backend = null;
+            }
+        }
+    };
+};
+
+test "output sequence publishes only with successful VT tail snapshot" {
+    var next_sequence: u64 = 99;
+    try std.testing.expect(!CAPI.publishOutputSnapshotSequenceLocked(
+        false,
+        42,
+        &next_sequence,
+    ));
+    try std.testing.expectEqual(@as(u64, 99), next_sequence);
+
+    try std.testing.expect(CAPI.publishOutputSnapshotSequenceLocked(
+        true,
+        42,
+        &next_sequence,
+    ));
+    try std.testing.expectEqual(@as(u64, 42), next_sequence);
+}
+
+test "kitty replay aliases preserve duplicate image numbers in assignment order" {
+    const aliases = [_]CAPI.KittyReplayAlias{
+        .{ .image_id = 11, .image_number = 7 },
+        .{ .image_id = 12, .image_number = 7 },
+    };
+    try std.testing.expect(CAPI.kittyReplayAliasesAreValid(
+        std.testing.allocator,
+        &aliases,
+    ));
+}
+
+test "kitty replay aliases reject duplicate image IDs" {
+    const aliases = [_]CAPI.KittyReplayAlias{
+        .{ .image_id = 11, .image_number = 7 },
+        .{ .image_id = 11, .image_number = 8 },
+    };
+    try std.testing.expect(!CAPI.kittyReplayAliasesAreValid(
+        std.testing.allocator,
+        &aliases,
+    ));
+}
+
+test "kitty replay aliases reject counts above the restore bound" {
+    const aliases = try std.testing.allocator.alloc(
+        CAPI.KittyReplayAlias,
+        CAPI.max_kitty_replay_aliases + 1,
+    );
+    defer std.testing.allocator.free(aliases);
+
+    try std.testing.expect(!CAPI.kittyReplayAliasesAreValid(
+        std.testing.allocator,
+        aliases,
+    ));
+}
+
+test "clipboard selection work budget rejects blank history" {
+    const testing = std.testing;
+    const alloc = testing.allocator;
+    var term = try terminal.Terminal.init(std.testing.io, alloc, .{
+        .cols = 4,
+        .rows = 2,
+    });
+    defer term.deinit(alloc);
+
+    var stream = term.vtStream();
+    defer stream.deinit();
+    stream.nextSlice("\r\n\r\n\r\n\r\n");
+
+    const screen = term.screens.active;
+    const selection = terminal.Selection.initLinewise(
+        screen.pages.getTopLeft(.screen),
+        screen.pages.getBottomRight(.screen).?,
+    );
+    try testing.expect(!CoreSurface.selectionWithinClipboardWorkBudget(
+        screen,
+        selection,
+        8,
+    ));
+    try testing.expect(CoreSurface.selectionWithinClipboardWorkBudget(
+        screen,
+        selection,
+        64,
+    ));
+}
+
+test "grid metrics reject resize skew and report an offscreen cursor" {
+    const testing = std.testing;
+    const alloc = testing.allocator;
+    var term = try terminal.Terminal.init(std.testing.io, alloc, .{
+        .cols = 10,
+        .rows = 2,
+    });
+    defer term.deinit(alloc);
+
+    var stream = term.vtStream();
+    defer stream.deinit();
+    stream.nextSlice("one\r\ntwo\r\nthree\r\nfour\r\n");
+    term.scrollViewport(.top);
+    const screen = term.screens.active;
+
+    const size: renderer.Size = .{
+        .screen = .{ .width = 83, .height = 37 },
+        .cell = .{ .width = 8, .height = 16 },
+        .padding = .{ .left = 3, .top = 5 },
+    };
+    const snapshot = CAPI.surfaceGridMetricsSnapshot(
+        size,
+        .{ .x = 2, .y = 2 },
+        screen,
+    ).?;
+    try testing.expectEqual(@as(u16, 10), snapshot.columns);
+    try testing.expectEqual(@as(u16, 2), snapshot.rows);
+    try testing.expect(!snapshot.cursor_in_viewport);
+    try testing.expectEqual(@as(u16, 0), snapshot.cursor_width_cells);
+    try testing.expectEqual(@as(f64, 4), snapshot.cell_width);
+    try testing.expectEqual(@as(f64, 8), snapshot.cell_height);
+    try testing.expectEqual(@as(f64, 1.5), snapshot.padding_left);
+    try testing.expectEqual(@as(f64, 2.5), snapshot.padding_top);
+
+    var mismatched_size = size;
+    mismatched_size.screen.width += size.cell.width;
+    try testing.expect(CAPI.surfaceGridMetricsSnapshot(
+        mismatched_size,
+        .{ .x = 2, .y = 2 },
+        screen,
+    ) == null);
+
+    term.scrollViewport(.bottom);
+    const active = CAPI.surfaceGridMetricsSnapshot(
+        size,
+        .{ .x = 2, .y = 2 },
+        screen,
+    ).?;
+    try testing.expect(active.cursor_in_viewport);
+    try testing.expectEqual(@as(u16, 1), active.cursor_width_cells);
+}
+
+test "grid metrics canonicalize a wide-tail cursor" {
+    const testing = std.testing;
+    const alloc = testing.allocator;
+    var term = try terminal.Terminal.init(std.testing.io, alloc, .{
+        .cols = 6,
+        .rows = 2,
+    });
+    defer term.deinit(alloc);
+
+    var stream = term.vtStream();
+    defer stream.deinit();
+    stream.nextSlice("A橋B\x1b[1;3H");
+    const cursor_pin = term.screens.active.cursor.page_pin.*;
+    try testing.expectEqual(
+        terminal.page.Cell.Wide.spacer_tail,
+        cursor_pin.rowAndCell().cell.wide,
+    );
+
+    const snapshot = CAPI.surfaceGridMetricsSnapshot(
+        .{
+            .screen = .{ .width = 51, .height = 37 },
+            .cell = .{ .width = 8, .height = 16 },
+            .padding = .{ .left = 3, .top = 5 },
+        },
+        .{ .x = 1, .y = 1 },
+        term.screens.active,
+    ).?;
+    try testing.expect(snapshot.cursor_in_viewport);
+    try testing.expectEqual(@as(u16, 1), snapshot.cursor_column);
+    try testing.expectEqual(@as(u16, 0), snapshot.cursor_row);
+    try testing.expectEqual(@as(u16, 2), snapshot.cursor_width_cells);
+}
+
+test "grid metrics resolve a spacer-head cursor to its wrapped glyph" {
+    const testing = std.testing;
+    const alloc = testing.allocator;
+    var term = try terminal.Terminal.init(std.testing.io, alloc, .{
+        .cols = 4,
+        .rows = 3,
+    });
+    defer term.deinit(alloc);
+
+    var stream = term.vtStream();
+    defer stream.deinit();
+    stream.nextSlice("ABC橋\x1b[1;4H");
+    const cursor_pin = term.screens.active.cursor.page_pin.*;
+    try testing.expectEqual(
+        terminal.page.Cell.Wide.spacer_head,
+        cursor_pin.rowAndCell().cell.wide,
+    );
+
+    const snapshot = CAPI.surfaceGridMetricsSnapshot(
+        .{
+            .screen = .{ .width = 35, .height = 53 },
+            .cell = .{ .width = 8, .height = 16 },
+            .padding = .{ .left = 3, .top = 5 },
+        },
+        .{ .x = 1, .y = 1 },
+        term.screens.active,
+    ).?;
+    try testing.expect(snapshot.cursor_in_viewport);
+    try testing.expectEqual(@as(u16, 0), snapshot.cursor_column);
+    try testing.expectEqual(@as(u16, 1), snapshot.cursor_row);
+    try testing.expectEqual(@as(u16, 2), snapshot.cursor_width_cells);
+}
+
+test "render grid preserves terminal color semantics" {
+    const default_color = CAPI.renderGridColorSemantics(.none);
+    try std.testing.expectEqual(CAPI.RenderGridColorSource.default_color, default_color.source);
+    try std.testing.expectEqual(@as(?u8, null), default_color.palette_index);
+
+    const palette = CAPI.renderGridColorSemantics(.{ .palette = 42 });
+    try std.testing.expectEqual(CAPI.RenderGridColorSource.palette, palette.source);
+    try std.testing.expectEqual(@as(?u8, 42), palette.palette_index);
+
+    const rgb = CAPI.renderGridColorSemantics(.{ .rgb = .{ .r = 1, .g = 2, .b = 3 } });
+    try std.testing.expectEqual(CAPI.RenderGridColorSource.rgb, rgb.source);
+    try std.testing.expectEqual(@as(?u8, null), rgb.palette_index);
+}
+
+test "render presentation callback setter is per surface" {
+    const Callbacks = struct {
+        fn renderPresented(_: ?*anyopaque, _: u64) callconv(.c) void {}
+
+        fn renderFailed(
+            _: ?*anyopaque,
+            _: u64,
+            _: renderer.FramePresentation.Status,
+        ) callconv(.c) void {}
+    };
+
+    var parent_userdata: u8 = 0;
+    var child_userdata: u8 = 0;
+    var parent: Surface = undefined;
+    parent.render_presented_cb = null;
+    parent.render_presented_userdata = null;
+    parent.render_failed_cb = null;
+    parent.render_failed_userdata = null;
+    var child: Surface = undefined;
+    child.render_presented_cb = null;
+    child.render_presented_userdata = null;
+    child.render_failed_cb = null;
+    child.render_failed_userdata = null;
+
+    try std.testing.expect(CAPI.ghostty_surface_set_render_presented_callback(
+        &parent,
+        Callbacks.renderPresented,
+        &parent_userdata,
+    ));
+    try std.testing.expectEqual(Callbacks.renderPresented, parent.render_presented_cb);
+    try std.testing.expectEqual(
+        @as(?*anyopaque, &parent_userdata),
+        parent.render_presented_userdata,
+    );
+    try std.testing.expectEqual(null, child.render_presented_cb);
+    try std.testing.expectEqual(null, child.render_presented_userdata);
+
+    try std.testing.expect(CAPI.ghostty_surface_set_render_presented_callback(
+        &child,
+        Callbacks.renderPresented,
+        &child_userdata,
+    ));
+    try std.testing.expectEqual(Callbacks.renderPresented, child.render_presented_cb);
+    try std.testing.expectEqual(
+        @as(?*anyopaque, &child_userdata),
+        child.render_presented_userdata,
+    );
+    try std.testing.expectEqual(
+        @as(?*anyopaque, &parent_userdata),
+        parent.render_presented_userdata,
+    );
+
+    // Registration is one-shot because already-submitted frames snapshot the
+    // callback and userdata. Replacing either value could otherwise let an
+    // asynchronous presentation dereference userdata the embedder has freed.
+    try std.testing.expect(!CAPI.ghostty_surface_set_render_presented_callback(
+        &parent,
+        Callbacks.renderPresented,
+        &child_userdata,
+    ));
+    try std.testing.expectEqual(Callbacks.renderPresented, parent.render_presented_cb);
+    try std.testing.expectEqual(
+        @as(?*anyopaque, &parent_userdata),
+        parent.render_presented_userdata,
+    );
+
+    try std.testing.expect(CAPI.ghostty_surface_set_render_failed_callback(
+        &parent,
+        Callbacks.renderFailed,
+        &parent_userdata,
+    ));
+    try std.testing.expectEqual(Callbacks.renderFailed, parent.render_failed_cb);
+    try std.testing.expectEqual(
+        @as(?*anyopaque, &parent_userdata),
+        parent.render_failed_userdata,
+    );
+    try std.testing.expect(!CAPI.ghostty_surface_set_render_failed_callback(
+        &parent,
+        Callbacks.renderFailed,
+        &child_userdata,
+    ));
+    try std.testing.expectEqual(null, child.render_failed_cb);
+}
+
+test "font size action callback preserves resolved action events" {
+    const Observation = struct {
+        calls: usize = 0,
+        kind: CoreSurface.FontSizeActionKind = .reset,
+        previous_points: f32 = 0,
+        current_points: f32 = 0,
+        previous_adjusted: bool = false,
+        current_adjusted: bool = false,
+    };
+    const Callbacks = struct {
+        fn fontSizeAction(
+            userdata: ?*anyopaque,
+            kind: CoreSurface.FontSizeActionKind,
+            previous_points: f32,
+            current_points: f32,
+            previous_adjusted: bool,
+            current_adjusted: bool,
+        ) callconv(.c) void {
+            const observation: *Observation =
+                @ptrCast(@alignCast(userdata.?));
+            observation.* = .{
+                .calls = observation.calls + 1,
+                .kind = kind,
+                .previous_points = previous_points,
+                .current_points = current_points,
+                .previous_adjusted = previous_adjusted,
+                .current_adjusted = current_adjusted,
+            };
+        }
+    };
+
+    var observation: Observation = .{};
+    var surface: Surface = undefined;
+    surface.font_size_action_cb = null;
+    surface.font_size_action_userdata = null;
+
+    try std.testing.expect(
+        CAPI.ghostty_surface_set_font_size_action_callback(
+            &surface,
+            Callbacks.fontSizeAction,
+            &observation,
+        ),
+    );
+    surface.fontSizeActionDidPerform(.{
+        .kind = .set,
+        .previous_points = 12,
+        .current_points = 255,
+        .previous_adjusted = false,
+        .current_adjusted = true,
+    });
+
+    try std.testing.expectEqual(@as(usize, 1), observation.calls);
+    try std.testing.expectEqual(
+        CoreSurface.FontSizeActionKind.set,
+        observation.kind,
+    );
+    try std.testing.expectEqual(
+        @as(f32, 12),
+        observation.previous_points,
+    );
+    try std.testing.expectEqual(
+        @as(f32, 255),
+        observation.current_points,
+    );
+    try std.testing.expect(!observation.previous_adjusted);
+    try std.testing.expect(observation.current_adjusted);
+}

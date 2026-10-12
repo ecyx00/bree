@@ -1,0 +1,4 @@
+hero.gif: The core loop in about 15 seconds. The sidebar shows agents in different states (Running, Needs approval, Needs input); one agent finishes its turn and its row changes to done; the Attention Center (Cmd+I) opens with the approval, the exact command and the risk note "Deletes files recursively"; one key jumps to that pane; then the diff of the finished turn opens beside the terminal.
+review.png: Turn review: the diff of a finished agent turn (+16 lines in schema.py) next to the terminal where its output was run, with the demo folder in the Files panel.
+wiki.png: The repo-local Wiki popover (Option+Cmd+K) on the page "How Bree knows what an agent does", with its flow diagram and step-by-step text, over a terminal that just ran `bree wiki check` (60 passed, 0 failed).
+architecture.png: The Architecture popover (Option+Cmd+A) on Bree's own "big picture" diagram, with the AppDelegate node card open (what it does and a code link).
