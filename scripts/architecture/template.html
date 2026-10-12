@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<!-- Visual grammar after diagram-design (MIT, Cathryn Lavery), github.com/cathrynlavery/diagram-design. Licence: scripts/architecture/LICENSE.diagram-design -->
+<title>{{TITLE}} architecture</title>
+<style>
+/* Theme: every colour comes from these variables, so the host (Bree) can override them on :root. Fallbacks are Bree's dark overlay surface. */
+:root{
+  --paper:#262624;--paper-2:#2f2f2c;--ink:#ECEBE6;--muted:#A8A69F;--soft:#85837D;--grid-dot:rgba(245,245,245,.10);
+  --rule:rgba(236,235,230,.12);--rule-solid:rgba(236,235,230,.26);
+  --accent:#F5F4EE;--accent-tint:rgba(245,244,238,.08);
+  --serif:ui-serif,"New York",Georgia,serif;--sans:-apple-system,"SF Pro Text",system-ui,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+body{display:flex;flex-direction:column;background:var(--paper);color:var(--ink);font:13px var(--sans);-webkit-user-select:none;user-select:none}
+header{position:relative;flex:none;padding:6px 16px 8px;min-width:0}  /* 16 px content inset, like the host's segmented control */
+#eyb{display:flex;gap:10px;align-items:baseline;min-width:0;height:16px;overflow:hidden;white-space:nowrap;font:11.5px var(--mono);letter-spacing:.08em;color:var(--muted)}
+/* chrome labels are uppercased with the document language (html lang from D.lang), so tr gets i -> İ and en never does; board content is never uppercased */
+#eyb span:first-child{text-transform:uppercase}
+#eyb #ag{letter-spacing:0;overflow:hidden;text-overflow:ellipsis}
+.bar{display:flex;align-items:center;gap:10px;min-width:0;height:32px}
+#step[hidden],#zoom[hidden],#empty[hidden],#lead[hidden]{display:none}
+#step{flex:none;display:flex;align-items:center;gap:2px;border:1px solid var(--rule-solid);border-radius:8px;background:var(--rule);padding:2px}
+#step button{min-width:28px;height:26px;padding:0 6px;font-size:16px;line-height:1}
+#step button:disabled{opacity:.35;cursor:default}
+#pos{min-width:44px;text-align:center;color:var(--ink);font:12.5px var(--mono)}
+h1{flex:1 1 auto;min-width:0;margin:0;font:600 15px/1 var(--sans)}
+#toc{display:flex;align-items:center;gap:6px;max-width:100%;color:var(--ink);font:600 15px var(--sans);padding:4px 8px;margin-left:-8px}
+#toc span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#toc::after{content:"";flex:none;width:6px;height:6px;border:solid var(--muted);border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg)}
+#toc[aria-expanded=true]::after{transform:translateY(1px) rotate(-135deg)}
+#purpose{margin:2px 0 0;color:var(--muted);font-size:13px;line-height:1.4;-webkit-user-select:text;user-select:text}
+#contents{position:absolute;z-index:8;left:16px;top:58px;width:min(440px,calc(100% - 32px));max-height:min(70vh,520px);overflow:auto;padding:6px;background:var(--paper-2);border:1px solid var(--rule-solid);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#contents[hidden]{display:none}
+#contents .sec{padding:8px 8px 4px;color:var(--muted);font:12px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+#contents .it{display:flex;gap:10px;width:100%;text-align:left;padding:5px 8px;color:var(--ink);font-size:13px;border-radius:6px}
+#contents .it i{flex:none;min-width:18px;color:var(--muted);font:12px var(--mono);font-style:normal;text-align:right}
+#contents .sec.tg{display:flex;width:100%;text-align:left;border-radius:6px;cursor:pointer;color:var(--muted)}
+#contents .sec.tg::after{content:"";margin-left:auto;align-self:center;width:6px;height:6px;border:solid var(--muted);border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg)}
+#contents .sec.tg[aria-expanded=true]::after{transform:translateY(1px) rotate(-135deg)}
+#contents .it[hidden]{display:none}
+#contents .it:hover{background:var(--rule)}
+#contents .it[aria-current=true]{background:var(--accent-tint);box-shadow:inset 2px 0 var(--accent)}
+button{font:inherit;color:var(--muted);background:none;border:1px solid transparent;border-radius:6px;padding:3px 10px;cursor:pointer}
+button:hover{color:var(--ink)}
+button:focus-visible,.node:focus-visible rect{outline:2px solid var(--accent);outline-offset:1px}
+#wrap{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+#stage{position:relative;flex:1 1 0;min-width:0;min-height:0;overflow:hidden;touch-action:none;cursor:grab;border-top:1px solid var(--rule)}
+#stage.drag{cursor:grabbing}
+#view{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+/* geometricPrecision: with the default hinting Chrome lays text out at one size and paints it at another once #view is scaled, so names drift out of their boxes */
+.b svg{display:block;text-rendering:geometricPrecision}
+#stage::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:var(--gf,1);background-image:radial-gradient(circle,var(--grid-dot) .9px,transparent 1.2px);background-size:var(--gs,22px) var(--gs,22px);background-position:var(--gx,0) var(--gy,0)}
+#zoom{position:absolute;right:12px;bottom:12px;z-index:4;display:flex;gap:2px;font-variant-numeric:tabular-nums;background:var(--paper-2);border:1px solid var(--rule-solid);border-radius:8px;padding:2px}
+#zoom button{min-width:28px;height:28px;padding:0 6px;font:12px var(--sans);font-variant-numeric:tabular-nums}
+#zoom #zl{min-width:48px;cursor:default;color:var(--ink)}
+/* node info card: a small box in the stage, anchored beside the selected node with an arrow; it never resizes the stage and never changes the zoom */
+#card{position:absolute;z-index:6;left:0;top:0;width:300px;display:flex;flex-direction:column;background:var(--paper-2);border:1px solid var(--rule-solid);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);color:var(--ink);font-size:13.5px;line-height:1.5;cursor:default;-webkit-user-select:text;user-select:text}
+#card[hidden]{display:none}
+#card .arw{position:absolute;width:10px;height:10px;background:var(--paper-2);border:0 solid var(--rule-solid);transform:rotate(45deg);pointer-events:none}
+#card.s-right .arw{left:-6px;border-width:0 0 1px 1px}
+#card.s-left .arw{right:-6px;border-width:1px 1px 0 0}
+#card.s-below .arw{top:-6px;border-width:1px 0 0 1px}
+#card.s-above .arw{bottom:-6px;border-width:0 1px 1px 0}
+#card.docked .arw{display:none}
+/* docked in a stage corner (no side clears the neighbours): a thin leader line links the card to its node */
+#lead{position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;overflow:visible}
+#lead line{stroke:var(--accent);stroke-width:1;opacity:.8}#lead circle{fill:var(--accent)}
+#empty{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:24px;text-align:center;font-size:13px;color:var(--muted);pointer-events:none}
+#empty p{margin:0}#empty .when{color:var(--soft)}
+#card .hd{flex:none;display:flex;align-items:flex-start;gap:6px;padding:10px 8px 6px 12px}
+#card .hd>div{flex:1;min-width:0}
+#card .bk{display:block;max-width:100%;margin:-2px 0 2px -8px;padding:1px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;font-size:13px}
+#card .bd{flex:1 1 auto;min-height:0;overflow:auto;padding:0 12px 6px;scrollbar-width:thin;scrollbar-color:var(--soft) transparent}
+#card .bd::-webkit-scrollbar{width:8px}#card .bd::-webkit-scrollbar-thumb{background:var(--soft);border-radius:4px;border:2px solid var(--paper-2)}
+#card .bd.mb{-webkit-mask-image:linear-gradient(#000 calc(100% - 24px),transparent);mask-image:linear-gradient(#000 calc(100% - 24px),transparent)}
+#card .ft{flex:none;padding:6px 12px 8px;border-top:1px solid var(--rule);background:var(--paper-2);border-radius:0 0 10px 10px}
+#card .nmx{font-weight:600;font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+#card .kd{display:inline-block;margin-left:8px;padding:0 6px;border:1px solid var(--soft);border-radius:3px;color:var(--muted);font:13px var(--mono);vertical-align:1px}
+#card .x{flex:none;display:flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;margin:0;border:0;background:none}
+#card .x:hover{background:var(--rule)}
+#card .xm{position:relative;width:11px;height:11px}  /* the xmark glyph: two bars */
+#card .xm::before,#card .xm::after{content:"";position:absolute;left:0;top:5px;width:11px;height:1.5px;border-radius:1px;background:currentColor;transform:rotate(45deg)}
+#card .xm::after{transform:rotate(-45deg)}
+#card .det{margin:0 0 6px;font-size:14px;font-weight:500;line-height:1.45}
+#card .clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+#card:not(.exp) .xo,#card.exp .xc{display:none}
+#card h3{margin:10px 0 4px;color:var(--muted);font:13px var(--mono);letter-spacing:.08em;text-transform:uppercase}  /* chrome label: uppercase follows <html lang> */
+#card.exp .clamp{display:block;-webkit-line-clamp:unset}
+#card p{margin:0}
+#card ul{margin:0;padding:0;list-style:none}
+#card li{margin:2px 0}
+#card .m{color:var(--muted);margin-top:6px}
+#card a{color:var(--ink);font:13px var(--mono);overflow-wrap:anywhere}
+#card button{border-color:var(--rule-solid);margin:4px 4px 0 0;font-size:13px}
+#card .cn{display:block;width:100%;margin:0;text-align:left;color:var(--ink);border-color:transparent;padding:4px 8px;margin-left:-8px;width:calc(100% + 16px)}
+#card .cn:hover{background:var(--rule)}
+#card .cn b{color:var(--muted);font:13px var(--mono);font-weight:400;margin-right:6px}
+#card .cn em{color:var(--muted);font-style:normal;margin-right:6px}
+#card .watch{padding:6px 10px;border-left:2px solid var(--muted);background:var(--accent-tint)}
+#card .unv{margin-top:12px;color:var(--muted);font-style:italic}
+.node{cursor:pointer;outline:none}
+.node:hover .nb,.node:focus-visible .nb{stroke-width:2}
+.node.sel .nb{stroke:var(--accent);stroke-width:2}
+/* with a selection the focal node keeps its heavier fill but drops to the normal stroke: one strong outline at a time */
+.has-sel .node:not(.sel) .nb.focal{stroke-width:1}
+/* focus with context: the selected node, its neighbours and the edges between them stay at full contrast; the rest dims */
+.has-sel path.ed:not(.on){opacity:.4}
+/* dimming touches the box only (fill and stroke), never the text: node text keeps its full contrast on the paper */
+.has-sel .node:not(.sel):not(.nbr) .nb{fill-opacity:.4;stroke-opacity:.4}
+@media (prefers-reduced-motion:no-preference){.nb,path.ed{transition:fill-opacity .15s,stroke-opacity .15s,opacity .15s}}
+/* svg classes */
+.mask{fill:var(--paper)}
+.nb{fill:color-mix(in srgb,var(--ink) 6%,var(--paper));stroke:var(--ink)}
+/* the focal node (entry / the one thing) is a heavier neutral box with a small tag: the accent colour is reserved for the selection */
+.nb.focal{fill:color-mix(in srgb,var(--ink) 13%,var(--paper));stroke:var(--ink);stroke-width:2.4}
+.nb.store{fill:color-mix(in srgb,var(--ink) 5%,transparent);stroke:var(--muted)}
+.hit{fill:transparent;stroke:none}
+.nm{fill:var(--ink);font-family:var(--sans)}
+.sb{fill:var(--muted);font-family:var(--mono)}
+.eb{fill:var(--muted);font-family:var(--mono);letter-spacing:.08em}
+.al{fill:var(--muted);font-family:var(--mono);letter-spacing:.08em}
+.lg{fill:var(--muted);font-family:var(--sans)}
+.tag{fill:none;stroke:var(--soft)}
+.tg{fill:var(--muted);font-family:var(--mono);letter-spacing:.08em}
+.ed{fill:none;stroke:var(--muted)}
+.ar{fill:var(--muted)}
+.dg{fill:none;stroke:var(--muted)}
+.l1{stroke:var(--rule)}.l2{stroke:var(--rule-solid)}
+.band{fill:color-mix(in srgb,var(--ink) 4%,transparent)}
+.zone{fill:color-mix(in srgb,var(--ink) 3%,transparent);stroke:var(--rule-solid)}
+</style></head>
+<body>
+<header>
+<div id="eyb"><span id="eb"></span><span id="ag"></span></div>
+<div class="bar">
+<div id="step" role="group" aria-label="Reading order" data-sa="reading_order"><button id="pv" title="Previous diagram ([)" aria-label="Previous diagram" data-st="prev_title" data-sa="prev">&lsaquo;</button><span id="pos" aria-live="polite"></span><button id="nx" title="Next diagram (])" aria-label="Next diagram" data-st="next_title" data-sa="next">&rsaquo;</button></div>
+<h1><button id="toc" aria-expanded="false" aria-controls="contents" title="Contents" data-st="contents"><span id="ttl"></span></button></h1></div>
+<p id="purpose"></p>
+<div id="contents" hidden></div>
+</header>
+<div id="wrap"><main id="stage"><div id="view"><!--BOARDS--></div>
+<aside id="card" hidden aria-label="Node details" data-sa="node_details"></aside>
+<svg id="lead" hidden aria-hidden="true"><line x1="0" y1="0" x2="0" y2="0"/><circle r="3" cx="0" cy="0"/></svg>
+<div id="empty" hidden><p class="msg"></p><p class="when"></p></div>
+<div id="zoom" role="group" aria-label="Zoom" data-sa="zoom"><button id="zf" title="Fit to view (Cmd 0, double-click)" aria-label="Fit to view" data-st="fit_title" data-sa="fit_aria" data-s="fit">Fit</button><button id="zo" title="Zoom out (Cmd -)" aria-label="Zoom out" data-st="zoom_out_title" data-sa="zoom_out">&minus;</button><button id="zl" tabindex="-1" aria-label="Zoom level" title="Zoom level (Cmd 1 = 100%)" data-st="zoom_level_title" data-sa="zoom_level">100%</button><button id="zi" title="Zoom in (Cmd =)" aria-label="Zoom in" data-st="zoom_in_title" data-sa="zoom_in">+</button></div></main>
+
+<script>
+const D = /*DATA*/;
+/* Chrome strings: one table. The host may set window.breeStrings (any subset) before this script runs; these are the English defaults. Board content is the producer's language (D.lang). */
+const S = Object.assign({
+  reading_order: "Reading order", prev: "Previous diagram", prev_title: "Previous diagram ([)", next: "Next diagram", next_title: "Next diagram (])",
+  contents: "Contents", node_details: "Node details", zoom: "Zoom", fit: "Fit", fit_aria: "Fit to view", fit_title: "Fit to view (Cmd 0, double-click)",
+  zoom_out: "Zoom out", zoom_out_title: "Zoom out (Cmd -)", zoom_level: "Zoom level", zoom_level_title: "Zoom level (Cmd 1 = 100%)", zoom_in: "Zoom in", zoom_in_title: "Zoom in (Cmd =)",
+  back_to: "Back to {name}", close_aria: "Close card (Esc)", close_title: "Close (Esc)", more: "More", less: "Less",
+  what: "What it does", why: "Why it exists", code: "In the code", watch: "Watch out", links: "Connections", flows: "Flows", lane: "Lane",
+  unverified: "Unverified: this node's code link could not be checked.", wiki: "Wiki", agent_wrote: "Written by agent", changes: "Changes", last_generated: "Last generated", legend: "Legend"
+}, window.breeStrings || {});
+document.documentElement.lang = D.lang || "en";
+const UL = S._lang || "en";  // chrome elements carry the UI language; content keeps the document language (<html lang>)
+document.querySelectorAll("[data-st],[data-sa],[data-s]").forEach(e => e.lang = UL);
+document.querySelectorAll("[data-st]").forEach(e => e.title = S[e.dataset.st]);
+document.querySelectorAll("[data-sa]").forEach(e => e.setAttribute("aria-label", S[e.dataset.sa]));
+document.querySelectorAll("[data-s]").forEach(e => e.textContent = S[e.dataset.s]);
+document.querySelectorAll("svg text[data-sl]").forEach(e => {e.textContent = S[e.dataset.sl].toLocaleUpperCase(UL); e.lang = UL;});  // the legend eyebrow
+const card = document.getElementById("card"), lead = document.getElementById("lead"), stage = document.getElementById("stage"), view = document.getElementById("view"), toc = document.getElementById("toc"), contents = document.getElementById("contents");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const MIN = 0.25, MAX = 2.5, FIT_MAX = 1, PAD = 16, TEXT_PX = 10;  // the smallest text of a board should stay >= 10 px on screen at open; Fit never zooms above 100%; the fit pad keeps a board clear of the stage edge
+const CHANGES = "delta";  // the Changes tab loads current.html#delta: that board is not part of the Current list and never touches the saved place
+let blank = false, dock = null, cur = null, st = {s: 1, tx: 0, ty: 0, fit: true}, fitS = 1, gest = null, drag = null, swallow = false, sel = null, anim = 0;
+const ORDER = D.groups.flatMap(g => g.boards);  // reading order: the groups in nav order, boards in their order inside a group
+const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+/* where the reader was, per repo: board, zoom/pan per board, selected node. Restored on reopen (localStorage may be unavailable: then nothing is kept). */
+const KEY = "bree-arch:" + D.repo;
+let P = {board: null, views: {}, sel: null, exp: false}, saveT = 0;
+try {P = Object.assign(P, JSON.parse(localStorage.getItem(KEY) || "{}"));} catch (_) {}
+function remember(){
+  clearTimeout(saveT); if (!cur || cur === CHANGES) return;
+  P.board = cur; P.views[cur] = {s: st.s, tx: st.tx, ty: st.ty, fit: st.fit, home: !!st.home, user: !!st.user}; P.sel = sel; P.exp = exp;
+  try {localStorage.setItem(KEY, JSON.stringify(P));} catch (_) {}
+}
+const later = () => {clearTimeout(saveT); saveT = setTimeout(remember, 150);};
+addEventListener("pagehide", remember);
+function link(s, sym){return '<a href="'+esc(s.path)+'#L'+(s.line||1)+'">'+(sym ? esc(sym)+' \u00b7 '+esc(s.path) : esc(s.label||s.path))+(s.line?':'+s.line:'')+'</a>';}
+/* host bridge: code links are plain link activations (the app resolves them); other messages go to a message handler when the host has one,
+   and as a link activation of bree-bridge:<json> otherwise. */
+function postBridge(msg){
+  if (window.__bridgeLog) window.__bridgeLog.push(msg);
+  const h = window.webkit && webkit.messageHandlers && webkit.messageHandlers.bree;
+  if (h) h.postMessage(msg);
+  const a = document.createElement("a"); a.href = "bree-bridge:" + encodeURIComponent(JSON.stringify(msg)); a.click();
+}
+/* ---- node info card: a box beside the selected node (right, left, below or above, whichever fits and covers the fewest neighbours); the zoom is never touched ---- */
+const nodeEl = id => document.querySelector('#b-'+cur+' .node[data-id="'+CSS.escape(id)+'"]');
+const edgesOf = id => [...document.querySelectorAll('#b-'+cur+' path.ed')].filter(p => p.dataset.from === id || p.dataset.to === id);
+function neighbours(id){
+  const nb = new Set();
+  document.querySelectorAll('#b-'+cur+' path.ed').forEach(p => {if (p.dataset.from === id) nb.add(p.dataset.to); if (p.dataset.to === id) nb.add(p.dataset.from);});
+  nb.delete(id); return nb;
+}
+/* the stage changed size (window resized): keep the opening view or the fit, else keep the user's view inside the new box */
+function relayout(){
+  if (blank) return;
+  fitS = fitScale();
+  if (st.home) openView(); else if (st.fit) fitView(); else {clampPan(); apply();}
+  if (sel) chooseSide(false);
+}
+function stopAnim(){cancelAnimationFrame(anim);}
+/* pan (never zoom) to a target translation; animated 220 ms unless the reader asked for reduced motion */
+function panTo(tx, ty){
+  stopAnim();
+  const from = {tx: st.tx, ty: st.ty};
+  st.fit = st.home = false; st.tx = tx; st.ty = ty; clampPan();
+  const to = {tx: st.tx, ty: st.ty};
+  if (reduce.matches || Math.hypot(to.tx - from.tx, to.ty - from.ty) < 2) {apply(); return;}
+  const t0 = performance.now();
+  st.tx = from.tx; st.ty = from.ty;
+  const tick = now => {
+    const k = Math.min(1, (now - t0)/220), e = 1 - Math.pow(1 - k, 3);
+    st.tx = from.tx + (to.tx - from.tx)*e; st.ty = from.ty + (to.ty - from.ty)*e; apply();
+    if (k < 1) anim = requestAnimationFrame(tick);
+  };
+  anim = requestAnimationFrame(tick);
+}
+/* bring a node into the stage: centre it when forced or when it is not fully inside with a 24 px margin */
+function reveal(id, force){
+  const g = nodeEl(id); if (!g) return;
+  const s = stage.getBoundingClientRect(), r = g.getBoundingClientRect(), M = 24;
+  if (!force && r.left >= s.left + M && r.right <= s.right - M && r.top >= s.top + M && r.bottom <= s.bottom - M) return;
+  panTo(st.tx + ((s.left + s.right) - (r.left + r.right))/2, st.ty + ((s.top + s.bottom) - (r.top + r.bottom))/2);
+}
+const GAP = 12, EDGE = 8, SIDES = ["right", "left", "below", "above"], CORNERS = ["tl", "tr", "bl", "br"];
+const cornerSpot = (k, w, h, SW, SH) => ({x: k[1] === "l" ? EDGE : SW - EDGE - w, y: k[0] === "t" ? EDGE : SH - EDGE - h});
+let side = "right";
+/* a node's box in stage coordinates */
+function boxOf(id){
+  const e = nodeEl(id); if (!e) return null;
+  const r = e.getBoundingClientRect(), s = stage.getBoundingClientRect();
+  return {l: r.left - s.left, t: r.top - s.top, r: r.right - s.left, b: r.bottom - s.top};
+}
+const hits = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
+const clampTo = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+/* where the card sits for a side, given the node box and the card size, inside the stage */
+function spot(sd, nb, w, h, SW, SH){
+  const cx = (nb.l + nb.r)/2, cy = (nb.t + nb.b)/2;
+  if (sd === "right") return {x: nb.r + GAP, y: clampTo(cy - h/2, EDGE, SH - EDGE - h)};
+  if (sd === "left") return {x: nb.l - GAP - w, y: clampTo(cy - h/2, EDGE, SH - EDGE - h)};
+  if (sd === "below") return {x: clampTo(cx - w/2, EDGE, SW - EDGE - w), y: nb.b + GAP};
+  return {x: clampTo(cx - w/2, EDGE, SW - EDGE - w), y: nb.t - GAP - h};
+}
+/* Placement. Obstacles that must stay visible and uncovered: the selected node, its direct neighbours and the labels on the edges between them (so "focus with context"
+   keeps its context); the legend and the zoom control must stay uncovered. Non-neighbour nodes may be covered or panned away. Every side is tried with every pan on a
+   12 px grid (zoom never changes, pan limited by clampPan); the winner has the fewest violations, then the smallest pan, then the order right/left/below/above.
+   A violation is a neighbour covered or off the stage (10), a label (1), the legend or the zoom control covered (3). The selected node itself must always be inside. */
+function obstacles(id){
+  const sr = stage.getBoundingClientRect(), rb = r => ({l: r.left - sr.left, t: r.top - sr.top, r: r.right - sr.left, b: r.bottom - sr.top});
+  const nbs = [...neighbours(id)].map(i => nodeEl(i)).filter(Boolean).map(e => rb(e.getBoundingClientRect()));
+  /* an edge label belongs to the lit edges when it sits on one of them */
+  const pts = [];
+  document.querySelectorAll('#b-'+cur+' path.ed.on').forEach(p => {
+    const m = p.getScreenCTM(), L = p.getTotalLength(); if (!m) return;
+    for (let d = 0; d <= L; d += 6) {const q = p.getPointAtLength(d); pts.push([m.a*q.x + m.c*q.y + m.e - sr.left, m.b*q.x + m.d*q.y + m.f - sr.top]);}
+  });
+  const labels = [...document.querySelectorAll('#b-'+cur+' svg text.al')].map(t => rb(t.getBoundingClientRect())).filter(r => pts.some(([x, y]) => x > r.l - 8 && x < r.r + 8 && y > r.t - 6 && y < r.b + 6));
+  let lg = null;  // the legend strip: the LEGEND eyebrow and the key texts
+  document.querySelectorAll('#b-'+cur+' svg text.lg, #b-'+cur+' svg text.eb').forEach(t => {
+    const r = rb(t.getBoundingClientRect()); lg = lg ? {l: Math.min(lg.l, r.l), t: Math.min(lg.t, r.t), r: Math.max(lg.r, r.r), b: Math.max(lg.b, r.b)} : r;
+  });
+  return {sel: rb(nodeEl(id).getBoundingClientRect()), nbs, labels, lg, zoom: rb(document.getElementById("zoom").getBoundingClientRect())};
+}
+function chooseSide(allowPan){
+  if (!sel || !nodeEl(sel)) return;
+  if (allowPan) stopAnim();
+  stage.scrollLeft = stage.scrollTop = 0;  // focusing a node may have scrolled the clipped stage; its scroll event fires later, measure after undoing it
+  card.style.maxHeight = Math.round(stage.clientHeight*0.6) + "px";  // a docked card may have been shortened last time
+  const O = obstacles(sel), SW = stage.clientWidth, SH = stage.clientHeight, w = card.offsetWidth, h = card.offsetHeight, k = 64, sh = (b, x, y) => ({l: b.l + x, t: b.t + y, r: b.r + x, b: b.b + y});
+  const inside = b => b.l >= EDGE && b.t >= EDGE && b.r <= SW - EDGE && b.b <= SH - EDGE;
+  const [w0] = size();
+  const px0 = Math.min(0, k - w0*st.s - st.tx), px1 = Math.max(0, SW - k - st.tx);  // pan range that clampPan accepts
+  const [, h0] = size();
+  const py0 = Math.min(0, k - h0*st.s - st.ty), py1 = Math.max(0, SH - k - st.ty);
+  const STEP = 12, R = allowPan ? 0.9 : 0;
+  const xs = [0], ys = [0];
+  for (let d = STEP; d <= SW*R; d += STEP) {xs.push(d, -d);}
+  for (let d = STEP; d <= SH*R; d += STEP) {ys.push(d, -d);}
+  let best = null;
+  for (const x of xs) {
+    if (x < px0 || x > px1) continue;
+    for (const y of ys) {
+      if (y < py0 || y > py1) continue;
+      const S = sh(O.sel, x, y); if (!inside(S)) continue;
+      const nb = O.nbs.map(b => sh(b, x, y)), lb = O.labels.map(b => sh(b, x, y)), lg = O.lg && sh(O.lg, x, y);
+      const base = nb.filter(b => !inside(b)).length*10 + lb.filter(b => !inside(b)).length;
+      if (best && base + Math.hypot(x, y)*0.0001 > best.v) continue;
+      for (const sd of SIDES) {
+        const p = spot(sd, S, w, h, SW, SH), c = {l: p.x, t: p.y, r: p.x + w, b: p.y + h};
+        if (!inside(c)) continue;
+        const v = base + nb.filter(b => hits(c, b) && inside(b)).length*10 + lb.filter(b => hits(c, b) && inside(b)).length
+          + (lg && hits(c, lg) ? 3 : 0) + (hits(c, O.zoom) ? 3 : 0) + Math.hypot(x, y)*0.0001 + SIDES.indexOf(sd)*1e-6;
+        if (!best || v < best.v) best = {v, sd, x, y};
+      }
+    }
+  }
+  if (!best) best = {sd: side, x: 0, y: 0};
+  side = best.sd; dock = null;
+  /* no side clears the direct neighbours: dock the card in the stage corner farthest from the node (clear of neighbours and the zoom control first), linked by a leader line */
+  if (best.v !== undefined) {
+    const S = sh(O.sel, best.x, best.y), nbs = O.nbs.map(b => sh(b, best.x, best.y)), cov = c => nbs.filter(b => hits(c, b) && inside(b)).length;
+    const p0 = spot(best.sd, S, w, h, SW, SH), n0 = cov({l: p0.x, t: p0.y, r: p0.x + w, b: p0.y + h});
+    if (n0) {
+      const nx = (S.l + S.r)/2, ny = (S.t + S.b)/2; let bc = null;
+      for (const k of CORNERS) {
+        let hh = h, q = cornerSpot(k, w, hh, SW, SH), c = {l: q.x, t: q.y, r: q.x + w, b: q.y + hh}, n = cov(c);
+        if (n) {  // shorten the card (its body scrolls) so it fits between the corner and the boxes in its column
+          const ov = [...nbs, S].filter(b => b.r > q.x && b.l < q.x + w);
+          const room = k[0] === "t" ? Math.min(SH, ...ov.map(b => b.t - GAP - EDGE)) : SH - EDGE - Math.max(EDGE, ...ov.map(b => b.b + GAP));
+          if (room >= 150) {hh = Math.min(h, room); q = cornerSpot(k, w, hh, SW, SH); c = {l: q.x, t: q.y, r: q.x + w, b: q.y + hh}; n = cov(c);}
+        }
+        const v = n*10 + (hits(c, S) ? 10 : 0) + (hits(c, O.zoom) ? 3 : 0) + (O.lg && hits(c, sh(O.lg, best.x, best.y)) ? 3 : 0) + (h - hh)*0.01 - Math.hypot(q.x + w/2 - nx, q.y + hh/2 - ny)*0.001;
+        if (!bc || v < bc.v) bc = {v, k, n, hh};
+      }
+      if (bc.n < n0) {dock = bc.k; if (bc.hh < h) card.style.maxHeight = Math.floor(bc.hh) + "px";}
+    }
+  }
+  if (allowPan && (best.x || best.y)) panTo(st.tx + best.x, st.ty + best.y);
+  const bdy = card.querySelector(".bd"); if (bdy) bdy.classList.toggle("mb", bdy.scrollTop + bdy.clientHeight < bdy.scrollHeight - 2);
+  followCard();
+}
+/* keep the card glued to its node while the board pans or zooms */
+function followCard(){
+  if (!sel || card.hidden) return;
+  const nb = boxOf(sel); if (!nb) return;
+  const SW = stage.clientWidth, SH = stage.clientHeight, w = card.offsetWidth, h = card.offsetHeight;
+  const p = dock ? cornerSpot(dock, w, h, SW, SH) : spot(side, nb, w, h, SW, SH), arw = card.querySelector(".arw");
+  card.className = card.className.replace(/\bs-\w+/g, "").trim() + " s-" + side; card.classList.toggle("docked", !!dock);
+  card.style.transform = "translate("+Math.round(p.x)+"px,"+Math.round(p.y)+"px)";
+  const horiz = side === "right" || side === "left";
+  const along = horiz ? clampTo((nb.t + nb.b)/2 - p.y - 5, 14, h - 24) : clampTo((nb.l + nb.r)/2 - p.x - 5, 14, w - 24);
+  arw.style.top = horiz ? along + "px" : ""; arw.style.left = horiz ? "" : along + "px";
+  const gone = nb.r < 0 || nb.l > SW || nb.b < 0 || nb.t > SH;
+  card.style.visibility = gone ? "hidden" : "";
+  lead.hidden = !dock || gone;
+  if (dock) {  // leader: from the card edge nearest the node centre to the nearest point of the node box
+    const ax = clampTo((nb.l + nb.r)/2, p.x, p.x + w), ay = clampTo((nb.t + nb.b)/2, p.y, p.y + h), bx = clampTo(ax, nb.l, nb.r), by = clampTo(ay, nb.t, nb.b);
+    const ln = lead.querySelector("line"), dot = lead.querySelector("circle");
+    ln.setAttribute("x1", ax); ln.setAttribute("y1", ay); ln.setAttribute("x2", bx); ln.setAttribute("y2", by); dot.setAttribute("cx", bx); dot.setAttribute("cy", by);
+  }
+}
+function closeCard(){
+  const was = sel; sel = null; dock = null; card.hidden = true; lead.hidden = true; exp = false; hist = [];
+  view.classList.remove("has-sel");
+  document.querySelectorAll(".node.sel,.node.nbr,path.ed.on").forEach(x => x.classList.remove("sel", "nbr", "on"));
+  if (was && cur) later();
+}
+let exp = false, hist = [];
+/* select a node of any board (a "Connections" entry may point to another board); fromCard pushes the node we leave onto the history */
+function goTo(id, o = {}){
+  const n = D.info[id]; if (!n) return;
+  const prev = sel, keep = hist.slice();
+  if (n.board !== cur) open(n.board);  // a board change clears the history; a link keeps it
+  hist = keep;
+  if (o.back) hist.pop(); else if (prev && prev !== id) hist.push(prev);
+  selectNode(id);
+}
+const wikiOf = n => {
+  const A = window.breeWikiAnchors; if (!A) return null;
+  const keys = [n.anchor, ...(n.code || []).map(c => c.path + "#" + (c.symbol || ""))];
+  for (const k of keys) if (k && A[k]) return A[k];
+  return null;
+};
+function selectNode(id, o = {}){
+  const n = D.info[id]; if (!n || !nodeEl(id)) return;
+  if (sel !== id) exp = !!o.expanded;
+  document.querySelectorAll(".node.sel,.node.nbr,path.ed.on").forEach(x => x.classList.remove("sel", "nbr", "on"));
+  sel = id;
+  nodeEl(id).classList.add("sel"); view.classList.add("has-sel");
+  const nb = neighbours(id); nb.forEach(i => {const e = nodeEl(i); if (e) e.classList.add("nbr");});
+  edgesOf(id).forEach(p => p.classList.add("on"));
+  const mod = n.module && D.info[n.module];
+  const det = n.summary || n.about || n.detail || n.role;  // summary = the authored one-liner; about = 2-3 plain sentences (names.py, grounded); a step without either keeps its one-line label
+  const prevId = hist.length ? hist[hist.length - 1] : null, prev = prevId && D.info[prevId];
+  let h = '<span class="arw"></span><div class="hd"><div>'+(prev ? '<button class="bk" title="'+esc(S.back_to.replace("{name}", prev.name))+'">‹ '+esc(prev.name)+'</button>' : '')+'<span class="nmx">'+esc(n.name)+'</span>'+(n.kind ? '<span class="kd">'+esc(n.kind)+'</span>' : '')+'</div><button class="x" aria-label="'+esc(S.close_aria)+'" title="'+esc(S.close_title)+'"><i class="xm" aria-hidden="true"></i></button></div><div class="bd">';
+  let extra = false;
+  if (det && det !== n.name) h += '<p class="det'+(n.what ? '' : ' clamp')+'">'+esc(det)+'</p>';
+  const meta = [n.lane, mod && mod.name, n.actor && n.actor !== "tool" ? n.actor : ""].filter(Boolean);
+  if (meta.length) h += '<p class="m xo">'+esc(S.lane)+': '+esc(meta[0])+(meta.length > 1 ? ' · '+esc(meta.slice(1).join(' · ')) : '')+'</p>';
+  if (n.what) h += '<h3 lang="'+esc(UL)+'">'+esc(S.what)+'</h3><p class="clamp">'+esc(n.what)+'</p>';
+  if (n.why) {h += '<div class="xo"><h3 lang="'+esc(UL)+'">'+esc(S.why)+'</h3><p>'+esc(n.why)+'</p></div>'; extra = true;}
+  const cn = (n.connects && n.connects.length) ? n.connects.filter(c => D.info[c.to]) : [...nb].filter(i => D.info[i]).map(i => {
+    const ed = edgesOf(id).find(p => p.dataset.from === i || p.dataset.to === i); return {to: i, label: "", dir: ed && ed.dataset.to === id ? "in" : "out"};});
+  const cd = n.code && n.code.length ? n.code : (n.sources || []).map(s => ({path: s.path, line: s.line, label: s.label, symbol: n.sym}));
+  if (cn.length) {h += '<div class="xo"><h3 lang="'+esc(UL)+'">'+esc(S.links)+'</h3><ul class="conns">'+cn.map(c => '<li><button class="cn" data-id="'+esc(c.to)+'"><b>'+(c.dir === "in" ? "←" : "→")+'</b>'+(c.label ? '<em>'+esc(c.label)+'</em>' : '')+esc(D.info[c.to].name)+'</button></li>').join('')+'</ul></div>'; extra = true;}
+  if (cd.length) {
+    h += '<ul class="code xc">'+'<li>'+link(cd[0], cd[0].symbol)+'</li></ul>';
+    h += '<div class="xo"><h3 lang="'+esc(UL)+'">'+esc(S.code)+'</h3><ul class="code">'+cd.map(c => '<li>'+link(c, c.symbol)+'</li>').join('')+'</ul></div>';
+    if (cd.length > 1) extra = true;
+  }
+  if (n.watch) {h += '<div class="xo"><h3 lang="'+esc(UL)+'">'+esc(S.watch)+'</h3><p class="watch">'+esc(n.watch)+'</p></div>'; extra = true;}
+  if (n.unverified) h += '<p class="unv xo">'+esc(S.unverified)+'</p>';
+  const wk = wikiOf(n);
+  if (wk) {h += '<div class="xo"><button class="wiki" data-slug="'+esc(wk.slug)+'">'+esc(S.wiki)+': '+esc(wk.title)+'</button></div>'; extra = true;}
+  const fl = D.flows_of[id] || [];
+  if (fl.length) {h += '<div class="xo"><span class="m">'+esc(S.flows)+':</span> '+fl.map(f=>'<button data-b="'+esc(f)+'">'+esc(D.boards[f].title)+'</button>').join('')+'</div>'; extra = true;}
+  h += '</div><div class="ft"><button class="more" lang="'+esc(UL)+'" aria-expanded="false"></button></div>';
+  card.innerHTML = h;
+  card.classList.toggle("exp", exp); card.hidden = false;
+  card.style.visibility = "";
+  const sz = Math.min(300, stage.clientWidth - 32);
+  card.style.width = sz + "px"; card.style.maxHeight = Math.round(stage.clientHeight*0.6) + "px";
+  const more = card.querySelector(".more");
+  const clipped = [...card.querySelectorAll(".clamp")].some(e => e.scrollHeight > e.clientHeight + 1) || n.what && n.what.length > 160;
+  const setMore = () => {more.textContent = exp ? S.less : S.more; more.setAttribute("aria-expanded", exp ? "true" : "false"); card.classList.toggle("exp", exp);};
+  setMore();
+  if (!extra && !clipped) more.parentElement.hidden = true;
+  const bdy = card.querySelector(".bd"), fade = () => bdy.classList.toggle("mb", bdy.scrollTop + bdy.clientHeight < bdy.scrollHeight - 2);  // fade the cut-off text: more below
+  bdy.onscroll = fade;
+  more.onclick = () => {exp = !exp; setMore(); bdy.scrollTop = 0; chooseSide(true); fade(); later();};
+  card.querySelectorAll("button[data-b]").forEach(b=>b.onclick=()=>open(b.dataset.b));
+  card.querySelectorAll("button.wiki").forEach(b=>b.onclick=()=>postBridge({type: "openWiki", slug: b.dataset.slug}));
+  card.querySelectorAll("button.cn").forEach(b=>b.onclick=()=>goTo(b.dataset.id));
+  const bk = card.querySelector(".bk"); if (bk) bk.onclick = () => {goTo(prevId, {back: true});};
+  card.querySelector(".x").onclick = closeCard;
+  fade();
+  if (o.keep) {chooseSide(false);}
+  else {
+    chooseSide(true);  // finds the side and the smallest pan that keeps the node, its neighbours and their labels visible and uncovered
+  }
+  later();
+}
+/* ---- zoom and pan: the page never scrolls, a transform on #view moves the board; the dot grid follows the same transform ---- */
+const svgOf = () => document.querySelector("#b-"+cur+" svg");
+const size = () => {const v = svgOf().viewBox.baseVal; return [v.width, v.height];};
+function apply(){
+  view.style.transform = "translate("+st.tx+"px,"+st.ty+"px) scale("+st.s+")";
+  const gf = st.s >= 0.5 ? 1 : Math.max(0, (st.s - MIN)/(0.5 - MIN));  // dots fade out below 0.5x
+  stage.style.setProperty("--gs", (22*st.s)+"px"); stage.style.setProperty("--gx", st.tx+"px"); stage.style.setProperty("--gy", st.ty+"px"); stage.style.setProperty("--gf", gf);
+  stage.dataset.scale = st.s.toFixed(4); stage.dataset.tx = st.tx.toFixed(1); stage.dataset.ty = st.ty.toFixed(1); stage.dataset.fit = st.fit ? "1" : "0";
+  document.getElementById("zl").textContent = Math.round(st.s*100)+"%";
+  followCard();
+  later();
+}
+function clampPan(){
+  const r = stage.getBoundingClientRect(), [w, h] = size(), k = 64;
+  st.tx = Math.min(r.width - k, Math.max(k - w*st.s, st.tx));
+  st.ty = Math.min(r.height - k, Math.max(k - h*st.s, st.ty));
+}
+/* content box of the current board in svg units [left, top, right, bottom] (lanes, nodes, legend; not the empty margin the viewBox keeps around them) */
+const boxes = {};
+function contentBox(){
+  if (boxes[cur]) return boxes[cur];
+  let l = 1e9, t = 1e9, r = -1e9, b = -1e9;
+  svgOf().querySelectorAll(":scope > :not(defs):not(title):not(desc)").forEach(e => {try {const q = e.getBBox(); if (q.width || q.height) {l = Math.min(l, q.x); t = Math.min(t, q.y); r = Math.max(r, q.x + q.width); b = Math.max(b, q.y + q.height);}} catch (_) {}});
+  if (l >= 1e9) {const [w, h] = size(); return [0, 0, w, h];}
+  return boxes[cur] = [l, t, r, b];
+}
+function fitScale(){
+  const r = stage.getBoundingClientRect(), [l, t, rr, bb] = contentBox();
+  return Math.max(0.01, Math.min((r.width - 2*PAD)/(rr - l), (r.height - 2*PAD)/(bb - t), FIT_MAX));
+}
+function fitView(){
+  stopAnim(); if (blank) return;
+  const r = stage.getBoundingClientRect(), [l, t, rr, bb] = contentBox();
+  fitS = fitScale();
+  st = {s: fitS, tx: (r.width - (rr - l)*fitS)/2 - l*fitS, ty: Math.max(PAD, (r.height - (bb - t)*fitS)/2) - t*fitS, fit: true};
+  apply();
+}
+/* scale below which the board's smallest <text> falls under TEXT_PX on screen (cached per board) */
+const floors = {};
+function textFloor(){
+  if (floors[cur]) return floors[cur];
+  let m = 1e9; svgOf().querySelectorAll("text").forEach(t => {const f = parseFloat(getComputedStyle(t).fontSize); if (f > 0) m = Math.min(m, f);});
+  return floors[cur] = TEXT_PX/(m < 1e9 ? m : 11);
+}
+/* open: at Fit (the whole board, nothing clipped) when its smallest text stays readable there, else at the readable scale and panned; either way the content's top
+   sits PAD from the stage's top, and its left edge PAD from the stage's left, or centred when the board is narrower than the stage. st.home keeps this view on stage resize
+   until the reader pans or zooms. */
+function openView(){
+  stopAnim(); if (blank) return;
+  const r = stage.getBoundingClientRect(), [l, t, rr] = contentBox(), fl = textFloor();
+  fitS = fitScale();
+  const s = Math.max(fitS, fl), cw = (rr - l)*s;
+  st = {s, tx: (cw + 2*PAD < r.width ? (r.width - cw)/2 : PAD) - l*s, ty: PAD - t*s, fit: fitS >= fl, home: true};
+  clampPan(); apply();
+}
+function zoomAt(cx, cy, f){
+  stopAnim(); if (blank) return;
+  const ns = Math.min(MAX, Math.max(Math.min(MIN, fitS), st.s*f));
+  st.tx = cx - (cx - st.tx)*ns/st.s; st.ty = cy - (cy - st.ty)*ns/st.s; st.s = ns; st.fit = st.home = false; st.user = true;
+  clampPan(); apply();
+}
+const centre = () => {const r = stage.getBoundingClientRect(); return [r.width/2, r.height/2];};
+const rel = e => {const r = stage.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top];};
+/* focusing a node can make the browser scroll the clipped stage to reveal it; the board is only ever moved by the transform */
+stage.addEventListener("scroll", () => {stage.scrollLeft = 0; stage.scrollTop = 0;});
+stage.addEventListener("wheel", e => {
+  if (e.target.closest("#card") && !(e.ctrlKey || e.metaKey)) return;  // the card body scrolls on its own
+  e.preventDefault(); stopAnim();
+  if (e.ctrlKey || e.metaKey) {
+    if (gest) return;  // WebKit sends gesture* events for the same pinch
+    const [x, y] = rel(e);
+    zoomAt(x, y, Math.exp(-Math.max(-40, Math.min(40, e.deltaY))*0.01));
+  } else {
+    st.tx -= e.deltaX; st.ty -= e.deltaY; st.fit = st.home = false; st.user = true; clampPan(); apply();
+  }
+}, {passive: false});
+stage.addEventListener("gesturestart", e => {e.preventDefault(); const [x, y] = rel(e); gest = {s: st.s, tx: st.tx, ty: st.ty, x, y};});
+stage.addEventListener("gesturechange", e => {
+  e.preventDefault(); if (!gest) return;
+  const ns = Math.min(MAX, Math.max(Math.min(MIN, fitS), gest.s*e.scale));
+  st.tx = gest.x - (gest.x - gest.tx)*ns/gest.s; st.ty = gest.y - (gest.y - gest.ty)*ns/gest.s; st.s = ns; st.fit = st.home = false; st.user = true;
+  clampPan(); apply();
+});
+stage.addEventListener("gestureend", e => {e.preventDefault(); gest = null;});
+stage.addEventListener("pointerdown", e => {
+  if (e.button !== 0 || e.target.closest("#zoom") || e.target.closest("#card")) return;
+  stopAnim(); drag = {x: e.clientX, y: e.clientY, moved: false, id: e.pointerId};
+});
+stage.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+  if (!drag.moved) {drag.moved = true; stage.setPointerCapture(drag.id); stage.classList.add("drag");}
+  st.tx += dx; st.ty += dy; st.fit = st.home = false; st.user = true; drag.x = e.clientX; drag.y = e.clientY; clampPan(); apply();
+});
+const endDrag = () => {if (drag && drag.moved) {swallow = true; setTimeout(() => swallow = false, 0);} drag = null; stage.classList.remove("drag");};
+stage.addEventListener("pointerup", endDrag); stage.addEventListener("pointercancel", endDrag);
+stage.addEventListener("dblclick", e => {if (!e.target.closest(".node") && !e.target.closest("#zoom")) fitView();});
+const step = f => {const [x, y] = centre(); zoomAt(x, y, f);};
+document.getElementById("zi").onclick = () => step(1.25);
+document.getElementById("zo").onclick = () => step(0.8);
+document.getElementById("zf").onclick = fitView;
+function stepBoard(d){if (cur === CHANGES) return; const i = ORDER.indexOf(cur) + d; if (i >= 0 && i < ORDER.length) open(ORDER[i]);}
+let factsOpen = false;
+function setFacts(on){
+  factsOpen = on;
+  const h = contents.querySelector(".sec.tg"); if (h) h.setAttribute("aria-expanded", on ? "true" : "false");
+  contents.querySelectorAll(".it.fx").forEach(b => b.hidden = !on);
+}
+function setContents(on){
+  contents.hidden = !on; toc.setAttribute("aria-expanded", on ? "true" : "false");
+  if (on) {
+    if (D.facts && cur && D.boards[cur] && D.boards[cur].group === D.facts) setFacts(true);  // the current board has to be visible in the list
+    const c = contents.querySelector('[aria-current=true]'); if (c && !c.hidden) {c.focus({preventScroll: true}); c.scrollIntoView({block: "nearest"});}
+  }
+}
+/* Esc contract with the host (Bree): closes the open contents list or the node card and returns true; false when nothing was open, so the host closes its popover.
+   A key press the page already handled is remembered for a moment, so the host calling this for the same press still gets true. */
+let escMemo = null;
+function handleEscape(){
+  if (!contents.hidden) {setContents(false); toc.focus(); return true;}
+  if (sel) {closeCard(); return true;}
+  return false;
+}
+window.breeHandleEscape = () => {
+  if (escMemo && performance.now() - escMemo.t < 250) {const r = escMemo.r; escMemo = null; return r;}
+  return handleEscape();
+};
+/* arrow keys on a focused node move to the connected node that lies in that direction */
+function nodeInDir(id, key){
+  const c = e => {const r = e.getBoundingClientRect(); return [(r.left + r.right)/2, (r.top + r.bottom)/2];};
+  const [x, y] = c(nodeEl(id)), v = {ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1]}[key];
+  let best = null, fallback = null;
+  neighbours(id).forEach(i => {
+    const e = nodeEl(i); if (!e) return;
+    const [px, py] = c(e), dx = px - x, dy = py - y, d = Math.hypot(dx, dy) || 1, cos = (dx*v[0] + dy*v[1])/d;
+    if (cos <= 0) return;
+    const score = d/cos;
+    if (cos >= 0.35 && (!best || score < best.score)) best = {i, score};
+    if (!fallback || d < fallback.score) fallback = {i, score: d};
+  });
+  return (best || fallback || {}).i;
+}
+addEventListener("keydown", e => {
+  if (e.key === "Escape") {const r = handleEscape(); escMemo = {t: performance.now(), r}; if (r) e.preventDefault(); return;}
+  /* [ and ] also with Option held: the Turkish layout types them as Option+8 / Option+9 (e.key is already the bracket) */
+  if (!(e.metaKey || e.ctrlKey)) {
+    if (e.key === "[") {e.preventDefault(); stepBoard(-1); return;}
+    if (e.key === "]") {e.preventDefault(); stepBoard(1); return;}
+  }
+  if (!(e.metaKey || e.ctrlKey) && !e.altKey) {
+    const g = e.target.closest && e.target.closest(".node");
+    if (g && e.key.startsWith("Arrow")) {
+      const t = nodeInDir(g.dataset.id, e.key);
+      if (t) {e.preventDefault(); nodeEl(t).focus({preventScroll: true}); if (sel) selectNode(t); else reveal(t, false);}
+      return;
+    }
+    /* no node selected: the arrows switch boards (the user's Turkish layout reaches [ ] only through Option) */
+    if (!sel && !g && !e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && !(e.target.closest && e.target.closest("#contents"))) {e.preventDefault(); stepBoard(e.key === "ArrowLeft" ? -1 : 1); return;}
+  }
+  if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+  if (e.key === "=" || e.key === "+") {e.preventDefault(); step(1.25);}
+  else if (e.key === "-" || e.key === "_") {e.preventDefault(); step(0.8);}
+  else if (e.key === "0") {e.preventDefault(); fitView();}
+  else if (e.key === "1") {e.preventDefault(); step(1/st.s);}
+});
+new ResizeObserver(() => {if (cur) relayout();}).observe(stage);
+/* ---- boards ---- */
+function open(id, restore){
+  if(!D.boards[id]) return;
+  closeCard(); stopAnim(); setContents(false);
+  cur = id; location.hash = id;
+  document.querySelectorAll(".b").forEach(x=>x.hidden = x.id !== "b-"+id);
+  const i = ORDER.indexOf(id), bd = D.boards[id], ch = id === CHANGES;
+  contents.querySelectorAll(".it").forEach(b => b.setAttribute("aria-current", b.dataset.b === id ? "true" : "false"));
+  document.getElementById("step").hidden = ch;
+  document.getElementById("pos").textContent = ch ? "" : (i + 1)+" / "+ORDER.length;
+  document.getElementById("pv").disabled = i <= 0; document.getElementById("nx").disabled = i >= ORDER.length - 1;
+  document.getElementById("ttl").textContent = bd.title;
+  document.getElementById("purpose").textContent = bd.purpose;
+  const eb = document.getElementById("eb"); eb.textContent = ch ? S.changes : bd.group; if (ch) eb.lang = UL; else eb.removeAttribute("lang");  // uppercase follows <html lang>
+  document.getElementById("ag").lang = UL; document.getElementById("ag").textContent = bd.agent && D.agent ? S.agent_wrote + " \u00b7 " + D.agent.at : "";
+  /* a board with no diagram (svg.empty) shows an HTML message and no zoom control; the Changes tab has no pager either */
+  blank = svgOf().classList.contains("empty");
+  view.hidden = blank; document.getElementById("zoom").hidden = blank;
+  const em = document.getElementById("empty"); em.hidden = !blank;
+  if (blank) {em.querySelector(".msg").textContent = svgOf().dataset.msg || ""; const w = em.querySelector(".when"); w.lang = UL; w.textContent = D.agent ? S.last_generated + ": " + D.agent.at : ""; w.hidden = !D.agent;}
+  openView();
+  if (restore && !ch && !blank) {  // same board as when the page was last left: the selection first, then the saved view. A board the reader never zoomed or panned stays at Fit.
+    const same = P.board === id, v = P.views[id];
+    if (same && P.sel && D.info[P.sel] && nodeEl(P.sel)) selectNode(P.sel, {keep: true, expanded: !!P.exp});
+    if (v && !v.home && v.s > 0 && (v.user || (same && P.sel))) {st = {s: v.s, tx: v.tx, ty: v.ty, fit: !!v.fit, user: !!v.user}; clampPan(); apply();}
+    if (sel) chooseSide(false);
+  }
+  remember();
+}
+D.groups.forEach(g => {
+  const fold = D.facts && g.name === D.facts;  // the deterministic boards sit under one collapsed "Facts" row
+  let h;
+  if (fold) {h = document.createElement("button"); h.className = "sec tg"; h.setAttribute("aria-expanded", "false"); h.textContent = g.name+" \u00b7 "+g.boards.length; h.onclick = () => setFacts(!factsOpen);}
+  else {h = document.createElement("div"); h.className = "sec"; h.textContent = g.name;}
+  contents.appendChild(h);
+  g.boards.forEach(id => {const b = document.createElement("button"); b.className = "it" + (fold ? " fx" : ""); b.hidden = !!fold; b.dataset.b = id; b.innerHTML = "<i>"+(ORDER.indexOf(id) + 1)+"</i><span>"+esc(D.boards[id].title)+"</span>"; b.onclick = () => {open(id); toc.focus();}; contents.appendChild(b);});
+});
+toc.onclick = () => setContents(contents.hidden);
+document.getElementById("pv").onclick = () => stepBoard(-1);
+document.getElementById("nx").onclick = () => stepBoard(1);
+addEventListener("click", e => {if (!contents.hidden && !e.target.closest("#contents") && !e.target.closest("#toc")) setContents(false);});
+stage.addEventListener("click", e=>{
+  if (swallow || e.target.closest("#zoom") || e.composedPath().includes(card)) return;  // composedPath: a card button may already be gone from the DOM (the card re-renders on click)
+  const g = e.target.closest(".node");
+  if (!g) {closeCard(); return;}
+  if (sel === g.dataset.id) closeCard(); else {hist = []; selectNode(g.dataset.id);}
+});
+view.addEventListener("keydown", e=>{const g=e.target.closest&&e.target.closest(".node"); if(g&&(e.key==="Enter"||e.key===" ")){e.preventDefault(); if (sel === g.dataset.id) closeCard(); else {hist = []; selectNode(g.dataset.id);}}});
+view.addEventListener("focusin", e => {const g = e.target.closest && e.target.closest(".node"); if (g && g.matches(":focus-visible")) reveal(g.dataset.id, false);});  // keyboard focus brings the node into the stage
+/* a role="img" svg is one AX image: its nodes (role=button) are hidden from assistive tech. As a group, each node is reachable. */
+document.querySelectorAll(".b svg").forEach(v => v.setAttribute("role", "group"));
+{const h = location.hash.slice(1); open(D.boards[h] ? h : D.boards[P.board] && P.board !== CHANGES ? P.board : ORDER[0], true);}  // first open: diagram 1, the backbone
+addEventListener("hashchange", () => {const id = location.hash.slice(1); if (D.boards[id] && id !== cur) open(id);});
+</script>
+</body></html>

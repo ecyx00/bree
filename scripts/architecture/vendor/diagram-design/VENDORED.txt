@@ -1,0 +1,1 @@
+diagram-design, Cathryn Lavery, MIT, upstream SHA 75f47bb. Vendored unmodified.
