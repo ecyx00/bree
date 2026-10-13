@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PBXPROJ = ROOT / "cmux.xcodeproj/project.pbxproj"
+PBXPROJ = ROOT / "bree.xcodeproj/project.pbxproj"
 
 _spec = importlib.util.spec_from_file_location("normalize_pbxproj", Path(__file__).with_name("normalize-pbxproj.py"))
 _normalize = importlib.util.module_from_spec(_spec)
@@ -92,7 +92,7 @@ def main() -> int:
     path = Path(sys.argv[1]) if len(sys.argv) > 1 else PBXPROJ
     found = orphans(parse(path.read_text(encoding="utf-8")))
     for ref, name in found:
-        print(f"::error file=cmux.xcodeproj/project.pbxproj::{name} ({ref}) is built but no group under the main "
+        print(f"::error file=bree.xcodeproj/project.pbxproj::{name} ({ref}) is built but no group under the main "
               "group holds it; Xcode recovers it under a group with a new id on every load, so every build "
               "re-plans. Add it to the group that holds its siblings.", file=sys.stderr)
     return 1 if found else 0

@@ -1,5 +1,5 @@
-import CmuxAgentChat
-import CmuxSidebar
+import BreeAgentChat
+import BreeSidebar
 import Foundation
 
 @MainActor

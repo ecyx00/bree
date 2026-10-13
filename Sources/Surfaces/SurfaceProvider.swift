@@ -1,5 +1,5 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// A provider owns the resources of one machine and knows how to put one on screen.
@@ -29,7 +29,7 @@ protocol SurfaceProvider: AnyObject {
     /// (optimistic creation). A provider that cannot adopt materializes a fresh pane;
     /// the caller then closes the reservation when the returned panel differs.
     func materialize(_ resource: SurfaceResource, remoteView: SurfaceRemoteView?, at destination: SurfaceDestination, focus: Bool, adopting reservation: CloudTerminalPaneReservation?) async throws -> SurfaceProjection
-    /// Create a new terminal on this machine (remote providers create it in the cmux-tui
+    /// Create a new terminal on this machine (remote providers create it in the bree-tui
     /// session; the local provider spawns a shell) and return its resource.
     func createTerminal(command: [String]?, cwd: String?, name: String?, remoteWorkspaceID: String?) async throws -> SurfaceResource
     /// Retries of one UI intent carry the same id so a remote mutation can replay its receipt.

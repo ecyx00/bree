@@ -2,9 +2,9 @@ import Foundation
 
 extension TabManager {
     @discardableResult
-    func openWorkspace(fromSavedLayout layout: CmuxSavedLayout, cwdOverride: String?, focus: Bool) -> Workspace? {
+    func openWorkspace(fromSavedLayout layout: BreeSavedLayout, cwdOverride: String?, focus: Bool) -> Workspace? {
         let baseCwd = FileManager.default.homeDirectoryForCurrentUser.path
-        let resolvedCwd = CmuxConfigStore.resolveCwd(cwdOverride ?? layout.workspace.cwd, relativeTo: baseCwd)
+        let resolvedCwd = BreeConfigStore.resolveCwd(cwdOverride ?? layout.workspace.cwd, relativeTo: baseCwd)
         guard let workspace = addWorkspaceIfActive(
             title: layout.workspace.name ?? layout.name,
             workingDirectory: resolvedCwd,

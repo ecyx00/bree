@@ -4,7 +4,7 @@ enum AgentHibernationReclaimTrigger: Equatable, Sendable {
     case scheduled
     case systemMemoryPressure
     case aggregateMemoryPressure
-    /// The user asked for one specific agent (`cmux agent hibernate`). It skips
+    /// The user asked for one specific agent (`bree agent hibernate`). It skips
     /// the idle delay, live-terminal limit and confirmation window, and keeps
     /// every safety check.
     case manual

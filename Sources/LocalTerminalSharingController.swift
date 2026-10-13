@@ -1,6 +1,6 @@
-import CmuxTerminal
-import CmuxTerminalSharing
-import CmuxTerminalSizing
+import BreeTerminal
+import BreeTerminalSharing
+import BreeTerminalSizing
 import Foundation
 
 /// Executes store actions for one local terminal against its Mac host.

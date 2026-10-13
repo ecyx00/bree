@@ -1,6 +1,6 @@
 import Bonsplit
-import CmuxPanes
-import CmuxSettings
+import BreePanes
+import BreeSettings
 import Foundation
 
 extension Workspace {

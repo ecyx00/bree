@@ -44,7 +44,7 @@ final class SessionDragSessionSource: NSObject, NSDraggingSource {
         operation: NSDragOperation
     ) {
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "vault.drag.source.end drag=\(dragID.uuidString.prefix(5)) operation=\(operation.rawValue)"
         )
 #endif

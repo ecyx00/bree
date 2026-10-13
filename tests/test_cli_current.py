@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run the real current command against an isolated socket; never contacts a live app.
 
-CMUX_CLI_BIN=/path/to/freshly-built/cmux python3 tests/test_cli_current.py
+BREE_CLI_BIN=/path/to/freshly-built/bree python3 tests/test_cli_current.py
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import tempfile
 import threading
 import unittest
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 from fake_socket_env import cli_environment, unwrap_capability
 
 
@@ -28,14 +28,14 @@ SNAPSHOT = {
     "items": [{
         "resource_ref": "local/terminal/fixture-runtime",
         "durable_surface_id": "11111111-1111-4111-8111-111111111111",
-        "label": "Review cmux",
+        "label": "Review bree",
         "kind": "terminal",
         "placement": {"kind": "local", "machine": "local"},
         "projections": [{"resource_ref": "local/terminal/fixture-runtime",
                          "workspace_id": "22222222-2222-4222-8222-222222222222",
                          "panel_id": "33333333-3333-4333-8333-333333333333",
                          "stable_surface_id": "11111111-1111-4111-8111-111111111111"}],
-        "cwd": "/fixture/cmux",
+        "cwd": "/fixture/bree",
         "agents": [],
         "attention": [{"kind": "unread_notification", "scope": "surface",
                        "evidence": {"owner": "notifications", "reference": "fixture:notification",
@@ -77,10 +77,10 @@ class FakeHandler(socketserver.StreamRequestHandler):
 class CurrentCLITests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.cli = resolve_cmux_cli()
+        cls.cli = resolve_bree_cli()
 
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="cmux-current-", dir="/tmp")
+        self.temp = tempfile.TemporaryDirectory(prefix="bree-current-", dir="/tmp")
         self.addCleanup(self.temp.cleanup)
         self.path = str(Path(self.temp.name) / "s.sock")
         self.server = FakeServer(self.path)
@@ -109,7 +109,7 @@ class CurrentCLITests(unittest.TestCase):
     def test_text_uses_same_snapshot_and_reports_unknowns_and_truncation(self):
         result = self.invoke("current")
         self.assertEqual(result.returncode, 0, result.stderr)
-        for text in ("Review cmux", "local/terminal/fixture-runtime", "/fixture/cmux", "freshness: unknown",
+        for text in ("Review bree", "local/terminal/fixture-runtime", "/fixture/bree", "freshness: unknown",
                      "attention: unread_notification", "Limit reached", "agent_sessions: unavailable"):
             self.assertIn(text, result.stdout)
         self.assertEqual(self.server.requests, [("current.list", {})])

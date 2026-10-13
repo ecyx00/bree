@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify cmux-owned SwiftPM lockfiles are not ignored."""
+"""Verify bree-owned SwiftPM lockfiles are not ignored."""
 
 from __future__ import annotations
 
@@ -18,9 +18,9 @@ ALLOWED_IGNORED_PREFIXES = (
 )
 
 XCODE_PACKAGE_RESOLVED = (
-    "cmux.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+    "bree.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 )
-XCODE_PROJECT_FILE = "cmux.xcodeproj/project.pbxproj"
+XCODE_PROJECT_FILE = "bree.xcodeproj/project.pbxproj"
 EXPECTED_XCODE_LOCKFILES = {
     XCODE_PACKAGE_RESOLVED,
 }
@@ -236,17 +236,17 @@ def workspace_package_roots(
 
 
 def package_roots_requiring_lockfiles(
-    cmux_manifests: dict[str, Path] | None = None,
+    bree_manifests: dict[str, Path] | None = None,
     graph: dict[str, PackageNode] | None = None,
 ) -> set[str]:
-    if cmux_manifests is None or graph is None:
+    if bree_manifests is None or graph is None:
         all_manifests = tracked_package_manifests(include_allowed_vendor=True)
-        cmux_manifests = tracked_package_manifests(include_allowed_vendor=False)
+        bree_manifests = tracked_package_manifests(include_allowed_vendor=False)
         graph = package_graph(all_manifests)
     memo: dict[str, bool] = {}
 
     return {
-        root for root in cmux_manifests
+        root for root in bree_manifests
         if has_remote_dependency(root, graph, memo, set())
     }
 
@@ -347,14 +347,14 @@ def ignores_package_resolved(gitignore: Path) -> bool:
 def main() -> int:
     errors: list[str] = []
     all_manifests = tracked_package_manifests(include_allowed_vendor=True)
-    cmux_manifests = {
+    bree_manifests = {
         root: manifest for root, manifest in all_manifests.items()
         if not is_allowed_vendor_path(manifest.as_posix())
     }
     graph = package_graph(all_manifests)
-    roots = set(cmux_manifests)
+    roots = set(bree_manifests)
     tracked_lockfiles = set(git_ls_files("*Package.resolved"))
-    required_lockfile_roots = package_roots_requiring_lockfiles(cmux_manifests, graph)
+    required_lockfile_roots = package_roots_requiring_lockfiles(bree_manifests, graph)
     merge_base = merge_base_with_base_ref()
     changed_files = changed_files_since(merge_base)
     changed_dependency_roots: set[str] = set()
@@ -414,7 +414,7 @@ def main() -> int:
         if is_allowed_vendor_path(rel):
             continue
         errors.append(
-            f"{rel} ignores Package.resolved. cmux-owned SwiftPM lockfiles must be tracked."
+            f"{rel} ignores Package.resolved. bree-owned SwiftPM lockfiles must be tracked."
         )
 
     for expected_root in sorted(required_lockfile_roots):
@@ -425,7 +425,7 @@ def main() -> int:
             f"Missing Package.resolved for SwiftPM package with remote pins: {expected_lockfile}"
         )
 
-    for root, manifest in sorted(cmux_manifests.items()):
+    for root, manifest in sorted(bree_manifests.items()):
         expected_lockfile = package_lockfile_path(root)
         has_or_requires_lockfile = (
             root in required_lockfile_roots or expected_lockfile in tracked_lockfiles
@@ -462,7 +462,7 @@ def main() -> int:
             continue
         if is_expected_lockfile_path(lockfile, roots):
             continue
-        errors.append(f"Unexpected cmux Package.resolved location: {lockfile}")
+        errors.append(f"Unexpected bree Package.resolved location: {lockfile}")
 
     if errors:
         print("Package.resolved policy violations:", file=sys.stderr)

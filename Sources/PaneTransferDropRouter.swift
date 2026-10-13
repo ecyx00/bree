@@ -1,4 +1,4 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
 import Bonsplit
 

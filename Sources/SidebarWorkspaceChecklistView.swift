@@ -1,5 +1,5 @@
 import AppKit
-import CmuxWorkspaces
+import BreeWorkspaces
 import SwiftUI
 
 // MARK: - Minimal visibility policy
@@ -106,7 +106,7 @@ struct WorkspaceChecklistAttachmentMenu: View {
             }
         } label: {
             HStack(spacing: 2) {
-                CmuxSystemSymbolImage(systemName: "paperclip", pointSize: iconPointSize, tint: foregroundColor)
+                BreeSystemSymbolImage(systemName: "paperclip", pointSize: iconPointSize, tint: foregroundColor)
                 if item.attachmentCount > 0 {
                     Text(verbatim: "\(item.attachmentCount)")
                         .font(countFont)
@@ -271,7 +271,7 @@ struct SidebarWorkspaceChecklistSection: View {
             }
         }) {
             HStack(spacing: 4) {
-                CmuxSystemSymbolImage(
+                BreeSystemSymbolImage(
                     magnified: completedCount == totalCount ? "checkmark.circle.fill" : "checklist",
                     pointSize: SidebarRowType.glyphSize(fontScale: fontScale),
                     tint: secondaryColor
@@ -351,7 +351,7 @@ struct SidebarWorkspaceChecklistSection: View {
             Button {
                 actions.setItemState(item.id, isCompleted ? .pending : .completed)
             } label: {
-                CmuxSystemSymbolImage(
+                BreeSystemSymbolImage(
                     magnified: checkboxSymbolName(for: item.state),
                     pointSize: SidebarRowType.glyphSize(fontScale: fontScale),
                     tint: isCompleted ? secondaryColor : primaryColor
@@ -476,7 +476,7 @@ struct SidebarWorkspaceChecklistSection: View {
         return Button {
             actions.removeItem(item.id)
         } label: {
-            CmuxSystemSymbolImage(magnified: "xmark.circle.fill", pointSize: SidebarRowType.glyphSize(fontScale: fontScale), tint: secondaryColor)
+            BreeSystemSymbolImage(magnified: "xmark.circle.fill", pointSize: SidebarRowType.glyphSize(fontScale: fontScale), tint: secondaryColor)
                 .frame(width: SidebarRowType.glyphSize(fontScale: fontScale) + 8, height: SidebarRowType.glyphSize(fontScale: fontScale) + 8, alignment: .center)
                 .contentShape(Rectangle())
         }
@@ -498,7 +498,7 @@ struct SidebarWorkspaceChecklistSection: View {
                 // the add row never reads as a real (unchecked) item. Uses the
                 // row's secondary color (which inverts on the selected row) so
                 // it never clashes as accent-blue on a blue selected row.
-                CmuxSystemSymbolImage(magnified: "plus.circle", pointSize: SidebarRowType.glyphSize(fontScale: fontScale), tint: secondaryColor)
+                BreeSystemSymbolImage(magnified: "plus.circle", pointSize: SidebarRowType.glyphSize(fontScale: fontScale), tint: secondaryColor)
                 // AppKit field (like the sidebar rename field): takes first
                 // responder in the main window on appear, so typing works
                 // reliably (a SwiftUI TextField / floating popover does not win
@@ -524,7 +524,7 @@ struct SidebarWorkspaceChecklistSection: View {
                 }
             } label: {
                 HStack(spacing: 4) {
-                    CmuxSystemSymbolImage(magnified: "plus", pointSize: SidebarRowType.glyphSize(fontScale: fontScale), tint: secondaryColor)
+                    BreeSystemSymbolImage(magnified: "plus", pointSize: SidebarRowType.glyphSize(fontScale: fontScale), tint: secondaryColor)
                     Text(String(localized: "sidebar.checklist.addItem", defaultValue: "Add item"))
                         .font(itemFont)
                 }

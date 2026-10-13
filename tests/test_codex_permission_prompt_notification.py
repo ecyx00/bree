@@ -4,14 +4,14 @@ Regression: a codex PermissionRequest feed hook raises the
 "Agent Needs Permission"-gated notification, acknowledged before the hook
 returns, and codex tool completion clears it.
 
-https://github.com/manaflow-ai/cmux/issues/9592: the feed bridge normalized
+https://github.com/ecyx00/bree/issues/9592: the feed bridge normalized
 codex PermissionRequest to non-actionable PreToolUse telemetry and never
 raised any notification, leaving a blocked codex seat silent indefinitely.
-These tests exercise the actual CLI delivery path (`cmux hooks feed`)
+These tests exercise the actual CLI delivery path (`bree hooks feed`)
 against a fake socket: classification-only coverage cannot catch a broken
 or misrouted notify/clear dispatch.
 
-The native `cmux hooks codex notification` path is also covered after a
+The native `bree hooks codex notification` path is also covered after a
 completed turn: a message-less PermissionRequest must not replay the cached
 completion preview or put the session back into Idle.
 """
@@ -26,11 +26,11 @@ import time
 from pathlib import Path
 
 from agent_notification_test_utils import notification_view, resolution_view
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 from test_codex_feed_hooks import (
     FAKE_SURFACE_ID,
     FAKE_WORKSPACE_ID,
-    FakeCmuxSocket,
+    FakeBreeSocket,
 )
 from test_codex_monitor_memory import test_codex_monitor_rss_reaches_a_plateau
 
@@ -55,7 +55,7 @@ def codex_payload(event: str) -> dict:
 
 
 def strip_capability_prefix(raw: str) -> str:
-    if raw.startswith("_cmux_capability_v1 "):
+    if raw.startswith("_bree_capability_v1 "):
         parts = raw.split(" ", 2)
         return parts[2] if len(parts) == 3 else raw
     return raw
@@ -72,16 +72,16 @@ def run_feed_hook_capture(
     settle_seconds: float = 0,
     payload: dict | None = None,
 ) -> tuple[dict, list, float]:
-    """Runs `cmux hooks feed --source codex` and returns (stdout JSON,
+    """Runs `bree hooks feed --source codex` and returns (stdout JSON,
     ordered received frames, elapsed seconds)."""
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     if socket_password is not None:
-        env["CMUX_SOCKET_PASSWORD"] = socket_password
-    with FakeCmuxSocket(
+        env["BREE_SOCKET_PASSWORD"] = socket_password
+    with FakeBreeSocket(
         socket_path,
         None,
         raw_response_delay=raw_response_delay,
@@ -150,7 +150,7 @@ def test_permission_request_sends_gated_notification_before_feed_push(
     cli_path: str, root: Path
 ) -> None:
     stdout, frames, _ = run_feed_hook_capture(
-        cli_path, root / "cmux-notify.sock", "PermissionRequest"
+        cli_path, root / "bree-notify.sock", "PermissionRequest"
     )
     if stdout != {}:
         raise AssertionError(f"PermissionRequest must stay non-blocking: {stdout!r}")
@@ -176,7 +176,7 @@ def test_permission_request_sends_gated_notification_before_feed_push(
 
 def test_post_tool_use_sends_ordered_feed_for_host_side_resolution(cli_path: str, root: Path) -> None:
     stdout, frames, _ = run_feed_hook_capture(
-        cli_path, root / "cmux-clear.sock", "PostToolUse"
+        cli_path, root / "bree-clear.sock", "PostToolUse"
     )
     if stdout != {}:
         raise AssertionError(f"PostToolUse must stay non-blocking: {stdout!r}")
@@ -186,7 +186,7 @@ def test_post_tool_use_sends_ordered_feed_for_host_side_resolution(cli_path: str
     event = frames[feed_index].get("params", {}).get("event", {})
     if event.get("hook_event_name") != "PostToolUse":
         raise AssertionError(f"unexpected PostToolUse event: {event!r}")
-    if event.get("_cmux_ordered_hook") is not True:
+    if event.get("_bree_ordered_hook") is not True:
         raise AssertionError(f"PostToolUse must use the ordered hook lane: {event!r}")
     if not isinstance(event.get("_hook_sent_at_ms"), int):
         raise AssertionError(f"ordered PostToolUse must carry its send timestamp: {event!r}")
@@ -199,7 +199,7 @@ def test_pre_tool_use_sends_no_attention_command(cli_path: str, root: Path) -> N
     so they must neither notify nor clear (a start-time clear could erase a
     just-raised prompt while the agent is still blocked)."""
     _, frames, _ = run_feed_hook_capture(
-        cli_path, root / "cmux-pretool.sock", "PreToolUse"
+        cli_path, root / "bree-pretool.sock", "PreToolUse"
     )
     offenders = [
         command
@@ -216,7 +216,7 @@ def test_native_request_identity_aliases_share_semantic_key(cli_path: str, root:
         payload = codex_payload("PermissionRequest")
         payload[alias] = payload.pop("tool_use_id")
         _, frames, _ = run_feed_hook_capture(
-            cli_path, root / f"cmux-alias-{alias}.sock", "PermissionRequest", payload=payload
+            cli_path, root / f"bree-alias-{alias}.sock", "PermissionRequest", payload=payload
         )
         if notification_views(frames) != [EXPECTED_NOTIFY]:
             raise AssertionError(f"native identity alias {alias} was lost: {frames!r}")
@@ -231,7 +231,7 @@ def test_permission_notification_is_acknowledged_before_hook_returns(
     almost instantly; the awaited transport cannot."""
     delay = 0.5
     stdout, frames, elapsed = run_feed_hook_capture(
-        cli_path, root / "cmux-ack.sock", "PermissionRequest", raw_response_delay=delay
+        cli_path, root / "bree-ack.sock", "PermissionRequest", raw_response_delay=delay
     )
     if stdout != {}:
         raise AssertionError(f"PermissionRequest must stay non-blocking: {stdout!r}")
@@ -256,7 +256,7 @@ def test_permission_notification_survives_slow_authentication(
     in this scenario."""
     stdout, frames, _ = run_feed_hook_capture(
         cli_path,
-        root / "cmux-slow-auth.sock",
+        root / "bree-slow-auth.sock",
         "PermissionRequest",
         raw_response_delay=0.5,
         socket_password="test-password",
@@ -280,7 +280,7 @@ def test_permission_notification_targets_rehomed_pane(cli_path: str, root: Path)
     live_surface = "88888888-8888-8888-8888-888888888888"
     _, frames, _ = run_feed_hook_capture(
         cli_path,
-        root / "cmux-rehome.sock",
+        root / "bree-rehome.sock",
         "PermissionRequest",
         surface_delivery_target=(live_workspace, live_surface),
     )
@@ -314,7 +314,7 @@ def test_stalled_live_target_probe_does_not_starve_notification(
     waking, hence the settle window before snapshotting."""
     stdout, frames, _ = run_feed_hook_capture(
         cli_path,
-        root / "cmux-stall.sock",
+        root / "bree-stall.sock",
         "PermissionRequest",
         method_delays={"agent.resolve_delivery_target": 3.0},
         settle_seconds=3.0,
@@ -340,22 +340,22 @@ def test_native_permission_request_does_not_replay_previous_completion(
     ):
         state_root = root / label
         state_root.mkdir()
-        socket_path = state_root / "cmux.sock"
+        socket_path = state_root / "bree.sock"
         session_id = "33333333-3333-4333-8333-333333333333"
         previous_reply = "Synthetic task A is finished"
         env = {
             key: value for key, value in os.environ.items()
-            if not key.startswith(("CMUX_", "CODEX_", "CLAUDE_"))
+            if not key.startswith(("BREE_", "CODEX_", "CLAUDE_"))
         }
         env.update({
             "HOME": str(state_root),
             "CODEX_HOME": str(state_root),
             "XDG_CONFIG_HOME": str(state_root),
             "XDG_STATE_HOME": str(state_root),
-            "CMUX_AGENT_HOOK_STATE_DIR": str(state_root),
-            "CMUX_WORKSPACE_ID": FAKE_WORKSPACE_ID,
-            "CMUX_SURFACE_ID": FAKE_SURFACE_ID,
-            "CMUX_CLI_SENTRY_DISABLED": "1",
+            "BREE_AGENT_HOOK_STATE_DIR": str(state_root),
+            "BREE_WORKSPACE_ID": FAKE_WORKSPACE_ID,
+            "BREE_SURFACE_ID": FAKE_SURFACE_ID,
+            "BREE_CLI_SENTRY_DISABLED": "1",
         })
 
         def run_hook(command: str, event: str, **fields) -> None:
@@ -379,7 +379,7 @@ def test_native_permission_request_does_not_replay_previous_completion(
             state_path = state_root / "codex-hook-sessions.json"
             return json.loads(state_path.read_text())["sessions"][session_id]
 
-        with FakeCmuxSocket(
+        with FakeBreeSocket(
             socket_path, None,
             surface_delivery_target=(FAKE_WORKSPACE_ID, FAKE_SURFACE_ID),
         ) as fake:
@@ -426,13 +426,13 @@ def test_native_permission_request_does_not_replay_previous_completion(
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
     with tempfile.TemporaryDirectory(
-        prefix="cmux-codex-permission-prompt-", dir="/tmp"
+        prefix="bree-codex-permission-prompt-", dir="/tmp"
     ) as td:
         root = Path(td)
         try:

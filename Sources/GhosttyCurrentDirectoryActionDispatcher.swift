@@ -1,4 +1,4 @@
-import CmuxTerminal
+import BreeTerminal
 import Foundation
 
 /// Nonblocking ordered handoff from Ghostty's serialized PTY callback to the

@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "start": [
       "peer b1",
       "peer parity",

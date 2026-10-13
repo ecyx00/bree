@@ -1,5 +1,5 @@
 import AppKit
-import CmuxSettingsUI
+import BreeSettingsUI
 
 extension AppDelegate {
     enum VisibleGlobalSearchShortcutRoute {

@@ -1,6 +1,6 @@
 import Bonsplit
-import CmuxPanes
-import CmuxWorkspaces
+import BreePanes
+import BreeWorkspaces
 import Foundation
 
 /// Surface navigation and sidebar status helpers extracted from `Workspace.swift`, which sits at its file-length budget.

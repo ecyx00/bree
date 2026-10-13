@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression tests for OMX HUD panes through cmux's tmux compatibility shim.
+Regression tests for OMX HUD panes through bree's tmux compatibility shim.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 from fake_socket_env import cli_environment, unwrap_capability
 
 WORKSPACE_ID = "11111111-1111-4111-8111-111111111111"
@@ -22,7 +22,7 @@ HUD_PANE_ID = "66666666-6666-4666-8666-666666666666"
 HUD_SURFACE_ID = "77777777-7777-4777-8777-777777777777"
 
 
-class FakeCmuxState:
+class FakeBreeState:
     def __init__(self) -> None:
         self.split_created = False
         self.hud_rows = 12
@@ -141,10 +141,10 @@ class FakeCmuxState:
             if params.get("surface_id") == HUD_SURFACE_ID:
                 return {"text": "[OMX#0.15.3] turns:1 | session:23s | last:12s ago\n"}
             return {"text": ""}
-        raise RuntimeError(f"Unsupported fake cmux method: {method}")
+        raise RuntimeError(f"Unsupported fake bree method: {method}")
 
 
-class FakeCmuxHandler(socketserver.StreamRequestHandler):
+class FakeBreeHandler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         while True:
             line = self.rfile.readline()
@@ -169,12 +169,12 @@ class FakeCmuxHandler(socketserver.StreamRequestHandler):
             self.wfile.flush()
 
 
-class FakeCmuxUnixServer(socketserver.ThreadingUnixStreamServer):
+class FakeBreeUnixServer(socketserver.ThreadingUnixStreamServer):
     allow_reuse_address = True
 
-    def __init__(self, socket_path: str, state: FakeCmuxState) -> None:
+    def __init__(self, socket_path: str, state: FakeBreeState) -> None:
         self.state = state
-        super().__init__(socket_path, FakeCmuxHandler)
+        super().__init__(socket_path, FakeBreeHandler)
 
 
 def run_cli(
@@ -184,10 +184,10 @@ def run_cli(
     args: list[str],
 ) -> subprocess.CompletedProcess[str]:
     env = cli_environment(socket_path, home=fake_home)
-    env["CMUX_WORKSPACE_ID"] = "workspace:1"
-    env["CMUX_SURFACE_ID"] = "surface:1"
+    env["BREE_WORKSPACE_ID"] = "workspace:1"
+    env["BREE_SURFACE_ID"] = "surface:1"
     env["TMUX_PANE"] = f"%{PANE_ID}"
-    env["CMUX_OMX_CMUX_BIN"] = cli_path
+    env["BREE_OMX_BREE_BIN"] = cli_path
     return subprocess.run(
         [cli_path, "--socket", str(socket_path), *args],
         capture_output=True,
@@ -220,7 +220,7 @@ def assert_omx_hud_splits_down_with_compact_size(
     socket_path: Path,
     fake_home: Path,
     cwd: Path,
-    state: FakeCmuxState,
+    state: FakeBreeState,
 ) -> None:
     proc = run_cli(cli_path, socket_path, fake_home, omx_hud_split_args(cwd))
     if proc.returncode != 0:
@@ -345,7 +345,7 @@ def assert_absolute_height_resize_uses_row_cell_size(
     cli_path: str,
     socket_path: Path,
     fake_home: Path,
-    state: FakeCmuxState,
+    state: FakeBreeState,
 ) -> None:
     baseline = len(state.resize_params)
     proc = run_cli(
@@ -375,7 +375,7 @@ def assert_omx_hud_absolute_width_resize_still_applies(
     cli_path: str,
     socket_path: Path,
     fake_home: Path,
-    state: FakeCmuxState,
+    state: FakeBreeState,
 ) -> None:
     baseline = len(state.resize_params)
     proc = run_cli(
@@ -405,7 +405,7 @@ def assert_omx_hud_absolute_height_resize_does_not_override_user_layout(
     cli_path: str,
     socket_path: Path,
     fake_home: Path,
-    state: FakeCmuxState,
+    state: FakeBreeState,
 ) -> None:
     baseline = len(state.resize_params)
     proc = run_cli(
@@ -484,7 +484,7 @@ def assert_tmux_short_formats_are_expanded(
         fake_home,
         ["__tmux-compat", "display-message", "-p", "##S #S"],
     )
-    if escaped.returncode != 0 or escaped.stdout.strip() != "#S cmux":
+    if escaped.returncode != 0 or escaped.stdout.strip() != "#S bree":
         raise AssertionError(
             f"tmux ## escape/short format mismatch: {escaped.stdout!r} {escaped.stderr!r}"
         )
@@ -531,7 +531,7 @@ def assert_disabled_omx_hud_does_not_split(
     socket_path: Path,
     fake_home: Path,
     cwd: Path,
-    state: FakeCmuxState,
+    state: FakeBreeState,
 ) -> None:
     config_dir = cwd / ".omx"
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -554,22 +554,22 @@ def assert_disabled_omx_hud_does_not_split(
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
     try:
-        with tempfile.TemporaryDirectory(prefix="cmux-omx-hud-split-") as td:
+        with tempfile.TemporaryDirectory(prefix="bree-omx-hud-split-") as td:
             tmp = Path(td)
-            socket_path = tmp / "fake-cmux.sock"
+            socket_path = tmp / "fake-bree.sock"
             fake_home = tmp / "home"
             fake_home.mkdir(parents=True, exist_ok=True)
             cwd = tmp / "project"
             cwd.mkdir(parents=True, exist_ok=True)
 
-            state = FakeCmuxState()
-            server = FakeCmuxUnixServer(str(socket_path), state)
+            state = FakeBreeState()
+            server = FakeBreeUnixServer(str(socket_path), state)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
@@ -618,16 +618,16 @@ def main() -> int:
                 server.server_close()
                 thread.join(timeout=2)
 
-        with tempfile.TemporaryDirectory(prefix="cmux-omx-hud-disabled-") as td:
+        with tempfile.TemporaryDirectory(prefix="bree-omx-hud-disabled-") as td:
             tmp = Path(td)
-            socket_path = tmp / "fake-cmux.sock"
+            socket_path = tmp / "fake-bree.sock"
             fake_home = tmp / "home"
             fake_home.mkdir(parents=True, exist_ok=True)
             cwd = tmp / "project"
             cwd.mkdir(parents=True, exist_ok=True)
 
-            state = FakeCmuxState()
-            server = FakeCmuxUnixServer(str(socket_path), state)
+            state = FakeBreeState()
+            server = FakeBreeUnixServer(str(socket_path), state)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:

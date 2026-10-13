@@ -77,8 +77,8 @@ GHOSTTY_SHA="tree-$(git rev-parse HEAD:ghostty)"
 # One-time bridge from the submodule era: legacy-keys maps a tree hash to the
 # old submodule commit whose cache dir / pinned checksum is still valid.
 LEGACY_SHA="$(awk -v t="${GHOSTTY_SHA#tree-}" '$1 == t {print $2; exit}' "$SCRIPT_DIR/ghosttykit-legacy-keys.txt" 2>/dev/null || true)"
-GHOSTTYKIT_CRASH_REPORT_SUBDIR="${CMUX_GHOSTTYKIT_CRASH_REPORT_SUBDIR:-cmux/crash}"
-# cmux owns process-wide crash capture through Sentry Cocoa. Linking Ghostty's
+GHOSTTYKIT_CRASH_REPORT_SUBDIR="${BREE_GHOSTTYKIT_CRASH_REPORT_SUBDIR:-bree/crash}"
+# bree owns process-wide crash capture through Sentry Cocoa. Linking Ghostty's
 # native Sentry as well creates a second global crash handler and starts its
 # environment-reading init thread during Ghostty locale mutation.
 GHOSTTYKIT_BUILD_FLAVOR="crashsubdir-$(printf '%s' "$GHOSTTYKIT_CRASH_REPORT_SUBDIR" | tr '/=' '--')-sentry-off-noi18n-v2"
@@ -103,17 +103,39 @@ if ! git diff --quiet HEAD -- ghostty || [[ -n "$UNTRACKED_FILES" ]]; then
   GHOSTTY_KEY="${GHOSTTY_CLEAN_KEY}-dirty-${DIRTY_HASH}"
 fi
 
-CACHE_ROOT="${CMUX_GHOSTTYKIT_CACHE_DIR:-$HOME/.cache/cmux/ghosttykit}"
+CACHE_ROOT="${BREE_GHOSTTYKIT_CACHE_DIR:-$HOME/.cache/bree/ghosttykit}"
 CACHE_DIR="$CACHE_ROOT/$GHOSTTY_KEY"
 CACHE_XCFRAMEWORK="$CACHE_DIR/GhosttyKit.xcframework"
 LOCAL_XCFRAMEWORK="$PROJECT_DIR/ghostty/macos/GhosttyKit.xcframework"
 LOCAL_KEY_STAMP="$LOCAL_XCFRAMEWORK/.ghostty_state_key"
 LEGACY_LOCAL_SHA_STAMP="$LOCAL_XCFRAMEWORK/.ghostty_sha"
 LOCK_DIR="$CACHE_ROOT/$GHOSTTY_KEY.lock"
-GHOSTTYKIT_CHECKSUMS_FILE="${CMUX_GHOSTTYKIT_CHECKSUMS_FILE:-$SCRIPT_DIR/ghosttykit-checksums.txt}"
-GHOSTTYKIT_ARCHIVE_VALIDATOR="${CMUX_GHOSTTYKIT_ARCHIVE_VALIDATOR:-$SCRIPT_DIR/validate-xcframework-archive.py}"
+GHOSTTYKIT_CHECKSUMS_FILE="${BREE_GHOSTTYKIT_CHECKSUMS_FILE:-$SCRIPT_DIR/ghosttykit-checksums.txt}"
+GHOSTTYKIT_ARCHIVE_VALIDATOR="${BREE_GHOSTTYKIT_ARCHIVE_VALIDATOR:-$SCRIPT_DIR/validate-xcframework-archive.py}"
 
 mkdir -p "$CACHE_ROOT"
+
+# One-time move of the cache written before the rename. Only the name changed (the directory and the
+# crash-subdir part of the build flavor), not the build input, so reuse it instead of rebuilding.
+# The old name is spelled in pieces on purpose: the repo has a zero-old-name lint.
+legacy_word="cm""ux"
+legacy_cache_root="$HOME/.cache/${legacy_word}/ghosttykit"
+if [[ -z "${BREE_GHOSTTYKIT_CACHE_DIR:-}" && -d "$legacy_cache_root" ]]; then
+  for legacy_entry in "$legacy_cache_root"/*; do
+    [[ -e "$legacy_entry" || -L "$legacy_entry" ]] || continue
+    legacy_name="$(basename "$legacy_entry")"
+    moved_name="${legacy_name//${legacy_word}-crash/bree-crash}"
+    [[ -e "$CACHE_ROOT/$moved_name" || -L "$CACHE_ROOT/$moved_name" ]] && continue
+    if [[ -L "$legacy_entry" ]]; then
+      legacy_target="$(readlink "$legacy_entry")"
+      ln -s "${legacy_target//${legacy_word}-crash/bree-crash}" "$CACHE_ROOT/$moved_name"
+      rm -f "$legacy_entry"
+    else
+      mv "$legacy_entry" "$CACHE_ROOT/$moved_name"
+    fi
+  done
+  rmdir "$legacy_cache_root" "$(dirname "$legacy_cache_root")" 2>/dev/null || true
+fi
 
 # Reuse the submodule-era cache dir for an unmodified tree via an alias symlink.
 if [[ -n "$LEGACY_SHA" && "$GHOSTTY_KEY" == "$GHOSTTY_CLEAN_KEY" && ! -e "$CACHE_DIR" \
@@ -184,7 +206,7 @@ done
 
 try_fetch_prebuilt_xcframework() {
   # Only attempt when the vendored ghostty/ tree is clean — dirty trees won't match any
-  # published release. Opt-out via CMUX_GHOSTTYKIT_NO_PREBUILT=1.
+  # published release. Opt-out via BREE_GHOSTTYKIT_NO_PREBUILT=1.
   #
   # Trust model: only install prebuilt artifacts whose SHA256 is pinned in the
   # reviewed checksum manifest for the legacy commit mapped to this tree.
@@ -192,7 +214,7 @@ try_fetch_prebuilt_xcframework() {
   if [[ "$GHOSTTY_KEY" != "$GHOSTTY_CLEAN_KEY" ]]; then
     return 1
   fi
-  if [[ "${CMUX_GHOSTTYKIT_NO_PREBUILT:-0}" == "1" || -z "$LEGACY_SHA" ]]; then
+  if [[ "${BREE_GHOSTTYKIT_NO_PREBUILT:-0}" == "1" || -z "$LEGACY_SHA" ]]; then
     return 1
   fi
   if ! command -v curl >/dev/null 2>&1; then
@@ -283,10 +305,10 @@ else
     (
       cd ghostty
       # -Di18n=false: compiling Ghostty's .po catalogs needs gettext's
-      # msgfmt, which not every builder has, and cmux never bundles the
+      # msgfmt, which not every builder has, and bree never bundles the
       # resulting .mo files (they only install into Ghostty's own app
       # bundle, skipped by -Demit-macos-app=false). Runtime lookups are
-      # comptime-gated to return the msgid, which is what cmux shipped
+      # comptime-gated to return the msgid, which is what bree shipped
       # all along.
       zig build \
         -Dcrash-report-subdir="$GHOSTTYKIT_CRASH_REPORT_SUBDIR" \

@@ -17,7 +17,7 @@ Resources/markdown-viewer/webviews-app/** linguist-generated
 # A merge can run right after checking out a fork branch, so a driver resolved
 # from the working tree would run that branch's code with the maintainer's
 # credentials. scripts/install-git-hooks.sh installs reviewed copies into
-# $GIT_COMMON_DIR/cmux-merge-drivers and configures absolute paths to those, so
+# $GIT_COMMON_DIR/bree-merge-drivers and configures absolute paths to those, so
 # what git executes is not what a branch can rewrite; it also repoints the
 # older checkout-relative merge.xcstrings name at the same trusted copy.
 # scripts/ci/catch_up_pr.py pins every driver to false instead, since catch-up
@@ -29,4 +29,4 @@ Resources/markdown-viewer/webviews-app/** linguist-generated
 # same regions. scripts/merge-pbxproj.py takes the union of entries each side
 # added and writes an ordinary conflict whenever a hunk is anything else. Same
 # registration.
-cmux.xcodeproj/project.pbxproj merge=pbxproj-v1
+bree.xcodeproj/project.pbxproj merge=pbxproj-v1

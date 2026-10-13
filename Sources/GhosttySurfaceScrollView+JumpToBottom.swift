@@ -1,13 +1,12 @@
 import AppKit
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeTerminal
+import BreeTerminalCore
 
 @MainActor
 extension GhosttySurfaceScrollView {
     /// Refreshes the "Jump to Bottom" pill from the surface's newest
     /// scrollbar packet.
     func synchronizeJumpToBottomIndicator() {
-        agentImageStripOverlay.contentDidChange()
         let cellWidth = surfaceView.cellSize.width
         let columns = cellWidth > 0 ? Int(surfaceView.bounds.width / cellWidth) : 0
         jumpToBottomIndicatorView.update(
@@ -46,6 +45,5 @@ extension GhosttySurfaceScrollView {
             _ = self?.scrollTerminalToBottom(focusTerminal: true)
         }
         addSubview(jumpToBottomIndicatorView)
-        addSubview(agentImageStripOverlay)
     }
 }

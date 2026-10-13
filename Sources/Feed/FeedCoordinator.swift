@@ -1,12 +1,12 @@
 import AppKit
 import Bonsplit
-import CMUXAgentLaunch
-import CmuxFoundation
-import CmuxNotifications
+import BREEAgentLaunch
+import BreeFoundation
+import BreeNotifications
 import Foundation
 @preconcurrency import UserNotifications
-import CmuxSettings
-import CmuxSidebar
+import BreeSettings
+import BreeSidebar
 
 private enum FeedEventAcceptance: Sendable {
     case accepted(event: WorkstreamEvent, item: WorkstreamItem)
@@ -25,7 +25,7 @@ private enum FeedEventAcceptance: Sendable {
 /// Hooks then receive the decision inline in the `feed.push` response.
 final class FeedCoordinator: @unchecked Sendable {
     static let shared = FeedCoordinator()
-    static let storeInstalledNotification = Notification.Name("cmux.feed.storeInstalled")
+    static let storeInstalledNotification = Notification.Name("bree.feed.storeInstalled")
 
     // The store runs on the main actor. The coordinator is not isolated,
     // so it hops to main explicitly when touching the store.
@@ -52,7 +52,7 @@ final class FeedCoordinator: @unchecked Sendable {
     /// multiple prompts only installs one watcher.
     @MainActor private var pidWatchers: [Int: DispatchSourceProcess] = [:]
     private let pidWatcherQueue = DispatchQueue(
-        label: "cmux.feed.pidWatcher", qos: .utility
+        label: "bree.feed.pidWatcher", qos: .utility
     )
 
     /// Every accepted Feed path crosses this lane before insertion and `received` publication.
@@ -75,7 +75,7 @@ final class FeedCoordinator: @unchecked Sendable {
     /// transient target per agent session and retire it on the next event.
     @MainActor private var transientAttentionTargets: [String: FeedAttentionTarget] = [:]
 
-    /// Tail of the serialized `CMUXFeedQuestion.` category mutation chain.
+    /// Tail of the serialized `BREEFeedQuestion.` category mutation chain.
     /// `UNUserNotificationCenter` has no atomic category merge, so every
     /// mutation is a get→filter→set round trip; two concurrent round trips
     /// (mint racing mint, or mint racing cancel) each capture a stale snapshot
@@ -580,7 +580,7 @@ final class FeedCoordinator: @unchecked Sendable {
         )
     }
 
-    /// Retires blocking requests that `event` proves were decided outside cmux:
+    /// Retires blocking requests that `event` proves were decided outside bree:
     /// the waiting hook returns no decision, the card expires, and the
     /// needs-input overlay and banner clear, as when the user replies in Feed.
     @MainActor
@@ -702,7 +702,7 @@ extension FeedCoordinator {
     /// Returns the Feed-owned status/lifecycle slot for one agent source.
     /// Keeping this transient overlay separate from the agent's own slot makes
     /// concurrent hook updates and overlapping Feed decisions independent.
-    static let attentionStatusKeyPrefix = "cmux.feed.attention:"
+    static let attentionStatusKeyPrefix = "bree.feed.attention:"
 
     static func attentionStatusKey(forSource source: String) -> String {
         "\(attentionStatusKeyPrefix)\(lifecycleStatusKey(forSource: source))"
@@ -729,13 +729,13 @@ extension FeedCoordinator {
     /// This is the convergence point the PreToolUse→PermissionRequest
     /// migration left behind: the `feed.push` bridge ingested the card and
     /// (when inactive) posted a banner, but never drove the same in-app
-    /// attention path the `cmux hooks <agent> notification` hook uses. Doing
+    /// attention path the `bree hooks <agent> notification` hook uses. Doing
     /// it here — once, for every blocking decision — keeps a new event type
     /// from silently swallowing.
     ///
     /// Process-level AppKit attention is intentionally excluded: Stage Manager
-    /// can promote the entire cmux window set even though no user action targeted
-    /// cmux. The lifecycle and status mutations below are the attention surface.
+    /// can promote the entire bree window set even though no user action targeted
+    /// bree. The lifecycle and status mutations below are the attention surface.
     ///
     /// The overlay is cleared by ``concludeBlockingDecisionAttention(_:)``
     /// when the decision resolves or times out. Clearing is refcounted per
@@ -765,7 +765,7 @@ extension FeedCoordinator {
 
         guard let resolved else {
             #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "feed.attention.skip reason=unresolved-target session=\(event.sessionId) request=\(event.requestId ?? "nil") hook=\(event.hookEventName.rawValue) source=\(event.source) workspace=\(event.workspaceId ?? "nil") receivedAt=\(event.receivedAt.timeIntervalSince1970)"
             )
             #endif
@@ -777,7 +777,7 @@ extension FeedCoordinator {
         guard let tabManager,
               let tab = tabManager.tabs.first(where: { $0.id == resolved.ownerId }) else {
             #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "feed.attention.skip reason=missing-owner session=\(event.sessionId) request=\(event.requestId ?? "nil") hook=\(event.hookEventName.rawValue) source=\(event.source) owner=\(resolved.ownerId.uuidString) receivedAt=\(event.receivedAt.timeIntervalSince1970)"
             )
             #endif
@@ -801,7 +801,7 @@ extension FeedCoordinator {
         }
         guard resolved.surfaceId == nil || panelId != nil else {
             #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "feed.attention.skip reason=missing-surface session=\(event.sessionId) request=\(event.requestId ?? "nil") hook=\(event.hookEventName.rawValue) source=\(event.source) owner=\(resolved.ownerId.uuidString) surface=\(resolved.surfaceId?.uuidString ?? "nil") receivedAt=\(event.receivedAt.timeIntervalSince1970)"
             )
             #endif
@@ -830,7 +830,7 @@ extension FeedCoordinator {
             key: statusKey,
             value: Self.needsInputStatusValue,
             icon: "bell.fill",
-            color: CmuxAccentColor.builtInAgentStatusHex,
+            color: BreeAccentColor.builtInAgentStatusHex,
             timestamp: Date()
         ), key: statusKey, panelId: panelId)
 
@@ -1190,7 +1190,7 @@ private extension FeedCoordinator {
                     defaultValue: "Decision needed"
                 )
             case .exitPlanMode:
-                categoryId = "CMUXFeedExitPlan"
+                categoryId = "BREEFeedExitPlan"
                 title = String(
                     localized: "feed.notification.exitPlan.title",
                     defaultValue: "\(event.source.capitalized) plan ready"
@@ -1201,8 +1201,8 @@ private extension FeedCoordinator {
                 )
             case .askUserQuestion:
                 categoryId = Self.inlineQuestionOptions(for: event) == nil
-                    ? "CMUXFeedQuestion"
-                    : "CMUXFeedQuestion.\(requestId)"
+                    ? "BREEFeedQuestion"
+                    : "BREEFeedQuestion.\(requestId)"
                 title = String(
                     localized: "feed.notification.question.title",
                     defaultValue: "\(event.source.capitalized) question"
@@ -1291,7 +1291,7 @@ private extension FeedCoordinator {
         if supportsOnce { suffix += "Once" }
         if supportsAlways { suffix += "Always" }
         if supportsAll { suffix += "All" }
-        return suffix.isEmpty ? "CMUXFeedPermissionDeny" : "CMUXFeedPermission\(suffix)"
+        return suffix.isEmpty ? "BREEFeedPermissionDeny" : "BREEFeedPermission\(suffix)"
     }
 
     private static func inlineQuestionOptions(
@@ -1483,7 +1483,7 @@ private extension FeedCoordinator {
         requestId: String,
         effects: TerminalNotificationPolicyEffects
     ) {
-        guard request.content.categoryIdentifier.hasPrefix("CMUXFeedQuestion."),
+        guard request.content.categoryIdentifier.hasPrefix("BREEFeedQuestion."),
               let options = Self.inlineQuestionOptions(for: event) else {
             addNotificationIfStillAwaiting(
                 request: request,
@@ -1537,9 +1537,9 @@ private extension FeedCoordinator {
                 )
                 return
             }
-            let liveCategoryIds = self.liveWaiterRequestIds().map { "CMUXFeedQuestion.\($0)" }
+            let liveCategoryIds = self.liveWaiterRequestIds().map { "BREEFeedQuestion.\($0)" }
             var categories = Set(current.filter { category in
-                !category.identifier.hasPrefix("CMUXFeedQuestion.")
+                !category.identifier.hasPrefix("BREEFeedQuestion.")
                     || liveCategoryIds.contains(category.identifier)
             })
             categories.insert(minted)
@@ -1552,7 +1552,7 @@ private extension FeedCoordinator {
         }
     }
 
-    /// Appends one `CMUXFeedQuestion.` category round trip to the serialized
+    /// Appends one `BREEFeedQuestion.` category round trip to the serialized
     /// chain (see `questionCategoryUpdates`). Order between distinct requests
     /// is irrelevant — a mint whose waiter already resolved aborts on its
     /// `isAwaitingDecision` guard, and every update prunes dead categories —
@@ -1672,7 +1672,7 @@ private extension FeedCoordinator {
                     referenceID: identifier
                 )
             }
-            let categoryId = "CMUXFeedQuestion.\(requestId)"
+            let categoryId = "BREEFeedQuestion.\(requestId)"
             self.enqueueQuestionCategoryUpdate {
                 guard case .success(let current) = await center.notificationCategories() else { return }
                 let categories = Set(current.filter { $0.identifier != categoryId })
@@ -1684,7 +1684,7 @@ private extension FeedCoordinator {
 
 private struct FeedNotificationPolicyContext {
     let envelope: TerminalNotificationPolicyEnvelope
-    let hooks: [CmuxResolvedNotificationHook]
+    let hooks: [BreeResolvedNotificationHook]
     let globalConfigPath: String?
 }
 
@@ -1697,7 +1697,7 @@ private func makeFeedNotificationPolicyContext(
     let appDelegate = AppDelegate.shared
     let workspaceID = event.workspaceId.flatMap(UUID.init(uuidString:))
     let context = workspaceID.flatMap { appDelegate?.contextContainingTabId($0) }
-        ?? appDelegate?.mainWindowContexts.values.first(where: { $0.cmuxConfigStore != nil })
+        ?? appDelegate?.mainWindowContexts.values.first(where: { $0.breeConfigStore != nil })
     let workspace = workspaceID.flatMap { id in
         context?.tabManager.tabs.first(where: { $0.id == id })
     }
@@ -1745,8 +1745,8 @@ private func makeFeedNotificationPolicyContext(
             ),
             effects: effects
         ),
-        hooks: context?.cmuxConfigStore?.notificationHooks(startingFrom: workspace?.isRemoteWorkspace == true ? nil : (normalizedFeedNotificationCWD(event.cwd) ?? workspace?.surfaceTabBarDirectory)) ?? [],
-        globalConfigPath: context?.cmuxConfigStore?.globalConfigPath
+        hooks: context?.breeConfigStore?.notificationHooks(startingFrom: workspace?.isRemoteWorkspace == true ? nil : (normalizedFeedNotificationCWD(event.cwd) ?? workspace?.surfaceTabBarDirectory)) ?? [],
+        globalConfigPath: context?.breeConfigStore?.globalConfigPath
     )
 }
 

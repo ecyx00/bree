@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import AppKit
 import Foundation
 
@@ -47,7 +47,7 @@ extension TerminalController {
     }
 
     nonisolated func processAggregates(
-        from processSnapshot: CmuxTopProcessSnapshot,
+        from processSnapshot: BreeTopProcessSnapshot,
         totalPIDs: Set<Int>
     ) -> (programs: [[String: Any]], codingAgents: [[String: Any]]) {
         (

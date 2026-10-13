@@ -1,5 +1,5 @@
 import AppKit
-import CmuxCommandPalette
+import BreeCommandPalette
 
 extension ContentView {
     static func commandPaletteSurfaceNavigationContributions()

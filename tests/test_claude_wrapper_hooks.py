@@ -20,23 +20,23 @@ from node_runtime import ensure_node_on_path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "cmux-claude-wrapper"
+SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "bree-claude-wrapper"
 
 
 def queued_hook_command(agent: str, subcommand: str, disabled_key: str) -> str:
-    pid_key = "CMUX_" + "".join(character if character.isalnum() else "_" for character in agent.upper()) + "_PID"
+    pid_key = "BREE_" + "".join(character if character.isalnum() else "_" for character in agent.upper()) + "_PID"
     if agent == "claude":
-        executable = "${CMUX_CLAUDE_HOOK_CMUX_BIN:-${CMUX_BUNDLED_CLI_PATH:-}}"
+        executable = "${BREE_CLAUDE_HOOK_BREE_BIN:-${BREE_BUNDLED_CLI_PATH:-}}"
     elif agent == "codex":
-        executable = "${CMUX_CODEX_HOOK_CMUX_BIN:-${CMUX_BUNDLED_CLI_PATH:-}}"
+        executable = "${BREE_CODEX_HOOK_BREE_BIN:-${BREE_BUNDLED_CLI_PATH:-}}"
     else:
-        executable = "${CMUX_BUNDLED_CLI_PATH:-}"
+        executable = "${BREE_BUNDLED_CLI_PATH:-}"
     return "; ".join(
         [
-            f'cmux_cli="{executable}"',
-            'if [ -z "$cmux_cli" ] || [ ! -x "$cmux_cli" ]; then cmux_cli="$(command -v bree 2>/dev/null || true)"; fi',
+            f'bree_cli="{executable}"',
+            'if [ -z "$bree_cli" ] || [ ! -x "$bree_cli" ]; then bree_cli="$(command -v bree 2>/dev/null || true)"; fi',
             f'agent_pid="${{{pid_key}:-${{PPID:-}}}}"',
-            f'if [ -n "$CMUX_SURFACE_ID" ] && [ "${disabled_key}" != "1" ] && [ -n "$cmux_cli" ]; then if [ -n "${{CMUX_SOCKET_PATH:-}}" ]; then {pid_key}="$agent_pid" CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC=0.5 "$cmux_cli" --socket "$CMUX_SOCKET_PATH" hooks enqueue {agent} {subcommand} 2>/dev/null || {{ cat >/dev/null; echo \'{{}}\'; }}; else {pid_key}="$agent_pid" CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC=0.5 "$cmux_cli" hooks enqueue {agent} {subcommand} 2>/dev/null || {{ cat >/dev/null; echo \'{{}}\'; }}; fi; else cat >/dev/null; echo \'{{}}\'; fi',
+            f'if [ -n "$BREE_SURFACE_ID" ] && [ "${disabled_key}" != "1" ] && [ -n "$bree_cli" ]; then if [ -n "${{BREE_SOCKET_PATH:-}}" ]; then {pid_key}="$agent_pid" BREE_CLI_RESPONSE_TIMEOUT_SEC=0.5 "$bree_cli" --socket "$BREE_SOCKET_PATH" hooks enqueue {agent} {subcommand} 2>/dev/null || {{ cat >/dev/null; echo \'{{}}\'; }}; else {pid_key}="$agent_pid" BREE_CLI_RESPONSE_TIMEOUT_SEC=0.5 "$bree_cli" hooks enqueue {agent} {subcommand} 2>/dev/null || {{ cat >/dev/null; echo \'{{}}\'; }}; fi; else cat >/dev/null; echo \'{{}}\'; fi',
         ]
     )
 
@@ -44,30 +44,30 @@ def queued_hook_command(agent: str, subcommand: str, disabled_key: str) -> str:
 def spool_producer_command(agent: str, subcommand: str, fallback: str) -> str:
     """Port of AgentHookSpoolProducer.command(subcommand:fallback:)."""
     upper = agent.upper()
-    pid_key = "CMUX_" + "".join(character if character.isalnum() else "_" for character in upper) + "_PID"
-    spool_key = f"CMUX_{upper}_HOOK_SPOOL_DIR"
-    disable_key = f"CMUX_{upper}_HOOKS_DISABLED"
+    pid_key = "BREE_" + "".join(character if character.isalnum() else "_" for character in upper) + "_PID"
+    spool_key = f"BREE_{upper}_HOOK_SPOOL_DIR"
+    disable_key = f"BREE_{upper}_HOOKS_DISABLED"
     script = "\n".join(
         [
             "LC_ALL=C",
             f"export {pid_key}=${{{pid_key}:-$PPID}}",
-            'cmux_fallback() { { print -rn -- "$cmux_p"; /bin/cat; } | /bin/sh -c "$1" >&3; exit $?; }',
+            'bree_fallback() { { print -rn -- "$bree_p"; /bin/cat; } | /bin/sh -c "$1" >&3; exit $?; }',
             'zmodload zsh/system zsh/datetime zsh/files 2>/dev/null || exec /bin/sh -c "$1" >&3',
-            "cmux_p= cmux_c= cmux_e=0",
-            f"while (( ${{#cmux_p}} < {256 * 1024} )); do sysread -i 0 -s 65536 cmux_c || {{ cmux_e=$?; break; }}; cmux_p+=$cmux_c; done",
-            f"[[ -n ${{CMUX_SURFACE_ID:-}} && ${{{disable_key}:-}} != 1 ]] || {{ (( cmux_e == 5 )) || /bin/cat >/dev/null; print -r -- '{{}}' >&3; exit 0; }}",
-            f"cmux_d=${spool_key}",
-            '(( cmux_e == 5 )) && [[ -f $cmux_d/keys ]] || cmux_fallback "$1"',
-            f"cmux_r=\"cmux-agent-hook-v1\"$'\\n'\"{agent}\"$'\\n'\"$2\"$'\\n'",
-            "for cmux_k in ${(f)\"$(<$cmux_d/keys)\"}; do (( ${+parameters[$cmux_k]} )) && cmux_r+=\"$cmux_k=${(P)cmux_k}\"$'\\0'; done",
-            "cmux_r+=$'\\0'\"$cmux_p\"",
-            f'(( ${{#cmux_r}} <= {512 * 1024} )) || cmux_fallback "$1"',
+            "bree_p= bree_c= bree_e=0",
+            f"while (( ${{#bree_p}} < {256 * 1024} )); do sysread -i 0 -s 65536 bree_c || {{ bree_e=$?; break; }}; bree_p+=$bree_c; done",
+            f"[[ -n ${{BREE_SURFACE_ID:-}} && ${{{disable_key}:-}} != 1 ]] || {{ (( bree_e == 5 )) || /bin/cat >/dev/null; print -r -- '{{}}' >&3; exit 0; }}",
+            f"bree_d=${spool_key}",
+            '(( bree_e == 5 )) && [[ -f $bree_d/keys ]] || bree_fallback "$1"',
+            f"bree_r=\"bree-agent-hook-v1\"$'\\n'\"{agent}\"$'\\n'\"$2\"$'\\n'",
+            "for bree_k in ${(f)\"$(<$bree_d/keys)\"}; do (( ${+parameters[$bree_k]} )) && bree_r+=\"$bree_k=${(P)bree_k}\"$'\\0'; done",
+            "bree_r+=$'\\0'\"$bree_p\"",
+            f'(( ${{#bree_r}} <= {512 * 1024} )) || bree_fallback "$1"',
             "umask 077",
-            "cmux_n=$cmux_d/$epochtime[1].$epochtime[2]-$$",
-            '{ print -rn -- "$cmux_r" >| $cmux_n.tmp && mv -f -- $cmux_n.tmp $cmux_n.rec; } 2>/dev/null || { rm -f -- $cmux_n.tmp 2>/dev/null; cmux_fallback "$1"; }',
-            "if zsystem flock -t 0 -r -f cmux_l $cmux_d/forwarder.lock 2>/dev/null; then",
-            "  zsystem flock -u $cmux_l",
-            '  rm -- $cmux_n.rec 2>/dev/null && cmux_fallback "$1"',
+            "bree_n=$bree_d/$epochtime[1].$epochtime[2]-$$",
+            '{ print -rn -- "$bree_r" >| $bree_n.tmp && mv -f -- $bree_n.tmp $bree_n.rec; } 2>/dev/null || { rm -f -- $bree_n.tmp 2>/dev/null; bree_fallback "$1"; }',
+            "if zsystem flock -t 0 -r -f bree_l $bree_d/forwarder.lock 2>/dev/null; then",
+            "  zsystem flock -u $bree_l",
+            '  rm -- $bree_n.rec 2>/dev/null && bree_fallback "$1"',
             "fi",
             "print -r -- '{}' >&3",
         ]
@@ -78,13 +78,13 @@ def spool_producer_command(agent: str, subcommand: str, fallback: str) -> str:
 
     return (
         f'if [ -n "${{{spool_key}:-}}" ] && [ -x /bin/zsh ]; then '
-        f"exec /bin/zsh -fc {single_quoted(script)} cmux-hook {single_quoted(fallback)} {subcommand} 3>&1 1>&2; "
+        f"exec /bin/zsh -fc {single_quoted(script)} bree-hook {single_quoted(fallback)} {subcommand} 3>&1 1>&2; "
         f"else {fallback}; fi"
     )
 
 
 def generated_claude_hook_settings() -> str:
-    direct_cli = '"${CMUX_CLAUDE_HOOK_CMUX_BIN:-bree}"'
+    direct_cli = '"${BREE_CLAUDE_HOOK_BREE_BIN:-bree}"'
 
     def direct(
         command: str,
@@ -108,7 +108,7 @@ def generated_claude_hook_settings() -> str:
             spool_producer_command(
                 "claude",
                 subcommand,
-                queued_hook_command("claude", subcommand, "CMUX_CLAUDE_HOOKS_DISABLED"),
+                queued_hook_command("claude", subcommand, "BREE_CLAUDE_HOOKS_DISABLED"),
             ),
             5,
             matcher=matcher,
@@ -145,7 +145,7 @@ def generated_claude_hook_settings() -> str:
 
 
 # Fixtures exit at once while this is set, so priming runs none of their logic.
-PRIME_ENVIRONMENT_KEY = "CMUX_TEST_PRIME_EXEC"
+PRIME_ENVIRONMENT_KEY = "BREE_TEST_PRIME_EXEC"
 
 
 def prime_first_exec(path: Path, *args: str, env: dict[str, str] | None = None) -> None:
@@ -154,7 +154,7 @@ def prime_first_exec(path: Path, *args: str, env: dict[str, str] | None = None) 
     The first exec of every newly written file, a copy included, blocks in
     syspolicyd (Gatekeeper scan, notarization lookup, XProtect scan): 0.15-0.4 s
     on an idle Mac and seconds on a loaded shared mini. The wrapper bounds
-    `cmux hooks claude inject-settings` to 1 s and `claude --help` to 0.75 s.
+    `bree hooks claude inject-settings` to 1 s and `claude --help` to 0.75 s.
     Installed binaries were executed before, so only a fixture pays this, and
     it must not pay it inside those budgets.
     """
@@ -225,16 +225,16 @@ def run_wrapper(
     help_output: str | None = None,
     help_behavior: str = "success",
 ) -> tuple[int, list[str], list[str], str, str, str, str, str, str, str]:
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-wrapper-test-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-wrapper-test-") as td:
         tmp = Path(td)
-        wrapper_dir = tmp / "cmux.app" / "Contents" / "Resources" / "bin"
+        wrapper_dir = tmp / "bree.app" / "Contents" / "Resources" / "bin"
         real_dir = tmp / "real-bin"
         bundled_dir = tmp / "bundled cli"
         wrapper_dir.mkdir(parents=True, exist_ok=True)
         real_dir.mkdir(parents=True, exist_ok=True)
         bundled_dir.mkdir(parents=True, exist_ok=True)
 
-        wrapper = wrapper_dir / "cmux-claude-wrapper"
+        wrapper = wrapper_dir / "bree-claude-wrapper"
         install_wrapper_copy(wrapper)
 
         real_args_log = tmp / "real-args.log"
@@ -243,9 +243,9 @@ def run_wrapper(
         real_runtime_node_options_log = tmp / "real-runtime-node-options.log"
         real_child_node_options_log = tmp / "real-child-node-options.log"
         real_launch_argv_b64_log = tmp / "real-launch-argv-b64.log"
-        hook_cmux_bin_log = tmp / "hook-cmux-bin.log"
-        cmux_log = tmp / "cmux.log"
-        socket_path = str(tmp / "cmux.sock")
+        hook_bree_bin_log = tmp / "hook-bree-bin.log"
+        bree_log = tmp / "bree.log"
+        socket_path = str(tmp / "bree.sock")
 
         make_executable(
             real_dir / "claude",
@@ -254,8 +254,8 @@ set -euo pipefail
 : > "$FAKE_REAL_ARGS_LOG"
 printf '%s\\n' "${CLAUDECODE-__UNSET__}" > "$FAKE_REAL_CLAUDECODE_LOG"
 printf '%s\\n' "${NODE_OPTIONS-__UNSET__}" > "$FAKE_REAL_NODE_OPTIONS_LOG"
-printf '%s\\n' "${CMUX_AGENT_LAUNCH_ARGV_B64-__UNSET__}" > "$FAKE_REAL_LAUNCH_ARGV_B64_LOG"
-printf '%s\\n' "${CMUX_CLAUDE_HOOK_CMUX_BIN-__UNSET__}" > "$FAKE_HOOK_CMUX_BIN_LOG"
+printf '%s\\n' "${BREE_AGENT_LAUNCH_ARGV_B64-__UNSET__}" > "$FAKE_REAL_LAUNCH_ARGV_B64_LOG"
+printf '%s\\n' "${BREE_CLAUDE_HOOK_BREE_BIN-__UNSET__}" > "$FAKE_HOOK_BREE_BIN_LOG"
 for arg in "$@"; do
   printf '%s\\n' "$arg" >> "$FAKE_REAL_ARGS_LOG"
 done
@@ -313,12 +313,12 @@ fs.writeFileSync(
             wrapper_dir / "bree",
             """#!/usr/bin/env bash
 set -euo pipefail
-printf '%s timeout=%s\\n' "$*" "${CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC-__UNSET__}" >> "$FAKE_CMUX_LOG"
+printf '%s timeout=%s\\n' "$*" "${BREE_CLI_RESPONSE_TIMEOUT_SEC-__UNSET__}" >> "$FAKE_BREE_LOG"
 if [[ "${1:-}" == "--socket" ]]; then
   shift 2
 fi
 if [[ "${1:-}" == "ping" ]]; then
-  if [[ "${FAKE_CMUX_PING_OK:-0}" == "1" ]]; then
+  if [[ "${FAKE_BREE_PING_OK:-0}" == "1" ]]; then
     exit 0
   fi
   exit 1
@@ -349,8 +349,8 @@ exit 0
             sandbox_home.mkdir()
             env["HOME"] = str(sandbox_home)
         env["PATH"] = f"{wrapper_dir}:{real_dir}:{env.get('PATH', '/usr/bin:/bin')}"
-        env["CMUX_SURFACE_ID"] = "surface:test"
-        env["CMUX_SOCKET_PATH"] = socket_path
+        env["BREE_SURFACE_ID"] = "surface:test"
+        env["BREE_SOCKET_PATH"] = socket_path
         env["FAKE_REAL_ARGS_LOG"] = str(real_args_log)
         env["FAKE_REAL_CLAUDECODE_LOG"] = str(real_claudecode_log)
         env["FAKE_REAL_NODE_OPTIONS_LOG"] = str(real_node_options_log)
@@ -372,27 +372,27 @@ exit 0
             if help_output is None
             else help_output
         )
-        env["FAKE_HOOK_CMUX_BIN_LOG"] = str(hook_cmux_bin_log)
-        env["FAKE_CMUX_LOG"] = str(cmux_log)
-        env["FAKE_CMUX_PING_OK"] = "1" if socket_state == "live" else "0"
+        env["FAKE_HOOK_BREE_BIN_LOG"] = str(hook_bree_bin_log)
+        env["FAKE_BREE_LOG"] = str(bree_log)
+        env["FAKE_BREE_PING_OK"] = "1" if socket_state == "live" else "0"
         env["FAKE_GENERATED_CLAUDE_HOOK_SETTINGS"] = (
             generated_claude_hook_settings()
             if generated_hook_settings is None
             else generated_hook_settings
         )
-        env["CMUX_BUNDLED_CLI_PATH"] = str(bundled_cli_path)
+        env["BREE_BUNDLED_CLI_PATH"] = str(bundled_cli_path)
         env["CLAUDECODE"] = "nested-session-sentinel"
-        env.pop("CMUX_CLAUDE_HOOK_CMUX_BIN", None)
+        env.pop("BREE_CLAUDE_HOOK_BREE_BIN", None)
         if hooks_disabled:
-            env["CMUX_CLAUDE_HOOKS_DISABLED"] = "1"
+            env["BREE_CLAUDE_HOOKS_DISABLED"] = "1"
         else:
-            env.pop("CMUX_CLAUDE_HOOKS_DISABLED", None)
-        env.pop("CMUX_AGENT_RESTORE_LAUNCH", None)
+            env.pop("BREE_CLAUDE_HOOKS_DISABLED", None)
+        env.pop("BREE_AGENT_RESTORE_LAUNCH", None)
         env.pop("NODE_OPTIONS", None)
         if tmpdir is not None:
             env["TMPDIR"] = tmpdir
-        if node_options == "__CMUX_TEST_PRELOAD__":
-            preload_path = tmp / "cmux-test-preload.js"
+        if node_options == "__BREE_TEST_PRELOAD__":
+            preload_path = tmp / "bree-test-preload.js"
             preload_path.write_text("// benign preload used to test MCP env scrubbing\n", encoding="utf-8")
             env["NODE_OPTIONS"] = f"--require={preload_path}"
         elif node_options is not None:
@@ -427,7 +427,7 @@ exit 0
                 test_socket.close()
 
         claudecode_lines = read_lines(real_claudecode_log)
-        hook_cmux_bin_lines = read_lines(hook_cmux_bin_log)
+        hook_bree_bin_lines = read_lines(hook_bree_bin_log)
         launch_argv_b64_lines = read_lines(real_launch_argv_b64_log)
         claudecode_value = claudecode_lines[0] if claudecode_lines else ""
         node_options_lines = read_lines(real_node_options_log)
@@ -436,7 +436,7 @@ exit 0
         runtime_node_options_value = runtime_node_options_lines[0] if runtime_node_options_lines else ""
         child_node_options_lines = read_lines(real_child_node_options_log)
         child_node_options_value = child_node_options_lines[0] if child_node_options_lines else ""
-        hook_cmux_bin_value = hook_cmux_bin_lines[0] if hook_cmux_bin_lines else ""
+        hook_bree_bin_value = hook_bree_bin_lines[0] if hook_bree_bin_lines else ""
         launch_argv_b64_value = launch_argv_b64_lines[0] if launch_argv_b64_lines else ""
         stderr = proc.stderr.strip()
         if timed_out:
@@ -444,13 +444,13 @@ exit 0
         return (
             proc.returncode,
             read_lines(real_args_log),
-            read_lines(cmux_log),
+            read_lines(bree_log),
             stderr,
             claudecode_value,
             node_options_value,
             runtime_node_options_value,
             child_node_options_value,
-            hook_cmux_bin_value,
+            hook_bree_bin_value,
             launch_argv_b64_value,
         )
 
@@ -463,40 +463,40 @@ def run_wrapper_terminal_env_probe(
     restore_token: str | None = None,
     help_output: str = "",
 ) -> tuple[int, dict[str, str], list[str], str, set[str]]:
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-wrapper-env-probe-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-wrapper-env-probe-") as td:
         tmp = Path(td)
         wrapper_dir = tmp / "wrapper-bin"
         real_dir = tmp / "real-bin"
         wrapper_dir.mkdir(parents=True, exist_ok=True)
         real_dir.mkdir(parents=True, exist_ok=True)
 
-        wrapper = wrapper_dir / "cmux-claude-wrapper"
+        wrapper = wrapper_dir / "bree-claude-wrapper"
         install_wrapper_copy(wrapper)
 
         env_log = tmp / "real-env.log"
         args_log = tmp / "real-args.log"
-        socket_path = str(tmp / "cmux.sock")
+        socket_path = str(tmp / "bree.sock")
         fingerprint_env = {
-            "CMUX_BUNDLE_ID": "com.cmuxterm.app.debug.envprobe",
-            "CMUX_BUNDLED_CLI_PATH": str(wrapper_dir / "bree"),
-            "CMUX_LOAD_GHOSTTY_ZSH_INTEGRATION": "1",
-            "CMUX_PANEL_ID": "panel:test",
-            "CMUX_PORT": "9170",
-            "CMUX_PORT_END": "9179",
-            "CMUX_PORT_RANGE": "10",
-            "CMUX_SHELL_INTEGRATION": "1",
-            "CMUX_SHELL_INTEGRATION_DIR": str(tmp / "shell-integration"),
-            "CMUX_SOCKET_PATH": socket_path,
-            "CMUX_SURFACE_ID": "surface:test",
-            "CMUX_TAB_ID": "tab:test",
-            "CMUX_WORKSPACE_ID": "workspace:test",
-            "CMUX_CLAUDE_HEADLESS": "0",
+            "BREE_BUNDLE_ID": "com.bree.app.debug.envprobe",
+            "BREE_BUNDLED_CLI_PATH": str(wrapper_dir / "bree"),
+            "BREE_LOAD_GHOSTTY_ZSH_INTEGRATION": "1",
+            "BREE_PANEL_ID": "panel:test",
+            "BREE_PORT": "9170",
+            "BREE_PORT_END": "9179",
+            "BREE_PORT_RANGE": "10",
+            "BREE_SHELL_INTEGRATION": "1",
+            "BREE_SHELL_INTEGRATION_DIR": str(tmp / "shell-integration"),
+            "BREE_SOCKET_PATH": socket_path,
+            "BREE_SURFACE_ID": "surface:test",
+            "BREE_TAB_ID": "tab:test",
+            "BREE_WORKSPACE_ID": "workspace:test",
+            "BREE_CLAUDE_HEADLESS": "0",
             "TERMINFO": str(tmp / "terminfo"),
         }
         if hooks_disabled:
-            fingerprint_env["CMUX_CLAUDE_HOOKS_DISABLED"] = "1"
+            fingerprint_env["BREE_CLAUDE_HOOKS_DISABLED"] = "1"
         if restore_token is not None:
-            fingerprint_env["CMUX_AGENT_RESTORE_LAUNCH"] = restore_token
+            fingerprint_env["BREE_AGENT_RESTORE_LAUNCH"] = restore_token
         probe_key_lines = "\n".join(f"  {key}" for key in fingerprint_env)
 
         make_executable(
@@ -533,7 +533,7 @@ if [[ "${1:-}" == "--socket" ]]; then
   shift 2
 fi
 if [[ "${1:-}" == "ping" ]]; then
-  [[ "${FAKE_CMUX_PING_OK:-0}" == "1" ]]
+  [[ "${FAKE_BREE_PING_OK:-0}" == "1" ]]
   exit
 fi
 exit 0
@@ -555,7 +555,7 @@ exit 0
             env["FAKE_REAL_ENV_LOG"] = str(env_log)
             env["FAKE_REAL_ARGS_LOG"] = str(args_log)
             env["FAKE_REAL_HELP_OUTPUT"] = help_output
-            env["FAKE_CMUX_PING_OK"] = "1" if socket_state == "live" else "0"
+            env["FAKE_BREE_PING_OK"] = "1" if socket_state == "live" else "0"
 
             proc = subprocess.run(
                 [str(wrapper), *argv],
@@ -592,22 +592,22 @@ def run_wrapper_auth_env(
     inherited_env: dict[str, str],
     socket_state: str = "live",
     hooks_disabled: bool = False,
-    in_cmux: bool = True,
+    in_bree: bool = True,
     setup_env=None,
 ) -> tuple[int, dict[str, str], list[str], str]:
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-wrapper-auth-env-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-wrapper-auth-env-") as td:
         tmp = Path(td)
         wrapper_dir = tmp / "wrapper-bin"
         real_dir = tmp / "real-bin"
         wrapper_dir.mkdir(parents=True, exist_ok=True)
         real_dir.mkdir(parents=True, exist_ok=True)
 
-        wrapper = wrapper_dir / "cmux-claude-wrapper"
+        wrapper = wrapper_dir / "bree-claude-wrapper"
         install_wrapper_copy(wrapper)
 
         auth_env_log = tmp / "auth-env.log"
         args_log = tmp / "args.log"
-        socket_path = str(tmp / "cmux.sock")
+        socket_path = str(tmp / "bree.sock")
 
         make_executable(
             real_dir / "claude",
@@ -652,7 +652,7 @@ if [[ "${1:-}" == "--socket" ]]; then
   shift 2
 fi
 if [[ "${1:-}" == "ping" ]]; then
-  if [[ "${FAKE_CMUX_PING_OK:-0}" == "1" ]]; then
+  if [[ "${FAKE_BREE_PING_OK:-0}" == "1" ]]; then
     exit 0
   fi
   exit 1
@@ -672,8 +672,8 @@ exit 0
             sandbox_home = tmp / "home"
             sandbox_home.mkdir()
             env["HOME"] = str(sandbox_home)
-            for ambient_cmux_key in [k for k in env if k.startswith("CMUX_")]:
-                env.pop(ambient_cmux_key, None)
+            for ambient_bree_key in [k for k in env if k.startswith("BREE_")]:
+                env.pop(ambient_bree_key, None)
             for ambient_aws_key in [k for k in env if k.startswith("AWS_")]:
                 env.pop(ambient_aws_key, None)
             for ambient_key in (
@@ -692,14 +692,14 @@ exit 0
             ):
                 env.pop(ambient_key, None)
             env["PATH"] = f"{wrapper_dir}:{real_dir}:{env.get('PATH', '/usr/bin:/bin')}"
-            if in_cmux:
-                env["CMUX_SURFACE_ID"] = "surface:test"
-                env["CMUX_SOCKET_PATH"] = socket_path
+            if in_bree:
+                env["BREE_SURFACE_ID"] = "surface:test"
+                env["BREE_SOCKET_PATH"] = socket_path
             env["FAKE_AUTH_ENV_LOG"] = str(auth_env_log)
             env["FAKE_ARGS_LOG"] = str(args_log)
-            env["FAKE_CMUX_PING_OK"] = "1" if socket_state == "live" else "0"
+            env["FAKE_BREE_PING_OK"] = "1" if socket_state == "live" else "0"
             if hooks_disabled:
-                env["CMUX_CLAUDE_HOOKS_DISABLED"] = "1"
+                env["BREE_CLAUDE_HOOKS_DISABLED"] = "1"
             if setup_env is not None:
                 env.update(setup_env(tmp))
             env.update(inherited_env)
@@ -721,7 +721,7 @@ exit 0
 
 
 def test_live_socket_injects_supported_hooks_without_unlocking_bypass(failures: list[str]) -> None:
-    code, real_argv, cmux_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, hook_cmux_bin, _ = run_wrapper(
+    code, real_argv, bree_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, hook_bree_bin, _ = run_wrapper(
         socket_state="live",
         argv=["hello"],
     )
@@ -735,10 +735,10 @@ def test_live_socket_injects_supported_hooks_without_unlocking_bypass(failures: 
             failures,
         )
     expect(real_argv[-1] == "hello", f"live socket: expected original arg to pass through, got {real_argv}", failures)
-    expect(any(" ping" in line for line in cmux_log), f"live socket: expected cmux ping, got {cmux_log}", failures)
+    expect(any(" ping" in line for line in bree_log), f"live socket: expected bree ping, got {bree_log}", failures)
     expect(
-        any("timeout=0.75" in line for line in cmux_log),
-        f"live socket: expected bounded ping timeout, got {cmux_log}",
+        any("timeout=0.75" in line for line in bree_log),
+        f"live socket: expected bounded ping timeout, got {bree_log}",
         failures,
     )
     expect(claudecode == "__UNSET__", f"live socket: expected CLAUDECODE unset, got {claudecode!r}", failures)
@@ -755,7 +755,7 @@ def test_live_socket_injects_supported_hooks_without_unlocking_bypass(failures: 
     )
     expect(runtime_node_options == "__UNSET__", f"live socket: expected runtime NODE_OPTIONS restored, got {runtime_node_options!r}", failures)
     expect(child_node_options == "__UNSET__", f"live socket: expected child NODE_OPTIONS restored, got {child_node_options!r}", failures)
-    expect(hook_cmux_bin.endswith("/bundled cli/bree"), f"live socket: expected bundled cmux pin, got {hook_cmux_bin!r}", failures)
+    expect(hook_bree_bin.endswith("/bundled cli/bree"), f"live socket: expected bundled bree pin, got {hook_bree_bin!r}", failures)
 
     settings = parse_settings_arg(real_argv)
     expect(
@@ -786,7 +786,7 @@ def test_live_socket_injects_supported_hooks_without_unlocking_bypass(failures: 
         cron_guard_hooks = cron_guard_groups[0].get("hooks", [])
         expect(
             any(
-                h.get("command") == '"${CMUX_CLAUDE_HOOK_CMUX_BIN:-bree}" hooks claude cron-create-guard'
+                h.get("command") == '"${BREE_CLAUDE_HOOK_BREE_BIN:-bree}" hooks claude cron-create-guard'
                 and h.get("async") is not True
                 for h in cron_guard_hooks
             ),
@@ -794,9 +794,9 @@ def test_live_socket_injects_supported_hooks_without_unlocking_bypass(failures: 
             failures,
         )
 
-    # PushNotification delivers via a raw OSC notification that cmux suppresses
+    # PushNotification delivers via a raw OSC notification that bree suppresses
     # for agent surfaces and never fires the Notification hook, so a PostToolUse
-    # matcher is the only bridge into cmux notifications. It uses the same
+    # matcher is the only bridge into bree notifications. It uses the same
     # short queued-admission contract as lifecycle telemetry.
     post_tool_use_groups = hooks.get("PostToolUse", [])
     push_notification_groups = [group for group in post_tool_use_groups if group.get("matcher") == "PushNotification"]
@@ -836,7 +836,7 @@ def test_live_socket_injects_supported_hooks_without_unlocking_bypass(failures: 
     )
     permission_request_hooks = hooks.get("PermissionRequest", [{}])[0].get("hooks", [{}])
     expect(
-        any(h.get("command") == '"${CMUX_CLAUDE_HOOK_CMUX_BIN:-bree}" hooks feed --source claude' for h in permission_request_hooks),
+        any(h.get("command") == '"${BREE_CLAUDE_HOOK_BREE_BIN:-bree}" hooks feed --source claude' for h in permission_request_hooks),
         f"PermissionRequest hook should call hooks feed, got {permission_request_hooks}",
         failures,
     )
@@ -868,7 +868,7 @@ def test_semantically_empty_generated_settings_keep_decision_hook_fallback(
     failures: list[str],
 ) -> None:
     for generated_settings in ("{}", '{"hooks":{}}'):
-        code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+        code, real_argv, _bree_log, stderr, *_ = run_wrapper(
             socket_state="live",
             argv=["hello"],
             generated_hook_settings=generated_settings,
@@ -946,9 +946,9 @@ exec {json.dumps(real_node)} "$@"
 
 
 def run_generated_settings_case(generated: str) -> tuple[int, list[str], str, str, int]:
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-validation-log-") as log_dir:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-validation-log-") as log_dir:
         log_path = Path(log_dir) / "node-validations.log"
-        code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+        code, real_argv, _bree_log, stderr, *_ = run_wrapper(
             socket_state="live",
             argv=["hello"],
             generated_hook_settings=generated,
@@ -1053,7 +1053,7 @@ def test_speculative_hook_settings_are_discarded_on_passthrough(failures: list[s
         ("live", ["frobnicate"], True),
         ("live", ["doctor"], False),
     ):
-        with tempfile.TemporaryDirectory(prefix="cmux-claude-speculative-") as td:
+        with tempfile.TemporaryDirectory(prefix="bree-claude-speculative-") as td:
             private_tmp = Path(td) / "tmp"
             private_tmp.mkdir()
             pid_log = Path(td) / "generator.pid"
@@ -1063,7 +1063,7 @@ def test_speculative_hook_settings_are_discarded_on_passthrough(failures: list[s
                 sandbox_home.mkdir()
                 env["HOME"] = str(sandbox_home)
                 make_executable(
-                    Path(env["CMUX_BUNDLED_CLI_PATH"]),
+                    Path(env["BREE_BUNDLED_CLI_PATH"]),
                     f"""#!/usr/bin/env bash
 if [[ "${{1:-}}" == "hooks" && "${{3:-}}" == "inject-settings" ]]; then
   printf '%s\\n' "$$" > {json.dumps(str(pid_log))}
@@ -1073,7 +1073,7 @@ exit 0
 """,
                 )
 
-            code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+            code, real_argv, _bree_log, stderr, *_ = run_wrapper(
                 socket_state=socket_state,
                 argv=argv,
                 tmpdir=str(private_tmp),
@@ -1083,7 +1083,7 @@ exit 0
             context = f"speculative settings [{socket_state} {argv}]"
             expect(code == 0, f"{context}: wrapper exited {code}: {stderr}", failures)
             expect(real_argv == argv, f"{context}: expected passthrough argv, got {real_argv}", failures)
-            leftovers = sorted(path.name for path in private_tmp.glob("cmux-claude-hook-settings.*"))
+            leftovers = sorted(path.name for path in private_tmp.glob("bree-claude-hook-settings.*"))
             expect(leftovers == [], f"{context}: generator output left behind: {leftovers}", failures)
             pids = read_lines(pid_log)
             expect(
@@ -1101,7 +1101,7 @@ exit 0
 
 
 def test_live_socket_merges_user_settings_into_hooks(failures: list[str]) -> None:
-    code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+    code, real_argv, _bree_log, stderr, *_ = run_wrapper(
         socket_state="live",
         argv=["--settings", '{"ultracode": true, "effortLevel": "max"}', "-p", "hi"],
     )
@@ -1114,7 +1114,7 @@ def test_live_socket_merges_user_settings_into_hooks(failures: list[str]) -> Non
     settings = parse_settings_arg(real_argv)
     expect(
         settings.get("preferredNotifChannel") == "notifications_disabled",
-        f"merge user settings: cmux hook settings lost, got {settings}",
+        f"merge user settings: bree hook settings lost, got {settings}",
         failures,
     )
     expected_hooks = {
@@ -1123,7 +1123,7 @@ def test_live_socket_merges_user_settings_into_hooks(failures: list[str]) -> Non
     }
     expect(
         set(settings.get("hooks", {}).keys()) == expected_hooks,
-        f"merge user settings: cmux hooks missing after merge, got {settings.get('hooks', {}).keys()}",
+        f"merge user settings: bree hooks missing after merge, got {settings.get('hooks', {}).keys()}",
         failures,
     )
     expect(
@@ -1149,7 +1149,7 @@ def test_live_socket_merges_user_settings_into_hooks(failures: list[str]) -> Non
 
 
 def test_live_socket_merges_inline_settings_form(failures: list[str]) -> None:
-    code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+    code, real_argv, _bree_log, stderr, *_ = run_wrapper(
         socket_state="live",
         argv=['--settings={"ultracode": true}', "hello"],
     )
@@ -1163,7 +1163,7 @@ def test_live_socket_merges_inline_settings_form(failures: list[str]) -> None:
     expect(settings.get("ultracode") is True, f"inline settings: user key dropped, got {settings}", failures)
     expect(
         settings.get("preferredNotifChannel") == "notifications_disabled",
-        f"inline settings: cmux hooks lost, got {settings}",
+        f"inline settings: bree hooks lost, got {settings}",
         failures,
     )
     expect(real_argv[-1] == "hello", f"inline settings: positional arg dropped, got {real_argv}", failures)
@@ -1176,7 +1176,7 @@ def test_live_socket_repeated_settings_user_value_wins_conflict(failures: list[s
     # >=2.1.169) is irrelevant. Among the user's own repeated --settings, the
     # earliest-listed value wins a scalar conflict. Asserted on the WRAPPER
     # OUTPUT (a single merged --settings in argv).
-    code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+    code, real_argv, _bree_log, stderr, *_ = run_wrapper(
         socket_state="live",
         argv=[
             "--settings", '{"effortLevel": "high", "a": 1}',
@@ -1203,17 +1203,17 @@ def test_live_socket_repeated_settings_user_value_wins_conflict(failures: list[s
     )
     expect(
         settings.get("preferredNotifChannel") == "notifications_disabled",
-        f"merged: cmux hook settings lost, got {settings}",
+        f"merged: bree hook settings lost, got {settings}",
         failures,
     )
 
 
-def test_live_socket_user_nonobject_hooks_does_not_drop_cmux_hooks(failures: list[str]) -> None:
+def test_live_socket_user_nonobject_hooks_does_not_drop_bree_hooks(failures: list[str]) -> None:
     # Regression: the merge must never let a non-object/array user value clobber
-    # cmux's own hook structure. If a user --settings sets `hooks` to a non-object
-    # (here an array; `null` behaves the same), the cmux hook object must survive
+    # bree's own hook structure. If a user --settings sets `hooks` to a non-object
+    # (here an array; `null` behaves the same), the bree hook object must survive
     # so notifications/status keep working, while the user's other keys still apply.
-    code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+    code, real_argv, _bree_log, stderr, *_ = run_wrapper(
         socket_state="live",
         argv=[
             "--settings", '{"hooks": [], "myKey": "kept"}',
@@ -1230,12 +1230,12 @@ def test_live_socket_user_nonobject_hooks_does_not_drop_cmux_hooks(failures: lis
     hooks = settings.get("hooks")
     expect(
         isinstance(hooks, dict) and "SessionStart" in hooks,
-        f"nonobject-hooks: cmux hook object dropped by non-object user hooks, got {hooks!r}",
+        f"nonobject-hooks: bree hook object dropped by non-object user hooks, got {hooks!r}",
         failures,
     )
     expect(
         settings.get("preferredNotifChannel") == "notifications_disabled",
-        f"nonobject-hooks: cmux preferredNotifChannel lost, got {settings}",
+        f"nonobject-hooks: bree preferredNotifChannel lost, got {settings}",
         failures,
     )
     expect(
@@ -1248,9 +1248,9 @@ def test_live_socket_user_nonobject_hooks_does_not_drop_cmux_hooks(failures: lis
 def test_live_socket_preserves_genuine_user_hook_command(failures: list[str]) -> None:
     user_hook = {
         "matcher": "UserPromptSubmit",
-        "hooks": [{"type": "command", "command": "cmux hooks claude user-owned"}],
+        "hooks": [{"type": "command", "command": "bree hooks claude user-owned"}],
     }
-    code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+    code, real_argv, _bree_log, stderr, *_ = run_wrapper(
         socket_state="live",
         argv=["--settings", json.dumps({"hooks": {"UserPromptSubmit": [user_hook]}}), "hi"],
     )
@@ -1268,7 +1268,7 @@ def test_live_socket_invalid_settings_warns_and_falls_back(failures: list[str]) 
     # A malformed --settings must not be dropped in silence: the wrapper surfaces
     # a stderr warning instead of quietly reverting to the dual --settings
     # behavior that #2816 fixes.
-    code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+    code, real_argv, _bree_log, stderr, *_ = run_wrapper(
         socket_state="live",
         argv=["--settings", "{not valid json", "hi"],
     )
@@ -1288,10 +1288,10 @@ def test_live_socket_invalid_settings_warns_and_falls_back(failures: list[str]) 
 def test_live_socket_merges_settings_file_form(failures: list[str]) -> None:
     # --settings <path> reads JSON from disk (readFileSync/expand). Exercise that
     # loader branch end-to-end so path parsing/merging cannot silently regress.
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-wrapper-settings-file-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-wrapper-settings-file-") as td:
         settings_path = Path(td) / "user-settings.json"
         settings_path.write_text('{"ultracode": true, "effortLevel": "max"}', encoding="utf-8")
-        code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+        code, real_argv, _bree_log, stderr, *_ = run_wrapper(
             socket_state="live",
             argv=["--settings", str(settings_path), "hello"],
         )
@@ -1306,7 +1306,7 @@ def test_live_socket_merges_settings_file_form(failures: list[str]) -> None:
     expect(settings.get("effortLevel") == "max", f"settings file: user key dropped, got {settings}", failures)
     expect(
         settings.get("preferredNotifChannel") == "notifications_disabled",
-        f"settings file: cmux hooks lost, got {settings}",
+        f"settings file: bree hooks lost, got {settings}",
         failures,
     )
     expect(real_argv[-1] == "hello", f"settings file: positional arg dropped, got {real_argv}", failures)
@@ -1316,7 +1316,7 @@ def test_live_socket_empty_settings_warns_instead_of_silent_drop(failures: list[
     # An explicit empty --settings= must not be swallowed in silence: the wrapper
     # surfaces the merge-failure warning instead of dropping the flag with no
     # signal (CodeRabbit review on #5388).
-    code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+    code, real_argv, _bree_log, stderr, *_ = run_wrapper(
         socket_state="live",
         argv=["--settings=", "hi"],
     )
@@ -1335,7 +1335,7 @@ def test_live_socket_empty_settings_warns_instead_of_silent_drop(failures: list[
 
 def test_large_settings_argument_is_rejected_without_hanging(failures: list[str]) -> None:
     large_settings = '{"large":"' + ("x" * 125_000) + '"}'
-    code, _real_argv, _cmux_log, stderr, *_ = run_wrapper(
+    code, _real_argv, _bree_log, stderr, *_ = run_wrapper(
         socket_state="live",
         argv=["--settings", large_settings, "hello"],
         process_timeout=2,
@@ -1353,7 +1353,7 @@ def test_multibyte_settings_argument_uses_byte_limit(failures: list[str]) -> Non
     # 62,000 two-byte characters stay below Linux's per-argument exec ceiling
     # while exceeding the wrapper's 120 KiB byte limit.
     large_settings = '{"large":"' + ("é" * 62_000) + '"}'
-    code, _real_argv, _cmux_log, stderr, *_ = run_wrapper(
+    code, _real_argv, _bree_log, stderr, *_ = run_wrapper(
         socket_state="live",
         argv=["--settings", large_settings, "hello"],
         process_timeout=2,
@@ -1368,11 +1368,11 @@ def test_multibyte_settings_argument_uses_byte_limit(failures: list[str]) -> Non
 
 
 def test_large_settings_file_is_merged_without_argv_growth(failures: list[str]) -> None:
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-wrapper-large-settings-file-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-wrapper-large-settings-file-") as td:
         settings_path = Path(td) / "large-settings.json"
         large_value = "x" * 200_000
         settings_path.write_text(json.dumps({"largeUserValue": large_value}), encoding="utf-8")
-        code, real_argv, _cmux_log, stderr, *_ = run_wrapper(
+        code, real_argv, _bree_log, stderr, *_ = run_wrapper(
             socket_state="live",
             argv=["--settings", str(settings_path), "hello"],
             process_timeout=5,
@@ -1497,7 +1497,7 @@ def test_discovered_subcommands_and_aliases_pass_through(failures: list[str]) ->
         expect(code == 0, f"discovery {argv}: exit {code}: {stderr}", failures)
         expect(real_argv == argv, f"discovery {argv}: argv changed: {real_argv}", failures)
         expect(all(env.get(key) == "__UNSET__" for key in keys),
-               f"discovery {argv}: cmux environment leaked: {env}", failures)
+               f"discovery {argv}: bree environment leaked: {env}", failures)
     for prompt in ("hello", "wrapped", "example-word"):
         code, argv, _, stderr, *_ = run_wrapper(
             socket_state="live", argv=[prompt], help_output=help_output,
@@ -1509,7 +1509,7 @@ def test_discovered_subcommands_and_aliases_pass_through(failures: list[str]) ->
 def test_subcommand_discovery_cache_and_binary_identity(failures: list[str]) -> None:
     """Reuse help until the binary path or mtime changes; ignore obsolete commands."""
     for change in ("mtime", "path", "symlink"):
-        with tempfile.TemporaryDirectory(prefix="cmux-help-calls-") as td:
+        with tempfile.TemporaryDirectory(prefix="bree-help-calls-") as td:
             calls = Path(td) / "calls"
 
             def setup(tmp: Path, env: dict) -> None:
@@ -1518,12 +1518,12 @@ def test_subcommand_discovery_cache_and_binary_identity(failures: list[str]) -> 
                 env["HOME"] = str(home)
                 env["FAKE_REAL_HELP_CALLS_LOG"] = str(calls)
                 real = tmp / "real-bin" / "claude"
-                wrapper = tmp / "cmux.app/Contents/Resources/bin/cmux-claude-wrapper"
-                env["CMUX_CUSTOM_CLAUDE_PATH"] = str(real)
+                wrapper = tmp / "bree.app/Contents/Resources/bin/bree-claude-wrapper"
+                env["BREE_CUSTOM_CLAUDE_PATH"] = str(real)
                 if change == "symlink":
                     link = tmp / "claude-link"
                     link.symlink_to(real)
-                    env["CMUX_CUSTOM_CLAUDE_PATH"] = str(link)
+                    env["BREE_CUSTOM_CLAUDE_PATH"] = str(link)
 
                 def invoke(word: str, *, passthrough: bool) -> None:
                     proc = subprocess.run([str(wrapper), word], cwd=tmp, env=env,
@@ -1550,7 +1550,7 @@ def test_subcommand_discovery_cache_and_binary_identity(failures: list[str]) -> 
                         link.unlink()
                         link.symlink_to(replacement)
                     else:
-                        env["CMUX_CUSTOM_CLAUDE_PATH"] = str(replacement)
+                        env["BREE_CUSTOM_CLAUDE_PATH"] = str(replacement)
                 invoke("future-first", passthrough=False)
 
             code, argv, _, stderr, *_ = run_wrapper(
@@ -1569,11 +1569,11 @@ def test_subcommand_cache_expires_for_unchanged_launchers(failures: list[str]) -
         home = tmp / "home"
         home.mkdir()
         env["HOME"] = str(home)
-        wrapper = tmp / "cmux.app/Contents/Resources/bin/cmux-claude-wrapper"
+        wrapper = tmp / "bree.app/Contents/Resources/bin/bree-claude-wrapper"
         # Perl's test-only preload replaces the clock imported by the wrapper;
         # alarms and filesystem timestamps retain their real behavior.
-        (tmp / "CmuxTestClock.pm").write_text(
-            'package CmuxTestClock;\n'
+        (tmp / "BreeTestClock.pm").write_text(
+            'package BreeTestClock;\n'
             'use Time::HiRes ();\n'
             'BEGIN { no warnings "redefine"; '
             '*Time::HiRes::time = sub () { 0 + $ENV{FAKE_CLAUDE_CLOCK} }; }\n'
@@ -1582,14 +1582,14 @@ def test_subcommand_cache_expires_for_unchanged_launchers(failures: list[str]) -
         )
         epoch = 1_800_000_000
         env["PERL5LIB"] = str(tmp)
-        env["PERL5OPT"] = "-MCmuxTestClock"
+        env["PERL5OPT"] = "-MBreeTestClock"
         env["FAKE_CLAUDE_CLOCK"] = str(epoch)
         env["FAKE_REAL_HELP_OUTPUT"] = "Commands:\n  future-first  Old downstream command\n"
         proc = subprocess.run([str(wrapper), "future-first"], cwd=tmp, env=env,
                               capture_output=True, text=True, timeout=15)
         expect(proc.returncode == 0 and read_lines(Path(env["FAKE_REAL_ARGS_LOG"])) == ["future-first"],
                f"expiry: initial catalog did not load: {proc.stderr}", failures)
-        cache_files = list((home / "Library/Caches/cmux/claude-commands-v1").iterdir())
+        cache_files = list((home / "Library/Caches/bree/claude-commands-v1").iterdir())
         expect(len(cache_files) == 1, f"expiry: expected one published cache: {cache_files}", failures)
         if not cache_files:
             return
@@ -1612,7 +1612,7 @@ def test_subcommand_help_failure_falls_back_and_is_cached(failures: list[str]) -
     """Failed, empty, or hung help never changes prompt or hidden-command dispatch."""
     for behavior, output in (("fail", "Commands:\n  hello  Partial output\n"),
                              ("success", ""), ("hang", "")):
-        with tempfile.TemporaryDirectory(prefix="cmux-help-fallback-") as td:
+        with tempfile.TemporaryDirectory(prefix="bree-help-fallback-") as td:
             calls = Path(td) / "calls"
 
             def setup(tmp: Path, env: dict) -> None:
@@ -1620,7 +1620,7 @@ def test_subcommand_help_failure_falls_back_and_is_cached(failures: list[str]) -
                 home.mkdir()
                 env["HOME"] = str(home)
                 env["FAKE_REAL_HELP_CALLS_LOG"] = str(calls)
-                wrapper = tmp / "cmux.app/Contents/Resources/bin/cmux-claude-wrapper"
+                wrapper = tmp / "bree.app/Contents/Resources/bin/bree-claude-wrapper"
                 proc = subprocess.run([str(wrapper), "hello"], cwd=tmp, env=env,
                                       capture_output=True, text=True, timeout=15)
                 observed = read_lines(Path(env["FAKE_REAL_ARGS_LOG"]))
@@ -1650,7 +1650,7 @@ def test_explicit_prompt_modes_skip_subcommand_discovery(failures: list[str]) ->
                  ["-p", "future-command"], ["--print", "future-command"],
                  ["--continue"], ["--resume", "abc123"], ["--worktree", "tree"],
                  ["--remote-control"], ["--from-pr", "123"]):
-        with tempfile.TemporaryDirectory(prefix="cmux-help-fast-path-") as td:
+        with tempfile.TemporaryDirectory(prefix="bree-help-fast-path-") as td:
             calls = Path(td) / "calls"
 
             def setup(tmp: Path, env: dict) -> None:
@@ -1672,7 +1672,7 @@ def test_headless_detection_ignores_option_values(failures: list[str]) -> None:
     for argv in (["--append-system-prompt", "-p"], ["--model", "--print"], ["--append-system-prompt=-p"]):
         code, observed_env, _, stderr, _ = run_wrapper_terminal_env_probe(argv)
         expect(code == 0, f"option value {argv}: wrapper failed: {stderr}", failures)
-        expect(observed_env.get("CMUX_CLAUDE_HEADLESS") == "0",
+        expect(observed_env.get("BREE_CLAUDE_HEADLESS") == "0",
                f"option value {argv}: incorrectly marked headless: {observed_env}", failures)
 
 
@@ -1683,7 +1683,7 @@ def test_subcommand_help_cancellation_cleans_up_children(failures: list[str]) ->
             home = tmp / "home"
             home.mkdir()
             env["HOME"] = str(home)
-            wrapper = tmp / "cmux.app/Contents/Resources/bin/cmux-claude-wrapper"
+            wrapper = tmp / "bree.app/Contents/Resources/bin/bree-claude-wrapper"
             pid_log = Path(env["FAKE_REAL_HELP_PIDS_LOG"])
             proc = subprocess.Popen([str(wrapper), "hello"], cwd=tmp, env=env,
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -1748,7 +1748,7 @@ def test_passthrough_flags_bypass_hook_injection(failures: list[str]) -> None:
         expect(node_options == "__UNSET__", f"{flag} passthrough: expected no NODE_OPTIONS injection, got {node_options!r}", failures)
 
 
-def test_agents_subcommand_removes_cmux_terminal_fingerprint(failures: list[str]) -> None:
+def test_agents_subcommand_removes_bree_terminal_fingerprint(failures: list[str]) -> None:
     code, observed_env, real_argv, stderr, expected_keys = run_wrapper_terminal_env_probe(["agents"])
     expect(code == 0, f"agents env probe: wrapper exited {code}: {stderr}", failures)
     expect(real_argv == ["agents"], f"agents env probe: expected raw argv, got {real_argv}", failures)
@@ -1766,7 +1766,7 @@ def test_agents_subcommand_removes_cmux_terminal_fingerprint(failures: list[str]
         )
 
 
-def test_hooks_disabled_preserves_cmux_terminal_env_for_custom_hooks(failures: list[str]) -> None:
+def test_hooks_disabled_preserves_bree_terminal_env_for_custom_hooks(failures: list[str]) -> None:
     scenarios = [
         ("interactive", ["hello"]),
         ("command-like", ["agents"]),
@@ -1785,19 +1785,19 @@ def test_hooks_disabled_preserves_cmux_terminal_env_for_custom_hooks(failures: l
         )
 
         for key, expected_value in {
-            "CMUX_BUNDLE_ID": "com.cmuxterm.app.debug.envprobe",
-            "CMUX_CLAUDE_HOOKS_DISABLED": "1",
-            "CMUX_PANEL_ID": "panel:test",
-            "CMUX_SURFACE_ID": "surface:test",
-            "CMUX_TAB_ID": "tab:test",
-            "CMUX_WORKSPACE_ID": "workspace:test",
+            "BREE_BUNDLE_ID": "com.bree.app.debug.envprobe",
+            "BREE_CLAUDE_HOOKS_DISABLED": "1",
+            "BREE_PANEL_ID": "panel:test",
+            "BREE_SURFACE_ID": "surface:test",
+            "BREE_TAB_ID": "tab:test",
+            "BREE_WORKSPACE_ID": "workspace:test",
         }.items():
             expect(
                 observed_env.get(key) == expected_value,
                 f"hooks-disabled {label} env probe: expected {key} preserved as {expected_value!r}, got {observed_env.get(key)!r}",
                 failures,
             )
-        for key in sorted(k for k in expected_keys if k.startswith("CMUX_")):
+        for key in sorted(k for k in expected_keys if k.startswith("BREE_")):
             expect(
                 observed_env.get(key) != "__UNSET__",
                 f"hooks-disabled {label} env probe: expected {key} to survive passthrough, got unset",
@@ -1887,7 +1887,7 @@ def test_live_socket_normalizes_subrouter_claude_config_dir(failures: list[str])
 
 
 def test_live_socket_resume_self_heals_mismatched_claude_config_dir(failures: list[str]) -> None:
-    # Regression for https://github.com/manaflow-ai/cmux/issues/6194: when cmux is
+    # Regression for https://github.com/ecyx00/bree/issues/6194: when bree is
     # launched with a foreign CLAUDE_CONFIG_DIR (e.g. the .app was opened from a
     # terminal whose agent set one), a restored `claude --resume <id>` must still
     # find the session by self-healing CLAUDE_CONFIG_DIR to the config root that
@@ -1905,7 +1905,7 @@ def test_live_socket_resume_self_heals_mismatched_claude_config_dir(failures: li
             "{}\n", encoding="utf-8"
         )
         # A FOREIGN config dir is inherited: a valid config dir that does NOT hold
-        # this session (mirrors the cmux app inheriting an agent's CLAUDE_CONFIG_DIR).
+        # this session (mirrors the bree app inheriting an agent's CLAUDE_CONFIG_DIR).
         foreign_root = home / ".codex-accounts" / "claude" / "_pforeign"
         (foreign_root / "projects").mkdir(parents=True)
         expected["path"] = str(default_root)
@@ -1962,7 +1962,7 @@ def test_live_socket_resume_self_heals_bare_legacy_subrouter_config_dir(failures
 
 
 def test_stale_socket_resume_self_heals_mismatched_claude_config_dir(failures: list[str]) -> None:
-    # A manual resume from a detached shell can inherit stale cmux environment.
+    # A manual resume from a detached shell can inherit stale bree environment.
     # It must keep native behavior while still selecting the transcript owner.
     session_id = "5b5d0816-ef91-4a8d-8933-68a114787c40"
     expected: dict[str, str] = {}
@@ -1970,9 +1970,9 @@ def test_stale_socket_resume_self_heals_mismatched_claude_config_dir(failures: l
     def setup_env(tmp: Path) -> dict[str, str]:
         home = tmp / "home"
         default_root = home / ".claude"
-        (default_root / "projects" / "-Users-example-manaflow-term-cmux166").mkdir(parents=True)
+        (default_root / "projects" / "-Users-example-manaflow-term-bree166").mkdir(parents=True)
         (
-            default_root / "projects" / "-Users-example-manaflow-term-cmux166" / f"{session_id}.jsonl"
+            default_root / "projects" / "-Users-example-manaflow-term-bree166" / f"{session_id}.jsonl"
         ).write_text("{}\n", encoding="utf-8")
         foreign_root = home / ".codex-accounts" / "claude" / "_pforeign"
         (foreign_root / "projects").mkdir(parents=True)
@@ -2004,16 +2004,16 @@ def test_stale_socket_resume_self_heals_mismatched_claude_config_dir(failures: l
 
 def test_stale_socket_resume_self_heals_after_value_option(failures: list[str]) -> None:
     # Resume parsing still has to skip value-taking options before `--resume`,
-    # including newer Claude options outside cmux's preserved-argument lists.
+    # including newer Claude options outside bree's preserved-argument lists.
     session_id = "017427ef-1828-43d9-ae1d-8ec6d4b2bdb7"
     expected: dict[str, str] = {}
 
     def setup_env(tmp: Path) -> dict[str, str]:
         home = tmp / "home"
         default_root = home / ".claude"
-        (default_root / "projects" / "-Users-example-manaflow-term-cmux166").mkdir(parents=True)
+        (default_root / "projects" / "-Users-example-manaflow-term-bree166").mkdir(parents=True)
         (
-            default_root / "projects" / "-Users-example-manaflow-term-cmux166" / f"{session_id}.jsonl"
+            default_root / "projects" / "-Users-example-manaflow-term-bree166" / f"{session_id}.jsonl"
         ).write_text("{}\n", encoding="utf-8")
         foreign_root = home / ".codex-accounts" / "claude" / "_pforeign"
         (foreign_root / "projects").mkdir(parents=True)
@@ -2024,14 +2024,14 @@ def test_stale_socket_resume_self_heals_after_value_option(failures: list[str]) 
         }
 
     code, auth_env, real_argv, stderr = run_wrapper_auth_env(
-        argv=["--permission-prompt-tool", "/tmp/cmux-permission-tool", "--resume", session_id],
+        argv=["--permission-prompt-tool", "/tmp/bree-permission-tool", "--resume", session_id],
         inherited_env={},
         socket_state="stale",
         setup_env=setup_env,
     )
     expect(code == 0, f"stale socket option resume self-heal: wrapper exited {code}: {stderr}", failures)
     expect(
-        real_argv == ["--permission-prompt-tool", "/tmp/cmux-permission-tool", "--resume", session_id],
+        real_argv == ["--permission-prompt-tool", "/tmp/bree-permission-tool", "--resume", session_id],
         f"stale socket option resume self-heal: expected passthrough argv, got {real_argv}",
         failures,
     )
@@ -2049,7 +2049,7 @@ def test_stale_socket_resume_self_heals_after_value_option(failures: list[str]) 
 
 
 def test_plain_terminal_resume_does_not_self_heal_mismatched_claude_config_dir(failures: list[str]) -> None:
-    # Outside cmux, the wrapper must be a passthrough and must not repoint the
+    # Outside bree, the wrapper must be a passthrough and must not repoint the
     # user's selected Claude account just because another config root has the id.
     session_id = "57d7a2a6-6261-4a6f-b950-10f892a0fd81"
 
@@ -2077,7 +2077,7 @@ def test_plain_terminal_resume_does_not_self_heal_mismatched_claude_config_dir(f
             inherited_env={},
             socket_state="missing",
             hooks_disabled=hooks_disabled,
-            in_cmux=False,
+            in_bree=False,
             setup_env=setup_env,
         )
         expect(code == 0, f"plain terminal {label} resume: wrapper exited {code}: {stderr}", failures)
@@ -2097,7 +2097,7 @@ def test_plain_terminal_resume_does_not_self_heal_mismatched_claude_config_dir(f
 def test_live_socket_resume_after_unlisted_value_option_does_not_inject_session_id(failures: list[str]) -> None:
     code, real_argv, _, stderr, _, _, _, _, _, _ = run_wrapper(
         socket_state="live",
-        argv=["--permission-prompt-tool", "/tmp/cmux-permission-tool", "--resume", "some-session-id"],
+        argv=["--permission-prompt-tool", "/tmp/bree-permission-tool", "--resume", "some-session-id"],
     )
     expect(code == 0, f"unlisted value option resume: wrapper exited {code}: {stderr}", failures)
     expect("--settings" in real_argv, f"unlisted value option resume: expected hook settings injection, got {real_argv}", failures)
@@ -2107,7 +2107,7 @@ def test_live_socket_resume_after_unlisted_value_option_does_not_inject_session_
         settings_index = passthrough_argv.index("--settings")
         del passthrough_argv[settings_index:settings_index + 2]
     expect(
-        passthrough_argv == ["--permission-prompt-tool", "/tmp/cmux-permission-tool", "--resume", "some-session-id"],
+        passthrough_argv == ["--permission-prompt-tool", "/tmp/bree-permission-tool", "--resume", "some-session-id"],
         f"unlisted value option resume: expected original argv preserved around injected settings, got {real_argv}",
         failures,
     )
@@ -2235,7 +2235,7 @@ def test_live_socket_resume_keeps_correct_claude_config_dir(failures: list[str])
 
 def test_live_socket_resume_self_heal_ignores_prompt_text_after_double_dash(failures: list[str]) -> None:
     # A fresh prompt can contain literal --resume text after `--`; that must not
-    # trigger resume self-healing or suppress cmux's generated --session-id.
+    # trigger resume self-healing or suppress bree's generated --session-id.
     session_id = "7e2f5010-98d4-465f-93f6-a01608943e5f"
     expected: dict[str, str] = {}
 
@@ -2276,8 +2276,8 @@ def test_live_socket_preserves_claude_auth_for_resume_launch(failures: list[str]
     }
     inherited = {
         **expected_auth_env,
-        "CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV": "1",
-        "CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS": "CLAUDE_CONFIG_DIR,ANTHROPIC_MODEL",
+        "BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV": "1",
+        "BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS": "CLAUDE_CONFIG_DIR,ANTHROPIC_MODEL",
     }
     code, auth_env, real_argv, stderr = run_wrapper_auth_env(
         argv=["--resume", "claude-session-123"],
@@ -2294,8 +2294,8 @@ def test_live_socket_preserves_only_listed_claude_auth_keys(failures: list[str])
         "CLAUDE_CONFIG_DIR": "/tmp/claude-config",
         "ANTHROPIC_API_KEY": "stale-api-key",
         "ANTHROPIC_MODEL": "resume-model",
-        "CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV": "1",
-        "CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS": "ANTHROPIC_MODEL",
+        "BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV": "1",
+        "BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS": "ANTHROPIC_MODEL",
     }
     code, auth_env, real_argv, stderr = run_wrapper_auth_env(
         argv=["--resume", "claude-session-123"],
@@ -2309,7 +2309,7 @@ def test_live_socket_preserves_only_listed_claude_auth_keys(failures: list[str])
 
 
 def test_live_socket_auto_preserves_vertex_auth_when_truthy(failures: list[str]) -> None:
-    # Regression for https://github.com/manaflow-ai/cmux/issues/3641.
+    # Regression for https://github.com/ecyx00/bree/issues/3641.
     inherited = {
         "CLAUDE_CODE_USE_VERTEX": "1",
         "ANTHROPIC_API_KEY": "anthropic-key-must-be-scrubbed-on-vertex",
@@ -2367,7 +2367,7 @@ def test_live_socket_auto_preserves_vertex_auth_when_truthy(failures: list[str])
 
 
 def test_live_socket_auto_preserves_bedrock_auth_when_truthy(failures: list[str]) -> None:
-    # Regression for https://github.com/manaflow-ai/cmux/issues/3638.
+    # Regression for https://github.com/ecyx00/bree/issues/3638.
     inherited = {
         "CLAUDE_CODE_USE_BEDROCK": "1",
         "ANTHROPIC_API_KEY": "anthropic-key-must-be-scrubbed-on-bedrock",
@@ -2465,9 +2465,9 @@ def test_live_socket_does_not_auto_preserve_when_all_backends_are_falsy(failures
 
 
 def test_live_socket_preserves_plain_anthropic_model_on_default_path(failures: list[str]) -> None:
-    # Regression for https://github.com/manaflow-ai/cmux/issues/7047.
+    # Regression for https://github.com/ecyx00/bree/issues/7047.
     # A user who pins `export ANTHROPIC_MODEL=claude-opus-4-8[1m]` to get the
-    # Max-plan 1M context window must keep that selection inside cmux on the
+    # Max-plan 1M context window must keep that selection inside bree on the
     # default Anthropic API path, exactly like a plain Terminal does. A plain
     # (non-backend-qualified) id is valid against the Anthropic API, so the
     # auth-selection scrub must NOT strip it when no Vertex/Bedrock backend is
@@ -2491,7 +2491,7 @@ def test_live_socket_preserves_plain_anthropic_model_on_default_path(failures: l
         f"plain model default path: expected ANTHROPIC_SMALL_FAST_MODEL preserved, got {auth_env.get('ANTHROPIC_SMALL_FAST_MODEL')!r}",
         failures,
     )
-    # The model pin must not block the normal cmux hook/session injection.
+    # The model pin must not block the normal bree hook/session injection.
     expect(
         "--session-id" in real_argv,
         f"plain model default path: expected session injection, got {real_argv}",
@@ -2533,7 +2533,7 @@ def test_live_socket_strips_backend_qualified_model_on_default_path(failures: li
 
 def test_live_socket_auto_preserve_accepts_all_documented_truthy_variants(failures: list[str]) -> None:
     # The wrapper recognizes 1|true|TRUE|yes|YES as truthy (matching the
-    # existing CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV parser); the focused
+    # existing BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV parser); the focused
     # auto-preserve tests above only exercise "1". This loop pins all 5
     # documented variants for both backends so a future "simplification"
     # of the case statement cannot silently drop yes/YES/true/TRUE.
@@ -2555,12 +2555,12 @@ def test_live_socket_auto_preserve_accepts_all_documented_truthy_variants(failur
 
 def test_live_socket_explicit_key_list_is_additive_to_vertex_auto_preserve(failures: list[str]) -> None:
     # Pins the precedence between the explicit-opt-in key list
-    # (CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS) and the Vertex/Bedrock
+    # (BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS) and the Vertex/Bedrock
     # auto-preserve introduced for #3641 / #3638: the key list adds entries
     # to preservation, it does NOT exclude keys from auto-preserve.
     inherited = {
-        "CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV": "1",
-        "CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS": "ANTHROPIC_API_KEY",
+        "BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV": "1",
+        "BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS": "ANTHROPIC_API_KEY",
         "ANTHROPIC_API_KEY": "explicitly-listed-key-must-survive",
         "CLAUDE_CODE_USE_VERTEX": "1",
         "ANTHROPIC_MODEL": "claude-sonnet-4-5@20250929",
@@ -2613,12 +2613,12 @@ def test_live_socket_enforces_heap_cap_for_space_separated_flag(failures: list[s
 
 
 def test_live_socket_tmpdir_failure_keeps_node_options_injection(failures: list[str]) -> None:
-    # The restore preload lives in ~/.cmuxterm, not $TMPDIR (#12022), so an
+    # The restore preload lives in ~/.bree, not $TMPDIR (#12022), so an
     # unusable TMPDIR no longer disables the NODE_OPTIONS injection.
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-wrapper-bad-tmp-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-wrapper-bad-tmp-") as td:
         bad_tmpdir = Path(td) / "not-a-directory"
         bad_tmpdir.write_text("occupied", encoding="utf-8")
-        code, real_argv, cmux_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, _, _ = run_wrapper(
+        code, real_argv, bree_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, _, _ = run_wrapper(
             socket_state="live",
             argv=["hello"],
             tmpdir=str(bad_tmpdir),
@@ -2626,13 +2626,13 @@ def test_live_socket_tmpdir_failure_keeps_node_options_injection(failures: list[
     expect(code == 0, f"tmpdir failure: wrapper exited {code}: {stderr}", failures)
     expect("--settings" in real_argv, f"tmpdir failure: missing --settings in args: {real_argv}", failures)
     expect("--session-id" in real_argv, f"tmpdir failure: missing --session-id in args: {real_argv}", failures)
-    expect(any(" ping" in line for line in cmux_log), f"tmpdir failure: expected cmux ping, got {cmux_log}", failures)
+    expect(any(" ping" in line for line in bree_log), f"tmpdir failure: expected bree ping, got {bree_log}", failures)
     expect(claudecode == "__UNSET__", f"tmpdir failure: expected CLAUDECODE unset, got {claudecode!r}", failures)
     require_flag, _, remaining_flags = node_options.partition(" ")
     expect(
         require_flag.startswith("--require=")
-        and require_flag.endswith("/.cmuxterm/cmux-claude-node-options/restore-node-options.cjs"),
-        f"tmpdir failure: expected restore preload under ~/.cmuxterm, got {node_options!r}",
+        and require_flag.endswith("/.bree/bree-claude-node-options/restore-node-options.cjs"),
+        f"tmpdir failure: expected restore preload under ~/.bree, got {node_options!r}",
         failures,
     )
     expect(
@@ -2718,7 +2718,7 @@ def install_native_fake_claude_at_volta_path(*, as_shim: bool):
 
 
 def test_live_socket_native_claude_skips_node_options_injection(failures: list[str]) -> None:
-    # https://github.com/manaflow-ai/cmux/issues/14681: a native claude never
+    # https://github.com/ecyx00/bree/issues/14681: a native claude never
     # runs the --require restore module, so an injected NODE_OPTIONS leaked to
     # every child it spawned (shells, apps opened with `open`).
     code, real_argv, _, stderr, _, node_options, _, child_node_options, _, _ = run_wrapper(
@@ -2741,12 +2741,12 @@ def test_live_socket_native_claude_skips_node_options_injection(failures: list[s
     expect(node_options == "--trace-warnings", f"native claude: expected user NODE_OPTIONS untouched, got {node_options!r}", failures)
     expect(child_node_options == "--trace-warnings", f"native claude: expected child to inherit user NODE_OPTIONS, got {child_node_options!r}", failures)
 
-    # An earlier cmux layer (claude-teams, a re-entering shim) already injected
+    # An earlier bree layer (claude-teams, a re-entering shim) already injected
     # the restore preload; the wrapper undoes it since the module won't run.
-    injected = "--require=/tmp/x/cmux-claude-node-options/restore-node-options.cjs --max-old-space-size=4096"
+    injected = "--require=/tmp/x/bree-claude-node-options/restore-node-options.cjs --max-old-space-size=4096"
     for label, extra, expected in [
-        ("no original", {"CMUX_ORIGINAL_NODE_OPTIONS_PRESENT": "0"}, "__UNSET__"),
-        ("original", {"CMUX_ORIGINAL_NODE_OPTIONS_PRESENT": "1", "CMUX_ORIGINAL_NODE_OPTIONS": "--trace-warnings"}, "--trace-warnings"),
+        ("no original", {"BREE_ORIGINAL_NODE_OPTIONS_PRESENT": "0"}, "__UNSET__"),
+        ("original", {"BREE_ORIGINAL_NODE_OPTIONS_PRESENT": "1", "BREE_ORIGINAL_NODE_OPTIONS": "--trace-warnings"}, "--trace-warnings"),
     ]:
         code, _, _, stderr, _, node_options, _, child_node_options, _, _ = run_wrapper(
             socket_state="live",
@@ -2758,7 +2758,7 @@ def test_live_socket_native_claude_skips_node_options_injection(failures: list[s
         expect(node_options == expected, f"native claude inherited injection ({label}): expected {expected!r}, got {node_options!r}", failures)
         expect(child_node_options == expected, f"native claude inherited injection ({label}): expected child {expected!r}, got {child_node_options!r}", failures)
 
-    # Without the original-value marker, only cmux's preload and heap flag are
+    # Without the original-value marker, only bree's preload and heap flag are
     # removed; the user's own options survive.
     code, _, _, stderr, _, node_options, _, child_node_options, _, _ = run_wrapper(
         socket_state="live",
@@ -2772,7 +2772,7 @@ def test_live_socket_native_claude_skips_node_options_injection(failures: list[s
 
     # The wrapper quotes the preload when $HOME has spaces (#14814); the
     # quoted flag is stripped whole, not split into fragments.
-    quoted = '--require="/Users/a b/.cmuxterm/cmux-claude-node-options/restore-node-options.cjs" --max-old-space-size=4096'
+    quoted = '--require="/Users/a b/.bree/bree-claude-node-options/restore-node-options.cjs" --max-old-space-size=4096'
     code, _, _, stderr, _, node_options, _, child_node_options, _, _ = run_wrapper(
         socket_state="live",
         argv=["hello"],
@@ -2832,7 +2832,7 @@ def test_live_socket_preserves_explicit_bypass_availability_flag(failures: list[
 def test_live_socket_stale_mktemp_literal_does_not_warn(failures: list[str]) -> None:
     def setup(tmp: Path, env: dict[str, str]) -> None:
         home = tmp / "home"
-        guard_dir = home / ".cmuxterm" / "cmux-claude-node-options"
+        guard_dir = home / ".bree" / "bree-claude-node-options"
         guard_dir.mkdir(parents=True)
         # Literal mktemp template names left behind by an older wrapper.
         (guard_dir / ".restore-node-options.cjs.XXXXXX").write_text("stale", encoding="utf-8")
@@ -2862,22 +2862,22 @@ def test_live_socket_stale_mktemp_literal_does_not_warn(failures: list[str]) -> 
 
 
 def test_missing_socket_skips_hook_injection(failures: list[str]) -> None:
-    code, real_argv, cmux_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, hook_cmux_bin, _ = run_wrapper(
+    code, real_argv, bree_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, hook_bree_bin, _ = run_wrapper(
         socket_state="missing",
         argv=["hello"],
     )
     expect(code == 0, f"missing socket: wrapper exited {code}: {stderr}", failures)
     expect(real_argv == ["hello"], f"missing socket: expected passthrough args, got {real_argv}", failures)
-    expect(cmux_log == [], f"missing socket: expected no cmux calls, got {cmux_log}", failures)
+    expect(bree_log == [], f"missing socket: expected no bree calls, got {bree_log}", failures)
     expect(claudecode == "__UNSET__", f"missing socket: expected CLAUDECODE unset, got {claudecode!r}", failures)
     expect(node_options == "__UNSET__", f"missing socket: expected NODE_OPTIONS passthrough, got {node_options!r}", failures)
     expect(runtime_node_options == "__UNSET__", f"missing socket: expected runtime NODE_OPTIONS passthrough, got {runtime_node_options!r}", failures)
     expect(child_node_options == "__UNSET__", f"missing socket: expected child NODE_OPTIONS passthrough, got {child_node_options!r}", failures)
-    expect(hook_cmux_bin == "__UNSET__", f"missing socket: expected hook cmux unset, got {hook_cmux_bin!r}", failures)
+    expect(hook_bree_bin == "__UNSET__", f"missing socket: expected hook bree unset, got {hook_bree_bin!r}", failures)
 
 
 def test_disabled_integration_skips_hook_injection(failures: list[str]) -> None:
-    code, real_argv, cmux_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, hook_cmux_bin, _ = run_wrapper(
+    code, real_argv, bree_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, hook_bree_bin, _ = run_wrapper(
         socket_state="live",
         argv=["hello"],
         hooks_disabled=True,
@@ -2886,32 +2886,32 @@ def test_disabled_integration_skips_hook_injection(failures: list[str]) -> None:
     expect(real_argv == ["hello"], f"disabled integration: expected passthrough args, got {real_argv}", failures)
     expect("--settings" not in real_argv, f"disabled integration: expected no --settings injection, got {real_argv}", failures)
     expect("notifications_disabled" not in " ".join(real_argv), f"disabled integration: expected no notification suppression, got {real_argv}", failures)
-    expect(cmux_log == [], f"disabled integration: expected no cmux calls, got {cmux_log}", failures)
+    expect(bree_log == [], f"disabled integration: expected no bree calls, got {bree_log}", failures)
     expect(claudecode == "__UNSET__", f"disabled integration: expected CLAUDECODE unset, got {claudecode!r}", failures)
     expect(node_options == "__UNSET__", f"disabled integration: expected NODE_OPTIONS passthrough, got {node_options!r}", failures)
     expect(runtime_node_options == "__UNSET__", f"disabled integration: expected runtime NODE_OPTIONS passthrough, got {runtime_node_options!r}", failures)
     expect(child_node_options == "__UNSET__", f"disabled integration: expected child NODE_OPTIONS passthrough, got {child_node_options!r}", failures)
-    expect(hook_cmux_bin == "__UNSET__", f"disabled integration: expected hook cmux unset, got {hook_cmux_bin!r}", failures)
+    expect(hook_bree_bin == "__UNSET__", f"disabled integration: expected hook bree unset, got {hook_bree_bin!r}", failures)
 
 
 def test_stale_socket_skips_hook_injection(failures: list[str]) -> None:
-    code, real_argv, cmux_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, hook_cmux_bin, _ = run_wrapper(
+    code, real_argv, bree_log, stderr, claudecode, node_options, runtime_node_options, child_node_options, hook_bree_bin, _ = run_wrapper(
         socket_state="stale",
         argv=["hello"],
     )
     expect(code == 0, f"stale socket: wrapper exited {code}: {stderr}", failures)
     expect(real_argv == ["hello"], f"stale socket: expected passthrough args, got {real_argv}", failures)
-    expect(any(" ping" in line for line in cmux_log), f"stale socket: expected cmux ping probe, got {cmux_log}", failures)
+    expect(any(" ping" in line for line in bree_log), f"stale socket: expected bree ping probe, got {bree_log}", failures)
     expect(
-        any("timeout=0.75" in line for line in cmux_log),
-        f"stale socket: expected bounded ping timeout, got {cmux_log}",
+        any("timeout=0.75" in line for line in bree_log),
+        f"stale socket: expected bounded ping timeout, got {bree_log}",
         failures,
     )
     expect(claudecode == "__UNSET__", f"stale socket: expected CLAUDECODE unset, got {claudecode!r}", failures)
     expect(node_options == "__UNSET__", f"stale socket: expected NODE_OPTIONS passthrough, got {node_options!r}", failures)
     expect(runtime_node_options == "__UNSET__", f"stale socket: expected runtime NODE_OPTIONS passthrough, got {runtime_node_options!r}", failures)
     expect(child_node_options == "__UNSET__", f"stale socket: expected child NODE_OPTIONS passthrough, got {child_node_options!r}", failures)
-    expect(hook_cmux_bin == "__UNSET__", f"stale socket: expected hook cmux unset, got {hook_cmux_bin!r}", failures)
+    expect(hook_bree_bin == "__UNSET__", f"stale socket: expected hook bree unset, got {hook_bree_bin!r}", failures)
 
 
 def test_app_owned_stale_socket_resume_injects_hooks_and_consumes_marker(failures: list[str]) -> None:
@@ -2928,7 +2928,7 @@ def test_app_owned_stale_socket_resume_injects_hooks_and_consumes_marker(failure
         failures,
     )
     expect(
-        observed_env.get("CMUX_AGENT_RESTORE_LAUNCH") == "__UNSET__",
+        observed_env.get("BREE_AGENT_RESTORE_LAUNCH") == "__UNSET__",
         f"app restore/stale: one-shot restore marker leaked to Claude: {observed_env}",
         failures,
     )
@@ -2943,7 +2943,7 @@ def test_restore_marker_without_valid_resume_id_still_requires_live_socket(failu
     expect(code == 0, f"invalid app restore/stale: wrapper exited {code}: {stderr}", failures)
     expect(real_argv == ["--resume", "not-a-session-id"],
            f"invalid app restore/stale: expected passthrough, got {real_argv}", failures)
-    expect(observed_env.get("CMUX_AGENT_RESTORE_LAUNCH") == "__UNSET__",
+    expect(observed_env.get("BREE_AGENT_RESTORE_LAUNCH") == "__UNSET__",
            f"invalid app restore/stale: marker leaked to Claude: {observed_env}", failures)
 
 
@@ -2962,7 +2962,7 @@ def test_mismatched_restore_tokens_still_require_live_socket(failures: list[str]
         expect(code == 0, f"mismatched marker {token}: wrapper exited {code}: {stderr}", failures)
         expect(real_argv == ["--resume", session_id],
                f"mismatched marker {token}: expected passthrough, got {real_argv}", failures)
-        expect(observed_env.get("CMUX_AGENT_RESTORE_LAUNCH") == "__UNSET__",
+        expect(observed_env.get("BREE_AGENT_RESTORE_LAUNCH") == "__UNSET__",
                f"mismatched marker {token}: marker leaked to Claude: {observed_env}", failures)
 
 
@@ -2979,7 +2979,7 @@ def main() -> int:
     test_live_socket_merges_user_settings_into_hooks(failures)
     test_live_socket_merges_inline_settings_form(failures)
     test_live_socket_repeated_settings_user_value_wins_conflict(failures)
-    test_live_socket_user_nonobject_hooks_does_not_drop_cmux_hooks(failures)
+    test_live_socket_user_nonobject_hooks_does_not_drop_bree_hooks(failures)
     test_live_socket_preserves_genuine_user_hook_command(failures)
     test_live_socket_invalid_settings_warns_and_falls_back(failures)
     test_live_socket_merges_settings_file_form(failures)
@@ -2998,8 +2998,8 @@ def main() -> int:
     test_headless_detection_ignores_option_values(failures)
     test_subcommand_help_cancellation_cleans_up_children(failures)
     test_passthrough_flags_bypass_hook_injection(failures)
-    test_agents_subcommand_removes_cmux_terminal_fingerprint(failures)
-    test_hooks_disabled_preserves_cmux_terminal_env_for_custom_hooks(failures)
+    test_agents_subcommand_removes_bree_terminal_fingerprint(failures)
+    test_hooks_disabled_preserves_bree_terminal_env_for_custom_hooks(failures)
     test_live_socket_preserves_third_party_claude_auth_for_fresh_launch(failures)
     test_hooks_disabled_clears_stale_auth_selection_before_passthrough(failures)
     test_live_socket_normalizes_subrouter_claude_config_dir(failures)

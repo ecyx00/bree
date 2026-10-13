@@ -23,7 +23,7 @@ export const SECRETS = {
   xSession: "x-auth-token-secret",
 };
 
-// Cookies a signed-in cmux browser holds for these sites.
+// Cookies a signed-in bree browser holds for these sites.
 export const COOKIES = [
   { name: "SID", value: SECRETS.googleSID, domain: ".google.com", path: "/", secure: true, httpOnly: true },
   { name: "SID", value: SECRETS.googleSID, domain: ".youtube.com", path: "/", secure: true, httpOnly: true },

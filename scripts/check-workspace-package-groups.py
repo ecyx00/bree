@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate / verify the SPM package grouping in cmux.xcworkspace.
+"""Generate / verify the SPM package grouping in bree.xcworkspace.
 
 The on-disk folder layout is the single source of truth. Every Swift package
 lives physically under exactly one group directory:
@@ -28,14 +28,14 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(SCRIPT_DIR)
 
 PACKAGES_DIR = os.path.join(ROOT, "Packages")
-WORKSPACE_DATA = os.path.join(ROOT, "cmux.xcworkspace", "contents.xcworkspacedata")
+WORKSPACE_DATA = os.path.join(ROOT, "bree.xcworkspace", "contents.xcworkspacedata")
 
 # Group directories, in the order they appear in the workspace.
 GROUPS = ["Shared", "macOS"]
 
 # Structural workspace entries that are not Packages/<group>/* folders; kept
 # verbatim so regeneration only ever touches package membership.
-TOP_LEVEL_PROJECTS = ["group:cmux.xcodeproj"]
+TOP_LEVEL_PROJECTS = ["group:bree.xcodeproj"]
 # The Examples group is curated by hand and lives under a different container.
 EXAMPLES_GROUP = (
     "container:Examples",
@@ -43,7 +43,7 @@ EXAMPLES_GROUP = (
     [
         "group:TabsVisibleSidebar/TabsVisibleSidebar.xcodeproj",
         "group:SampleSidebarExtensionApp/SampleSidebarExtensionApp.xcodeproj",
-        "group:CmuxExtensionSidebarExamples",
+        "group:BreeExtensionSidebarExamples",
     ],
 )
 

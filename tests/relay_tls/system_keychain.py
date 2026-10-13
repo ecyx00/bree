@@ -30,7 +30,7 @@ def run(*args, **kwargs):
 
 
 def certificates(directory):
-    subject = "cmux-12714-" + uuid.uuid4().hex
+    subject = "bree-12714-" + uuid.uuid4().hex
     config = directory / "openssl.cnf"
     config.write_text(f"""[req]
 distinguished_name = dn
@@ -78,7 +78,7 @@ commonName = supplied
 
 def build_client(directory, output, diagnostics):
     """Build the probe with the app's locked revision and reject resolver drift."""
-    lockfile = ROOT / "Packages/Shared/CmuxIrohTransport/Package.resolved"
+    lockfile = ROOT / "Packages/Shared/BreeIrohTransport/Package.resolved"
     pins = json.loads(lockfile.read_text())["pins"]
     pin = next(pin for pin in pins if pin["identity"] == "iroh-ffi")
     (directory / "Package.swift").write_text(f'''// swift-tools-version: 6.0
@@ -185,7 +185,7 @@ def main():
     if sys.platform != "darwin" or not args.allow_system_keychain:
         parser.error("use an isolated macOS runner with --allow-system-keychain")
     args.output.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="cmux-relay-tls-") as temp:
+    with tempfile.TemporaryDirectory(prefix="bree-relay-tls-") as temp:
         directory = Path(temp)
         os.chmod(directory, 0o700)
         subject = certificates(directory)

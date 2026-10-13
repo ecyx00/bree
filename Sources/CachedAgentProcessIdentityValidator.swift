@@ -1,4 +1,4 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Foundation
 
 struct CachedAgentProcessIdentityValidator: Sendable {
@@ -27,11 +27,11 @@ struct CachedAgentProcessIdentityValidator: Sendable {
     }
 
     func currentProcess(
-        _ process: CmuxTopProcessArguments,
+        _ process: BreeTopProcessArguments,
         matches snapshot: SessionRestorableAgentSnapshot,
         hermesSessionValidation: HermesSessionValidation = .cachedSnapshot
     ) -> Bool {
-        if let liveKind = normalizedProcessValue(process.environment["CMUX_AGENT_LAUNCH_KIND"]),
+        if let liveKind = normalizedProcessValue(process.environment["BREE_AGENT_LAUNCH_KIND"]),
            !Self.launchKind(liveKind, matches: snapshot.kind, launcher: snapshot.launchCommand?.launcher) {
             return false
         }
@@ -42,11 +42,11 @@ struct CachedAgentProcessIdentityValidator: Sendable {
                 arguments: process.arguments,
                 environment: process.environment
             )
-            guard CmuxVaultAgentRegistration.builtInHermes.detect.matches(observed),
+            guard BreeVaultAgentRegistration.builtInHermes.detect.matches(observed),
                   observed.isInteractiveHermesAgentInvocation else {
                 return false
             }
-            guard let explicitSessionID = CmuxVaultAgentPersistedSessionStore.hermesStateDB
+            guard let explicitSessionID = BreeVaultAgentPersistedSessionStore.hermesStateDB
                 .explicitSessionID(arguments: process.arguments) else {
                 // A fresh hook record supplies the missing session identity. A
                 // cached snapshot cannot: Hermes can switch conversations without
@@ -75,7 +75,7 @@ struct CachedAgentProcessIdentityValidator: Sendable {
         matches snapshot: SessionRestorableAgentSnapshot
     ) -> Bool {
         guard let liveExecutable = arguments.first.map(executableBasename) else { return false }
-        if let liveKind = normalizedProcessValue(environment["CMUX_AGENT_LAUNCH_KIND"]),
+        if let liveKind = normalizedProcessValue(environment["BREE_AGENT_LAUNCH_KIND"]),
            Self.launchKind(liveKind, matches: snapshot.kind, launcher: snapshot.launchCommand?.launcher),
            normalizedProcessValue(snapshot.launchCommand?.launcher)?.compare(liveKind, options: [.caseInsensitive, .literal]) == .orderedSame,
            liveProcessExecutableMatchesRecordedAgent(
@@ -110,13 +110,13 @@ struct CachedAgentProcessIdentityValidator: Sendable {
     }
 
     private func currentProcessSession(
-        _ process: CmuxTopProcessArguments,
+        _ process: BreeTopProcessArguments,
         matches snapshot: SessionRestorableAgentSnapshot,
         hermesSessionValidation: HermesSessionValidation
     ) -> Bool {
         let arguments = process.arguments
         let authoritativeEnvironmentSessionID = normalizedProcessValue(
-            process.environment["CMUX_AGENT_SESSION_ID"]
+            process.environment["BREE_AGENT_SESSION_ID"]
         )
         if let registration = snapshot.registration ?? Self.builtInRegistration(for: snapshot.kind) {
             let observedSessionID: String?
@@ -129,7 +129,7 @@ struct CachedAgentProcessIdentityValidator: Sendable {
                     // id in-process and reports it through its hooks. When the
                     // current hook record is the evidence, it was written by
                     // the very process generation that already matched on pid
-                    // identity, cmux scope, and executable above, so a bare
+                    // identity, bree scope, and executable above, so a bare
                     // argv cannot contradict it; failing closed there marked
                     // every fresh Antigravity session exited and retired its
                     // binding on the next autosave (#5473). A cached snapshot
@@ -155,19 +155,19 @@ struct CachedAgentProcessIdentityValidator: Sendable {
             case .persistedStore:
                 // Hermes is validated in the dedicated branch above.
                 observedSessionID = nil
-            case .cmuxHookStore:
+            case .breeHookStore:
                 // Hook-store registrations carry their canonical identity in
                 // the hook record; an exported process identity is optional.
                 observedSessionID = authoritativeEnvironmentSessionID
             }
             guard let observedSessionID else {
-                if case .cmuxHookStore = registration.sessionIdSource {
+                if case .breeHookStore = registration.sessionIdSource {
                     // The hook store is the authoritative session identity for
                     // this registration; argv is intentionally irrelevant.
                     return true
                 }
                 // Pi overwrites its argv with a bare title and nothing exports
-                // CMUX_AGENT_SESSION_ID for it, so a fresh Pi never shows its
+                // BREE_AGENT_SESSION_ID for it, so a fresh Pi never shows its
                 // session. Its own current hook record vouches instead (#12084).
                 return hermesSessionValidation.vouchesForMissingSessionIdentity
             }
@@ -227,11 +227,11 @@ struct CachedAgentProcessIdentityValidator: Sendable {
     /// Built-in kinds carry no registration on hook-store snapshots, but Amp's
     /// identity contract is its Vault registration's: the hook store that
     /// recorded the PID generation is authoritative and argv never names the
-    /// thread. Without this, a resumed Amp that outlives cmux is never an
+    /// thread. Without this, a resumed Amp that outlives bree is never an
     /// owner and the next restore is silently skipped instead of reported (#12158).
     private static func builtInRegistration(
         for kind: RestorableAgentKind
-    ) -> CmuxVaultAgentRegistration? {
+    ) -> BreeVaultAgentRegistration? {
         switch kind {
         case .amp:
             return .builtInAmp
@@ -339,10 +339,10 @@ struct CachedAgentProcessIdentityValidator: Sendable {
         executableCandidates: [String],
         environment: [String: String]
     ) -> Bool {
-        guard let liveKind = normalizedProcessValue(environment["CMUX_AGENT_LAUNCH_KIND"]),
+        guard let liveKind = normalizedProcessValue(environment["BREE_AGENT_LAUNCH_KIND"]),
               (liveKind.compare(kind.rawValue, options: [.caseInsensitive, .literal]) == .orderedSame
                   || AgentLaunchCaptureTrust.launcherDescribesKind(liveKind, kind: kind.rawValue)),
-              let launchExecutable = normalizedProcessValue(environment["CMUX_AGENT_LAUNCH_EXECUTABLE"]) else {
+              let launchExecutable = normalizedProcessValue(environment["BREE_AGENT_LAUNCH_EXECUTABLE"]) else {
             return false
         }
         let launchBasename = executableBasename(launchExecutable)
@@ -352,7 +352,7 @@ struct CachedAgentProcessIdentityValidator: Sendable {
     }
 
     private func registrationDetectRule(
-        _ rule: CmuxVaultAgentDetectRule,
+        _ rule: BreeVaultAgentDetectRule,
         matchesExecutable liveExecutable: String,
         arguments: [String]
     ) -> Bool {

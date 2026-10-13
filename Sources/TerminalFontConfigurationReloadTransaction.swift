@@ -1,9 +1,9 @@
-import CmuxFoundation
+import BreeFoundation
 
 /// One configuration transaction's font-scale boundary.
 ///
 /// Settings reload before the target is sampled, so a value imported from
-/// cmux.json and the Ghostty config built in this transaction cannot diverge.
+/// bree.json and the Ghostty config built in this transaction cannot diverge.
 @MainActor
 struct TerminalFontConfigurationReloadTransaction {
     let previousMagnificationPercent: Int

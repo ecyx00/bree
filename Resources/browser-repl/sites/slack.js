@@ -4,7 +4,7 @@
 // request carries the session cookie. Nothing returns the token.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
   const APP = "https://app.slack.com";
 
@@ -61,7 +61,7 @@
         slackPage((run) =>
           body(async (team, method, params) => {
             const r = await run(slackCall, { team, method, params });
-            if (r.error === "not_signed_in") throw new S.SiteError("not_signed_in", "slack: the cmux browser is not signed in to Slack; open https://app.slack.com with tabs.open() and ask the user to sign in");
+            if (r.error === "not_signed_in") throw new S.SiteError("not_signed_in", "slack: the bree browser is not signed in to Slack; open https://app.slack.com with tabs.open() and ask the user to sign in");
             if (r.error === "unknown_team") throw new S.SiteError("not_found", `slack: no signed-in workspace ${JSON.stringify(team)}; workspaces: ${r.teams.join(", ")}`);
             if (!r.json) throw new S.SiteError("http", `slack ${method}: HTTP ${r.status}`);
             if (!r.json.ok) throw new S.SiteError(r.json.error === "invalid_auth" || r.json.error === "not_authed" ? "not_signed_in" : "slack_error", `slack ${method}: ${r.json.error}${r.json.needed ? ` (needs ${r.json.needed})` : ""}`);
@@ -85,7 +85,7 @@
         // [{ teamId, name, domain, url, userId, enterpriseId, lastActive }]
         async workspaces() {
           const r = await slackPage((run) => run(slackCall, { list: true }));
-          if (r.error) throw new S.SiteError("not_signed_in", "slack.workspaces: the cmux browser is not signed in to Slack; open https://app.slack.com and ask the user to sign in");
+          if (r.error) throw new S.SiteError("not_signed_in", "slack.workspaces: the bree browser is not signed in to Slack; open https://app.slack.com and ask the user to sign in");
           return r.teams;
         },
         // Channels the user is in: { channels: [{ id, name, isPrivate, isIm, topic, members }], nextCursor }.

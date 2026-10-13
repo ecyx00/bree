@@ -104,7 +104,7 @@ export async function startFixtureServers({ primaryPort = 0, peerPort = 0 } = {}
   const primary = await listen(primaryPort);
   const peer = await listen(peerPort);
   // A plain-http origin with a public hostname that resolves to loopback
-  // (lvh.me). cmux prompts before loading http from hosts outside its
+  // (lvh.me). bree prompts before loading http from hosts outside its
   // localhost and private-network allowlist, so this origin exercises that gate.
   const insecureHost = await dns.lookup("lvh.me").then((r) => (r.address === "127.0.0.1" ? "lvh.me" : null), () => null);
   // Two distinct hostnames make the peer a different site, not just a

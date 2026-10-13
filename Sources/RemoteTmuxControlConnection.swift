@@ -1,4 +1,4 @@
-import CmuxRemoteSession
+import BreeRemoteSession
 import Foundation
 import os
 
@@ -7,7 +7,7 @@ import os
 /// Spawns `ssh -tt <ControlMaster> host tmux -CC attach -t <session>` as a
 /// `Process` with pipes, feeds its stdout through ``RemoteTmuxControlStreamParser``
 /// (in order, via an `AsyncStream`), and exposes the mirrored topology plus a
-/// live output callback. cmux owns the whole protocol here — so it never depends
+/// live output callback. bree owns the whole protocol here — so it never depends
 /// on ghostty's (tmux-3.6-fragile) built-in Viewer, and there is no
 /// command-queue desync because we issue and correlate commands ourselves.
 @MainActor
@@ -79,7 +79,7 @@ final class RemoteTmuxControlConnection {
     /// (style tokens stripped) — exactly the text a native tmux client draws
     /// in that pane's header, custom formats included. Seeded by the
     /// pane-rects fetch and kept LIVE by a per-pane subscription
-    /// (`cmux_hdr_<pane>`), so a program retitling its pane updates the strip
+    /// (`bree_hdr_<pane>`), so a program retitling its pane updates the strip
     /// the moment tmux would redraw its own border. The mirror copies its
     /// windows' subset on reconcile; the view never reads this directly.
     var paneHeaderLabels: [Int: String] = [:]
@@ -306,7 +306,7 @@ final class RemoteTmuxControlConnection {
     /// Subscription-name prefix for per-pane `pane_current_path` (`refresh-client -B`).
     /// The tmux pane id is appended so an inbound `%subscription-changed` can be
     /// routed back to its pane; defined once so the writer and reader can't drift.
-    static let cwdSubscriptionPrefix = "cmux_cwd_"
+    static let cwdSubscriptionPrefix = "bree_cwd_"
 
     /// Subscription-name prefix for per-pane reflow classification
     /// (`refresh-client -B`). The subscribed format is
@@ -314,16 +314,16 @@ final class RemoteTmuxControlConnection {
     /// and on every change, so launching/exiting an app (bash → node when claude
     /// starts) re-classifies the pane live. The tmux pane id is appended for
     /// routing, mirroring ``cwdSubscriptionPrefix``.
-    static let reflowSubscriptionPrefix = "cmux_reflow_"
+    static let reflowSubscriptionPrefix = "bree_reflow_"
     /// Per-pane subscription that keeps header labels LIVE, mirroring
     /// ``cwdSubscriptionPrefix``: tmux pushes the newly-expanded
     /// `pane-border-format` whenever its value changes (a program retitling
     /// its pane, the running command changing) — the same moments native
     /// tmux redraws its own header row.
-    static let headerSubscriptionPrefix = "cmux_hdr_"
+    static let headerSubscriptionPrefix = "bree_hdr_"
     /// Per-pane subscription for raw `pane_title`, independent of the user's
     /// `pane-border-format` (which may omit the title entirely).
-    nonisolated static let paneTitleSubscriptionPrefix = "cmux_title_"
+    nonisolated static let paneTitleSubscriptionPrefix = "bree_title_"
 
     /// Per-WINDOW subscription to `pane-border-status`, the one layout input tmux
     /// changes with no notification of its own.
@@ -339,7 +339,7 @@ final class RemoteTmuxControlConnection {
     /// tmux pushes the value once on subscribe and again on every change, for
     /// hidden windows as well as the current one (both verified on 3.7), so the
     /// mirror learns the change on an event instead of polling for it.
-    static let borderStatusSubscriptionPrefix = "cmux_border_"
+    static let borderStatusSubscriptionPrefix = "bree_border_"
 
     /// The last `pane-border-status` value each window's subscription reported.
     /// The initial push needs no refetch (the attach's own rects fetch is already
@@ -431,7 +431,7 @@ final class RemoteTmuxControlConnection {
     private func spawnProcess(createIfMissing: Bool) throws {
         // A fresh control stream cannot retain the prior parser or command FIFO.
         #if DEBUG
-        cmuxDebugLog("remote.stream.reset pendingCommands=\(pendingCommands.count) createIfMissing=\(createIfMissing)")
+        breeDebugLog("remote.stream.reset pendingCommands=\(pendingCommands.count) createIfMissing=\(createIfMissing)")
         #endif
         parser = RemoteTmuxControlStreamParser()
         pendingCommands.removeAll()
@@ -463,7 +463,7 @@ final class RemoteTmuxControlConnection {
         proc.standardError = errPipe
         let stdinWriter = RemoteTmuxControlPipeWriter(
             handle: inPipe.fileHandleForWriting,
-            label: "com.cmux.remote-tmux.stdin.\(UUID().uuidString)",
+            label: "com.bree.remote-tmux.stdin.\(UUID().uuidString)",
             maxPendingBytes: Self.maxPendingStdinBytes,
             onFailure: { [weak self] in
                 self?.handleStdinWriteFailure()
@@ -471,7 +471,7 @@ final class RemoteTmuxControlConnection {
         )
 
         let stdoutPipeReader = RemoteTmuxProcessOutputReader(
-            label: "com.cmux.remote-tmux.stdout.\(UUID().uuidString)",
+            label: "com.bree.remote-tmux.stdout.\(UUID().uuidString)",
             maxPendingChunks: Self.maxPendingStdoutChunks,
             maxPendingBytes: Self.maxPendingStdoutBytes,
             onOverflow: { [weak self] in
@@ -481,7 +481,7 @@ final class RemoteTmuxControlConnection {
         let reader = outPipe.fileHandleForReading
         stdoutPipeReader.attach(to: reader)
         let stderrPipeReader = RemoteTmuxProcessOutputReader(
-            label: "com.cmux.remote-tmux.stderr.\(UUID().uuidString)",
+            label: "com.bree.remote-tmux.stderr.\(UUID().uuidString)",
             maxPendingChunks: Self.maxPendingStderrChunks,
             maxPendingBytes: Self.maxPendingStderrBytes,
             onOverflow: { [weak self] in
@@ -639,7 +639,7 @@ final class RemoteTmuxControlConnection {
         // cells get refilled (see repaintPaneVisibleScreen), so "did the repaint
         // fire?" must be answerable from the log rather than argued.
         if command.hasPrefix("refresh-client") || command.hasPrefix("capture-pane") {
-            cmuxDebugLog("remote.send state=\(connectionState) \(command)")
+            breeDebugLog("remote.send state=\(connectionState) \(command)")
         }
         #endif
         return sendBatchInternal([command], kinds: [kind])
@@ -938,7 +938,7 @@ final class RemoteTmuxControlConnection {
             windowTitleRowPlacements[id] = nil
             windowOrder.removeAll { $0 == id }
             #if DEBUG
-            cmuxDebugLog("remote.window.close @\(id) order=\(windowOrder)")
+            breeDebugLog("remote.window.close @\(id) order=\(windowOrder)")
             #endif
             pendingLayouts[id] = nil
             initialBatchStaged[id] = nil
@@ -976,7 +976,7 @@ final class RemoteTmuxControlConnection {
         case let .sessionWindowChanged(_, windowId):
             record("session-window-changed @\(windowId)")
         case let .subscriptionChanged(name, value):
-            // cmux subscribes each pane's working directory as "cmux_cwd_<paneId>".
+            // bree subscribes each pane's working directory as "bree_cwd_<paneId>".
             if name.hasPrefix(Self.cwdSubscriptionPrefix),
                let paneId = Int(name.dropFirst(Self.cwdSubscriptionPrefix.count)) {
                 let path = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1029,7 +1029,7 @@ final class RemoteTmuxControlConnection {
                 if let baseline, baseline != status {
                     record("border-status @\(windowId) \(baseline)->\(status)")
                     #if DEBUG
-                    cmuxDebugLog("remote.border.change @\(windowId) \(baseline)->\(status) refetching")
+                    breeDebugLog("remote.border.change @\(windowId) \(baseline)->\(status) refetching")
                     #endif
                     requestWindows()
                 }

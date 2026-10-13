@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WRAPPER = ROOT / "Resources" / "bin" / "cmux-codex-wrapper"
+WRAPPER = ROOT / "Resources" / "bin" / "bree-codex-wrapper"
 SESSION_ID = "0198f073-0a5b-7000-8000-000000000059"
 
 
@@ -22,19 +22,19 @@ def executable(path: Path, contents: str) -> None:
 
 
 def main() -> int:
-    with tempfile.TemporaryDirectory(prefix="cmux-codex-autoresume-chain-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-codex-autoresume-chain-") as td:
         root = Path(td)
         wrapper_dir = root / "wrapper"
         real_dir = root / "real"
         wrapper_dir.mkdir()
         real_dir.mkdir()
-        wrapper = wrapper_dir / "cmux-codex-wrapper"
+        wrapper = wrapper_dir / "bree-codex-wrapper"
         shutil.copy2(WRAPPER, wrapper)
         wrapper.chmod(0o755)
         state_path = root / "state.json"
         state_path.write_text(json.dumps({"bindings": [], "calls": []}), encoding="utf-8")
 
-        cli = root / "cmux"
+        cli = root / "bree"
         executable(
             cli,
             """#!/usr/bin/env python3
@@ -52,8 +52,8 @@ elif args[:4] == ["hooks", "enqueue", "codex", "session-start"] or args[:3] == [
     payload = json.loads(sys.stdin.read() or "{}")
     state["bindings"].append({
         "session_id": payload.get("session_id"),
-        "pid": os.environ.get("CMUX_CODEX_PID"),
-        "surface": os.environ.get("CMUX_SURFACE_ID"),
+        "pid": os.environ.get("BREE_CODEX_PID"),
+        "surface": os.environ.get("BREE_SURFACE_ID"),
         "queued": args[1] == "enqueue",
     })
 state_path.write_text(json.dumps(state), encoding="utf-8")
@@ -72,29 +72,29 @@ if "resume" in args:
     session_id = args[index]
 else:
     subprocess.run(
-        [os.environ["CMUX_BUNDLED_CLI_PATH"], "hooks", "codex", "session-start"],
+        [os.environ["BREE_BUNDLED_CLI_PATH"], "hooks", "codex", "session-start"],
         input=json.dumps({"session_id": session_id, "cwd": os.getcwd()}),
         text=True,
         check=True,
         env=os.environ,
     )
 with open(os.environ["FAKE_CODEX_LOG"], "a", encoding="utf-8") as log:
-    log.write(json.dumps({"session_id": session_id, "argv": args, "pid": os.environ.get("CMUX_CODEX_PID")}) + "\\n")
+    log.write(json.dumps({"session_id": session_id, "argv": args, "pid": os.environ.get("BREE_CODEX_PID")}) + "\\n")
 """,
         )
 
         env = os.environ.copy()
         env["PATH"] = f"{wrapper_dir}:{real_dir}:/usr/bin:/bin"
         env["HOME"] = str(root / "home")
-        env["CMUX_SURFACE_ID"] = "11111111-1111-1111-1111-111111111111"
-        env["CMUX_WORKSPACE_ID"] = "22222222-2222-2222-2222-222222222222"
-        env["CMUX_BUNDLED_CLI_PATH"] = str(cli)
+        env["BREE_SURFACE_ID"] = "11111111-1111-1111-1111-111111111111"
+        env["BREE_WORKSPACE_ID"] = "22222222-2222-2222-2222-222222222222"
+        env["BREE_BUNDLED_CLI_PATH"] = str(cli)
         env["FAKE_STATE_PATH"] = str(state_path)
         env["FAKE_CODEX_LOG"] = str(root / "codex.log")
         env["FAKE_SESSION_ID"] = SESSION_ID
-        env["CMUX_COMPUTER_USE_APP_ENABLED"] = "0"
-        env["CMUX_COMPUTER_USE_MCP_DISABLED"] = "1"
-        env.pop("CMUX_SOCKET_PATH", None)
+        env["BREE_COMPUTER_USE_APP_ENABLED"] = "0"
+        env["BREE_COMPUTER_USE_MCP_DISABLED"] = "1"
+        env.pop("BREE_SOCKET_PATH", None)
 
         invocations = [
             ["--yolo"],

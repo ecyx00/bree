@@ -7,7 +7,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG = ROOT / "CLI" / "CMUXCLI+AgentHookCatalog.swift"
+CATALOG = ROOT / "CLI" / "BREECLI+AgentHookCatalog.swift"
 DOCS = ROOT / "docs" / "agent-hooks.md"
 
 
@@ -31,7 +31,7 @@ def catalog_agent_names(source: str) -> set[str]:
 
 def documented_agent_names(source: str) -> list[str]:
     setup_list = re.search(
-        r"Supported agent names are(?P<names>.*?)\. `cmux hooks setup` skips",
+        r"Supported agent names are(?P<names>.*?)\. `bree hooks setup` skips",
         source,
         re.DOTALL,
     )

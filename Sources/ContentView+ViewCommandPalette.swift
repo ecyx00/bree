@@ -1,7 +1,7 @@
 import AppKit
 import Bonsplit
-import CmuxCommandPalette
-import CmuxFoundation
+import BreeCommandPalette
+import BreeFoundation
 import Foundation
 
 extension ContentView {
@@ -16,7 +16,7 @@ extension ContentView {
                 title: constant(String(localized: "command.browseSidebarTemplates.title", defaultValue: "Browse Sidebar Templates")),
                 subtitle: constant(String(localized: "command.browseSidebarTemplates.subtitle", defaultValue: "Custom Sidebars")),
                 keywords: ["sidebar", "template", "gallery", "custom", "try", "browse"],
-                when: { _ in CmuxExtensionSidebarSelection.customSidebarsEnabled }
+                when: { _ in BreeExtensionSidebarSelection.customSidebarsEnabled }
             ),
             CommandPaletteCommandContribution(
                 commandId: "palette.triggerFlash",
@@ -55,6 +55,12 @@ extension ContentView {
                 keywords: ["keyboard","shortcuts","keys","cheat sheet","help"]
             ),
             CommandPaletteCommandContribution(
+                commandId: "palette.showBoard",
+                title: constant(KeyboardShortcutSettings.Action.showBoard.label),
+                subtitle: constant(String(localized: "command.closeWindow.subtitle", defaultValue: "Window")),
+                keywords: ["board", "agents", "running", "waiting", "approval", "done", "status"]
+            ),
+            CommandPaletteCommandContribution(
                 commandId: "palette.focusLeftSidebar",
                 title: constant(KeyboardShortcutSettings.Action.focusLeftSidebar.label),
                 subtitle: constant(String(localized: "command.triggerFlash.subtitle", defaultValue: "View")),
@@ -68,8 +74,8 @@ extension ContentView {
             ),
             CommandPaletteCommandContribution(
                 commandId: "palette.swapWithSession",
-                title: constant(CmuxPaneSwapStrings().swapWithSession),
-                subtitle: constant(CmuxPaneSwapStrings().terminalPane),
+                title: constant(BreePaneSwapStrings().swapWithSession),
+                subtitle: constant(BreePaneSwapStrings().terminalPane),
                 keywords: ["swap", "pane", "session", "terminal", "exchange"],
                 when: { context in
                     context.bool(CommandPaletteContextKeys.panelIsTerminal)
@@ -93,7 +99,7 @@ extension ContentView {
                 title: constant(String(localized: "agentInbox.command.title", defaultValue: "Show Agent Inbox")),
                 subtitle: constant(String(localized: "agentInbox.command.subtitle", defaultValue: "Agents")),
                 keywords: ["agent", "inbox", "message", "question", "permission", "feed"],
-                when: { _ in CmuxFeatureFlags.shared.isAgentInboxQuickViewEnabled }
+                when: { _ in BreeFeatureFlags.shared.isAgentInboxQuickViewEnabled }
             ),
         ]
     }
@@ -198,6 +204,9 @@ extension ContentView {
         }
         registry.register(commandId: "palette.showKeyboardShortcuts") {
             KeyboardShortcutsCheatSheetController.shared.show()
+        }
+        registry.register(commandId: "palette.showBoard") {
+            if AppDelegate.shared?.toggleBoardFromShortcut(preferredWindow: observedWindow) != true { NSSound.beep() }
         }
         registry.register(commandId: "palette.focusLeftSidebar") {
             _ = AppDelegate.shared?.focusRegionInActiveMainWindow(.leftSidebar, preferredWindow: observedWindow)

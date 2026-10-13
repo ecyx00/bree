@@ -6,7 +6,7 @@ RUN adduser -D -s /bin/sh dev \
     && mkdir -p /home/dev/.ssh /run/sshd /srv/www \
     && chown -R dev:dev /home/dev/.ssh \
     && chmod 700 /home/dev/.ssh \
-    && echo "cmux-ssh-forward-ok" > /srv/www/index.html
+    && echo "bree-ssh-forward-ok" > /srv/www/index.html
 
 RUN ssh-keygen -A
 

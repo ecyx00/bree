@@ -1,5 +1,5 @@
-import CmuxControlSocket
-import CmuxCore
+import BreeControlSocket
+import BreeCore
 import Foundation
 
 // This file keeps the closed lifecycle vocabulary beside its only behavior

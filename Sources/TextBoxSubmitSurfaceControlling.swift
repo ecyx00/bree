@@ -1,5 +1,5 @@
 import AppKit
-import CmuxTerminal
+import BreeTerminal
 
 @MainActor
 protocol TextBoxSubmitSurfaceControlling: AnyObject {

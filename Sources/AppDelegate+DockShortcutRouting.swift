@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxPanes
+import BreePanes
 
 extension KeyboardShortcutSettings.Action {
     /// Selects whether an action resolves through the Dock, responder, or main workspace.
@@ -77,7 +77,7 @@ extension KeyboardShortcutSettings.Action {
              .focusRightSidebar,
              .focusLeftSidebar, .focusTerminal, .focusRightSidebarRegion,
              .cycleFocusRegionForward, .cycleFocusRegionBackward,
-             .toggleQuickView, .toggleArchitecture, .toggleWiki, .showKeyboardShortcuts,
+             .toggleQuickView, .toggleArchitecture, .toggleWiki, .showKeyboardShortcuts, .showBoard,
              .switchRightSidebarToFiles,
              .switchRightSidebarToSessions,
              .switchRightSidebarToActivity,

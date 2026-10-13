@@ -3,7 +3,7 @@
 Regression: one retained Codex transcript monitor must reach a bounded RSS
 plateau as synchronized transcript updates are processed.
 
-The test drives the real CLI monitor against FakeCmuxSocket. Each synthetic
+The test drives the real CLI monitor against FakeBreeSocket. Each synthetic
 update includes a large assistant row plus a unique request_user_input marker.
 The notification for that marker is the parser-progress signal before the next
 write, so checkpoints do not depend on fixed sleeps or scheduler timing.
@@ -21,11 +21,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 from test_codex_feed_hooks import (
     FAKE_SURFACE_ID,
     FAKE_WORKSPACE_ID,
-    FakeCmuxSocket,
+    FakeBreeSocket,
     monitor_pids_for_session,
     wait_for_monitor_pids,
 )
@@ -56,7 +56,7 @@ def monitor_rss_kb(pid: int) -> int:
 
 
 def wait_for_raw_command(
-    server: FakeCmuxSocket,
+    server: FakeBreeSocket,
     needle: str,
     *,
     timeout: float = 5.0,
@@ -146,7 +146,7 @@ def append_synchronized_update(
 
 def test_codex_monitor_rss_reaches_a_plateau(cli_path: str, root: Path) -> None:
     """Verify one monitor stops accumulating parser temporaries across wakes."""
-    socket_path = root / "cmux-monitor-memory.sock"
+    socket_path = root / "bree-monitor-memory.sock"
     state_dir = root / "hook-state-memory"
     transcript_path = root / "codex-session-memory.jsonl"
     state_dir.mkdir()
@@ -170,20 +170,20 @@ def test_codex_monitor_rss_reaches_a_plateau(cli_path: str, root: Path) -> None:
         "transcript_path": str(transcript_path),
     }
     environment = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PASSWORD"):
         environment.pop(key, None)
     environment.update(
         {
-            "CMUX_SOCKET_PATH": str(socket_path),
-            "CMUX_SURFACE_ID": FAKE_SURFACE_ID,
-            "CMUX_WORKSPACE_ID": FAKE_WORKSPACE_ID,
-            "CMUX_AGENT_HOOK_STATE_DIR": str(state_dir),
-            "CMUX_CLI_SENTRY_DISABLED": "1",
+            "BREE_SOCKET_PATH": str(socket_path),
+            "BREE_SURFACE_ID": FAKE_SURFACE_ID,
+            "BREE_WORKSPACE_ID": FAKE_WORKSPACE_ID,
+            "BREE_AGENT_HOOK_STATE_DIR": str(state_dir),
+            "BREE_CLI_SENTRY_DISABLED": "1",
         }
     )
 
     monitor_pid: int | None = None
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surface_delivery_target=(FAKE_WORKSPACE_ID, FAKE_SURFACE_ID),
@@ -254,13 +254,13 @@ def test_codex_monitor_rss_reaches_a_plateau(cli_path: str, root: Path) -> None:
 def main() -> int:
     """Run the isolated monitor memory regression and report its result."""
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
     with tempfile.TemporaryDirectory(
-        prefix="cmux-codex-monitor-memory-", dir="/tmp"
+        prefix="bree-codex-monitor-memory-", dir="/tmp"
     ) as td:
         try:
             test_codex_monitor_rss_reaches_a_plateau(cli_path, Path(td))

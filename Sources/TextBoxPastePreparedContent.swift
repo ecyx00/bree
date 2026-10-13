@@ -1,4 +1,4 @@
-import CmuxTerminal
+import BreeTerminal
 
 enum TextBoxPastePreparedContent: Codable, Equatable, Sendable {
     case insertText(String)

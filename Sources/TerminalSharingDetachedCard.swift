@@ -1,5 +1,5 @@
-import CmuxTerminalSharing
-import CmuxTerminalSizing
+import BreeTerminalSharing
+import BreeTerminalSizing
 import SwiftUI
 
 /// The pane card shown after someone disconnected this Mac from a Cloud

@@ -1,7 +1,7 @@
-import CmuxTerminalCore
-import CmuxNotifications
-import CmuxSidebar
-import CmuxWorkspaces
+import BreeTerminalCore
+import BreeNotifications
+import BreeSidebar
+import BreeWorkspaces
 import Darwin
 import AppKit
 import Foundation

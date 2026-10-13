@@ -24,7 +24,7 @@
     "closed": true,
     "after-close": 3
   },
-  "cmux": {
+  "bree": {
     "snapshot-other-tab": "title: ARIA Fixture"
   }
 }

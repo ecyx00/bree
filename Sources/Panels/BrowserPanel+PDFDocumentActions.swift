@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 
 extension BrowserPanel {
@@ -8,11 +8,11 @@ extension BrowserPanel {
             NSSound.beep()
             return
         }
-        guard let webView = webView as? CmuxWebView else {
+        guard let webView = webView as? BreeWebView else {
             NSSound.beep()
             return
         }
-        let traceID = CmuxWebView.makeContextDownloadTraceID(prefix: "pdfdl")
+        let traceID = BreeWebView.makeContextDownloadTraceID(prefix: "pdfdl")
         webView.downloadURLViaSession(
             url,
             suggestedFilename: nil,
@@ -28,6 +28,6 @@ extension BrowserPanel {
             NSSound.beep()
             return
         }
-        webView.cmuxRunPrintOperation()
+        webView.breeRunPrintOperation()
     }
 }

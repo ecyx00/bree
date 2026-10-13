@@ -4,7 +4,7 @@
   ],
   "launch": {
     "args": [
-      "-cmux.flags.override.agent-inbox-quick-view-enabled-release",
+      "-bree.flags.override.agent-inbox-quick-view-enabled-release",
       "<true/>"
     ]
   },

@@ -1,6 +1,6 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
-import CmuxTestSupport
+import BreeTestSupport
 
 final class WindowDecorationsController {
     private var observers: [NSObjectProtocol] = []
@@ -45,7 +45,7 @@ final class WindowDecorationsController {
         }
         let shouldHideButtons = shouldHideTrafficLights(for: window)
         hideStandardButtons(on: window, hidden: shouldHideButtons)
-        // Native traffic-light frames are AppKit-owned. cmux reads them for layout but never moves them.
+        // Native traffic-light frames are AppKit-owned. bree reads them for layout but never moves them.
         applyMinimalModeSidebarTitlebarClickTarget(to: window)
     }
 
@@ -249,7 +249,7 @@ final class WindowDecorationsController {
         lastMinimalModeTitlebarClick = nil
         let result = handleTitlebarDoubleClick(window: window, behavior: .standardAction)
         #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "titlebar.minimalWindowDoubleClick.result=\(String(describing: result)) point=\(NSStringFromPoint(locationInWindow)) band=\(String(format: "%.1f", minimalModeTitlebarDoubleClickBandHeight(for: window)))"
         )
         #endif
@@ -287,8 +287,8 @@ final class WindowDecorationsController {
         isHovering: Bool?,
         slot: MinimalModeSidebarControlActionSlot?
     ) {
-        guard ProcessInfo.processInfo.environment["CMUX_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" else { return }
-        _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+        guard ProcessInfo.processInfo.environment["BREE_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" else { return }
+        _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
             if event.type == .leftMouseDown {
                 let count = (payload["minimalSidebarWindowMonitorLeftMouseDownCount"] as? String).flatMap(Int.init) ?? 0
                 payload["minimalSidebarWindowMonitorLeftMouseDownCount"] = String(count + 1)
@@ -311,8 +311,8 @@ final class WindowDecorationsController {
         isHovering: Bool,
         slot: MinimalModeSidebarControlActionSlot?
     ) {
-        guard ProcessInfo.processInfo.environment["CMUX_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" else { return }
-        _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+        guard ProcessInfo.processInfo.environment["BREE_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" else { return }
+        _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
             let count = (payload["minimalSidebarWindowSendEventLeftMouseDownCount"] as? String).flatMap(Int.init) ?? 0
             payload["minimalSidebarWindowSendEventLeftMouseDownCount"] = String(count + 1)
             payload["minimalSidebarWindowSendEventLastWindowNumber"] = String(window.windowNumber)
@@ -330,7 +330,7 @@ final class WindowDecorationsController {
         anchorView: NSView? = nil
     ) {
         #if DEBUG
-        _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+        _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
             payload["minimalSidebarWindowMonitorLastAction"] = slot.debugName
         }
         #endif
@@ -401,8 +401,8 @@ final class WindowDecorationsController {
         guard shouldInstall,
               let contentView = window.contentView else {
             #if DEBUG
-            if ProcessInfo.processInfo.environment["CMUX_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" {
-                _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+            if ProcessInfo.processInfo.environment["BREE_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" {
+                _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
                     payload["minimalSidebarTitlebarClickTargetInstalled"] = "false"
                     payload["minimalSidebarTitlebarClickTargetWindowNumber"] = String(window.windowNumber)
                 }
@@ -457,8 +457,8 @@ final class WindowDecorationsController {
         )
 
         #if DEBUG
-        if ProcessInfo.processInfo.environment["CMUX_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" {
-            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+        if ProcessInfo.processInfo.environment["BREE_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" {
+            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
                 payload["minimalSidebarTitlebarClickTargetInstalled"] = "true"
                 payload["minimalSidebarTitlebarClickTargetWindowNumber"] = String(window.windowNumber)
                 payload["minimalSidebarTitlebarClickTargetFrameInWindow"] = NSStringFromRect(target.convert(target.bounds, to: nil))

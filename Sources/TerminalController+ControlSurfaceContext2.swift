@@ -1,7 +1,7 @@
 import AppKit
 import Bonsplit
-import CmuxControlSocket
-import CmuxPanes
+import BreeControlSocket
+import BreePanes
 import Foundation
 /// The surface-domain lifecycle witnesses (`split` / `respawn` / `create` /
 /// `close` / `move` / `reorder`) plus the browser-disabled mapping and the

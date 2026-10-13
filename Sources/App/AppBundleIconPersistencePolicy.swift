@@ -1,10 +1,10 @@
 import Foundation
 
 enum AppBundleIconPersistencePolicy {
-    private static let stableReleaseBundleIdentifier = "com.cmuxterm.app"
-    private static let stableReleaseAppBundleName = "cmux.app"
-    static let disablePersistenceArgument = "--cmux-disable-bundle-icon-persistence"
-    static let disablePersistenceDefaultsKey = "cmuxDisableBundleIconPersistence"
+    private static let stableReleaseBundleIdentifier = "com.bree.app"
+    private static let stableReleaseAppBundleName = "bree.app"
+    static let disablePersistenceArgument = "--bree-disable-bundle-icon-persistence"
+    static let disablePersistenceDefaultsKey = "breeDisableBundleIconPersistence"
 
     static func updateDisableDefault(defaults: UserDefaults, launchArguments: [String]) {
         defaults.set(

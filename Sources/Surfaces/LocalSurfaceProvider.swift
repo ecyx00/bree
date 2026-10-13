@@ -1,7 +1,7 @@
 import AppKit
 import Bonsplit
-import CmuxFoundation
-import CmuxSurfaceCatalogModel
+import BreeFoundation
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// This Mac as a surface provider.

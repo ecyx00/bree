@@ -1,5 +1,5 @@
-import CmuxTerminal
-import CmuxRemoteSession
+import BreeTerminal
+import BreeRemoteSession
 import Foundation
 
 @MainActor

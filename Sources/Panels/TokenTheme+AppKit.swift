@@ -1,5 +1,5 @@
 import AppKit
-import CmuxSyntaxHighlighting
+import BreeSyntaxHighlighting
 
 extension TokenTheme {
     /// Resolves light/dark token palettes from the view's effective appearance.

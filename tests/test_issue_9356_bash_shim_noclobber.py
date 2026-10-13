@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 """
-Regression coverage for https://github.com/manaflow-ai/cmux/issues/9356.
+Regression coverage for https://github.com/ecyx00/bree/issues/9356.
 
 Same bug as #6714, but in the bash integration: with ``set -o noclobber`` in the
 user's interactive bash, every prompt prints
 
-    bash: /var/folders/.../T/cmux-cli-shims/<surface-id>/claude: cannot overwrite existing file
+    bash: /var/folders/.../T/bree-cli-shims/<surface-id>/claude: cannot overwrite existing file
 
-``Resources/shell-integration/cmux-bash-integration.bash`` writes its per-surface
+``Resources/shell-integration/bree-bash-integration.bash`` writes its per-surface
 CLI shim with a plain ``>`` redirection::
 
     } >"$shim_path" 2>/dev/null || return 0
 
-``_cmux_install_cli_command_shim`` runs more than once per shell (source time,
+``_bree_install_cli_command_shim`` runs more than once per shell (source time,
 then again from the prompt hook), so the second and later writes target an
 existing file. Under ``noclobber`` bash refuses the redirect and reports it; the
 ``2>/dev/null`` does not suppress the message because the shell's redirection
 machinery reports the failure on the compound-command redirect itself. The
 ``|| return 0`` then skips the write, so the shim is also left stale.
 
-Fix: bash's explicit clobber redirection ``>|`` for this cmux-owned generated
+Fix: bash's explicit clobber redirection ``>|`` for this bree-owned generated
 file, matching the zsh integration.
 
 This test drives the real integration file through real bash with ``noclobber``
@@ -37,20 +37,20 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-INTEGRATION = REPO_ROOT / "Resources/shell-integration/cmux-bash-integration.bash"
+INTEGRATION = REPO_ROOT / "Resources/shell-integration/bree-bash-integration.bash"
 
 # Two explicit shim writes under noclobber, with two different wrapper paths so
 # we can prove the second write refreshed the file rather than silently
-# no-op'ing. Sourcing without CMUX_SHELL_INTEGRATION_DIR keeps the top-level
+# no-op'ing. Sourcing without BREE_SHELL_INTEGRATION_DIR keeps the top-level
 # wrapper install an early-return, and the prompt hooks never fire under
 # `bash -c`, so these are the only writes.
 DRIVER = r"""
 set -o noclobber
-source "$CMUX_BASH_INTEGRATION" 2>/dev/null
-export TMPDIR="$CMUX_TEST_TMPDIR"
-export CMUX_SURFACE_ID="$CMUX_TEST_SURFACE_ID"
-_cmux_install_cli_command_shim claude "$CMUX_TEST_WRAPPER_A"
-_cmux_install_cli_command_shim claude "$CMUX_TEST_WRAPPER_B"
+source "$BREE_BASH_INTEGRATION" 2>/dev/null
+export TMPDIR="$BREE_TEST_TMPDIR"
+export BREE_SURFACE_ID="$BREE_TEST_SURFACE_ID"
+_bree_install_cli_command_shim claude "$BREE_TEST_WRAPPER_A"
+_bree_install_cli_command_shim claude "$BREE_TEST_WRAPPER_B"
 """
 
 
@@ -62,19 +62,19 @@ def _run_driver(tmp: Path) -> subprocess.CompletedProcess[str]:
     wrapper_a.chmod(0o755)
     wrapper_b.chmod(0o755)
 
-    env = {key: value for key, value in os.environ.items() if not key.startswith("CMUX")}
+    env = {key: value for key, value in os.environ.items() if not key.startswith("BREE")}
     env.update(
         {
             "LC_ALL": "C",
             "LANG": "C",
-            "CMUX_BASH_INTEGRATION": str(INTEGRATION),
-            "CMUX_TEST_TMPDIR": str(tmp),
+            "BREE_BASH_INTEGRATION": str(INTEGRATION),
+            "BREE_TEST_TMPDIR": str(tmp),
             "HOME": str(tmp / "home"),
-            "CMUX_TEST_SURFACE_ID": "issue-9356-shim",
-            "CMUX_TEST_WRAPPER_A": str(wrapper_a),
-            "CMUX_TEST_WRAPPER_B": str(wrapper_b),
-            "CMUX_SOCKET_PATH": "",
-            "CMUX_LOAD_GHOSTTY_BASH_INTEGRATION": "0",
+            "BREE_TEST_SURFACE_ID": "issue-9356-shim",
+            "BREE_TEST_WRAPPER_A": str(wrapper_a),
+            "BREE_TEST_WRAPPER_B": str(wrapper_b),
+            "BREE_SOCKET_PATH": "",
+            "BREE_LOAD_GHOSTTY_BASH_INTEGRATION": "0",
             "GHOSTTY_RESOURCES_DIR": "",
         }
     )
@@ -92,9 +92,9 @@ def _run_driver(tmp: Path) -> subprocess.CompletedProcess[str]:
 def test_bash_shim_refresh_is_silent_and_refreshes_under_noclobber() -> None:
     assert INTEGRATION.exists(), f"missing integration file: {INTEGRATION}"
 
-    with tempfile.TemporaryDirectory(prefix="cmux-9356-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-9356-") as td:
         tmp = Path(td)
-        (tmp / "home" / ".cmuxterm").mkdir(parents=True)
+        (tmp / "home" / ".bree").mkdir(parents=True)
         proc = _run_driver(tmp)
         debug = (
             f"\nexit={proc.returncode}"
@@ -103,16 +103,16 @@ def test_bash_shim_refresh_is_silent_and_refreshes_under_noclobber() -> None:
         )
 
         assert "cannot overwrite existing file" not in proc.stderr.lower(), (
-            "cmux printed a noclobber 'cannot overwrite existing file' error while "
+            "bree printed a noclobber 'cannot overwrite existing file' error while "
             "refreshing its own generated shim" + debug
         )
         # Locale-independent guard: the failing redirect names the shim path.
-        assert "cmux-cli-shims" not in proc.stderr, (
+        assert "bree-cli-shims" not in proc.stderr, (
             "the shim writer reported an error to stderr while refreshing the shim"
             + debug
         )
 
-        shim_path = tmp / "home" / ".cmuxterm" / "cmux-cli-shims" / "issue-9356-shim" / "claude"
+        shim_path = tmp / "home" / ".bree" / "bree-cli-shims" / "issue-9356-shim" / "claude"
         assert shim_path.exists(), f"shim was not created at {shim_path}" + debug
         assert os.access(shim_path, os.X_OK), (
             f"shim is not executable: {shim_path}" + debug
@@ -121,12 +121,12 @@ def test_bash_shim_refresh_is_silent_and_refreshes_under_noclobber() -> None:
         contents = shim_path.read_text(encoding="utf-8")
         wrapper_b = str(tmp / "wrapper-b")
         wrapper_a = str(tmp / "wrapper-a")
-        assert f'cmux_wrapper="{wrapper_b}"' in contents, (
-            "cmux did not refresh its generated shim on the second write under "
+        assert f'bree_wrapper="{wrapper_b}"' in contents, (
+            "bree did not refresh its generated shim on the second write under "
             f"noclobber (expected wrapper {wrapper_b!r}).\n--- shim ---\n{contents}"
             + debug
         )
-        assert f'cmux_wrapper="{wrapper_a}"' not in contents, (
+        assert f'bree_wrapper="{wrapper_a}"' not in contents, (
             "stale wrapper path from the first write survived the refresh.\n"
             f"--- shim ---\n{contents}" + debug
         )
@@ -134,4 +134,4 @@ def test_bash_shim_refresh_is_silent_and_refreshes_under_noclobber() -> None:
 
 if __name__ == "__main__":
     test_bash_shim_refresh_is_silent_and_refreshes_under_noclobber()
-    print("PASS: cmux refreshes its bash CLI shim silently under noclobber")
+    print("PASS: bree refreshes its bash CLI shim silently under noclobber")

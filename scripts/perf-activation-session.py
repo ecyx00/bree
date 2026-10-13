@@ -94,20 +94,20 @@ class PerfFailure(RuntimeError):
     pass
 
 
-class CmuxPerfRunner:
+class BreePerfRunner:
     def __init__(self, args: argparse.Namespace):
         self.args = args
         self.tag = args.tag
         self.tag_slug = sanitize_path(args.tag)
         self.tag_id = sanitize_bundle(args.tag)
-        self.socket_path = pathlib.Path(f"/tmp/cmux-debug-{self.tag_slug}.sock")
-        self.cmuxd_socket_path = pathlib.Path(
-            os.path.expanduser(f"~/Library/Application Support/cmux/cmuxd-dev-{self.tag_slug}.sock")
+        self.socket_path = pathlib.Path(f"/tmp/bree-debug-{self.tag_slug}.sock")
+        self.breed_socket_path = pathlib.Path(
+            os.path.expanduser(f"~/Library/Application Support/bree/breed-dev-{self.tag_slug}.sock")
         )
-        self.debug_log_path = pathlib.Path(f"/tmp/cmux-debug-{self.tag_slug}.log")
-        self.stdout_path = pathlib.Path(f"/tmp/cmux-perf-{self.tag_slug}-stdout.log")
+        self.debug_log_path = pathlib.Path(f"/tmp/bree-debug-{self.tag_slug}.log")
+        self.stdout_path = pathlib.Path(f"/tmp/bree-perf-{self.tag_slug}-stdout.log")
         self.app_path = pathlib.Path(args.app_path).expanduser() if args.app_path else self.default_app_path()
-        self.binary_path = self.app_path / "Contents/MacOS/cmux DEV"
+        self.binary_path = self.app_path / "Contents/MacOS/Bree Dev"
         self.cli_path = self.app_path / "Contents/Resources/bin/bree"
         self.fixture_root = self.make_fixture_root(args.fixture_root)
         self.proc: subprocess.Popen | None = None
@@ -127,20 +127,20 @@ class CmuxPerfRunner:
         if fixture_root_arg:
             fixture_parent = pathlib.Path(fixture_root_arg).expanduser()
             fixture_parent.mkdir(parents=True, exist_ok=True)
-            return pathlib.Path(tempfile.mkdtemp(prefix=f"cmux-perf-{self.tag_slug}-", dir=str(fixture_parent)))
-        return pathlib.Path(tempfile.mkdtemp(prefix=f"cmux-perf-{self.tag_slug}-"))
+            return pathlib.Path(tempfile.mkdtemp(prefix=f"bree-perf-{self.tag_slug}-", dir=str(fixture_parent)))
+        return pathlib.Path(tempfile.mkdtemp(prefix=f"bree-perf-{self.tag_slug}-"))
 
     def default_app_path(self) -> pathlib.Path:
         return pathlib.Path.home() / (
-            f"Library/Developer/Xcode/DerivedData/cmux-{self.tag_slug}/"
-            f"Build/Products/Debug/cmux DEV {self.tag_slug}.app"
+            f"Library/Developer/Xcode/DerivedData/bree-{self.tag_slug}/"
+            f"Build/Products/Debug/Bree Dev {self.tag_slug}.app"
         )
 
     def check_paths(self) -> None:
         if not self.binary_path.exists():
             raise PerfFailure(f"app binary not found: {self.binary_path}")
         if not self.cli_path.exists():
-            raise PerfFailure(f"cmux CLI not found: {self.cli_path}")
+            raise PerfFailure(f"bree CLI not found: {self.cli_path}")
 
     def log_tail(self, path: pathlib.Path, max_lines: int = 80) -> str:
         try:
@@ -169,12 +169,12 @@ class CmuxPerfRunner:
         )
 
     def clean_persisted_state(self) -> None:
-        app_support = pathlib.Path.home() / "Library/Application Support/cmux"
-        bundle_id = f"com.cmuxterm.app.debug.{self.tag_id}"
+        app_support = pathlib.Path.home() / "Library/Application Support/bree"
+        bundle_id = f"com.bree.app.debug.{self.tag_id}"
         for suffix in ("", "-previous"):
             (app_support / f"session-{bundle_id}{suffix}.json").unlink(missing_ok=True)
         self.socket_path.unlink(missing_ok=True)
-        self.cmuxd_socket_path.unlink(missing_ok=True)
+        self.breed_socket_path.unlink(missing_ok=True)
         self.debug_log_path.unlink(missing_ok=True)
         self.stdout_path.unlink(missing_ok=True)
         if self.fixture_root.exists():
@@ -184,24 +184,24 @@ class CmuxPerfRunner:
     def app_env(self) -> dict[str, str]:
         env = os.environ.copy()
         for key in (
-            "CMUX_SOCKET",
-            "CMUX_SOCKET_PATH",
-            "CMUX_SOCKET_MODE",
-            "CMUX_TAB_ID",
-            "CMUX_PANEL_ID",
-            "CMUX_SURFACE_ID",
-            "CMUX_WORKSPACE_ID",
-            "CMUXD_UNIX_PATH",
-            "CMUX_TAG",
-            "CMUX_PORT",
-            "CMUX_PORT_END",
-            "CMUX_PORT_RANGE",
-            "CMUX_DEBUG_LOG",
-            "CMUX_BUNDLE_ID",
-            "CMUX_UI_TEST_MODE",
-            "CMUX_SHELL_INTEGRATION",
-            "CMUX_SHELL_INTEGRATION_DIR",
-            "CMUX_LOAD_GHOSTTY_ZSH_INTEGRATION",
+            "BREE_SOCKET",
+            "BREE_SOCKET_PATH",
+            "BREE_SOCKET_MODE",
+            "BREE_TAB_ID",
+            "BREE_PANEL_ID",
+            "BREE_SURFACE_ID",
+            "BREE_WORKSPACE_ID",
+            "BREED_UNIX_PATH",
+            "BREE_TAG",
+            "BREE_PORT",
+            "BREE_PORT_END",
+            "BREE_PORT_RANGE",
+            "BREE_DEBUG_LOG",
+            "BREE_BUNDLE_ID",
+            "BREE_UI_TEST_MODE",
+            "BREE_SHELL_INTEGRATION",
+            "BREE_SHELL_INTEGRATION_DIR",
+            "BREE_LOAD_GHOSTTY_ZSH_INTEGRATION",
             "GHOSTTY_BIN_DIR",
             "GHOSTTY_RESOURCES_DIR",
             "GHOSTTY_SHELL_FEATURES",
@@ -209,24 +209,24 @@ class CmuxPerfRunner:
             env.pop(key, None)
         env.update(
             {
-                "CMUX_SOCKET": str(self.socket_path),
-                "CMUX_SOCKET_MODE": "automation",
-                "CMUX_SOCKET_PATH": str(self.socket_path),
-                "CMUXD_UNIX_PATH": str(self.cmuxd_socket_path),
-                "CMUX_DEBUG_LOG": str(self.debug_log_path),
-                "CMUX_TAG": self.tag,
-                "CMUX_BUNDLE_ID": f"com.cmuxterm.app.debug.{self.tag_id}",
+                "BREE_SOCKET": str(self.socket_path),
+                "BREE_SOCKET_MODE": "automation",
+                "BREE_SOCKET_PATH": str(self.socket_path),
+                "BREED_UNIX_PATH": str(self.breed_socket_path),
+                "BREE_DEBUG_LOG": str(self.debug_log_path),
+                "BREE_TAG": self.tag,
+                "BREE_BUNDLE_ID": f"com.bree.app.debug.{self.tag_id}",
             }
         )
         return env
 
     def cli_env(self) -> dict[str, str]:
         env = os.environ.copy()
-        env["CMUX_SOCKET"] = str(self.socket_path)
-        env["CMUX_SOCKET_PATH"] = str(self.socket_path)
-        env["CMUX_TAG"] = self.tag
-        env["CMUX_BUNDLE_ID"] = f"com.cmuxterm.app.debug.{self.tag_id}"
-        env["CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC"] = str(max(15, int(self.args.snapshot_timeout)))
+        env["BREE_SOCKET"] = str(self.socket_path)
+        env["BREE_SOCKET_PATH"] = str(self.socket_path)
+        env["BREE_TAG"] = self.tag
+        env["BREE_BUNDLE_ID"] = f"com.bree.app.debug.{self.tag_id}"
+        env["BREE_CLI_RESPONSE_TIMEOUT_SEC"] = str(max(15, int(self.args.snapshot_timeout)))
         return env
 
     def launch(self, label: str) -> float:
@@ -279,13 +279,13 @@ class CmuxPerfRunner:
                 except subprocess.TimeoutExpired:
                     pass
         subprocess.run(
-            ["pkill", "-f", re.escape(f"cmux DEV {self.tag_slug}.app/Contents/MacOS/cmux DEV")],
+            ["pkill", "-f", re.escape(f"Bree Dev {self.tag_slug}.app/Contents/MacOS/Bree Dev")],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
         )
         self.socket_path.unlink(missing_ok=True)
-        self.cmuxd_socket_path.unlink(missing_ok=True)
+        self.breed_socket_path.unlink(missing_ok=True)
 
     def run_cli(self, args: list[str], input_text: str | None = None, timeout: float = 60, check: bool = True) -> str:
         proc = subprocess.run(
@@ -298,7 +298,7 @@ class CmuxPerfRunner:
         )
         if check and proc.returncode != 0:
             raise PerfFailure(
-                "cmux command failed: "
+                "bree command failed: "
                 + " ".join(args)
                 + f"\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
             )
@@ -341,10 +341,10 @@ class CmuxPerfRunner:
         repo = self.fixture_root / f"project-{index:02d}"
         repo.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "init"], cwd=repo, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
-        (repo / "README.md").write_text(f"# Project {index}\n\ncmux perf fixture\n", encoding="utf-8")
+        (repo / "README.md").write_text(f"# Project {index}\n\nbree perf fixture\n", encoding="utf-8")
         subprocess.run(["git", "add", "README.md"], cwd=repo, stdout=subprocess.DEVNULL, check=True)
         subprocess.run(
-            ["git", "-c", "user.name=cmux", "-c", "user.email=cmux@example.invalid", "commit", "-m", "seed"],
+            ["git", "-c", "user.name=bree", "-c", "user.email=bree@example.invalid", "commit", "-m", "seed"],
             cwd=repo,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -783,7 +783,7 @@ def print_summary(result: dict) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run cmux activation/session snapshot performance benchmark.")
+    parser = argparse.ArgumentParser(description="Run bree activation/session snapshot performance benchmark.")
     parser.add_argument("--tag", default="perfci", help="Tagged debug app name built by scripts/reload.sh.")
     parser.add_argument("--app-path", default="", help="Override app bundle path.")
     parser.add_argument("--fixture-root", default="", help="Directory for temporary dirty git repos.")
@@ -837,7 +837,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    runner = CmuxPerfRunner(args)
+    runner = BreePerfRunner(args)
     try:
         result = runner.run()
     except Exception as exc:

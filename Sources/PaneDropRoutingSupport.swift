@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import Bonsplit
 import Foundation

@@ -46,18 +46,18 @@ class PackageImportTests(unittest.TestCase):
     def test_package_imports_are_blanked_keeping_line_numbers(self):
         source = "\n".join([
             "import AppKit",
-            "import CmuxSidebar",
-            "@testable import CmuxFoundation",
-            "@preconcurrency internal import CmuxSettings",
-            "import struct CmuxCore.Thing",
+            "import BreeSidebar",
+            "@testable import BreeFoundation",
+            "@preconcurrency internal import BreeSettings",
+            "import struct BreeCore.Thing",
             "",
-            "let x = 1  // import CmuxNope stays: not at line start",
+            "let x = 1  // import BreeNope stays: not at line start",
         ])
         stripped = ui_lab.PACKAGE_IMPORT.sub("", source)
         self.assertEqual(stripped.count("\n"), source.count("\n"))
         self.assertEqual(stripped.split("\n")[0], "import AppKit")
-        self.assertNotIn("import Cmux", "\n".join(stripped.split("\n")[:6]))
-        self.assertIn("import CmuxNope", stripped)
+        self.assertNotIn("import Bree", "\n".join(stripped.split("\n")[:6]))
+        self.assertIn("import BreeNope", stripped)
 
 
 if __name__ == "__main__":

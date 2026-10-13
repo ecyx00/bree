@@ -22,7 +22,7 @@ extension TerminalController {
 
         // Determine output path
         let outputDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cmux-screenshots")
+            .appendingPathComponent("bree-screenshots")
         try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
 
         let filename = label.isEmpty ? "\(screenshotId).png" : "\(label)_\(screenshotId).png"
@@ -133,7 +133,7 @@ extension TerminalController {
         do {
             let shareableContent: SCShareableContent
             if #available(macOS 14.4, *) {
-                // This current-process-only query captures cmux's own windows
+                // This current-process-only query captures bree's own windows
                 // without requesting Screen Recording permission.
                 shareableContent = try await SCShareableContent.currentProcess
             } else {

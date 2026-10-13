@@ -1,4 +1,4 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Foundation
 
 extension WorkstreamEvent {
@@ -44,7 +44,7 @@ extension WorkstreamEvent {
     /// the agent before the frame is sent. Detached telemetry workers omit this
     /// marker because their completion can arrive after a newer prompt.
     var feedHookIsOrdered: Bool {
-        feedExtraFields?["_cmux_ordered_hook"] as? Bool == true
+        feedExtraFields?["_bree_ordered_hook"] as? Bool == true
     }
 
     private var feedExtraFields: [String: Any]? {

@@ -1,6 +1,6 @@
-import CMUXAgentLaunch
-import CmuxAgentChat
-import CmuxMobileHost
+import BREEAgentLaunch
+import BreeAgentChat
+import BreeMobileHost
 import Foundation
 
 enum AgentLiveProcessLookupResult: Sendable {
@@ -35,8 +35,8 @@ extension AgentChatSessionRegistry {
         allowUnidentifiedFallback: Bool = false
     ) async -> AgentLiveProcessLookupResult {
         guard !expectedSessionIDs.isEmpty else { return .notFound }
-        let snapshot = await CmuxTopProcessSnapshot.capture(
-            includeProcessDetails: true, includeCMUXScope: true, includeResources: false
+        let snapshot = await BreeTopProcessSnapshot.capture(
+            includeProcessDetails: true, includeBREEScope: true, includeResources: false
         )
         guard snapshot.captureIsAvailable, snapshot.enumerationIsComplete else { return .unavailable }
         guard let livePID = liveAgentPID(
@@ -45,7 +45,7 @@ extension AgentChatSessionRegistry {
             allowUnidentifiedFallback: allowUnidentifiedFallback,
             processArgumentsAndEnvironment: { pid in
                 guard let process = snapshot.process(pid: pid) else { return nil }
-                return CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: process)
+                return BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: process)
             }
         ) else { return .notFound }
         return .found(livePID)
@@ -63,9 +63,9 @@ extension AgentChatSessionRegistry {
         allowUnidentifiedFallback: Bool = false
     ) async -> Int? {
         guard !expectedSessionIDs.isEmpty else { return nil }
-        let snapshot = await CmuxTopProcessSnapshot.capture(
+        let snapshot = await BreeTopProcessSnapshot.capture(
             includeProcessDetails: true,
-            includeCMUXScope: true, includeResources: false
+            includeBREEScope: true, includeResources: false
         )
         guard snapshot.captureIsAvailable, snapshot.enumerationIsComplete else { return nil }
         return liveAgentPID(
@@ -76,16 +76,16 @@ extension AgentChatSessionRegistry {
             allowUnidentifiedFallback: allowUnidentifiedFallback,
             processArgumentsAndEnvironment: { pid in
                 guard let process = snapshot.process(pid: pid) else { return nil }
-                return CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: process)
+                return BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: process)
             }
         )
     }
 
     nonisolated static func liveAgentPID(
-        in snapshot: CmuxTopProcessSnapshot,
+        in snapshot: BreeTopProcessSnapshot,
         surfaceID: String,
         kind: ChatAgentKind,
-        processArgumentsAndEnvironment: (Int) -> CmuxTopProcessArguments?
+        processArgumentsAndEnvironment: (Int) -> BreeTopProcessArguments?
     ) -> Int? {
         liveAgentPID(
             in: snapshot,
@@ -98,15 +98,15 @@ extension AgentChatSessionRegistry {
     }
 
     nonisolated static func liveAgentPID(
-        in snapshot: CmuxTopProcessSnapshot,
+        in snapshot: BreeTopProcessSnapshot,
         surfaceID: String,
         kind: ChatAgentKind,
         matchingSessionIDs expectedSessionIDs: Set<String>?,
         allowUnidentifiedFallback: Bool = false,
-        processArgumentsAndEnvironment: (Int) -> CmuxTopProcessArguments?
+        processArgumentsAndEnvironment: (Int) -> BreeTopProcessArguments?
     ) -> Int? {
         guard let surfaceUUID = UUID(uuidString: surfaceID) else { return nil }
-        let rootPIDs = cmuxSurfaceRootPIDs(surfaceID: surfaceUUID, snapshot: snapshot)
+        let rootPIDs = breeSurfaceRootPIDs(surfaceID: surfaceUUID, snapshot: snapshot)
         guard !rootPIDs.isEmpty else { return nil }
         let wantedID = kind.sourceName
         var matchedPID: (pid: Int, depth: Int)?
@@ -115,8 +115,8 @@ extension AgentChatSessionRegistry {
         let expandedPIDs = snapshot.expandedPIDs(rootPIDs: rootPIDs)
         for pid in expandedPIDs.sorted() {
             let depth = processTreeDepth(pid: pid, rootPIDs: rootPIDs, snapshot: snapshot)
-            var details: CmuxTopProcessArguments?
-            func loadDetails() -> CmuxTopProcessArguments? {
+            var details: BreeTopProcessArguments?
+            func loadDetails() -> BreeTopProcessArguments? {
                 if details == nil {
                     details = processArgumentsAndEnvironment(pid)
                 }
@@ -188,11 +188,11 @@ extension AgentChatSessionRegistry {
         return current
     }
 
-    nonisolated static func cmuxSurfaceRootPIDs(
+    nonisolated static func breeSurfaceRootPIDs(
         surfaceID: UUID,
-        snapshot: CmuxTopProcessSnapshot
+        snapshot: BreeTopProcessSnapshot
     ) -> Set<Int> {
-        let pids = snapshot.pids(forCMUXSurfaceID: surfaceID)
+        let pids = snapshot.pids(forBREESurfaceID: surfaceID)
         return Set(pids.filter { pid in
             guard let parentPID = snapshot.process(pid: pid)?.parentPID else {
                 return true
@@ -204,7 +204,7 @@ extension AgentChatSessionRegistry {
     nonisolated static func processTreeDepth(
         pid: Int,
         rootPIDs: Set<Int>,
-        snapshot: CmuxTopProcessSnapshot
+        snapshot: BreeTopProcessSnapshot
     ) -> Int {
         guard pid > 0 else { return 0 }
         var currentPID = pid
@@ -237,7 +237,7 @@ extension AgentChatSessionRegistry {
     private nonisolated static func observedSessionID(
         agentID: String,
         pid: Int,
-        details: CmuxTopProcessArguments?,
+        details: BreeTopProcessArguments?,
         preferredSessionIDs: Set<String>
     ) -> String? {
         if agentID == "codex",

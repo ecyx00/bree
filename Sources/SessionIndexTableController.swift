@@ -1,5 +1,5 @@
 import AppKit
-import CmuxAppKitSupportUI
+import BreeAppKitSupportUI
 
 /// Main-actor owner of the Vault table lifecycle and its immutable row snapshot.
 @MainActor

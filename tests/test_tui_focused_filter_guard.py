@@ -8,7 +8,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github" / "workflows" / "cmux-tui.yml"
+WORKFLOW = ROOT / ".github" / "workflows" / "bree-tui.yml"
 
 FOCUSED_SENTINEL_STEPS = (
     "focused Linux journal process-fence test",
@@ -90,13 +90,13 @@ def test_journal_sentinels_are_focused_only_and_full_uses_isolated_core_runner()
         assert "full" not in condition
 
     final_sentinels = steps[FOCUSED_SENTINEL_STEPS[3]]["run"]
-    assert "cargo test -p cmux-tui-core --test browser_runtime" in final_sentinels
+    assert "cargo test -p bree-tui-core --test browser_runtime" in final_sentinels
     assert "socket_browser_attach_streams_frames_input_and_cell_pixels" in final_sentinels
 
     cargo_test = steps["cargo test"]["run"]
     assert 'if [[ "$MODE" == "full" ]]; then' in cargo_test
-    assert "run-cmux-tui-core-tests-isolated.py" in cargo_test
-    assert "crates/cmux-tui-core" in cargo_test
+    assert "run-bree-tui-core-tests-isolated.py" in cargo_test
+    assert "crates/bree-tui-core" in cargo_test
 
 
 def test_tui_status_names_remain_stable() -> None:
@@ -164,5 +164,5 @@ def test_lint_matrix_runs_clippy_with_each_host_cfg() -> None:
 
         clippy_steps = [step for step in steps if step.get("name") == "cargo clippy"]
         assert len(clippy_steps) == 1
-        assert clippy_steps[0]["working-directory"] == "cmux-tui"
+        assert clippy_steps[0]["working-directory"] == "bree-tui"
         assert "cargo clippy --workspace --all-targets --locked -- -D warnings" in clippy_steps[0]["run"]

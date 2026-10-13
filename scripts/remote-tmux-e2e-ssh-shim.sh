@@ -20,7 +20,7 @@ done
 shift  # the ssh destination
 # Two things real ssh does that we must replicate:
 #  1. It hands the remaining arguments to the remote LOGIN SHELL, which
-#     re-splits them — cmux passes the remote command as one shell-quoted
+#     re-splits them — bree passes the remote command as one shell-quoted
 #     string, so it goes through `sh -c`.
 #  2. With -t/-tt (and ONLY then) it allocates a remote PTY. `tmux -CC`
 #     requires a controlling tty (bare pipe → "tcgetattr failed"), so the

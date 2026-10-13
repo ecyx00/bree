@@ -1,7 +1,7 @@
 import AppKit
-import CmuxSettings
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeSettings
+import BreeTerminal
+import BreeTerminalCore
 import GhosttyKit
 
 extension GhosttySurfaceCallbackContext {

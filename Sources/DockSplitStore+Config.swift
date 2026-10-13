@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 import SwiftUI
 
@@ -68,7 +68,7 @@ extension DockSplitStore {
         case .workspace:
             if let rootDirectory = rootDirectory.flatMap(existingDirectory) {
                 return URL(fileURLWithPath: rootDirectory, isDirectory: true)
-                    .appendingPathComponent(CmuxIdentity.current.projectDirectoryName, isDirectory: true)
+                    .appendingPathComponent(BreeIdentity.current.projectDirectoryName, isDirectory: true)
                     .appendingPathComponent("dock.json", isDirectory: false)
             }
             return globalConfigURL()
@@ -80,7 +80,7 @@ extension DockSplitStore {
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        // Intentionally empty: cmux ships no opinionated default controls (no
+        // Intentionally empty: bree ships no opinionated default controls (no
         // assumed tools like lazygit). The starter file is schema-valid and
         // ready for the user to add their own controls; an empty Dock is a
         // fully supported state — the toolbar `+` menu and empty panes offer
@@ -120,7 +120,7 @@ extension DockSplitStore {
 
     nonisolated private static func dockValidationErrorMessage(for error: Error) -> String? {
         let nsError = error as NSError
-        if nsError.domain == "cmux.dock",
+        if nsError.domain == "bree.dock",
            let message = nsError.userInfo[NSLocalizedDescriptionKey] as? String,
            !message.isEmpty {
             return message
@@ -129,13 +129,13 @@ extension DockSplitStore {
         return nil
     }
 
-    nonisolated static func trustDescriptor(for resolution: DockConfigResolution) -> CmuxActionTrustDescriptor {
+    nonisolated static func trustDescriptor(for resolution: DockConfigResolution) -> BreeActionTrustDescriptor {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let data = (try? encoder.encode(DockConfigFile(controls: resolution.controls))) ?? Data()
         let commandFingerprint = String(data: data, encoding: .utf8) ?? ""
-        return CmuxActionTrustDescriptor(
-            actionID: "cmux.dock",
+        return BreeActionTrustDescriptor(
+            actionID: "bree.dock",
             kind: "dockControls",
             command: commandFingerprint,
             target: "rightSidebarDock",
@@ -157,7 +157,7 @@ extension DockSplitStore {
         for control in file.controls {
             guard seen.insert(control.id).inserted else {
                 throw NSError(
-                    domain: "cmux.dock",
+                    domain: "bree.dock",
                     code: 1,
                     userInfo: [
                         NSLocalizedDescriptionKey: String(
@@ -182,7 +182,7 @@ extension DockSplitStore {
         let homePath = FileManager.default.homeDirectoryForCurrentUser.path
         while true {
             let configURL = URL(fileURLWithPath: candidatePath, isDirectory: true)
-                .appendingPathComponent(CmuxIdentity.current.projectDirectoryName, isDirectory: true)
+                .appendingPathComponent(BreeIdentity.current.projectDirectoryName, isDirectory: true)
                 .appendingPathComponent("dock.json", isDirectory: false)
             if FileManager.default.fileExists(atPath: configURL.path) {
                 return configURL
@@ -198,18 +198,18 @@ extension DockSplitStore {
     }
 
     nonisolated private static func projectBaseDirectory(for configURL: URL) -> String {
-        let cmuxDirectory = configURL.deletingLastPathComponent()
-        return cmuxDirectory.deletingLastPathComponent().path
+        let breeDirectory = configURL.deletingLastPathComponent()
+        return breeDirectory.deletingLastPathComponent().path
     }
 
     nonisolated private static func globalConfigURL() -> URL {
-        if ProcessInfo.processInfo.environment["CMUX_UI_TEST_MODE"] == "1",
-           let testPath = ProcessInfo.processInfo.environment["CMUX_UI_TEST_DOCK_CONFIG_PATH"]?
+        if ProcessInfo.processInfo.environment["BREE_UI_TEST_MODE"] == "1",
+           let testPath = ProcessInfo.processInfo.environment["BREE_UI_TEST_DOCK_CONFIG_PATH"]?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !testPath.isEmpty {
             return URL(fileURLWithPath: testPath)
         }
-        return CmuxIdentity.current
+        return BreeIdentity.current
             .configDirectory(homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
             .appendingPathComponent("dock.json", isDirectory: false)
     }

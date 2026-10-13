@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CMUXProjectModel
+import BreeFoundation
+import BREEProjectModel
 import SwiftUI
 
 /// Schemes tab inside ``ProjectPanelView``.
@@ -9,7 +9,7 @@ import SwiftUI
 /// listing its run / test / profile / archive targets, launch arguments,
 /// and environment variables.
 struct ProjectSchemesTabView: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     @ObservedObject var panel: ProjectPanel
     let model: ProjectModel
 
@@ -46,30 +46,30 @@ struct ProjectSchemesTabView: View {
         Button(action: { panel.selectedSchemeName = scheme.name }) {
             HStack(spacing: 8) {
                 Image(systemName: "play.rectangle")
-                    .foregroundStyle(cmuxAccent.color)
+                    .foregroundStyle(breeAccent.color)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
                         Text(scheme.name)
-                            .cmuxFont(size: 12, weight: .semibold)
+                            .scaledFont(size: 12, weight: .semibold)
                         Text(scopeBadgeText(isShared: scheme.isShared))
-                            .cmuxFont(size: 9, weight: .medium)
+                            .scaledFont(size: 9, weight: .medium)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
                             .background(
                                 RoundedRectangle(cornerRadius: 3)
-                                    .fill((scheme.isShared ? cmuxAccent.color : Color.orange).opacity(0.18))
+                                    .fill((scheme.isShared ? breeAccent.color : BreeChromePalette.currentSnapshot.textSecondary).opacity(0.18))
                             )
-                            .foregroundStyle(scheme.isShared ? cmuxAccent.color : Color.orange)
+                            .foregroundStyle(scheme.isShared ? breeAccent.color : BreeChromePalette.currentSnapshot.textSecondary)
                     }
                     HStack(spacing: 8) {
                         if !scheme.runTargetIDs.isEmpty {
                             Text(runSummaryText(for: scheme.runTargetIDs, in: module))
-                                .cmuxFont(size: 10)
+                                .scaledFont(size: 10)
                                 .foregroundStyle(.secondary)
                         }
                         if !scheme.testTargetIDs.isEmpty {
                             Text(testSummaryText(count: scheme.testTargetIDs.count))
-                                .cmuxFont(size: 10)
+                                .scaledFont(size: 10)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -78,7 +78,7 @@ struct ProjectSchemesTabView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(isSelected ? Color.accentColor.opacity(0.15) : .clear)
+            .background(isSelected ? BreeChromePalette.currentSnapshot.accentFill.opacity(0.15) : .clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -91,16 +91,16 @@ struct ProjectSchemesTabView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 8) {
                         Label(selected.scheme.name, systemImage: "play.rectangle.fill")
-                            .cmuxFont(size: 14, weight: .semibold)
+                            .scaledFont(size: 14, weight: .semibold)
                         Text(scopeBadgeText(isShared: selected.scheme.isShared))
-                            .cmuxFont(size: 10, weight: .medium)
+                            .scaledFont(size: 10, weight: .medium)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
                             .background(
                                 RoundedRectangle(cornerRadius: 3)
-                                    .fill((selected.scheme.isShared ? cmuxAccent.color : Color.orange).opacity(0.18))
+                                    .fill((selected.scheme.isShared ? breeAccent.color : BreeChromePalette.currentSnapshot.textSecondary).opacity(0.18))
                             )
-                            .foregroundStyle(selected.scheme.isShared ? cmuxAccent.color : Color.orange)
+                            .foregroundStyle(selected.scheme.isShared ? breeAccent.color : BreeChromePalette.currentSnapshot.textSecondary)
                         Spacer()
                     }
                     row(label: String(localized: "projectSchemes.detail.visibility", defaultValue: "Visibility"), value: scopeDetailText(isShared: selected.scheme.isShared))
@@ -119,11 +119,11 @@ struct ProjectSchemesTabView: View {
                     if !selected.scheme.launchArguments.isEmpty {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(String(localized: "projectSchemes.detail.launchArguments", defaultValue: "Launch arguments"))
-                                .cmuxFont(size: 11, weight: .semibold)
+                                .scaledFont(size: 11, weight: .semibold)
                                 .foregroundStyle(.secondary)
                             ForEach(selected.scheme.launchArguments, id: \.self) { arg in
                                 Text(arg)
-                                    .cmuxFont(size: 11, design: .monospaced)
+                                    .scaledFont(size: 11, design: .monospaced)
                                     .textSelection(.enabled)
                             }
                         }
@@ -131,11 +131,11 @@ struct ProjectSchemesTabView: View {
                     if !selected.scheme.environmentVariables.isEmpty {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(String(localized: "projectSchemes.detail.environment", defaultValue: "Environment"))
-                                .cmuxFont(size: 11, weight: .semibold)
+                                .scaledFont(size: 11, weight: .semibold)
                                 .foregroundStyle(.secondary)
                             ForEach(selected.scheme.environmentVariables.sorted(by: { $0.key < $1.key }), id: \.key) { entry in
                                 Text("\(entry.key) = \(entry.value)")
-                                    .cmuxFont(size: 11, design: .monospaced)
+                                    .scaledFont(size: 11, design: .monospaced)
                                     .textSelection(.enabled)
                             }
                         }
@@ -198,11 +198,11 @@ struct ProjectSchemesTabView: View {
     private func row(label: String, value: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(label)
-                .cmuxFont(size: 11, weight: .semibold)
+                .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .frame(width: 110, alignment: .leading)
             Text(value)
-                .cmuxFont(size: 12)
+                .scaledFont(size: 12)
                 .textSelection(.enabled)
         }
     }

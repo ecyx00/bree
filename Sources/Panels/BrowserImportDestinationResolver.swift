@@ -1,9 +1,9 @@
 import Foundation
-import CmuxBrowser
+import BreeBrowser
 
 @MainActor
 struct BrowserImportDestinationResolver {
-    private let packageResolver = CmuxBrowser.BrowserImportDestinationResolver()
+    private let packageResolver = BreeBrowser.BrowserImportDestinationResolver()
 
     func resolve(
         params: [String: Any],

@@ -5,7 +5,7 @@ usage() {
   cat <<'EOF'
 usage: verify-app-bundle-licenses.sh <app-path>
 
-Verifies that a built cmux app contains the canonical project GPL and its
+Verifies that a built bree app contains the canonical project GPL and its
 third-party license notices before the app is placed in a distributed DMG.
 EOF
 }
@@ -28,12 +28,12 @@ if [[ ! -d "$APP_PATH/Contents" ]]; then
 fi
 
 if [[ ! -s "$BUNDLED_LICENSE" ]]; then
-  echo "error: cmux project license missing or empty at $BUNDLED_LICENSE" >&2
+  echo "error: bree project license missing or empty at $BUNDLED_LICENSE" >&2
   exit 1
 fi
 
 if ! cmp -s "$SOURCE_LICENSE" "$BUNDLED_LICENSE"; then
-  echo "error: bundled cmux project license differs from $SOURCE_LICENSE" >&2
+  echo "error: bundled bree project license differs from $SOURCE_LICENSE" >&2
   exit 1
 fi
 

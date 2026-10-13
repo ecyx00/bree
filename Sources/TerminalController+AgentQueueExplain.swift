@@ -1,4 +1,4 @@
-import CmuxAgentJournal
+import BreeAgentJournal
 import Foundation
 
 /// Socket v2 surface for `bree queue` and `bree agent explain`:
@@ -6,7 +6,7 @@ import Foundation
 ///
 /// Scoped to one terminal surface (`surface_id`, or `workspace_id` for that
 /// workspace's focused surface). None of these is allowlisted in
-/// `RemoteRelayCommandPolicy`, so a `cmux ssh` session cannot reach them.
+/// `RemoteRelayCommandPolicy`, so a `bree ssh` session cannot reach them.
 /// They never focus anything; `agent.explain` is read-only and returns no
 /// typed text, draft text or tool input.
 extension TerminalController {

@@ -1,4 +1,4 @@
-import CmuxRemoteDaemon
+import BreeRemoteDaemon
 import Foundation
 
 // User-facing daemon strings resolve here, in the app target, so

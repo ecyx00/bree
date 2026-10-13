@@ -12,15 +12,15 @@ import time
 import unittest
 import uuid
 
-HELPER = os.environ.get("CMUX_PASTE_HELPER", "")
-PROVIDER = os.environ.get("CMUX_PASTE_PROVIDER", "")
-CLIENT = os.environ.get("CMUX_PASTE_CLIENT", "")
+HELPER = os.environ.get("BREE_PASTE_HELPER", "")
+PROVIDER = os.environ.get("BREE_PASTE_PROVIDER", "")
+CLIENT = os.environ.get("BREE_PASTE_CLIENT", "")
 
 
 @unittest.skipUnless(HELPER and PROVIDER, "requires built helper and isolated provider")
 class PlainPasteFixture(unittest.TestCase):
     def setUp(self):
-        self.root = Path(tempfile.mkdtemp(prefix="cmux-paste-test-"))
+        self.root = Path(tempfile.mkdtemp(prefix="bree-paste-test-"))
         self.children = []
         self.workdirs = []
 
@@ -38,7 +38,7 @@ class PlainPasteFixture(unittest.TestCase):
 
     def board(self, text="hello\n日本語 🦀 e\u0301\r\n", extra=None, behavior=None):
         identity = str(uuid.uuid4())
-        config = dict(name="cmux-paste-test-" + identity, text=text or "",
+        config = dict(name="bree-paste-test-" + identity, text=text or "",
                       representations={**({"public.utf8-plain-text": text} if text is not None else {}), **(extra or {})},
                       ready=str(self.root / (identity + "-ready.json")),
                       requested=str(self.root / (identity + "-requested")))
@@ -60,7 +60,7 @@ class PlainPasteFixture(unittest.TestCase):
         self.assertTrue(predicate(), "fixture condition did not occur")
 
     def directory(self, board, stale=False):
-        path = Path(tempfile.gettempdir()) / ("cmux-paste-preparation-" + str(uuid.uuid4()))
+        path = Path(tempfile.gettempdir()) / ("bree-paste-preparation-" + str(uuid.uuid4()))
         path.mkdir(mode=0o700)
         self.workdirs.append(path)
         request = dict(pasteboard=dict(pasteboardName=board["name"],
@@ -70,8 +70,8 @@ class PlainPasteFixture(unittest.TestCase):
         return path
 
     def launch(self, path):
-        child = subprocess.Popen([HELPER, "--cmux-plain-text-paste-worker",
-                                  "--cmux-paste-preparation-working-directory", str(path)],
+        child = subprocess.Popen([HELPER, "--bree-plain-text-paste-worker",
+                                  "--bree-paste-preparation-working-directory", str(path)],
                                  stdin=subprocess.PIPE)
         self.children.append(child)
         return child
@@ -183,7 +183,7 @@ class PlainTextPasteWorkerTests(PlainPasteFixture):
 
 class PlainTextPasteServerTests(PlainPasteFixture):
     def server(self):
-        child = subprocess.Popen([HELPER, "--cmux-plain-text-paste-server"],
+        child = subprocess.Popen([HELPER, "--bree-plain-text-paste-server"],
                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         self.children.append(child)
         self.assertEqual(self.read_exact(child, 1), b"R")
@@ -266,7 +266,7 @@ class PlainTextPasteServerTests(PlainPasteFixture):
         board = self.board(behavior="stall")
         launcher = self.root / "parent.py"
         launcher.write_text("""import os, subprocess, sys
-reader = subprocess.Popen([sys.argv[1], '--cmux-plain-text-paste-server'],
+reader = subprocess.Popen([sys.argv[1], '--bree-plain-text-paste-server'],
                           stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 assert reader.stdout.read(1) == b'R'
 print(reader.pid, flush=True)

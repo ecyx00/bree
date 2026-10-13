@@ -1,4 +1,4 @@
-import CmuxRemoteWorkspace
+import BreeRemoteWorkspace
 import CryptoKit
 import Foundation
 
@@ -8,10 +8,10 @@ import Foundation
 struct WorkspaceRemoteRelayCommandRewriter: RemoteRelayCommandRewriting {
     /// Legacy per-resume MAC key. Nothing verifies it anymore, but old remote
     /// clients may still send it, so it stays out of the signed request payload.
-    static let authenticationCodeKey = "_cmux_remote_relay_authentication_code"
-    static let requestAuthenticationCodeKey = "_cmux_remote_relay_request_authentication_code"
-    static let remoteWorkspaceIDKey = "_cmux_remote_workspace_id"
-    static let connectionIDKey = "_cmux_remote_connection_id"
+    static let authenticationCodeKey = "_bree_remote_relay_authentication_code"
+    static let requestAuthenticationCodeKey = "_bree_remote_relay_request_authentication_code"
+    static let remoteWorkspaceIDKey = "_bree_remote_workspace_id"
+    static let connectionIDKey = "_bree_remote_connection_id"
 
     let remoteWorkspaceID: UUID
     let remoteRelayTokenHex: String

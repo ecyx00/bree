@@ -1,11 +1,11 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import Bonsplit
 import SwiftUI
-import CmuxTerminal
+import BreeTerminal
 
 private extension NSView {
-    func cmuxAncestor<T: NSView>(of type: T.Type) -> T? {
+    func breeAncestor<T: NSView>(of type: T.Type) -> T? {
         var current: NSView? = self
         while let view = current {
             if let target = view as? T {
@@ -17,12 +17,12 @@ private extension NSView {
     }
 }
 
-/// Hosting root for the terminal find bar: the overlay plus the cmux accent
+/// Hosting root for the terminal find bar: the overlay plus the bree accent
 /// environment, since it mounts outside any window root.
-typealias SurfaceSearchOverlayRoot = ModifiedContent<SurfaceSearchOverlay, CmuxAccentColorEnvironmentModifier>
+typealias SurfaceSearchOverlayRoot = ModifiedContent<SurfaceSearchOverlay, BreeAccentColorEnvironmentModifier>
 
 struct SurfaceSearchOverlay: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     let tabId: UUID
     let surfaceId: UUID
     @ObservedObject var searchState: TerminalSurface.SearchState
@@ -53,7 +53,7 @@ struct SurfaceSearchOverlay: View {
                     onEditingChanged: { isSearchFieldEditing = $0 },
                     onEscape: {
                         #if DEBUG
-                        cmuxDebugLog("find.nativeField.escape surface=\(surfaceId.uuidString.prefix(5)) needleEmpty=\(searchState.needle.isEmpty)")
+                        breeDebugLog("find.nativeField.escape surface=\(surfaceId.uuidString.prefix(5)) needleEmpty=\(searchState.needle.isEmpty)")
                         #endif
                         onClose()
                     },
@@ -70,19 +70,19 @@ struct SurfaceSearchOverlay: View {
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(isSearchFieldEditing ? cmuxAccent.color : Color.clear, lineWidth: 1)
+                        .stroke(isSearchFieldEditing ? breeAccent.color : Color.clear, lineWidth: 1)
                 )
                 .overlay(alignment: .trailing) {
                     if let selected = searchState.selected {
                         let totalText = searchState.total.map { String($0) } ?? "?"
                         Text("\(selected + 1)/\(totalText)")
-                            .cmuxFont(.caption)
+                            .scaledFont(.caption)
                             .foregroundColor(.secondary)
                             .monospacedDigit()
                             .padding(.trailing, 8)
                     } else if let total = searchState.total {
                         Text("-/\(total)")
-                            .cmuxFont(.caption)
+                            .scaledFont(.caption)
                             .foregroundColor(.secondary)
                             .monospacedDigit()
                             .padding(.trailing, 8)
@@ -91,7 +91,7 @@ struct SurfaceSearchOverlay: View {
 
                 Button(action: {
                     #if DEBUG
-                    cmuxDebugLog("findbar.next surface=\(surfaceId.uuidString.prefix(5))")
+                    breeDebugLog("findbar.next surface=\(surfaceId.uuidString.prefix(5))")
                     #endif
                     onNavigateSearch(.next)
                 }) {
@@ -102,7 +102,7 @@ struct SurfaceSearchOverlay: View {
 
                 Button(action: {
                     #if DEBUG
-                    cmuxDebugLog("findbar.prev surface=\(surfaceId.uuidString.prefix(5))")
+                    breeDebugLog("findbar.prev surface=\(surfaceId.uuidString.prefix(5))")
                     #endif
                     onNavigateSearch(.previous)
                 }) {
@@ -113,7 +113,7 @@ struct SurfaceSearchOverlay: View {
 
                 Button(action: {
                     #if DEBUG
-                    cmuxDebugLog("findbar.close surface=\(surfaceId.uuidString.prefix(5))")
+                    breeDebugLog("findbar.close surface=\(surfaceId.uuidString.prefix(5))")
                     #endif
                     onClose()
                 }) {
@@ -128,7 +128,7 @@ struct SurfaceSearchOverlay: View {
             .shadow(radius: 4)
             .onAppear {
                 #if DEBUG
-                cmuxDebugLog("find.overlay.appear tab=\(tabId.uuidString.prefix(5)) surface=\(surfaceId.uuidString.prefix(5))")
+                breeDebugLog("find.overlay.appear tab=\(tabId.uuidString.prefix(5)) surface=\(surfaceId.uuidString.prefix(5))")
                 #endif
                 isSearchFieldFocused = true
             }
@@ -247,7 +247,7 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
     let onEditingChanged: (Bool) -> Void
     let onEscape: () -> Void
     let onReturn: (_ isShift: Bool) -> Void
-    @Environment(\.cmuxGlobalFontMagnificationPercent) private var globalFontPercent
+    @Environment(\.breeGlobalFontMagnificationPercent) private var globalFontPercent
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: SearchTextFieldRepresentable
@@ -268,13 +268,13 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
         }
 
         func focusField(_ field: SearchNativeTextField, in window: NSWindow, selectAll: Bool) {
-            let alreadyFocused = cmuxTextFieldIsFirstResponder(field, in: window)
+            let alreadyFocused = breeTextFieldIsFirstResponder(field, in: window)
             guard alreadyFocused || window.makeFirstResponder(field) else { return }
-            let rememberedRange = field.cmuxLastSelectedRange ?? cmuxStoredFindSelection(for: self.parent.selectionOwner) ?? self.lastSelectedRange
-            if let selection = cmuxApplyFindFocusSelection(field: field, selectAll: selectAll, alreadyFocused: alreadyFocused, rememberedRange: rememberedRange) { self.lastSelectedRange = selection; return }
+            let rememberedRange = field.breeLastSelectedRange ?? breeStoredFindSelection(for: self.parent.selectionOwner) ?? self.lastSelectedRange
+            if let selection = breeApplyFindFocusSelection(field: field, selectAll: selectAll, alreadyFocused: alreadyFocused, rememberedRange: rememberedRange) { self.lastSelectedRange = selection; return }
             DispatchQueue.main.async { [weak field, weak self] in
                 guard let field, let self,
-                      let selection = cmuxApplyFindFocusSelection(field: field, selectAll: selectAll, alreadyFocused: alreadyFocused, rememberedRange: rememberedRange) else { return }
+                      let selection = breeApplyFindFocusSelection(field: field, selectAll: selectAll, alreadyFocused: alreadyFocused, rememberedRange: rememberedRange) else { return }
                 self.lastSelectedRange = selection
             }
         }
@@ -289,7 +289,7 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
 
         func controlTextDidBeginEditing(_ obj: Notification) {
             #if DEBUG
-            cmuxDebugLog("find.nativeField.beginEditing surface=\(parent.surfaceId.uuidString.prefix(5))")
+            breeDebugLog("find.nativeField.beginEditing surface=\(parent.surfaceId.uuidString.prefix(5))")
             #endif
             parent.onFieldDidFocus()
             if !parent.isFocused {
@@ -301,7 +301,7 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
 
         func controlTextDidEndEditing(_ obj: Notification) {
             #if DEBUG
-            cmuxDebugLog("find.nativeField.endEditing surface=\(parent.surfaceId.uuidString.prefix(5))")
+            breeDebugLog("find.nativeField.endEditing surface=\(parent.surfaceId.uuidString.prefix(5))")
             #endif
             if let field = obj.object as? NSTextField {
                 rememberSelection(from: field)
@@ -324,7 +324,7 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
                 parent.onReturn(isShift)
                 return true
             default:
-                if cmuxFindCommandMayChangeSelection(commandSelector) {
+                if breeFindCommandMayChangeSelection(commandSelector) {
                     DispatchQueue.main.async { [weak self, weak textView] in
                         guard let textView else { return }
                         self?.rememberSelection(from: textView)
@@ -338,14 +338,14 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
             // Don't intercept Escape during CJK IME composition (issue #118)
             if textView.hasMarkedText() { return false }
             rememberSelection(from: textView)
-            (control ?? parentField)?.cmuxAncestor(of: GhosttySurfaceScrollView.self)?.beginFindEscapeSuppression()
+            (control ?? parentField)?.breeAncestor(of: GhosttySurfaceScrollView.self)?.beginFindEscapeSuppression()
             parent.onEscape()
             return true
         }
 
         private func rememberSelection(from field: NSTextField) {
             if let field = field as? SearchNativeTextField,
-               let selection = field.cmuxRememberSelectionFromCurrentEditor() {
+               let selection = field.breeRememberSelectionFromCurrentEditor() {
                 lastSelectedRange = selection
                 return
             }
@@ -354,10 +354,10 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
         }
 
         private func rememberSelection(from textView: NSTextView) {
-            let selection = cmuxClampedFindSelection(textView.selectedRange(), in: textView.string)
+            let selection = breeClampedFindSelection(textView.selectedRange(), in: textView.string)
             lastSelectedRange = selection
-            parentField?.cmuxLastSelectedRange = selection
-            cmuxStoreFindSelection(selection, for: parent.selectionOwner)
+            parentField?.breeLastSelectedRange = selection
+            breeStoreFindSelection(selection, for: parent.selectionOwner)
         }
     }
 
@@ -370,7 +370,7 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
         field.font = GlobalFontMagnification.systemFont(ofSize: NSFont.systemFontSize)
         field.placeholderString = String(localized: "search.placeholder", defaultValue: "Search")
         field.setAccessibilityIdentifier("TerminalFindSearchTextField")
-        field.cmuxOnEditingChanged = { [weak coordinator = context.coordinator] isEditing in
+        field.breeOnEditingChanged = { [weak coordinator = context.coordinator] isEditing in
             // Deferred like the isFocused writes: AppKit can report this while
             // SwiftUI is updating the view.
             DispatchQueue.main.async {
@@ -378,8 +378,8 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
             }
         }
         field.delegate = context.coordinator
-        field.cmuxSelectionOwner = selectionOwner
-        field.cmuxOnEscape = { [weak coordinator = context.coordinator] textView in coordinator?.handleEscape(from: textView) ?? false }
+        field.breeSelectionOwner = selectionOwner
+        field.breeOnEscape = { [weak coordinator = context.coordinator] textView in coordinator?.handleEscape(from: textView) ?? false }
         field.stringValue = text
         context.coordinator.parentField = field
 
@@ -399,9 +399,9 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
             // Don't re-focus if already first responder. makeFirstResponder on an
             // already-editing NSTextField ends the editing session and restarts it
             // with all text selected, causing typed characters to replace each other.
-            let alreadyFocused = cmuxTextFieldIsFirstResponder(field, in: window)
+            let alreadyFocused = breeTextFieldIsFirstResponder(field, in: window)
             #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "find.nativeField.searchFocusNotification surface=\(coordinator.parent.surfaceId.uuidString.prefix(5)) " +
                 "alreadyFocused=\(alreadyFocused) firstResponder=\(String(describing: window.firstResponder))"
             )
@@ -409,7 +409,7 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
             guard !alreadyFocused else { return }
             coordinator.focusField(field, in: window, selectAll: selectAll)
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "find.nativeField.searchFocusApply surface=\(coordinator.parent.surfaceId.uuidString.prefix(5)) " +
                 "selectAll=\(selectAll ? 1 : 0) firstResponder=\(String(describing: window.firstResponder))"
             )
@@ -423,20 +423,20 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
         context.coordinator.parent = self
         context.coordinator.parentField = nsView
         nsView.delegate = context.coordinator
-        nsView.cmuxSelectionOwner = selectionOwner
-        nsView.cmuxOnEscape = { [weak coordinator = context.coordinator] textView in coordinator?.handleEscape(from: textView) ?? false }
+        nsView.breeSelectionOwner = selectionOwner
+        nsView.breeOnEscape = { [weak coordinator = context.coordinator] textView in coordinator?.handleEscape(from: textView) ?? false }
         nsView.font = GlobalFontMagnification.systemFont(ofSize: NSFont.systemFontSize)
 
         // Sync text from binding to field (skip during active IME composition)
         if let editor = nsView.currentEditor() as? NSTextView {
             if editor.string != text, !editor.hasMarkedText() {
-                let selectedRange = nsView.cmuxRememberSelection(editor.selectedRange(), in: text)
+                let selectedRange = nsView.breeRememberSelection(editor.selectedRange(), in: text)
                 context.coordinator.isProgrammaticMutation = true
                 editor.string = text
                 nsView.stringValue = text
                 editor.setSelectedRange(selectedRange)
                 context.coordinator.lastSelectedRange = selectedRange
-                cmuxStoreFindSelection(selectedRange, for: selectionOwner)
+                breeStoreFindSelection(selectedRange, for: selectionOwner)
                 context.coordinator.isProgrammaticMutation = false
             }
         } else if nsView.stringValue != text {
@@ -445,7 +445,7 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
 
         // Sync focus from binding to AppKit
         if let window = nsView.window {
-            let isFirstResponder = cmuxTextFieldIsFirstResponder(nsView, in: window)
+            let isFirstResponder = breeTextFieldIsFirstResponder(nsView, in: window)
 
             if isFocused,
                canApplyFocusRequest(),
@@ -458,7 +458,7 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
                           coordinator.parent.isFocused,
                           coordinator.parent.canApplyFocusRequest() else { return }
                     guard let nsView, let window = nsView.window else { return }
-                    let alreadyFocused = cmuxTextFieldIsFirstResponder(nsView, in: window)
+                    let alreadyFocused = breeTextFieldIsFirstResponder(nsView, in: window)
                     guard !alreadyFocused else { return }
                     coordinator.focusField(nsView, in: window, selectAll: false)
                 }
@@ -472,8 +472,8 @@ private struct SearchTextFieldRepresentable: NSViewRepresentable {
             coordinator.searchFocusObserver = nil
         }
         nsView.delegate = nil
-        nsView.cmuxSelectionOwner = nil
-        nsView.cmuxOnEscape = nil
+        nsView.breeSelectionOwner = nil
+        nsView.breeOnEscape = nil
         coordinator.parentField = nil
     }
 }

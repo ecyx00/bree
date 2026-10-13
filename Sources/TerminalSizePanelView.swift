@@ -1,5 +1,6 @@
-import CmuxTerminalSharing
-import CmuxTerminalSizing
+import BreeFoundation
+import BreeTerminalSharing
+import BreeTerminalSizing
 import SwiftUI
 
 /// The shared-terminal size panel, anchored under the terminal's tab: the
@@ -211,7 +212,7 @@ struct TerminalSizePanelView: View {
                 confirmingDisconnectOthers = true
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.red)
+            .foregroundStyle(BreeChromePalette.currentSnapshot.signalError)
         }
     }
 }

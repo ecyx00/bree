@@ -328,7 +328,7 @@ enum WikiPageScript {
         var js = "(function(){var c=document.getElementById('content');if(!c){return;}\n"
         if inert {
             // Capture cards hold outside content: no images, no live links.
-            js += "c.querySelectorAll('img,picture,video,audio,iframe,.cmux-remote-image-placeholder').forEach(function(n){n.remove();});"
+            js += "c.querySelectorAll('img,picture,video,audio,iframe,.bree-remote-image-placeholder').forEach(function(n){n.remove();});"
             js += "c.querySelectorAll('a').forEach(function(a){a.removeAttribute('href');});\n"
         }
         if source {

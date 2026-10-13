@@ -4,7 +4,7 @@
 # URL against the tagged debug socket. Sourced by scripts/dev-setup.sh,
 # scripts/mobile-dev-launch.sh, and the reload scripts so the bundle-id / socket
 # derivation and the mint RPC live in exactly ONE place (they MUST match
-# reload.sh / cmux-debug-cli.sh exactly).
+# reload.sh / bree-debug-cli.sh exactly).
 #
 # The attach URL is a bearer credential: callers must never print it.
 
@@ -12,10 +12,10 @@
 # remains the default for ordinary simulator work. Physical-device dogfood can
 # select a trusted shared backend without giving every developer the relay
 # fleet's private JWT signing key.
-cmux_attach_resolve_dev_api_base_url() {
+bree_attach_resolve_dev_api_base_url() {
   local fallback="$1"
-  if [[ -n "${CMUX_DEV_API_BASE_URL:-}" ]]; then
-    printf '%s' "$CMUX_DEV_API_BASE_URL"
+  if [[ -n "${BREE_DEV_API_BASE_URL:-}" ]]; then
+    printf '%s' "$BREE_DEV_API_BASE_URL"
   else
     printf '%s' "$fallback"
   fi
@@ -23,16 +23,16 @@ cmux_attach_resolve_dev_api_base_url() {
 
 # Raw slug WITHOUT the empty-input fallback: lowercase, ASCII non-[a-z0-9] -> '-',
 # trimmed/collapsed. Empty when the tag has no ASCII alphanumerics. The ASCII
-# class is deliberate (matches reload.sh + cmux-debug-cli.sh socket/DerivedData
+# class is deliberate (matches reload.sh + bree-debug-cli.sh socket/DerivedData
 # naming); a locale-sensitive class would keep non-ASCII letters the slug drops.
-cmux_attach__slug_raw() {
+bree_attach__slug_raw() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-+/-/g'
 }
 
 # slug: raw slug, falling back to "agent" only for an otherwise-empty result.
-cmux_attach__slug() {
+bree_attach__slug() {
   local cleaned
-  cleaned="$(cmux_attach__slug_raw "$1")"
+  cleaned="$(bree_attach__slug_raw "$1")"
   [[ -n "$cleaned" ]] || cleaned="agent"
   printf '%s' "$cleaned"
 }
@@ -43,17 +43,17 @@ cmux_attach__slug() {
 # Tag identity is correctness-critical (it selects the bundle id / socket / Mac
 # app), so entry points must fail closed when this is false rather than let the
 # tag collapse onto the shared fallback identity and target an unrelated app.
-cmux_attach_tag_has_alnum() {
-  [[ -n "$(cmux_attach__slug_raw "$1")" ]]
+bree_attach_tag_has_alnum() {
+  [[ -n "$(bree_attach__slug_raw "$1")" ]]
 }
 
 # Cloud registry/presence instance tags are capped at 64 JavaScript UTF-16
 # units. Slugs are ASCII, so shell character count is the same measurement.
 # Reject instead of truncating because truncation could collapse two tagged
 # builds onto the same instance identity.
-cmux_attach_tag_within_cloud_limit() {
+bree_attach_tag_within_cloud_limit() {
   local slug
-  slug="$(cmux_attach__slug_raw "$1")"
+  slug="$(bree_attach__slug_raw "$1")"
   (( ${#slug} <= 64 ))
 }
 
@@ -61,25 +61,25 @@ cmux_attach_tag_within_cloud_limit() {
 # presence identity. "default" is the stable app instance sentinel, so allowing
 # a dev tag to sanitize to that value would make the dev build impersonate the
 # stable instance even though its bundle and socket are otherwise isolated.
-cmux_attach_validate_dev_tag() {
+bree_attach_validate_dev_tag() {
   local tag="$1" slug
-  if ! cmux_attach_tag_has_alnum "$tag"; then
+  if ! bree_attach_tag_has_alnum "$tag"; then
     echo "error: --tag '$tag' has no letters or digits; pick a tag with at least one alphanumeric character" >&2
     return 1
   fi
-  slug="$(cmux_attach__slug_raw "$tag")"
+  slug="$(bree_attach__slug_raw "$tag")"
   if [[ "$slug" == "default" ]]; then
     echo "error: --tag must not sanitize to 'default'; that tag is reserved for the stable app instance" >&2
     return 1
   fi
-  if ! cmux_attach_tag_within_cloud_limit "$tag"; then
+  if ! bree_attach_tag_within_cloud_limit "$tag"; then
     echo "error: --tag must sanitize to at most 64 characters" >&2
     return 1
   fi
 }
 
 # bundle id segment: lowercase, non-alnum -> '.', trimmed/collapsed.
-cmux_attach__bundle_seg() {
+bree_attach__bundle_seg() {
   local cleaned
   cleaned="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/./g; s/^\.+//; s/\.+$//; s/\.+/./g')"
   [[ -n "$cleaned" ]] || cleaned="agent"
@@ -87,8 +87,8 @@ cmux_attach__bundle_seg() {
 }
 
 # The tagged macOS Debug app's bundle id (the iOS pairing host lives on the Mac).
-cmux_attach_mac_bundle_id() {
-  printf 'com.cmuxterm.app.debug.%s' "$(cmux_attach__bundle_seg "$1")"
+bree_attach_mac_bundle_id() {
+  printf 'com.bree.app.debug.%s' "$(bree_attach__bundle_seg "$1")"
 }
 
 # Unsigned Simulator apps have no application-identifier entitlement, so iOS
@@ -97,54 +97,54 @@ cmux_attach_mac_bundle_id() {
 # into the app process; writing the external defaults domain as well keeps the
 # value inspectable from simctl. Recreated isolated simulators for the same tag
 # reuse one broker device slot instead of leaking a slot on every verification.
-cmux_attach_seed_simulator_device_id() {
+bree_attach_seed_simulator_device_id() {
   local simulator_id="${1:?simulator id is required}"
   local bundle_id="${2:?bundle id is required}"
   local device_id
-  device_id="$(CMUX_SIMULATOR_BUNDLE_ID="$bundle_id" /usr/bin/python3 - <<'PY'
+  device_id="$(BREE_SIMULATOR_BUNDLE_ID="$bundle_id" /usr/bin/python3 - <<'PY'
 import os
 import uuid
 
-bundle_id = os.environ["CMUX_SIMULATOR_BUNDLE_ID"]
-print(uuid.uuid5(uuid.NAMESPACE_URL, f"cmux-ios-simulator-device:{bundle_id}"))
+bundle_id = os.environ["BREE_SIMULATOR_BUNDLE_ID"]
+print(uuid.uuid5(uuid.NAMESPACE_URL, f"bree-ios-simulator-device:{bundle_id}"))
 PY
 )"
   xcrun simctl spawn "$simulator_id" defaults write \
-    "$bundle_id" cmux.deviceRegistry.iosDeviceID -string "$device_id"
+    "$bundle_id" bree.deviceRegistry.iosDeviceID -string "$device_id"
   printf '%s' "$device_id"
 }
 
 # Deterministic client identity for one dogfood bundle on one concrete target.
 # The launch script injects it into the DEBUG app and uses the same value to
 # reject readiness events emitted by a different phone or simulator.
-cmux_attach_dogfood_client_id() {
+bree_attach_dogfood_client_id() {
   local bundle_id="${1:?bundle id is required}"
   local target_id="${2:?target id is required}"
-  CMUX_DOGFOOD_BUNDLE_ID="$bundle_id" \
-  CMUX_DOGFOOD_TARGET_ID="$target_id" \
+  BREE_DOGFOOD_BUNDLE_ID="$bundle_id" \
+  BREE_DOGFOOD_TARGET_ID="$target_id" \
     /usr/bin/python3 - <<'PY'
 import os
 import uuid
 
-bundle_id = os.environ["CMUX_DOGFOOD_BUNDLE_ID"]
-target_id = os.environ["CMUX_DOGFOOD_TARGET_ID"]
-print(uuid.uuid5(uuid.NAMESPACE_URL, f"cmux-ios-dogfood-client:{bundle_id}:{target_id}"))
+bundle_id = os.environ["BREE_DOGFOOD_BUNDLE_ID"]
+target_id = os.environ["BREE_DOGFOOD_TARGET_ID"]
+print(uuid.uuid5(uuid.NAMESPACE_URL, f"bree-ios-dogfood-client:{bundle_id}:{target_id}"))
 PY
 }
 
 # The tagged Mac app's debug socket path.
-cmux_attach_socket_path() {
-  printf '/tmp/cmux-debug-%s.sock' "$(cmux_attach__slug "$1")"
+bree_attach_socket_path() {
+  printf '/tmp/bree-debug-%s.sock' "$(bree_attach__slug "$1")"
 }
 
 # Remove a stale socket only for one validated tagged-build identity. Callers
 # must first prove the exact tagged app process has exited. Refuse regular files
 # and symlinks so this cleanup cannot delete an unrelated path substituted at
 # the tag's predictable socket location.
-cmux_attach_remove_stale_socket() {
+bree_attach_remove_stale_socket() {
   local tag="$1" sock
-  cmux_attach_validate_dev_tag "$tag" || return 1
-  sock="$(cmux_attach_socket_path "$tag")"
+  bree_attach_validate_dev_tag "$tag" || return 1
+  sock="$(bree_attach_socket_path "$tag")"
   if [[ -L "$sock" ]]; then
     echo "error: refusing to remove symlink at tagged socket path: $sock" >&2
     return 1
@@ -159,38 +159,38 @@ cmux_attach_remove_stale_socket() {
 
 # The locally-built tagged macOS Debug .app bundle path (cloud/local reloads both
 # download/install here). Both the DerivedData dir AND the .app basename use the
-# sanitized slug, matching reload.sh (`APP_NAME="cmux DEV ${TAG_SLUG}"`); the raw
+# sanitized slug, matching reload.sh (`APP_NAME="Bree Dev ${TAG_SLUG}"`); the raw
 # tag would miss for any tag whose slug differs (e.g. "Fix Foo" -> "fix-foo").
-cmux_attach_mac_app_path() {
+bree_attach_mac_app_path() {
   local slug
-  slug="$(cmux_attach__slug "$1")"
-  printf '%s/Library/Developer/Xcode/DerivedData/cmux-%s/Build/Products/Debug/cmux DEV %s.app' \
+  slug="$(bree_attach__slug "$1")"
+  printf '%s/Library/Developer/Xcode/DerivedData/bree-%s/Build/Products/Debug/Bree Dev %s.app' \
     "$HOME" "$slug" "$slug"
 }
 
 # Enable the opt-in iOS pairing host on the tagged Mac bundle. Must be written
 # BEFORE the Mac app launches (read in applicationDidFinishLaunching). The first
 # bind per bundle id triggers a one-time macOS "Local Network" prompt.
-cmux_attach_enable_pairing_host() {
+bree_attach_enable_pairing_host() {
   local tag="$1" bundle_id
-  bundle_id="$(cmux_attach_mac_bundle_id "$tag")"
+  bundle_id="$(bree_attach_mac_bundle_id "$tag")"
   defaults write "$bundle_id" mobile.iOSPairingHost.enabled -bool true
 }
 
 # True if the tagged Mac app's debug socket is bound (app running + listening).
-cmux_attach_mac_socket_ready() {
+bree_attach_mac_socket_ready() {
   local sock
-  sock="$(cmux_attach_socket_path "$1")"
+  sock="$(bree_attach_socket_path "$1")"
   [[ -S "$sock" ]]
 }
 
 # Return the normalized email currently authenticated on one exact tagged Mac.
-# The tagged socket and bundled CLI are selected by cmux-debug-cli.sh, so this
+# The tagged socket and bundled CLI are selected by bree-debug-cli.sh, so this
 # can never read the stable app or another agent's tag.
-cmux_attach_mac_auth_account() {
+bree_attach_mac_auth_account() {
   local tag="$1" repo_root="$2" slug status
-  slug="$(cmux_attach__slug "$tag")"
-  status="$(CMUX_TAG="$slug" "$repo_root/scripts/cmux-debug-cli.sh" auth status --json 2>/dev/null)" \
+  slug="$(bree_attach__slug "$tag")"
+  status="$(BREE_TAG="$slug" "$repo_root/scripts/bree-debug-cli.sh" auth status --json 2>/dev/null)" \
     || return 1
   AUTH_STATUS="$status" /usr/bin/python3 - <<'PY'
 import json
@@ -212,7 +212,7 @@ PY
 # `auth.status` RPC awaits AuthCoordinator bootstrap, which includes session
 # restore and DEBUG auto-login, so this is one lifecycle-owned check rather
 # than a shell polling loop.
-cmux_attach_wait_for_mac_auth_account() {
+bree_attach_wait_for_mac_auth_account() {
   local tag="$1" repo_root="$2" expected="$3" actual=""
   expected="$(printf '%s' "$expected" | tr '[:upper:]' '[:lower:]')"
   expected="${expected#"${expected%%[![:space:]]*}"}"
@@ -221,7 +221,7 @@ cmux_attach_wait_for_mac_auth_account() {
     echo "error: tagged Mac auth check requires a non-empty expected account" >&2
     return 1
   fi
-  actual="$(cmux_attach_mac_auth_account "$tag" "$repo_root" 2>/dev/null || true)"
+  actual="$(bree_attach_mac_auth_account "$tag" "$repo_root" 2>/dev/null || true)"
   if [[ "$actual" == "$expected" ]]; then
     echo "==> tagged Mac auth profile verified ($expected)" >&2
     return 0
@@ -236,18 +236,18 @@ cmux_attach_wait_for_mac_auth_account() {
 
 # Opens the tagged Mac's event stream. The stream itself is the readiness
 # contract, so launch tooling does not infer connection state from diagnostics.
-cmux_attach_events() {
+bree_attach_events() {
   local tag="$1" repo_root="$2" slug
   shift 2
-  slug="$(cmux_attach__slug "$tag")"
-  CMUX_TAG="$slug" "$repo_root/scripts/cmux-debug-cli.sh" events "$@"
+  slug="$(bree_attach__slug "$tag")"
+  BREE_TAG="$slug" "$repo_root/scripts/bree-debug-cli.sh" events "$@"
 }
 
 # Captures the event sequence before launch. A subsequent wait can replay usable
 # session readiness that raced between launch and event-stream subscription.
-cmux_attach_readiness_cursor() {
+bree_attach_readiness_cursor() {
   local tag="$1" repo_root="$2" snapshot cursor
-  snapshot="$(cmux_attach_events "$tag" "$repo_root" --snapshot --no-heartbeat)" || return 1
+  snapshot="$(bree_attach_events "$tag" "$repo_root" --snapshot --no-heartbeat)" || return 1
   cursor="$(printf '%s\n' "$snapshot" | /usr/bin/python3 -c '
 import json
 import sys
@@ -273,11 +273,11 @@ for line in sys.stdin:
 # Waits on the host's explicit usable-RPC event after the launch baseline.
 # Args: <tag> <repo_root> <baseline_event_sequence> <timeout_seconds>
 #       <expected_client_id>.
-cmux_attach_wait_for_usable_session() {
+bree_attach_wait_for_usable_session() {
   local tag="$1" repo_root="$2" baseline="$3" timeout="$4"
   local expected_client_id="$5" event event_client_id event_sequence
   local started_ms deadline_ms remaining_ms remaining_seconds cursor
-  started_ms="$(cmux_attach_monotonic_milliseconds)"
+  started_ms="$(bree_attach_monotonic_milliseconds)"
   deadline_ms="$((started_ms + timeout * 1000))"
   cursor="$baseline"
   # The app settles its first dial as timed out at ~30s and keeps dialing
@@ -285,13 +285,13 @@ cmux_attach_wait_for_usable_session() {
   # readiness routinely lands moments after a fixed cliff. One bounded grace
   # extension re-checks the retained event stream instead of failing a
   # session that is about to become usable.
-  local grace_seconds="${CMUX_ATTACH_READY_GRACE_SECONDS:-45}"
+  local grace_seconds="${BREE_ATTACH_READY_GRACE_SECONDS:-45}"
   local grace_remaining="$grace_seconds"
   while true; do
-    remaining_ms="$((deadline_ms - $(cmux_attach_monotonic_milliseconds)))"
+    remaining_ms="$((deadline_ms - $(bree_attach_monotonic_milliseconds)))"
     if (( remaining_ms <= 0 )); then
       if (( grace_remaining > 0 )); then
-        deadline_ms="$(($(cmux_attach_monotonic_milliseconds) + grace_remaining * 1000))"
+        deadline_ms="$(($(bree_attach_monotonic_milliseconds) + grace_remaining * 1000))"
         grace_remaining=0
         echo "warn: readiness deadline reached; re-checking ${grace_seconds}s for a late usable session (the app keeps dialing past its first attempt)" >&2
         continue
@@ -299,7 +299,7 @@ cmux_attach_wait_for_usable_session() {
       break
     fi
     remaining_seconds="$(((remaining_ms + 999) / 1000))"
-    if ! event="$(cmux_attach_events \
+    if ! event="$(bree_attach_events \
       "$tag" \
       "$repo_root" \
       --after "$cursor" \
@@ -345,15 +345,15 @@ if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
 # evidence that the app on the simulator/device came from that checkout. Keep
 # this probe best-effort for physical devices where iOS does not expose the
 # app executable, while requiring the simulator container to be readable.
-cmux_attach_installed_bundle_metadata() {
-  local target="$1" target_id="$2" bundle_id="$3" app_path="${CMUX_INSTALLED_APP_PATH:-}"
+bree_attach_installed_bundle_metadata() {
+  local target="$1" target_id="$2" bundle_id="$3" app_path="${BREE_INSTALLED_APP_PATH:-}"
   if [[ -z "$app_path" && "$target" == "simulator_injection" ]]; then
     app_path="$(xcrun simctl get_app_container "$target_id" "$bundle_id" app 2>/dev/null || true)"
   fi
-  CMUX_INSTALLED_TARGET="$target" \
-  CMUX_INSTALLED_TARGET_ID="$target_id" \
-  CMUX_INSTALLED_BUNDLE_ID="$bundle_id" \
-  CMUX_INSTALLED_APP_PATH="$app_path" \
+  BREE_INSTALLED_TARGET="$target" \
+  BREE_INSTALLED_TARGET_ID="$target_id" \
+  BREE_INSTALLED_BUNDLE_ID="$bundle_id" \
+  BREE_INSTALLED_APP_PATH="$app_path" \
     /usr/bin/python3 - <<'PY'
 import hashlib
 import json
@@ -361,10 +361,10 @@ import os
 import plistlib
 from pathlib import Path
 
-target = os.environ["CMUX_INSTALLED_TARGET"]
-target_id = os.environ["CMUX_INSTALLED_TARGET_ID"]
-bundle_id = os.environ["CMUX_INSTALLED_BUNDLE_ID"]
-app_path = os.environ.get("CMUX_INSTALLED_APP_PATH", "")
+target = os.environ["BREE_INSTALLED_TARGET"]
+target_id = os.environ["BREE_INSTALLED_TARGET_ID"]
+bundle_id = os.environ["BREE_INSTALLED_BUNDLE_ID"]
+app_path = os.environ.get("BREE_INSTALLED_APP_PATH", "")
 metadata = {
     "bundle_id": bundle_id,
     "target": target,
@@ -395,8 +395,8 @@ metadata.update({
     "metadata_source": "simulator_container" if target == "simulator_injection" else "signed_app_bundle",
     "short_version": plist.get("CFBundleShortVersionString"),
     "build_version": plist.get("CFBundleVersion"),
-    "source_git_sha": plist.get("CMUXGitSHA"),
-    "dev_tag": plist.get("CMUXDevTag"),
+    "source_git_sha": plist.get("BREEGitSHA"),
+    "dev_tag": plist.get("BREEDevTag"),
     "executable_name": executable_name,
     "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
 })
@@ -408,7 +408,7 @@ PY
 # event arrives on stdin to Python so even an unexpectedly sensitive field
 # never appears in argv or the process environment; only the explicit
 # readiness identity fields are copied into the receipt.
-cmux_attach_write_readiness_receipt() {
+bree_attach_write_readiness_receipt() {
   local path="$1" git_sha="$2" tag="$3" bundle_id="$4"
   local target="$5" target_id="$6" mac_tag="$7" socket_path="$8"
   local readiness_latency_ms="$9" attempt_count="${10}" event_json="${11}"
@@ -467,7 +467,7 @@ if isinstance(workspace_count, bool) or not isinstance(workspace_count, int) or 
     raise SystemExit("invalid readiness field: workspace_count")
 
 receipt = {
-    "schema": "cmux-ios-dogfood-readiness-v1",
+    "schema": "bree-ios-dogfood-readiness-v1",
     # git_sha now identifies the source embedded in the installed app. Keep
     # the launcher checkout separately so stale bundles cannot look current.
     "git_sha": installed_bundle.get("source_git_sha") or git_sha,
@@ -487,8 +487,8 @@ receipt = {
     "transport": payload["transport"],
     "installed_bundle": installed_bundle,
 }
-auth_profile = os.environ.get("CMUX_DEV_AUTH_PROFILE", "")
-auth_account = os.environ.get("CMUX_DEV_AUTH_ACCOUNT", "")
+auth_profile = os.environ.get("BREE_DEV_AUTH_PROFILE", "")
+auth_account = os.environ.get("BREE_DEV_AUTH_ACCOUNT", "")
 if auth_profile and auth_account:
     receipt["auth_profile"] = auth_profile
     receipt["auth_account"] = auth_account
@@ -500,7 +500,7 @@ if not stat.S_ISDIR(parent_status.st_mode) or parent_status.st_uid != os.getuid(
     raise SystemExit("readiness receipt directory is not a private owned directory")
 if parent != ".":
     os.chmod(parent, 0o700)
-descriptor, temporary_path = tempfile.mkstemp(prefix=".cmux-ready-", dir=parent)
+descriptor, temporary_path = tempfile.mkstemp(prefix=".bree-ready-", dir=parent)
 try:
     os.fchmod(descriptor, 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8") as output:
@@ -522,7 +522,7 @@ except BaseException:
     "$installed_bundle_metadata_json"
 }
 
-cmux_attach_monotonic_milliseconds() {
+bree_attach_monotonic_milliseconds() {
   /usr/bin/python3 -c '
 import time
 
@@ -535,9 +535,9 @@ print(time.clock_gettime_ns(time.CLOCK_MONOTONIC) // 1_000_000)
 # never infer process identity from a command-line regex or a sleep loop.
 # Tests can replace this function with a deterministic fake; production callers
 # must provide the repository root so the helper source is unambiguous.
-cmux_attach_terminate_bundle_app() {
+bree_attach_terminate_bundle_app() {
   local bundle_id="$1" repo_root="$2" timeout="${3:-5}"
-  local helper="${CMUX_ATTACH_TERMINATE_BUNDLE_HELPER:-}"
+  local helper="${BREE_ATTACH_TERMINATE_BUNDLE_HELPER:-}"
   if [[ -z "$helper" ]]; then
     [[ -n "$repo_root" ]] || {
       echo "error: tagged Mac termination requires the repository root" >&2
@@ -556,9 +556,9 @@ cmux_attach_terminate_bundle_app() {
 # non-secret auth contract. NSWorkspace.OpenConfiguration is the supported
 # environment propagation path for LaunchServices; unlike `open --env`, it
 # reports launch errors to the caller.
-cmux_attach_launch_bundle_app() {
+bree_attach_launch_bundle_app() {
   local app="$1" repo_root="$2"
-  local helper="${CMUX_ATTACH_LAUNCH_BUNDLE_HELPER:-}"
+  local helper="${BREE_ATTACH_LAUNCH_BUNDLE_HELPER:-}"
   if [[ -z "$helper" ]]; then
     [[ -n "$repo_root" ]] || {
       echo "error: tagged Mac launch requires the repository root" >&2
@@ -586,23 +586,23 @@ cmux_attach_launch_bundle_app() {
 # probe). Returns
 # 0 if the Mac is ready to mint a usable target-specific ticket, 1 otherwise.
 # Never force-kills a running app by default.
-cmux_attach_ensure_mac() {
+bree_attach_ensure_mac() {
   local tag="$1" repo_root="${2:-}" target="${3:?attach target is required}" force_relaunch="${4:-0}"
   local expected_account=""
   local sock app mint_attempts _i current_account="" stopped_exact_tagged_app=0
-  sock="$(cmux_attach_socket_path "$tag")"
-  app="$(cmux_attach_mac_app_path "$tag")"
-  cmux_attach_enable_pairing_host "$tag" || true
+  sock="$(bree_attach_socket_path "$tag")"
+  app="$(bree_attach_mac_app_path "$tag")"
+  bree_attach_enable_pairing_host "$tag" || true
 
   stop_exact_tagged_app() {
     [[ -d "$app" ]] || return 0
     local bundle_id
-    bundle_id="$(cmux_attach_mac_bundle_id "$tag")"
+    bundle_id="$(bree_attach_mac_bundle_id "$tag")"
     echo "==> stopping exact tagged Mac app before applying the auth contract ($tag)" >&2
     # The bundle id is derived from the same sanitized tag used by the app and
     # socket. This is required even when the socket is down: `open` reuses an
     # existing process and cannot apply a new profile to it.
-    cmux_attach_terminate_bundle_app "$bundle_id" "$repo_root" 5 || {
+    bree_attach_terminate_bundle_app "$bundle_id" "$repo_root" 5 || {
       echo "error: tagged Mac app '$tag' did not stop before applying a new auth profile" >&2
       return 1
     }
@@ -619,20 +619,20 @@ cmux_attach_ensure_mac() {
   if [[ -S "$sock" ]]; then
     if [[ "$force_relaunch" != "1" ]]; then
       if [[ -n "$expected_account" ]]; then
-        current_account="$(cmux_attach_mac_auth_account "$tag" "$repo_root" 2>/dev/null || true)"
+        current_account="$(bree_attach_mac_auth_account "$tag" "$repo_root" 2>/dev/null || true)"
       fi
       # Quick probe (2 attempts ~1s): reuse only a listener whose selected
       # account already matches this launch contract.
       if [[ -n "$repo_root" ]] \
           && { [[ -z "$expected_account" ]] || [[ "$current_account" == "$expected_account" ]]; } \
-          && [[ -n "$(cmux_attach_mint_url "$tag" 60 "$repo_root" "$target" 2)" ]]; then
+          && [[ -n "$(bree_attach_mint_url "$tag" 60 "$repo_root" "$target" 2)" ]]; then
         return 0
       fi
     fi
     # A tagged app is running but its pairing listener is not ready (launched
     # before the startup-only default was set, prompt pending, or briefly
-    # busy). `cmux_attach_ensure_mac` is itself the explicit authorization to
-    # relaunch this tag. Bundle identity keeps stable cmux and every other DEV
+    # busy). `bree_attach_ensure_mac` is itself the explicit authorization to
+    # relaunch this tag. Bundle identity keeps stable bree and every other DEV
     # tag untouched.
     if [[ ! -d "$app" ]]; then
       echo "warning: tagged Mac app for '$tag' is running but not ready, and there is no local build to relaunch; auto-pair unavailable. Re-run without --attach for an intentionally unpaired launch." >&2
@@ -649,7 +649,7 @@ cmux_attach_ensure_mac() {
     return 1
   fi
   echo "==> launching tagged Mac app to arm pairing ($tag)" >&2
-  cmux_attach_launch_bundle_app "$app" "$repo_root" || {
+  bree_attach_launch_bundle_app "$app" "$repo_root" || {
     echo "error: tagged Mac app '$tag' could not be launched" >&2
     return 1
   }
@@ -659,11 +659,11 @@ cmux_attach_ensure_mac() {
         return 0
       fi
       if [[ -n "$expected_account" ]] \
-          && ! cmux_attach_wait_for_mac_auth_account "$tag" "$repo_root" "$expected_account"; then
+          && ! bree_attach_wait_for_mac_auth_account "$tag" "$repo_root" "$expected_account"; then
         return 1
       fi
-      mint_attempts="${CMUX_ATTACH_MINT_MAX_ATTEMPTS:-20}"
-      if [[ -n "$(cmux_attach_mint_url "$tag" 60 "$repo_root" "$target" "$mint_attempts")" ]]; then
+      mint_attempts="${BREE_ATTACH_MINT_MAX_ATTEMPTS:-20}"
+      if [[ -n "$(bree_attach_mint_url "$tag" 60 "$repo_root" "$target" "$mint_attempts")" ]]; then
         return 0
       fi
       if [[ "$target" == "physical_device" ]]; then
@@ -686,7 +686,7 @@ cmux_attach_ensure_mac() {
 # A physical-device ticket is usable with an authenticated Iroh route or with
 # the exact non-loopback Tailscale route selected by MobileAttachTarget. Both
 # paths authenticate the phone to the Mac before any mobile operation.
-cmux_attach_mint_url() {
+bree_attach_mint_url() {
   local tag="$1" ttl="$2" repo_root="$3" target="$4" max="${5:-20}"
   local sock slug payload cli_output cli_stderr url node_status cli_status _i
   local cli_stderr_file
@@ -695,11 +695,11 @@ cmux_attach_mint_url() {
     simulator_injection|physical_device) ;;
     *) echo "error: invalid attach target '$target'" >&2; return 1 ;;
   esac
-  sock="$(cmux_attach_socket_path "$tag")"
-  # cmux-debug-cli.sh rejects CMUX_TAG outside [A-Za-z0-9._-] and re-sanitizes it
+  sock="$(bree_attach_socket_path "$tag")"
+  # bree-debug-cli.sh rejects BREE_TAG outside [A-Za-z0-9._-] and re-sanitizes it
   # to the same slug used for the socket. Pass the slug so tags needing
   # sanitization (e.g. "Fix Foo" -> "fix-foo") are not rejected before minting.
-  slug="$(cmux_attach__slug "$tag")"
+  slug="$(bree_attach__slug "$tag")"
   for _i in $(seq 1 "$max"); do
     if [[ ! -S "$sock" ]]; then
       last_reason="control_socket_unavailable"
@@ -710,9 +710,9 @@ cmux_attach_mint_url() {
     # still returning a valid JSON response on stdout. Keep the two streams
     # separate so those diagnostics cannot turn a successful ticket response
     # into a false malformed-response failure.
-    cli_stderr_file="$(mktemp "${TMPDIR:-/tmp}/cmux-attach-stderr.XXXXXX")"
+    cli_stderr_file="$(mktemp "${TMPDIR:-/tmp}/bree-attach-stderr.XXXXXX")"
     cli_status=0
-    cli_output="$(CMUX_TAG="$slug" "$repo_root/scripts/cmux-debug-cli.sh" rpc mobile.attach_ticket.create \
+    cli_output="$(BREE_TAG="$slug" "$repo_root/scripts/bree-debug-cli.sh" rpc mobile.attach_ticket.create \
       "{\"ttl_seconds\":${ttl},\"scope\":\"mac\",\"target\":\"${target}\"}" \
       2>"$cli_stderr_file")" || cli_status=$?
     cli_stderr="$(cat "$cli_stderr_file")"
@@ -771,19 +771,19 @@ NODE
 
 # --- app-receipt readiness ----------------------------------------------------
 # A dogfood app can prove "signed in" without a tagged Mac pairing. Such an
-# app declares Info.plist CMUXDogfoodReadiness = app-receipt-v1. After it signs
+# app declares Info.plist BREEDogfoodReadiness = app-receipt-v1. After it signs
 # in and one authenticated API call succeeds, its DEBUG build writes a
 # secret-free JSON receipt into its own data container, echoing the launch
-# nonce (CMUX_DOGFOOD_READINESS_NONCE) so a stale file can never pass. An app
+# nonce (BREE_DOGFOOD_READINESS_NONCE) so a stale file can never pass. An app
 # without the key keeps the mac-rpc readiness mode (tagged Mac
 # mobile.rpc.ready event), unchanged.
-CMUX_ATTACH_APP_RECEIPT_RELATIVE_PATH="Library/Application Support/cmux-dogfood/readiness.json"
+BREE_ATTACH_APP_RECEIPT_RELATIVE_PATH="Library/Application Support/bree-dogfood/readiness.json"
 
 # Print the readiness mode one app bundle declares: "app-receipt" or "mac-rpc".
 # A missing bundle, Info.plist, or key means mac-rpc. An unknown value fails
 # closed (exit 2) so a newer app contract cannot be silently treated as an old
 # one.
-cmux_attach_app_readiness_mode() {
+bree_attach_app_readiness_mode() {
   local app_path="${1:-}"
   if [[ -z "$app_path" || ! -f "$app_path/Info.plist" ]]; then
     printf 'mac-rpc'
@@ -799,20 +799,20 @@ try:
 except Exception:
     print("mac-rpc", end="")
     raise SystemExit(0)
-value = info.get("CMUXDogfoodReadiness") if isinstance(info, dict) else None
+value = info.get("BREEDogfoodReadiness") if isinstance(info, dict) else None
 if value is None:
     print("mac-rpc", end="")
 elif value == "app-receipt-v1":
     print("app-receipt", end="")
 else:
-    print(f"error: unsupported CMUXDogfoodReadiness value {value!r}", file=sys.stderr)
+    print(f"error: unsupported BREEDogfoodReadiness value {value!r}", file=sys.stderr)
     raise SystemExit(2)
 PY
 }
 
 # Fresh single-use launch nonce. Not a secret; it only binds a receipt to one
 # launch. Callers inject it through SIMCTL_CHILD_/DEVICECTL_CHILD_, never argv.
-cmux_attach_readiness_nonce() {
+bree_attach_readiness_nonce() {
   /usr/bin/python3 -c 'import secrets; print(secrets.token_hex(16))'
 }
 
@@ -822,14 +822,14 @@ cmux_attach_readiness_nonce() {
 # Exit 0 valid; 1 not (yet) valid for this launch (missing, unreadable, stale
 # nonce: keep waiting); 3 definitive failure for this launch (the nonce matches
 # but identity, account, session source, or shape is wrong: stop waiting).
-cmux_attach_validate_app_receipt() {
+bree_attach_validate_app_receipt() {
   local receipt="$1" nonce="$2" client_id="$3" bundle_id="$4" account="$5" required_source="${6:-}"
   [[ -f "$receipt" ]] || { echo "app readiness receipt is missing" >&2; return 1; }
-  CMUX_RECEIPT_NONCE="$nonce" \
-  CMUX_RECEIPT_CLIENT_ID="$client_id" \
-  CMUX_RECEIPT_BUNDLE_ID="$bundle_id" \
-  CMUX_RECEIPT_ACCOUNT="$account" \
-  CMUX_RECEIPT_SOURCE="$required_source" \
+  BREE_RECEIPT_NONCE="$nonce" \
+  BREE_RECEIPT_CLIENT_ID="$client_id" \
+  BREE_RECEIPT_BUNDLE_ID="$bundle_id" \
+  BREE_RECEIPT_ACCOUNT="$account" \
+  BREE_RECEIPT_SOURCE="$required_source" \
     /usr/bin/python3 - "$receipt" <<'PY'
 import json
 import os
@@ -843,7 +843,7 @@ def reject(reason):
     print(reason, file=sys.stderr)
     raise SystemExit(3)
 
-nonce = os.environ["CMUX_RECEIPT_NONCE"]
+nonce = os.environ["BREE_RECEIPT_NONCE"]
 if not nonce:
     reject("launcher has no readiness nonce")
 try:
@@ -871,17 +871,17 @@ for key in string_fields:
 for key in ("client_id", "bundle_id", "account_email", "session_source", "written_at"):
     if not receipt.get(key):
         reject(f"app readiness receipt is missing {key}")
-if receipt["client_id"] != os.environ["CMUX_RECEIPT_CLIENT_ID"]:
+if receipt["client_id"] != os.environ["BREE_RECEIPT_CLIENT_ID"]:
     reject("app readiness receipt names a different dogfood client id")
-if receipt["bundle_id"] != os.environ["CMUX_RECEIPT_BUNDLE_ID"]:
+if receipt["bundle_id"] != os.environ["BREE_RECEIPT_BUNDLE_ID"]:
     reject("app readiness receipt names a different bundle id")
-expected_account = os.environ["CMUX_RECEIPT_ACCOUNT"].strip().lower()
+expected_account = os.environ["BREE_RECEIPT_ACCOUNT"].strip().lower()
 if not expected_account or receipt["account_email"].strip().lower() != expected_account:
     reject("app is signed in to a different account than the selected profile")
 source = receipt["session_source"]
 if source not in ("auto_login", "restored"):
     reject(f"app readiness receipt has an unknown session_source {source!r}")
-required_source = os.environ["CMUX_RECEIPT_SOURCE"]
+required_source = os.environ["BREE_RECEIPT_SOURCE"]
 if required_source and source != required_source:
     reject(f"app session_source is {source}, expected {required_source}")
 
@@ -896,7 +896,7 @@ PY
 #   physical_device: devicectl copy from the appDataContainer domain (works for
 #   development-signed builds with get-task-allow).
 #   simulator_injection: simctl data container on the host filesystem.
-cmux_attach_fetch_app_receipt() {
+bree_attach_fetch_app_receipt() {
   local target="$1" target_id="$2" bundle_id="$3" destination="$4" container
   case "$target" in
     physical_device)
@@ -904,14 +904,14 @@ cmux_attach_fetch_app_receipt() {
         --device "$target_id" \
         --domain-type appDataContainer \
         --domain-identifier "$bundle_id" \
-        --source "$CMUX_ATTACH_APP_RECEIPT_RELATIVE_PATH" \
+        --source "$BREE_ATTACH_APP_RECEIPT_RELATIVE_PATH" \
         --destination "$destination" \
         --timeout 15 >/dev/null 2>&1 || return 1
       ;;
     simulator_injection)
       container="$(xcrun simctl get_app_container "$target_id" "$bundle_id" data 2>/dev/null)" || return 1
-      [[ -n "$container" && -f "$container/$CMUX_ATTACH_APP_RECEIPT_RELATIVE_PATH" ]] || return 1
-      cp "$container/$CMUX_ATTACH_APP_RECEIPT_RELATIVE_PATH" "$destination" || return 1
+      [[ -n "$container" && -f "$container/$BREE_ATTACH_APP_RECEIPT_RELATIVE_PATH" ]] || return 1
+      cp "$container/$BREE_ATTACH_APP_RECEIPT_RELATIVE_PATH" "$destination" || return 1
       ;;
     *)
       echo "error: unknown readiness target '$target'" >&2
@@ -927,17 +927,17 @@ cmux_attach_fetch_app_receipt() {
 #   $1 target, $2 target id, $3 bundle id, $4 nonce, $5 client id,
 #   $6 expected account, $7 required session_source ("" = either),
 #   $8 timeout seconds.
-cmux_attach_wait_for_app_receipt() {
+bree_attach_wait_for_app_receipt() {
   local target="$1" target_id="$2" bundle_id="$3" nonce="$4" client_id="$5"
   local account="$6" required_source="$7" timeout="$8"
   local deadline delay=1 workdir status output last_reason="no receipt published yet"
   deadline=$((SECONDS + timeout))
-  workdir="$(mktemp -d "${TMPDIR:-/tmp}/cmux-app-receipt.XXXXXX")" || return 1
+  workdir="$(mktemp -d "${TMPDIR:-/tmp}/bree-app-receipt.XXXXXX")" || return 1
   while :; do
     rm -f "$workdir/readiness.json" "$workdir/reason"
-    if cmux_attach_fetch_app_receipt "$target" "$target_id" "$bundle_id" "$workdir/readiness.json"; then
+    if bree_attach_fetch_app_receipt "$target" "$target_id" "$bundle_id" "$workdir/readiness.json"; then
       status=0
-      output="$(cmux_attach_validate_app_receipt "$workdir/readiness.json" \
+      output="$(bree_attach_validate_app_receipt "$workdir/readiness.json" \
         "$nonce" "$client_id" "$bundle_id" "$account" "$required_source" \
         2>"$workdir/reason")" || status=$?
       if [[ "$status" -eq 0 ]]; then
@@ -972,7 +972,7 @@ cmux_attach_wait_for_app_receipt() {
 # schema id as the mac-rpc receipt, plus readiness=app-receipt; it has no Mac
 # fields because no Mac takes part. Only allowlisted fields are copied from the
 # app's sanitized receipt.
-cmux_attach_write_app_readiness_receipt() {
+bree_attach_write_app_readiness_receipt() {
   local path="$1" git_sha="$2" tag="$3" bundle_id="$4" target="$5" target_id="$6"
   local readiness_latency_ms="$7" attempt_count="$8" app_receipt_json="$9"
   local installed_bundle_metadata_json="${10:-}"
@@ -1013,7 +1013,7 @@ if not isinstance(installed_bundle, dict) or installed_bundle.get("bundle_id") !
     raise SystemExit("installed bundle metadata has the wrong bundle identifier")
 
 receipt = {
-    "schema": "cmux-ios-dogfood-readiness-v1",
+    "schema": "bree-ios-dogfood-readiness-v1",
     "readiness": "app-receipt",
     "git_sha": installed_bundle.get("source_git_sha") or app.get("git_sha") or git_sha,
     "tooling_checkout_sha": git_sha,
@@ -1033,8 +1033,8 @@ receipt = {
     },
     "installed_bundle": installed_bundle,
 }
-auth_profile = os.environ.get("CMUX_DEV_AUTH_PROFILE", "")
-auth_account = os.environ.get("CMUX_DEV_AUTH_ACCOUNT", "")
+auth_profile = os.environ.get("BREE_DEV_AUTH_PROFILE", "")
+auth_account = os.environ.get("BREE_DEV_AUTH_ACCOUNT", "")
 if auth_profile and auth_account:
     receipt["auth_profile"] = auth_profile
     receipt["auth_account"] = auth_account
@@ -1046,7 +1046,7 @@ if not stat.S_ISDIR(parent_status.st_mode) or parent_status.st_uid != os.getuid(
     raise SystemExit("readiness receipt directory is not a private owned directory")
 if parent != ".":
     os.chmod(parent, 0o700)
-descriptor, temporary_path = tempfile.mkstemp(prefix=".cmux-ready-", dir=parent)
+descriptor, temporary_path = tempfile.mkstemp(prefix=".bree-ready-", dir=parent)
 try:
     os.fchmod(descriptor, 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8") as output:

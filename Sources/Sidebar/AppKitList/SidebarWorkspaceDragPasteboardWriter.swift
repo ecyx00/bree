@@ -1,5 +1,5 @@
 import AppKit
-import CmuxSidebar
+import BreeSidebar
 import Foundation
 
 /// Keeps a table drag's source graph alive while AppKit materializes its native session.

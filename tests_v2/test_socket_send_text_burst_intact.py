@@ -16,11 +16,11 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 PAYLOAD_BYTES = 5000
-ROUNDS = int(os.environ.get("CMUX_SEND_BURST_ROUNDS", "3"))
+ROUNDS = int(os.environ.get("BREE_SEND_BURST_ROUNDS", "3"))
 
 READER = """import os, sys, tty, time
 sleep_s = float(sys.argv[1]); out = sys.argv[2]
@@ -41,7 +41,7 @@ open(out, "wb").write(buf)
 
 def _must(cond: bool, msg: str) -> None:
     if not cond:
-        raise cmuxError(msg)
+        raise breeError(msg)
 
 
 def _wait_for(path: Path, timeout_s: float) -> None:
@@ -50,7 +50,7 @@ def _wait_for(path: Path, timeout_s: float) -> None:
         if path.exists():
             return
         time.sleep(0.05)
-    raise cmuxError(f"timed out waiting for {path}")
+    raise breeError(f"timed out waiting for {path}")
 
 
 def _payload() -> bytes:
@@ -62,7 +62,7 @@ def _first_terminal_surface_id(payload: dict) -> str:
     for row in payload.get("surfaces") or []:
         if row.get("type") == "terminal" and row.get("id"):
             return str(row["id"])
-    raise cmuxError(f"surface.list returned no terminal surface: {payload}")
+    raise breeError(f"surface.list returned no terminal surface: {payload}")
 
 
 def _describe_gap(expected: bytes, got: bytes) -> str:
@@ -75,8 +75,8 @@ def _describe_gap(expected: bytes, got: bytes) -> str:
     )
 
 
-def _run_round(c: cmux, round_index: int) -> None:
-    tmp = Path(tempfile.mkdtemp(prefix="cmux-send-burst-"))
+def _run_round(c: bree, round_index: int) -> None:
+    tmp = Path(tempfile.mkdtemp(prefix="bree-send-burst-"))
     reader = tmp / "reader.py"
     reader.write_text(READER, encoding="utf-8")
     received = tmp / f"received-{round_index}.bin"
@@ -113,7 +113,7 @@ def _run_round(c: cmux, round_index: int) -> None:
 
 
 def main() -> int:
-    with cmux(SOCKET_PATH) as c:
+    with bree(SOCKET_PATH) as c:
         for i in range(ROUNDS):
             _run_round(c, i)
     print(f"PASS: {ROUNDS} x {PAYLOAD_BYTES}-byte surface.send_text bursts arrived intact")

@@ -1,7 +1,7 @@
 import AppKit
 import Bonsplit
-import CmuxTerminalSharing
-import CmuxTerminalSizing
+import BreeTerminalSharing
+import BreeTerminalSizing
 import Foundation
 
 /// Tab-bar side of shared terminal sizing: the avatar accessory on a

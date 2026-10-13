@@ -1,7 +1,7 @@
 import AppKit
-import CmuxCommandPalette
-import CmuxSettings
-import CmuxSettingsUI
+import BreeCommandPalette
+import BreeSettings
+import BreeSettingsUI
 
 extension ContentView {
     static func keymapPresetCommandID(_ preset: ShortcutKeymapPreset) -> String {

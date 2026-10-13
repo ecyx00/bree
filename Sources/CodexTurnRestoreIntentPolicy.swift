@@ -1,6 +1,6 @@
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
-import CmuxWorkspaces
+import BreeWorkspaces
 
 /// Preserves one Codex restore intent after a stale turn owner exits.
 ///

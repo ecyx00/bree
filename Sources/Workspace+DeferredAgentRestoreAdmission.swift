@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import Foundation
 
 extension Workspace {
@@ -47,7 +47,7 @@ extension Workspace {
                     continue
                 }
                 // The staged snapshot owns this launch. A late SessionEnd from
-                // the previous cmux can retire the live binding in place while
+                // the previous bree can retire the live binding in place while
                 // leaving the same session identity; do not turn that race into
                 // a silent shell or rebuild the launch from autoResume=false.
                 currentResumeBinding = capturedBinding

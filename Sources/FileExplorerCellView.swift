@@ -1,12 +1,15 @@
 import AppKit
-import CmuxFoundation
-import CmuxAppKitSupportUI
+import BreeFoundation
+import BreeAppKitSupportUI
 import UniformTypeIdentifiers
 
 final class FileExplorerCellView: NSTableCellView {
-    private let iconView = CmuxResolvedIconImageView()
+    private let iconView = BreeResolvedIconImageView()
     private let nameLabel = NSTextField(labelWithString: "")
     private let loadingIndicator = NSProgressIndicator()
+    /// Git status letter (M, A, D, R, U): the non-colour cue for the name colour.
+    private let statusLabel = NSTextField(labelWithString: "")
+    private var statusWidthConstraint: NSLayoutConstraint!
     private var trackingArea: NSTrackingArea?
     var onHover: ((Bool) -> Void)?
     private var nameLabelTrailingToLoadingConstraint: NSLayoutConstraint!
@@ -45,6 +48,13 @@ final class FileExplorerCellView: NSTableCellView {
         addSubview(nameLabel)
         addSubview(loadingIndicator)
 
+        statusLabel.translatesAutoresizingMaskIntoConstraints = false
+        statusLabel.font = .monospacedSystemFont(ofSize: 10, weight: .semibold)
+        statusLabel.alignment = .center
+        statusLabel.setAccessibilityElement(false)
+        addSubview(statusLabel)
+        statusWidthConstraint = statusLabel.widthAnchor.constraint(equalToConstant: 0)
+
         iconWidthConstraint = iconView.widthAnchor.constraint(equalToConstant: 16)
         iconHeightConstraint = iconView.heightAnchor.constraint(equalToConstant: 16)
         iconToTextConstraint = nameLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 4)
@@ -63,6 +73,10 @@ final class FileExplorerCellView: NSTableCellView {
             loadingIndicator.centerYAnchor.constraint(equalTo: centerYAnchor),
             loadingWidthConstraint,
             loadingIndicator.heightAnchor.constraint(equalToConstant: 12),
+
+            statusLabel.trailingAnchor.constraint(equalTo: loadingIndicator.leadingAnchor, constant: -2),
+            statusLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+            statusWidthConstraint,
         ])
 
         nameLabelTrailingToLoadingConstraint = nameLabel.trailingAnchor.constraint(
@@ -70,7 +84,7 @@ final class FileExplorerCellView: NSTableCellView {
             constant: -2
         )
         nameLabelTrailingToContainerConstraint = nameLabel.trailingAnchor.constraint(
-            equalTo: trailingAnchor,
+            equalTo: statusLabel.leadingAnchor,
             constant: -2
         )
         NSLayoutConstraint.activate([
@@ -92,14 +106,14 @@ final class FileExplorerCellView: NSTableCellView {
         if style == .finder {
             // Native Finder icon pixels miss 3:1 in light mode; use their masks with the dynamic palette tint.
             if node.isDirectory {
-                iconView.apply(CmuxResolvedIconRequest(
+                iconView.apply(BreeResolvedIconRequest(
                     source: .workspaceIcon(.folder),
                     size: NSSize(width: style.iconSize, height: style.iconSize),
                     tintColor: style.folderIconTint
                 ))
             } else {
                 let pathExtension = (node.name as NSString).pathExtension
-                iconView.apply(CmuxResolvedIconRequest(
+                iconView.apply(BreeResolvedIconRequest(
                     source: .workspaceIcon(Self.contentType(forExtension: pathExtension)),
                     size: NSSize(width: style.iconSize, height: style.iconSize),
                     tintColor: style.fileIconTint
@@ -107,14 +121,14 @@ final class FileExplorerCellView: NSTableCellView {
             }
         } else {
             if node.isDirectory {
-                iconView.apply(CmuxResolvedIconRequest(
+                iconView.apply(BreeResolvedIconRequest(
                     source: .systemSymbol(name: "folder", accessibilityDescription: nil),
                     size: NSSize(width: style.iconSize, height: style.iconSize),
                     tintColor: style.folderIconTint,
                     symbolWeight: style.iconWeight
                 ))
             } else {
-                iconView.apply(CmuxResolvedIconRequest(
+                iconView.apply(BreeResolvedIconRequest(
                     source: .systemSymbol(name: "doc", accessibilityDescription: nil),
                     size: NSSize(width: style.iconSize, height: style.iconSize),
                     tintColor: style.fileIconTint,
@@ -147,7 +161,20 @@ final class FileExplorerCellView: NSTableCellView {
             baseNameColor = FileExplorerPalette.textPrimary
             nameLabel.toolTip = node.path
         }
+        let letter = node.error == nil ? gitStatus.map(Self.statusLetter) : nil
+        statusLabel.stringValue = letter ?? ""
+        statusWidthConstraint.constant = letter == nil ? 0 : 12
         applyNameColor()
+    }
+
+    private static func statusLetter(_ status: GitFileStatus) -> String {
+        switch status {
+        case .modified: "M"
+        case .added: "A"
+        case .deleted: "D"
+        case .renamed: "R"
+        case .untracked: "U"
+        }
     }
 
     /// Extension to content type, memoized: `UTType(filenameExtension:)` consults the type database.
@@ -167,6 +194,7 @@ final class FileExplorerCellView: NSTableCellView {
     /// only while the tree has keyboard focus); the role colour otherwise.
     private func applyNameColor() {
         nameLabel.textColor = backgroundStyle == .emphasized ? .white : baseNameColor
+        statusLabel.textColor = nameLabel.textColor
     }
 
     override var backgroundStyle: NSView.BackgroundStyle {

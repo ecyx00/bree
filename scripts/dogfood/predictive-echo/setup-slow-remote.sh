@@ -1,10 +1,10 @@
 #!/bin/bash
 # Starts a user-level sshd on 127.0.0.1:2222 and adds `Host pe-slow` to
 # ~/.ssh/config, reached through delay_proxy.py. Needs no sudo.
-# Change the link with: echo '{"one_way_ms":75,"jitter_ms":20}' > ~/.cmux-dogfood/predictive-echo/link.json
+# Change the link with: echo '{"one_way_ms":75,"jitter_ms":20}' > ~/.bree-dogfood/predictive-echo/link.json
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
-d=${PE_DOGFOOD_DIR:-$HOME/.cmux-dogfood/predictive-echo}
+d=${PE_DOGFOOD_DIR:-$HOME/.bree-dogfood/predictive-echo}
 mkdir -p "$d/sshd"
 [ -f "$d/sshd/host_ed25519" ] || ssh-keygen -q -t ed25519 -N '' -f "$d/sshd/host_ed25519"
 [ -f "$d/sshd/client_ed25519" ] || ssh-keygen -q -t ed25519 -N '' -f "$d/sshd/client_ed25519"

@@ -1,5 +1,5 @@
 import AppKit
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 enum SurfaceResumeContextMenuState: Equatable, Sendable {
@@ -241,7 +241,7 @@ extension GhosttyNSView {
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 420, height: 24))
         field.stringValue = existingCommand ?? ""
         // Only a saved resume binding is authoritative enough to prefill. A terminal's
-        // initial launch command can also be cmux transport or placeholder plumbing.
+        // initial launch command can also be bree transport or placeholder plumbing.
         alert.accessoryView = field
         alert.addButton(withTitle: String(localized: "common.ok", defaultValue: "OK"))
         alert.addButton(withTitle: String(localized: "common.cancel", defaultValue: "Cancel"))
@@ -331,13 +331,13 @@ extension GhosttyNSView {
     private func currentAgentConversationForkAvailability() -> WorkspaceForkAgentConversationAvailability {
         guard let panelId = terminalSurface?.id else {
 #if DEBUG
-            cmuxDebugLog("fork.contextMenu.hidden reason=missing_terminal_surface")
+            breeDebugLog("fork.contextMenu.hidden reason=missing_terminal_surface")
 #endif
             return .noAgentSnapshot
         }
         guard let located = AppDelegate.shared?.workspaceContainingPanel(panelId: panelId) else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "fork.contextMenu.hidden panel=\(panelId.uuidString.prefix(5)) " +
                 "reason=missing_workspace"
             )
@@ -349,7 +349,7 @@ extension GhosttyNSView {
         )
 #if DEBUG
         if !availability.isAvailable {
-            cmuxDebugLog(
+            breeDebugLog(
                 "fork.contextMenu.hidden workspace=\(located.workspace.id.uuidString.prefix(5)) " +
                 "panel=\(panelId.uuidString.prefix(5)) reason=\(availability.diagnosticReason)"
             )

@@ -30,7 +30,7 @@ enum BrowserReplCredentialRequest {
     static let maxTimeoutMilliseconds = 600_000
 
     /// - Parameter requester: The tab and workspace whose agent asks, shown
-    ///   on the sheet: the sheet appears on whichever cmux window the user
+    ///   on the sheet: the sheet appears on whichever bree window the user
     ///   works in, which may show another workspace.
     static func run(
         webView: WKWebView,
@@ -128,7 +128,7 @@ enum BrowserReplCredentialRequest {
     }
 
     /// The window that shows the tab, or, when the REPL renders the tab in an
-    /// off-screen window, the main cmux window.
+    /// off-screen window, the main bree window.
     private static func hostWindow(for webView: WKWebView) -> NSWindow? {
         if let window = webView.window, window.isVisible,
            NSScreen.screens.contains(where: { $0.frame.intersects(window.frame) }) {

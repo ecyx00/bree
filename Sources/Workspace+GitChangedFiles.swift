@@ -1,4 +1,4 @@
-import CmuxSidebar
+import BreeSidebar
 import Foundation
 
 extension Workspace {

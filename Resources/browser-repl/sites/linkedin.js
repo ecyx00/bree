@@ -5,7 +5,7 @@
 // posts made through LinkedIn's share composer after a confirmed draft.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
   const ORIGIN = "https://www.linkedin.com";
   const SIGN_IN = [/linkedin\.com\/(login|authwall|checkpoint|uas\/login|signup)/];
@@ -73,7 +73,7 @@
     (t) => {
       async function api(path) {
         const r = await t.inOrigin(ORIGIN, voyager, { path });
-        if (r.error || r.status === 401 || r.status === 403) throw new S.SiteError("not_signed_in", "linkedin: the cmux browser is not signed in to LinkedIn; open https://www.linkedin.com with tabs.open() and ask the user to sign in");
+        if (r.error || r.status === 401 || r.status === 403) throw new S.SiteError("not_signed_in", "linkedin: the bree browser is not signed in to LinkedIn; open https://www.linkedin.com with tabs.open() and ask the user to sign in");
         if (r.status < 200 || r.status >= 300 || !r.json) throw new S.SiteError("http", `linkedin: HTTP ${r.status} for ${path}`);
         return r.json;
       }

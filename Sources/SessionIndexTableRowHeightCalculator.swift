@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 
 /// Computes Vault table heights without instantiating offscreen SwiftUI rows.
 @MainActor

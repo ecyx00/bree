@@ -1,4 +1,4 @@
-import CmuxNotifications
+import BreeNotifications
 
 extension TerminalNotification {
     /// Converts app notification state into the value consumed by navigation.

@@ -1,11 +1,11 @@
-// sites.googleAccounts: the Google accounts signed in to the cmux browser,
+// sites.googleAccounts: the Google accounts signed in to the bree browser,
 // with their /u/{uid}/ index, from Google's ListAccounts endpoint (the one
 // Chromium's account reconcilor uses; shape parsed as in Chromium's
 // google_apis/gaia/gaia_auth_util.cc: [2] name, [3] email, [14] signed
 // out). Cookie-only, no tab.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
   S.register(
     "googleAccounts",

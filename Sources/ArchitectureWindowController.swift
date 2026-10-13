@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxFoundation
+import BreeFoundation
 import Combine
 import CryptoKit
 import SwiftUI
@@ -349,7 +349,7 @@ final class ArchitectureWindowController: NSObject {
         guard let session = TabBarPopoverSession(
             workspace: workspace,
             parent: parent,
-            slot: 0,
+            slot: 1,
             sizeName: "architecture",
             preferredSize: { [weak model] maxWidth, maxHeight in
                 Self.contentSize(content: model?.content ?? .empty, tab: model?.tab ?? .current, maxHeight: maxHeight, maxWidth: maxWidth)

@@ -1,4 +1,4 @@
-import CmuxTerminalCore
+import BreeTerminalCore
 import CryptoKit
 import Darwin
 import Foundation

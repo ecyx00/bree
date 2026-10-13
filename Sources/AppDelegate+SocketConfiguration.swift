@@ -1,5 +1,5 @@
-import CmuxControlSocket
-import CmuxSettings
+import BreeControlSocket
+import BreeSettings
 import Foundation
 
 extension AppDelegate {
@@ -13,7 +13,7 @@ extension AppDelegate {
 
     private func resolvedSocketListenerConfiguration() -> SocketControlServerConfiguration {
         return SocketControlServerConfiguration(
-            accessMode: CmuxSettingsFileStore.liveSocketAccessMode(),
+            accessMode: BreeSettingsFileStore.liveSocketAccessMode(),
             preferredSocketPath: SocketControlSettings.socketPath()
         )
     }

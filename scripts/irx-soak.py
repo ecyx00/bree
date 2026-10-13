@@ -4,9 +4,9 @@ the irx transport with zero disconnects, zero unexpected reconnects, and
 sub-3s establishment, using the transport's own JSONL journals as evidence.
 
 Preconditions (the runner sets these up):
-  - tagged Mac (cmux DEV <tag>) running with cmux.irx.enabled + force-relay
+  - tagged Mac (Bree Dev <tag>) running with bree.irx.enabled + force-relay
   - simulator app installed, signed in, paired, foregrounded on a terminal
-  - both journals live: /tmp/cmux-irx-journal-mac-<tag>.jsonl and the sim app
+  - both journals live: /tmp/bree-irx-journal-mac-<tag>.jsonl and the sim app
     container's Documents/irx-journal.jsonl
 
 Engagement: a repeating command is typed into the phone's terminal via idb
@@ -55,7 +55,7 @@ args = parser.parse_args()
 
 round_dir = pathlib.Path(args.out) / time.strftime("%Y%m%d-%H%M%S")
 round_dir.mkdir(parents=True, exist_ok=True)
-mac_journal_path = pathlib.Path(f"/tmp/cmux-irx-journal-mac-{args.tag}.jsonl")
+mac_journal_path = pathlib.Path(f"/tmp/bree-irx-journal-mac-{args.tag}.jsonl")
 
 
 def sim_journal_path():

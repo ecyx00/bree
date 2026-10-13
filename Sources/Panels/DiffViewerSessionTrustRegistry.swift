@@ -8,7 +8,7 @@ final class DiffViewerSessionTrustRegistry {
     private let maxSessionAge: TimeInterval = 24 * 60 * 60
 
     func registerLiveHTTPURL(_ url: URL, token: String, now: Date = Date()) -> Bool {
-        guard let components = CmuxDiffViewerURLSchemeHandler.diffViewerComponents(from: url),
+        guard let components = BreeDiffViewerURLSchemeHandler.diffViewerComponents(from: url),
               components.token == token,
               let session = Self.liveHTTPSession(from: url, now: now) else {
             return false
@@ -23,8 +23,8 @@ final class DiffViewerSessionTrustRegistry {
               let token = DiffCommentsBridge.diffViewerToken(from: url) else {
             return false
         }
-        if url.scheme == CmuxDiffViewerURLSchemeHandler.scheme {
-            return CmuxDiffViewerURLSchemeHandler.shared.hasActiveSession(token: token, now: now)
+        if url.scheme == BreeDiffViewerURLSchemeHandler.scheme {
+            return BreeDiffViewerURLSchemeHandler.shared.hasActiveSession(token: token, now: now)
         }
         guard let candidate = Self.liveHTTPSession(from: url, now: now) else { return false }
         pruneExpiredSessionsLocked(now: now)

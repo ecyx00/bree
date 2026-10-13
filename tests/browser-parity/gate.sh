@@ -3,8 +3,8 @@
 # command. Run it before each push; a round that changes behavior must keep it
 # green or change goldens with a reviewed reason.
 #
-#   tests/browser-parity/gate.sh                 # unit, sites, cmux-dev, oracle
-#   PARITY_CMUX_CLI=<tagged cli> CMUX_SOCKET_PATH=/tmp/cmux-debug-<tag>.sock \
+#   tests/browser-parity/gate.sh                 # unit, sites, bree-dev, oracle
+#   PARITY_BREE_CLI=<tagged cli> BREE_SOCKET_PATH=/tmp/bree-debug-<tag>.sock \
 #     tests/browser-parity/gate.sh --app [--app-runs N]   # plus the real app
 set -uo pipefail
 cd "$(dirname "$0")/../.."
@@ -29,12 +29,12 @@ step() {
 
 step unit node --test tests/browser-parity/unit/*.test.mjs
 step sites node --test tests/browser-parity/sites/*.test.mjs
-step cmux-dev node tests/browser-parity/run.mjs check --backend cmux-dev
+step bree-dev node tests/browser-parity/run.mjs check --backend bree-dev
 step oracle node tests/browser-parity/run.mjs check --backend oracle
 if [ "$app" = 1 ]; then
-  : "${PARITY_CMUX_CLI:?set PARITY_CMUX_CLI to the tagged app cmux CLI}"
+  : "${PARITY_BREE_CLI:?set PARITY_BREE_CLI to the tagged app bree CLI}"
   for i in $(seq 1 "$app_runs"); do
-    step "app run $i/$app_runs" node tests/browser-parity/run.mjs check --backend cmux
+    step "app run $i/$app_runs" node tests/browser-parity/run.mjs check --backend bree
   done
 fi
 

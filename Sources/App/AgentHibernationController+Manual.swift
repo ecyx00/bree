@@ -1,10 +1,10 @@
 import Foundation
 
-/// Why a manual `cmux agent hibernate` request did not hibernate its pane.
+/// Why a manual `bree agent hibernate` request did not hibernate its pane.
 enum AgentHibernationManualRefusal: String, Sendable, Equatable {
     /// No terminal with that id exists.
     case surfaceNotFound = "surface_not_found"
-    /// The pane has no agent cmux can resume the way it was started.
+    /// The pane has no agent bree can resume the way it was started.
     case notRestorable = "not_restorable"
     case alreadyHibernated = "already_hibernated"
     /// The terminal has not started, so there is nothing to free.
@@ -20,7 +20,7 @@ enum AgentHibernationManualRefusal: String, Sendable, Equatable {
     case recentlyActive = "recently_active"
     /// Typed input has not reached the agent yet.
     case unconfirmedInput = "unconfirmed_input"
-    /// The pane runs work cmux can't account for, such as background jobs.
+    /// The pane runs work bree can't account for, such as background jobs.
     case processScopeUnsafe = "process_scope_unsafe"
     case teardownInProgress = "teardown_in_progress"
     /// The pane changed, or its transcript or background work could not be
@@ -57,7 +57,7 @@ enum AgentHibernationManualRefusal: String, Sendable, Equatable {
     }
 }
 
-/// Why `cmux agent wake` did not wake its pane.
+/// Why `bree agent wake` did not wake its pane.
 enum AgentHibernationWakeRefusal: String, Sendable, Equatable {
     case surfaceNotFound = "surface_not_found"
     case notHibernated = "not_hibernated"

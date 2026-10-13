@@ -1,45 +1,45 @@
 import Foundation
-import CmuxFoundation
-import CmuxTerminalCore
+import BreeFoundation
+import BreeTerminalCore
 
-// CmuxSurfaceConfigTemplate and the surface runtime probes moved to
-// CmuxTerminalCore (SurfaceValues/CmuxSurfaceConfigTemplate.swift and
+// BreeSurfaceConfigTemplate and the surface runtime probes moved to
+// BreeTerminalCore (SurfaceValues/BreeSurfaceConfigTemplate.swift and
 // Interop/GhosttySurfaceRuntimeProbe.swift). The legacy free-function names
 // below are shims forwarding existing app callers to the probe.
 
-typealias CmuxSurfaceConfigTemplate = CmuxTerminalCore.CmuxSurfaceConfigTemplate
+typealias BreeSurfaceConfigTemplate = BreeTerminalCore.BreeSurfaceConfigTemplate
 
-func cmuxSurfaceContextName(_ context: ghostty_surface_context_e) -> String {
+func breeSurfaceContextName(_ context: ghostty_surface_context_e) -> String {
     GhosttySurfaceRuntimeProbe.contextName(context)
 }
 
-func cmuxSurfacePointerAppearsLive(_ surface: ghostty_surface_t) -> Bool {
+func breeSurfacePointerAppearsLive(_ surface: ghostty_surface_t) -> Bool {
     GhosttySurfaceRuntimeProbe.surfacePointerAppearsLive(surface)
 }
 
 @MainActor
-func cmuxCurrentSurfaceFontSizePoints(_ surface: ghostty_surface_t) -> Float? {
+func breeCurrentSurfaceFontSizePoints(_ surface: ghostty_surface_t) -> Float? {
     GhosttySurfaceRuntimeProbe.currentSurfaceFontSizePoints(surface)
 }
 
 @MainActor
-func cmuxInheritedSurfaceConfig(
+func breeInheritedSurfaceConfig(
     sourceSurface: ghostty_surface_t,
     context: ghostty_surface_context_e
-) -> CmuxSurfaceConfigTemplate {
+) -> BreeSurfaceConfigTemplate {
     let inherited = ghostty_surface_inherited_config(sourceSurface, context)
     let percent = GlobalFontMagnification.storedPercent
-    var config = CmuxSurfaceConfigTemplate(
+    var config = BreeSurfaceConfigTemplate(
         cConfig: inherited,
         globalFontMagnificationPercent: percent
     )
 
     // Capture runtime zoom for inheritance, even when Ghostty's inherit-font-size
     // config is disabled, without claiming surface-local ownership.
-    let runtimePoints = cmuxCurrentSurfaceFontSizePoints(sourceSurface)
+    let runtimePoints = breeCurrentSurfaceFontSizePoints(sourceSurface)
     if let points = runtimePoints {
         config.setFontSize(
-            CmuxSurfaceConfigTemplate.baseFontSize(
+            BreeSurfaceConfigTemplate.baseFontSize(
                 fromRuntimePoints: points,
                 percent: percent
             ),
@@ -51,8 +51,8 @@ func cmuxInheritedSurfaceConfig(
     let inheritedText = String(format: "%.2f", inherited.font_size)
     let runtimeText = runtimePoints.map { String(format: "%.2f", $0) } ?? "nil"
     let finalText = String(format: "%.2f", config.fontSize)
-    cmuxDebugLog(
-        "zoom.inherit context=\(cmuxSurfaceContextName(context)) " +
+    breeDebugLog(
+        "zoom.inherit context=\(breeSurfaceContextName(context)) " +
         "inherited=\(inheritedText) runtime=\(runtimeText) final=\(finalText)"
     )
 #endif

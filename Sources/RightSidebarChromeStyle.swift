@@ -1,7 +1,7 @@
 import AppKit
-import CmuxFoundation
-import CmuxAppKitSupportUI
-import CmuxSettings
+import BreeFoundation
+import BreeAppKitSupportUI
+import BreeSettings
 import SwiftUI
 
 func titlebarShortcutHintShouldShow(
@@ -14,16 +14,16 @@ func titlebarShortcutHintShouldShow(
 
 /// Resolves to the Bree palette's `textSecondary` (4.5:1 floor on every
 /// surface, 7:1 under Increase Contrast) from the view's environment.
-struct CmuxSecondaryTextStyle: ShapeStyle {
+struct BreeSecondaryTextStyle: ShapeStyle {
     func resolve(in environment: EnvironmentValues) -> some ShapeStyle {
         environment.breePalette.textSecondary
     }
 }
 
-extension ShapeStyle where Self == CmuxSecondaryTextStyle {
+extension ShapeStyle where Self == BreeSecondaryTextStyle {
     /// Secondary text and empty states. Every caller keeps this name and gets
     /// the palette's `textSecondary` role.
-    static var cmuxSecondaryText: CmuxSecondaryTextStyle { CmuxSecondaryTextStyle() }
+    static var breeSecondaryText: BreeSecondaryTextStyle { BreeSecondaryTextStyle() }
 }
 
 enum HeaderChromeIconStyle {
@@ -91,7 +91,7 @@ private struct HeaderChromeSymbol: View {
     @Environment(\.breePalette) private var palette
 
     var body: some View {
-        CmuxSystemSymbolImage(
+        BreeSystemSymbolImage(
             systemName: systemName,
             pointSize: RightSidebarChromeMetrics.headerIconSize,
             weight: HeaderChromeIconStyle.weight,
@@ -130,7 +130,7 @@ struct RightSidebarChromeBarModifier: ViewModifier {
     var leadingPadding: CGFloat
     var trailingPadding: CGFloat
     var height: CGFloat
-    @Environment(\.cmuxGlobalFontMagnificationPercent) private var globalFontPercent
+    @Environment(\.breeGlobalFontMagnificationPercent) private var globalFontPercent
 
     func body(content: Content) -> some View {
         content
@@ -151,7 +151,7 @@ struct RightSidebarChromePillModifier: ViewModifier {
     var isHovered: Bool
     var horizontalPadding: CGFloat = RightSidebarChromeMetrics.controlHorizontalPadding
     var geometryKeyPrefix: String?
-    @Environment(\.cmuxGlobalFontMagnificationPercent) private var globalFontPercent
+    @Environment(\.breeGlobalFontMagnificationPercent) private var globalFontPercent
     @Environment(\.breePalette) private var palette
 
     func body(content: Content) -> some View {
@@ -419,7 +419,7 @@ struct ModeBarButton: View {
 
     private func tabContent(showsLabel: Bool) -> some View {
         HStack(spacing: 4) {
-            CmuxSystemSymbolImage(
+            BreeSystemSymbolImage(
                 systemName: item.symbolName,
                 pointSize: RightSidebarChromeControlStyle.modeIconSize,
                 weight: RightSidebarChromeControlStyle.iconWeight,
@@ -458,12 +458,12 @@ struct ModeBarButton: View {
             .breeFont(.count, countRow: .caption)
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: true)
-            .foregroundStyle(palette.signalAttention)
+            .foregroundStyle(palette.surfaceBase)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .background(
                 Capsule(style: .continuous)
-                    .fill(palette.signalAttention.opacity(0.20))
+                    .fill(palette.accentFill)
             )
             .fixedSize(horizontal: true, vertical: true)
             .layoutPriority(2)

@@ -13,7 +13,7 @@
 //     invariants compare against (fixtures/corpus/NAME.oracle.json): the
 //     interactive elements in Playwright's AI snapshot with each element's
 //     path, and text Chrome does not render. Scenario 27 judges each path's
-//     visibility in the engine that renders cmux (fixtures/corpus/gt.js).
+//     visibility in the engine that renders bree (fixtures/corpus/gt.js).
 //
 // Sizes of reference A's snapshots of the same frozen pages live in
 // fixtures/corpus/reference-a-sizes.json (recorded once with reference A's REPL).
@@ -28,7 +28,7 @@ const corpusDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", 
 export const PAGES = [
   { name: "wikipedia", url: "https://en.wikipedia.org/wiki/WebKit" },
   { name: "hackernews", url: "https://news.ycombinator.com/" },
-  { name: "github", url: "https://github.com/manaflow-ai/cmux" },
+  { name: "github", url: "https://github.com/ecyx00/bree" },
   { name: "mdn", url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map" },
   { name: "mdn-iframe", url: "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe" },
   { name: "npr", url: "https://text.npr.org/" },
@@ -264,7 +264,7 @@ async function oracle(only) {
       const aiText = typeof ai === "string" ? ai : ai.full;
       // _snapshotForAI inlines frames; parse the whole text once. Each entry
       // carries its element's path, so a check can judge visibility in the
-      // engine that renders cmux (scenario 27); Chrome's own judgement is
+      // engine that renders bree (scenario 27); Chrome's own judgement is
       // only counted here.
       const interactive = [];
       let hiddenInChrome = 0;

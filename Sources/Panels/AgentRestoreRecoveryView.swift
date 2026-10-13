@@ -1,4 +1,4 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import SwiftUI
 
 /// Displays recovery state outside the terminal input stream.

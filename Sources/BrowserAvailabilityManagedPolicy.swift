@@ -1,4 +1,4 @@
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 /// MDM enforcement for the embedded-browser gate.
@@ -6,7 +6,7 @@ import Foundation
 /// `BrowserAvailabilitySettings.isDisabled()` consults this before the
 /// user-level `browserDisabledOverride` value, making the
 /// `DisableEmbeddedBrowser` configuration-profile key tier 0: it wins over
-/// user settings, `cmux.json` imports, and defaults, and no in-app writer
+/// user settings, `bree.json` imports, and defaults, and no in-app writer
 /// (Settings toggle, command palette, CLI) can change it.
 extension BrowserAvailabilitySettings {
     /// Process-wide resolver for profile-forced policy values.

@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// Git branch of the selected workspace, shown after the workspace name in the window title row.
@@ -34,6 +34,7 @@ struct TitlebarBranchLabel: View {
 struct TitlebarRightSidebarToggle: View {
     @Environment(\.breePalette) private var palette
     let window: NSWindow?
+    @State private var isHovering = false
 
     var body: some View {
         let shortcut = KeyboardShortcutSettings.Action.toggleRightSidebar
@@ -45,10 +46,13 @@ struct TitlebarRightSidebarToggle: View {
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(palette.textSecondary)
                 .frame(width: 28, height: 28)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isHovering ? palette.hoverFill : Color.clear))
                 .accessibilityLabel(title)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
         .safeHelp(shortcut.tooltip(title))
         .accessibilityLabel(title)
         .accessibilityIdentifier("Titlebar.rightSidebarToggle")

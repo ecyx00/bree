@@ -1,4 +1,5 @@
 #if DEBUG
+import BreeFoundation
 import SwiftUI
 
 struct SpinnerCard: View {
@@ -24,7 +25,7 @@ struct SpinnerCard: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(Capsule().fill(Color.accentColor))
+                            .background(Capsule().fill(BreeChromePalette.currentSnapshot.accentFill))
                     }
                     Spacer()
                     Text(spec.energy.rawValue)

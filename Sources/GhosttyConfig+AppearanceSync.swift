@@ -24,13 +24,13 @@ extension GhosttyConfig {
         ) == .system
         if isSystemMode, isApplicationFinishedLaunching(), let liveEffectiveAppearance = liveEffectiveAppearance() {
             return (
-                preference: liveEffectiveAppearance.cmuxPrefersDark ? .dark : .light,
+                preference: liveEffectiveAppearance.breePrefersDark ? .dark : .light,
                 source: "liveEffectiveAppearance"
             )
         }
         if isSystemMode, let passedAppearance {
             return (
-                preference: passedAppearance.cmuxPrefersDark ? .dark : .light,
+                preference: passedAppearance.breePrefersDark ? .dark : .light,
                 source: "passedAppearance"
             )
         }

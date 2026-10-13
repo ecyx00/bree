@@ -1,5 +1,5 @@
 import Foundation
-import CmuxTerminal
+import BreeTerminal
 
 extension TerminalPanel {
     func performInternalBindingAction(_ action: String) -> Bool {

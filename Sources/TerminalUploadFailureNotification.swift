@@ -113,7 +113,7 @@ enum TerminalUploadFailureNotification {
     static func post(
         error: Error,
         surfaceId: UUID?,
-        resolvedHooks: [CmuxResolvedNotificationHook]? = nil
+        resolvedHooks: [BreeResolvedNotificationHook]? = nil
     ) -> Outcome {
         guard let payload = payload(for: error, surfaceId: surfaceId) else { return .suppressed }
         guard let appDelegate = AppDelegate.shared,

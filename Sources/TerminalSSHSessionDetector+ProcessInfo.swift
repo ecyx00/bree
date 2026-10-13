@@ -23,7 +23,7 @@ extension TerminalSSHSessionDetector {
     }
 
     static func processSnapshots(forTTY ttyName: String) -> [ProcessSnapshot] {
-        guard let ttyDevice = CmuxTopProcessSnapshot.deviceIdentifier(forTTYName: ttyName),
+        guard let ttyDevice = BreeTopProcessSnapshot.deviceIdentifier(forTTYName: ttyName),
               ttyDevice <= Int64(UInt32.max) else {
             return []
         }
@@ -76,7 +76,7 @@ extension TerminalSSHSessionDetector {
     /// 200 that froze each drop for seconds.
     static func processSnapshots(inProcessGroup processGroupID: Int32, ttyName: String) -> [ProcessSnapshot] {
         guard processGroupID > 0,
-              let ttyDevice = CmuxTopProcessSnapshot.deviceIdentifier(forTTYName: ttyName),
+              let ttyDevice = BreeTopProcessSnapshot.deviceIdentifier(forTTYName: ttyName),
               ttyDevice <= Int64(UInt32.max) else {
             return []
         }
@@ -137,7 +137,7 @@ extension TerminalSSHSessionDetector {
             pgid: Int32(info.pbi_pgid),
             tpgid: Int32(info.e_tpgid),
             tty: ttyName,
-            executableName: CmuxTopProcessSnapshot
+            executableName: BreeTopProcessSnapshot
                 .fixedString(info.pbi_comm)
                 .lowercased()
         )

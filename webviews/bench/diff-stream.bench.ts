@@ -7,19 +7,19 @@ import { createDiffViewerLabelResolver } from "../src/labels";
 import { streamPatch, type DiffItem, type StreamMetrics } from "../src/diff-stream";
 import { makeMixedPatch } from "./diff-fixture";
 
-const fileCount = Number(process.env.CMUX_DIFF_BENCH_FILES ?? 2000);
-const iterations = Number(process.env.CMUX_DIFF_BENCH_ITERATIONS ?? 5);
+const fileCount = Number(process.env.BREE_DIFF_BENCH_FILES ?? 2000);
+const iterations = Number(process.env.BREE_DIFF_BENCH_ITERATIONS ?? 5);
 if (!Number.isSafeInteger(fileCount) || fileCount <= 0) {
-  throw new Error("CMUX_DIFF_BENCH_FILES must be a positive integer");
+  throw new Error("BREE_DIFF_BENCH_FILES must be a positive integer");
 }
 if (!Number.isSafeInteger(iterations) || iterations <= 0) {
-  throw new Error("CMUX_DIFF_BENCH_ITERATIONS must be a positive integer");
+  throw new Error("BREE_DIFF_BENCH_ITERATIONS must be a positive integer");
 }
 const patch = makeMixedPatch(fileCount);
-const includeAppRender = process.env.CMUX_DIFF_BENCH_RENDER_APP === "1";
-const patchOutputPath = process.env.CMUX_DIFF_BENCH_PATCH_OUTPUT == null
+const includeAppRender = process.env.BREE_DIFF_BENCH_RENDER_APP === "1";
+const patchOutputPath = process.env.BREE_DIFF_BENCH_PATCH_OUTPUT == null
   ? undefined
-  : resolve(process.env.CMUX_DIFF_BENCH_PATCH_OUTPUT);
+  : resolve(process.env.BREE_DIFF_BENCH_PATCH_OUTPUT);
 if (patchOutputPath != null) {
   await Bun.write(patchOutputPath, patch);
 }
@@ -100,9 +100,9 @@ const report = {
   patchOutputPath,
   yieldCount: lastMetrics?.yieldCount ?? 0,
 };
-const maxP95Ms = Number(process.env.CMUX_DIFF_BENCH_MAX_STREAM_P95_MS ?? Number.POSITIVE_INFINITY);
+const maxP95Ms = Number(process.env.BREE_DIFF_BENCH_MAX_STREAM_P95_MS ?? Number.POSITIVE_INFINITY);
 if (!Number.isFinite(maxP95Ms) && maxP95Ms !== Number.POSITIVE_INFINITY) {
-  throw new Error("CMUX_DIFF_BENCH_MAX_STREAM_P95_MS must be a number");
+  throw new Error("BREE_DIFF_BENCH_MAX_STREAM_P95_MS must be a number");
 }
 if (p95Ms > maxP95Ms) {
   throw new Error(`diff stream p95 was ${p95Ms.toFixed(2)} ms, budget is ${maxP95Ms.toFixed(2)} ms`);

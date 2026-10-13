@@ -1,4 +1,4 @@
-import CmuxSidebar
+import BreeSidebar
 import Foundation
 
 /// Complete immutable render value for one workspace row.

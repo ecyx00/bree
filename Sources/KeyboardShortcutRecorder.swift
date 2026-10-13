@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import SwiftUI
 
@@ -31,7 +31,7 @@ struct KeyboardShortcutRecorder: View {
                     Text(label)
                     if let subtitle {
                         Text(subtitle)
-                            .cmuxFont(.caption)
+                            .scaledFont(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -86,24 +86,24 @@ struct KeyboardShortcutRecorder: View {
             if let validationMessage {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .cmuxFont(.caption)
-                        .foregroundStyle(.red)
+                        .scaledFont(.caption)
+                        .foregroundStyle(BreeChromePalette.currentSnapshot.signalError)
 
                     Text(validationMessage)
-                        .cmuxFont(.caption)
-                        .foregroundStyle(.red)
+                        .scaledFont(.caption)
+                        .foregroundStyle(BreeChromePalette.currentSnapshot.signalError)
                         .fixedSize(horizontal: false, vertical: true)
 
                     if let validationButtonTitle, let onValidationButtonPressed {
                         Button(validationButtonTitle, action: onValidationButtonPressed)
                             .buttonStyle(.link)
-                            .cmuxFont(.caption)
+                            .scaledFont(.caption)
                     }
 
                     if let undoButtonTitle, let onUndoButtonPressed {
                         Button(undoButtonTitle, action: onUndoButtonPressed)
                             .buttonStyle(.link)
-                            .cmuxFont(.caption)
+                            .scaledFont(.caption)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -111,11 +111,11 @@ struct KeyboardShortcutRecorder: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.red.opacity(0.12))
+                        .fill(BreeChromePalette.currentSnapshot.signalError.opacity(0.12))
                 }
                 .overlay {
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.red.opacity(0.35), lineWidth: 1)
+                        .stroke(BreeChromePalette.currentSnapshot.signalError.opacity(0.35), lineWidth: 1)
                 }
                 .accessibilityIdentifier("ShortcutRecorderValidationMessage")
             }

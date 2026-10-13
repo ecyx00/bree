@@ -1,6 +1,6 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 /// Runtime enforcement for MDM managed policies (`DisableEmbeddedBrowser`,
@@ -13,7 +13,7 @@ extension AppDelegate {
         guard managedPolicyEnforcementObserver == nil else { return }
         managedPolicyEnforcementObserver = ManagedPolicyEnforcementObserver(
             socketControlPolicy: {
-                CmuxSettingsFileStore.socketControlPolicyResolution()
+                BreeSettingsFileStore.socketControlPolicyResolution()
             },
             enforceBrowserPolicy: { [weak self] in
                 self?.closeBrowserPanelsForManagedPolicy()
@@ -30,12 +30,12 @@ extension AppDelegate {
         )
     }
 
-    /// `DisableRemoteConnections` activation. Every live cmux-created remote
+    /// `DisableRemoteConnections` activation. Every live bree-created remote
     /// connection ends: remote workspaces (SSH and Mosh)
     /// disconnect and drop their configuration so no reconnect path can
     /// redial, remote tmux mirrors detach and close, and their SSH control
     /// masters exit. Remote tmux sessions stay alive on their hosts; only
-    /// cmux's connections to them end. The per-call gates
+    /// bree's connections to them end. The per-call gates
     /// (`Workspace.configureRemoteConnection`, `reconnectRemoteConnection`,
     /// the remote-tmux socket verbs) refuse anything new while the policy is
     /// forced, and read the resolver live once it lifts.
@@ -52,7 +52,7 @@ extension AppDelegate {
     }
 
     /// Closes every live browser pane — main area and Docks, across all
-    /// windows — when `DisableEmbeddedBrowser` activates while cmux runs.
+    /// windows — when `DisableEmbeddedBrowser` activates while bree runs.
     func closeBrowserPanelsForManagedPolicy() {
         for manager in allTabManagersForManagedPolicyEnforcement() {
             for workspace in manager.tabs {

@@ -1,5 +1,5 @@
 import AppKit
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 /// Immutable presentation and menu state for one workspace-group row.
@@ -38,7 +38,7 @@ struct SidebarWorkspaceGroupRowSnapshot {
     let shortcutHintXOffset: Double
     let shortcutHintYOffset: Double
     let fontScale: CGFloat
-    let cwdContextMenuItems: [CmuxResolvedConfigContextMenuItem]
+    let cwdContextMenuItems: [BreeResolvedConfigContextMenuItem]
     let newWorkspacePlacement: WorkspaceGroupNewPlacement?
     let rowSpacing: CGFloat
     let isFirstRow: Bool

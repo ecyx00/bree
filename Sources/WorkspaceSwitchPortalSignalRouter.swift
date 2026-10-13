@@ -1,6 +1,6 @@
 import AppKit
 import Combine
-import CmuxTerminal
+import BreeTerminal
 import Foundation
 import WebKit
 

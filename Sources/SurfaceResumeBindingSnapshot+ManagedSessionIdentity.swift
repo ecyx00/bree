@@ -92,7 +92,7 @@ extension SurfaceResumeBindingSnapshot {
     /// write without it comes from the public `surface resume set` CLI (the Pi
     /// extension shipped before #12084 re-published its binding that way, and
     /// a Pi process that already loaded that extension keeps doing so after
-    /// cmux updates). Accepting it silently turns the pane manual, and the
+    /// bree updates). Accepting it silently turns the pane manual, and the
     /// next relaunch restores a bare shell instead of the agent. Callers run
     /// this inside the store mutation so no get/set interleaving can
     /// observe-then-downgrade the trusted binding.

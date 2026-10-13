@@ -1,6 +1,6 @@
 import Combine
 import Foundation
-import CmuxSidebar
+import BreeSidebar
 
 extension Workspace {
     private func normalizedSidebarDirectory(_ directory: String?) -> String? {

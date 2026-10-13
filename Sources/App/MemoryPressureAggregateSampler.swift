@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 
@@ -17,20 +17,20 @@ protocol MemoryPressureCoalitionSampling: Sendable {
     func usage(forProcessID processID: Int) -> MemoryPressureCoalitionUsage?
 }
 
-/// Captures cmux plus all unique descendants, preferring the resource coalition.
+/// Captures bree plus all unique descendants, preferring the resource coalition.
 struct DarwinMemoryPressureAggregateSampler: MemoryPressureAggregateSampling {
     private let processID: Int
-    private let snapshotProvider: @Sendable () async -> CmuxTopProcessSnapshot
+    private let snapshotProvider: @Sendable () async -> BreeTopProcessSnapshot
     private let coalitionSampler: any MemoryPressureCoalitionSampling
     private let physicalMemoryProvider: @Sendable () -> UInt64
     private let availableMemoryProvider: @Sendable () -> UInt64?
 
     init(
         processID: Int = Int(getpid()),
-        snapshotProvider: @escaping @Sendable () async -> CmuxTopProcessSnapshot = {
-            await CmuxTopProcessSnapshot.captureCached(
+        snapshotProvider: @escaping @Sendable () async -> BreeTopProcessSnapshot = {
+            await BreeTopProcessSnapshot.captureCached(
                 includeProcessDetails: false,
-                includeCMUXScope: false,
+                includeBREEScope: false,
                 maximumAge: 15
             )
         },
@@ -66,7 +66,7 @@ struct DarwinMemoryPressureAggregateSampler: MemoryPressureAggregateSampling {
             // memory. Installed RAM is not an upper bound. Falling back here
             // would lose coalition members reparented after their parent exited.
             // Reject only values outside the kernel's signed ledger domain.
-            // Coalition accounting already covers cmux and its descendants;
+            // Coalition accounting already covers bree and its descendants;
             // avoid a full process-table walk on the normal path. The count is
             // intentionally zero because no descendant enumeration occurred.
             return MemoryPressureAggregateSample(

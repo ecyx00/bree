@@ -1,11 +1,11 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 import os
 
 enum StartupBreadcrumbLog {
     private static let maxFieldLength = 240
-    private nonisolated static let logger = Logger(subsystem: "com.cmuxterm.app", category: "StartupBreadcrumbLog")
+    private nonisolated static let logger = Logger(subsystem: "com.bree.app", category: "StartupBreadcrumbLog")
     private static let reservedFieldKeys: Set<String> = [
         "timestamp",
         "timestampMs",
@@ -65,7 +65,7 @@ enum StartupBreadcrumbLog {
             try handle.write(contentsOf: line)
             try handle.write(contentsOf: Data([0x0A]))
         } catch {
-            logger.fault("cmux startup breadcrumb failed: \(String(describing: error), privacy: .public)")
+            logger.fault("bree startup breadcrumb failed: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -95,27 +95,27 @@ enum StartupBreadcrumbLog {
 
     private static var isEnabled: Bool {
         let environment = ProcessInfo.processInfo.environment
-        if environment["CMUX_DISABLE_STARTUP_BREADCRUMBS"] == "1" {
+        if environment["BREE_DISABLE_STARTUP_BREADCRUMBS"] == "1" {
             return false
         }
-        if environment["CMUX_STARTUP_BREADCRUMBS"] == "1" {
+        if environment["BREE_STARTUP_BREADCRUMBS"] == "1" {
             return true
         }
         let bundleIdentifier = Bundle.main.bundleIdentifier ?? ""
-        return bundleIdentifier == "com.cmuxterm.app.nightly"
-            || bundleIdentifier.hasPrefix("com.cmuxterm.app.nightly.")
-            || bundleIdentifier == "com.cmuxterm.app.rc"
-            || bundleIdentifier.hasPrefix("com.cmuxterm.app.rc.")
-            || bundleIdentifier == "com.cmuxterm.app.debug"
-            || bundleIdentifier.hasPrefix("com.cmuxterm.app.debug.")
+        return bundleIdentifier == "com.bree.app.nightly"
+            || bundleIdentifier.hasPrefix("com.bree.app.nightly.")
+            || bundleIdentifier == "com.bree.app.rc"
+            || bundleIdentifier.hasPrefix("com.bree.app.rc.")
+            || bundleIdentifier == "com.bree.app.debug"
+            || bundleIdentifier.hasPrefix("com.bree.app.debug.")
     }
 
     private static var logURL: URL {
         let logsDirectory = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)
             .first?
-            .appendingPathComponent("Logs/cmux", isDirectory: true)
+            .appendingPathComponent("Logs/bree", isDirectory: true)
             ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
-                .appendingPathComponent("\(CmuxIdentity.current.tempNamePrefix)-logs", isDirectory: true)
+                .appendingPathComponent("\(BreeIdentity.current.tempNamePrefix)-logs", isDirectory: true)
         let sanitizedBundleIdentifier = logFileComponent(Bundle.main.bundleIdentifier ?? "unknown")
         return logsDirectory.appendingPathComponent("startup-\(sanitizedBundleIdentifier).log")
     }

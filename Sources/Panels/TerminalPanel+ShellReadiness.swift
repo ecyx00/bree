@@ -1,4 +1,4 @@
-import CmuxWorkspaces
+import BreeWorkspaces
 
 extension TerminalPanel {
     func updateShellActivityState(_ state: PanelShellActivityState) {

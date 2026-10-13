@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_PATH="${1:-${CMUX_APP_PATH:-}}"
-TAG="${CMUX_TAG:-ca-main-thread}"
-SOCKET_PATH="${CMUX_CA_ASSERT_SOCKET_PATH:-/tmp/cmux-debug-${TAG}.sock}"
-LOG_PATH="${CMUX_CA_ASSERT_LOG:-/tmp/cmux-ca-main-thread-${TAG}.log}"
-HOLD_SECONDS="${CMUX_CA_ASSERT_HOLD_SECONDS:-8}"
-READY_TIMEOUT_SECONDS="${CMUX_CA_ASSERT_READY_TIMEOUT_SECONDS:-60}"
-APP_PID_FILE="${CMUX_CA_ASSERT_PID_FILE:-/tmp/cmux-ca-main-thread-${TAG}.pid}"
+APP_PATH="${1:-${BREE_APP_PATH:-}}"
+TAG="${BREE_TAG:-ca-main-thread}"
+SOCKET_PATH="${BREE_CA_ASSERT_SOCKET_PATH:-/tmp/bree-debug-${TAG}.sock}"
+LOG_PATH="${BREE_CA_ASSERT_LOG:-/tmp/bree-ca-main-thread-${TAG}.log}"
+HOLD_SECONDS="${BREE_CA_ASSERT_HOLD_SECONDS:-8}"
+READY_TIMEOUT_SECONDS="${BREE_CA_ASSERT_READY_TIMEOUT_SECONDS:-60}"
+APP_PID_FILE="${BREE_CA_ASSERT_PID_FILE:-/tmp/bree-ca-main-thread-${TAG}.pid}"
 
 if [ -z "$APP_PATH" ]; then
-  echo "usage: CMUX_APP_PATH=/path/to/cmux.app $0" >&2
-  echo "   or: $0 /path/to/cmux.app" >&2
-  echo "optional: CMUX_CA_ASSERT_SOCKET_PATH=/tmp/cmux-debug-<tag>.sock" >&2
+  echo "usage: BREE_APP_PATH=/path/to/bree.app $0" >&2
+  echo "   or: $0 /path/to/bree.app" >&2
+  echo "optional: BREE_CA_ASSERT_SOCKET_PATH=/tmp/bree-debug-<tag>.sock" >&2
   exit 2
 fi
 
@@ -22,18 +22,18 @@ if [ ! -d "$APP_PATH" ]; then
 fi
 
 APP_BASENAME="$(basename "$APP_PATH")"
-if [ "$APP_BASENAME" = "cmux DEV.app" ] && [ "${CMUX_ALLOW_UNTAGGED_CA_REGRESSION:-0}" != "1" ]; then
-  echo "ERROR: refusing to launch untagged cmux DEV.app without CMUX_ALLOW_UNTAGGED_CA_REGRESSION=1" >&2
+if [ "$APP_BASENAME" = "Bree Dev.app" ] && [ "${BREE_ALLOW_UNTAGGED_CA_REGRESSION:-0}" != "1" ]; then
+  echo "ERROR: refusing to launch untagged Bree Dev.app without BREE_ALLOW_UNTAGGED_CA_REGRESSION=1" >&2
   exit 2
 fi
 
-BINARY="$APP_PATH/Contents/MacOS/cmux DEV"
+BINARY="$APP_PATH/Contents/MacOS/Bree Dev"
 if [ ! -x "$BINARY" ]; then
-  BINARY="$APP_PATH/Contents/MacOS/cmux"
+  BINARY="$APP_PATH/Contents/MacOS/bree"
 fi
 
 if [ ! -x "$BINARY" ]; then
-  echo "ERROR: cmux executable not found in $APP_PATH" >&2
+  echo "ERROR: bree executable not found in $APP_PATH" >&2
   exit 2
 fi
 
@@ -86,13 +86,13 @@ rm -f "$SOCKET_PATH" "$LOG_PATH"
 DYLD_FRAMEWORK_PATH="$APP_FRAMEWORKS" \
 CA_ASSERT_MAIN_THREAD_TRANSACTIONS=1 \
 CA_DEBUG_TRANSACTIONS=1 \
-CMUX_UI_TEST_MODE=1 \
-CMUX_DISABLE_SESSION_RESTORE=1 \
-CMUX_SOCKET_ENABLE=1 \
-CMUX_SOCKET_MODE=automation \
-CMUX_TAG="$TAG" \
-CMUX_SOCKET_PATH="$SOCKET_PATH" \
-CMUX_ALLOW_SOCKET_OVERRIDE=1 \
+BREE_UI_TEST_MODE=1 \
+BREE_DISABLE_SESSION_RESTORE=1 \
+BREE_SOCKET_ENABLE=1 \
+BREE_SOCKET_MODE=automation \
+BREE_TAG="$TAG" \
+BREE_SOCKET_PATH="$SOCKET_PATH" \
+BREE_ALLOW_SOCKET_OVERRIDE=1 \
 "$BINARY" >"$LOG_PATH" 2>&1 &
 APP_PID=$!
 echo "$APP_PID" >"$APP_PID_FILE"
@@ -100,7 +100,7 @@ echo "$APP_PID" >"$APP_PID_FILE"
 wait_for_app_alive() {
   if ! kill -0 "$APP_PID" >/dev/null 2>&1; then
     wait "$APP_PID" >/dev/null 2>&1 || true
-    echo "FAIL: cmux exited while CA_ASSERT_MAIN_THREAD_TRANSACTIONS=1 was active" >&2
+    echo "FAIL: bree exited while CA_ASSERT_MAIN_THREAD_TRANSACTIONS=1 was active" >&2
     echo "--- app log tail ($LOG_PATH) ---" >&2
     tail -80 "$LOG_PATH" >&2 2>/dev/null || true
     exit 1
@@ -119,7 +119,7 @@ while [ "$SECONDS" -lt "$ready_deadline" ]; do
 done
 
 if [ "$socket_ready" -ne 1 ]; then
-  echo "FAIL: cmux stayed alive but did not create its socket at $SOCKET_PATH" >&2
+  echo "FAIL: bree stayed alive but did not create its socket at $SOCKET_PATH" >&2
   echo "--- app log tail ($LOG_PATH) ---" >&2
   tail -80 "$LOG_PATH" >&2 2>/dev/null || true
   exit 1
@@ -138,4 +138,4 @@ if grep -E "uncommitted CATransaction|implicit transaction wasn't created|CoreAn
   exit 1
 fi
 
-echo "PASS: cmux startup survived CoreAnimation main-thread transaction assertions"
+echo "PASS: bree startup survived CoreAnimation main-thread transaction assertions"

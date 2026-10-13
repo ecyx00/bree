@@ -1,5 +1,5 @@
 import AppKit
-import CmuxTerminal
+import BreeTerminal
 
 /// Performs one complete pasteboard read with process-local file ownership.
 struct TerminalPastePreparationOperation: Sendable {

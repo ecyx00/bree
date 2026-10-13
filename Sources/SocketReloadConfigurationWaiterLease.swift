@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 
 /// Retires one reload waiter exactly once, including after its socket timeout.
 final class SocketReloadConfigurationWaiterLease: Sendable {

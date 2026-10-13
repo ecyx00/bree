@@ -47,7 +47,7 @@
     ],
     "enoent": "ENOENT"
   },
-  "cmux": {
+  "bree": {
     "outside": "EACCES",
     "outside-write": "EACCES"
   }

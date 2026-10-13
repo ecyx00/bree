@@ -20,7 +20,7 @@ if [ "${1:-}" = "--check" ]; then
   (
     cd "$SRC_DIR"
     bun install --frozen-lockfile
-    CMUX_WEBVIEWS_OUT_DIR="$tmp_dir" bun run build
+    BREE_WEBVIEWS_OUT_DIR="$tmp_dir" bun run build
     normalize_webviews_output "$tmp_dir"
   )
   diff_output="$(mktemp)"

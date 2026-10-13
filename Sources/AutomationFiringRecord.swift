@@ -11,7 +11,7 @@ struct AutomationFiringRecord: Sendable {
 
     var payload: [String: Any] {
         [
-            "occurred_at": CmuxEventBus.isoTimestamp(occurredAt),
+            "occurred_at": BreeEventBus.isoTimestamp(occurredAt),
             "rule_id": ruleID,
             "event": eventName,
             "status": status,

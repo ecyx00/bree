@@ -1,5 +1,5 @@
 import Foundation
-import CmuxTerminal
+import BreeTerminal
 
 /// Shared immutable config-derived values plus bounded per-surface retry state.
 @MainActor

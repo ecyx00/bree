@@ -1,6 +1,6 @@
 import AppKit
-import CMUXAgentLaunch
-import CmuxAgentJournal
+import BREEAgentLaunch
+import BreeAgentJournal
 import Foundation
 
 enum AgentInboxItemKind: String, CaseIterable, Equatable, Sendable {

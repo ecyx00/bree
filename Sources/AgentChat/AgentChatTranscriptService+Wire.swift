@@ -1,5 +1,5 @@
-import CmuxAgentChat
-import CmuxMobileHost
+import BreeAgentChat
+import BreeMobileHost
 import Foundation
 
 extension AgentChatTranscriptService {

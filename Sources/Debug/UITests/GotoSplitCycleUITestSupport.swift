@@ -1,6 +1,6 @@
 #if DEBUG
 import AppKit
-import CmuxTestSupport
+import BreeTestSupport
 import Foundation
 
 /// Debug-only app-host bridge for the cross-process goto-split UI tests.
@@ -105,7 +105,7 @@ struct GotoSplitCycleUITestSupport {
 
     private func isRecordingEnabled() -> Bool {
         let env = ProcessInfo.processInfo.environment
-        return env["CMUX_UI_TEST_GOTO_SPLIT_SETUP"] == "1" || env["CMUX_UI_TEST_GOTO_SPLIT_RECORD_ONLY"] == "1"
+        return env["BREE_UI_TEST_GOTO_SPLIT_SETUP"] == "1" || env["BREE_UI_TEST_GOTO_SPLIT_RECORD_ONLY"] == "1"
     }
 
     private func stateSnapshot(for workspace: Workspace) -> [String: String] {
@@ -156,15 +156,15 @@ struct GotoSplitCycleUITestSupport {
         let currentResponder = (NSApp.keyWindow ?? NSApp.mainWindow)?.firstResponder
         updates["firstResponderTerminalPanelId"] =
             currentResponder
-                .cmuxStrictOwningGhosttyView()?
+                .breeStrictOwningGhosttyView()?
                 .terminalSurface?.id.uuidString ?? ""
 
-        updates.merge(cmuxFindResponderSnapshot()) { _, new in new }
+        updates.merge(breeFindResponderSnapshot()) { _, new in new }
         return updates
     }
 
     private func writeData(_ updates: [String: String]) {
-        _ = sink.mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_GOTO_SPLIT_PATH") { payload in
+        _ = sink.mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_GOTO_SPLIT_PATH") { payload in
             for (key, value) in updates {
                 payload[key] = value
             }

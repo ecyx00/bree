@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// A Quick View window. `shared` is the reusable one: showing another resource
@@ -189,7 +189,7 @@ final class QuickViewWindowController: NSObject, NSWindowDelegate {
             onPin: { [weak self] in self?.pin() },
             onOpenExternally: { [weak self] in self?.openExternally() },
             onClose: { [weak self] in self?.window?.close() }
-        ).cmuxFontMagnificationEnvironment())
+        ).breeFontMagnificationEnvironment())
         if activate { window.makeKeyAndOrderFront(nil) } else { window.orderFront(nil) }
     }
 

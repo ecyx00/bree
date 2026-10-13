@@ -1,7 +1,7 @@
 import AppKit
 import Bonsplit
-import CmuxAppKitSupportUI
-import CmuxRemoteSession
+import BreeAppKitSupportUI
+import BreeRemoteSession
 import Foundation
 import SwiftUI
 
@@ -163,7 +163,7 @@ extension RemoteTmuxWindowMirror {
                     .sorted { $0.key < $1.key }
                     .map { "%\($0.key)=\(Int($0.value.width))x\(Int($0.value.height))" }
                     .joined(separator: " ")
-                cmuxDebugLog(
+                breeDebugLog(
                     "remote.divider.plan @\(windowId) parent=\(Int((planParent ?? .zero).width))x\(Int((planParent ?? .zero).height)) titleRow=\(Int(metrics.paneTitleRowHeight)) outers[\(planSummary)]"
                 )
             }
@@ -269,7 +269,7 @@ extension RemoteTmuxWindowMirror {
         else {
             if case .split = treeNode {
                 #if DEBUG
-                cmuxDebugLog("remote.divider.plan mismatch: plan leaf vs bonsplit split")
+                breeDebugLog("remote.divider.plan mismatch: plan leaf vs bonsplit split")
                 #endif
             }
             return
@@ -285,7 +285,7 @@ extension RemoteTmuxWindowMirror {
               let splitId = UUID(uuidString: split.id)
         else {
             #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "remote.divider.plan mismatch: orientation \(split.orientation) vs \(orientation)"
             )
             #endif
@@ -683,7 +683,7 @@ extension RemoteTmuxWindowMirror: BonsplitDelegate {
             || dividerResizeSentSinceDragBegan
         dividerResizeSentSinceDragBegan = false
         #if DEBUG
-        cmuxDebugLog("remote.divider.dragEnd @\(windowId) sent=\(sent ? 1 : 0)")
+        breeDebugLog("remote.divider.dragEnd @\(windowId) sent=\(sent ? 1 : 0)")
         #endif
         if sent {
             // The resize-pane is out; tmux's layout reply is the settled

@@ -13,57 +13,57 @@ from pathlib import Path
 from typing import List, Tuple
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
-class cmuxSkip(Exception):
+class breeSkip(Exception):
     pass
 
 
 def _must(cond: bool, msg: str) -> None:
     if not cond:
-        raise cmuxError(msg)
+        raise breeError(msg)
 
 
 def _find_cli_binary() -> str:
-    env_cli = os.environ.get("CMUXTERM_CLI")
+    env_cli = os.environ.get("BREE_CLI")
     if env_cli and os.path.isfile(env_cli) and os.access(env_cli, os.X_OK):
         return env_cli
 
-    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/cmux-tests-v2/Build/Products/Debug/cmux")
+    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/bree-tests-v2/Build/Products/Debug/bree")
     if os.path.isfile(fixed) and os.access(fixed, os.X_OK):
         return fixed
 
-    candidates = glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/cmux"), recursive=True)
-    candidates += glob.glob("/tmp/cmux-*/Build/Products/Debug/cmux")
+    candidates = glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/bree"), recursive=True)
+    candidates += glob.glob("/tmp/bree-*/Build/Products/Debug/bree")
     candidates = [p for p in candidates if os.path.isfile(p) and os.access(p, os.X_OK)]
     if not candidates:
-        raise cmuxError("Could not locate cmux CLI binary; set CMUXTERM_CLI")
+        raise breeError("Could not locate bree CLI binary; set BREE_CLI")
     candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
     return candidates[0]
 
 
 def _run_cli(cli: str, args: List[str], check: bool = True) -> Tuple[int, str]:
     env = dict(os.environ)
-    env.pop("CMUX_WORKSPACE_ID", None)
-    env.pop("CMUX_SURFACE_ID", None)
-    env.pop("CMUX_TAB_ID", None)
+    env.pop("BREE_WORKSPACE_ID", None)
+    env.pop("BREE_SURFACE_ID", None)
+    env.pop("BREE_TAB_ID", None)
 
     cmd = [cli, "--socket", SOCKET_PATH] + args
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
     merged = f"{proc.stdout}\n{proc.stderr}".strip()
     if check and proc.returncode != 0:
-        raise cmuxError(f"CLI failed ({' '.join(cmd)}): {merged}")
+        raise breeError(f"CLI failed ({' '.join(cmd)}): {merged}")
     return proc.returncode, proc.stdout.strip() if proc.returncode == 0 else merged
 
 
 def _extract_ref(output: str, kind: str) -> str:
     match = re.search(rf"\b{kind}:\d+\b", output)
     if not match:
-        raise cmuxError(f"Could not find {kind} ref in CLI output: {output!r}")
+        raise breeError(f"Could not find {kind} ref in CLI output: {output!r}")
     return match.group(0)
 
 
@@ -89,11 +89,11 @@ def _wait_for_read_screen(cli: str, workspace_ref: str, surface_ref: str, token:
         if code == 0 and token in output:
             return output
         time.sleep(0.1)
-    raise cmuxError(f"read-screen never observed {token!r} for {surface_ref}: {last_output!r}")
+    raise breeError(f"read-screen never observed {token!r} for {surface_ref}: {last_output!r}")
 
 
 def _exercise_helper(cli: str, workspace_ref: str, surface_ref: str, label: str) -> None:
-    token = f"CMUX_HELPER_PTY_{label}_{int(time.time() * 1000)}"
+    token = f"BREE_HELPER_PTY_{label}_{int(time.time() * 1000)}"
     _run_cli(
         cli,
         [
@@ -117,7 +117,7 @@ def _create_background_workspace(cli: str) -> str:
     return workspace_ref
 
 
-def _find_unhosted_background_workspace(c: cmux, cli: str, baseline_ws: str) -> Tuple[str, List[str]]:
+def _find_unhosted_background_workspace(c: bree, cli: str, baseline_ws: str) -> Tuple[str, List[str]]:
     created_workspaces: List[str] = []
     try:
         for _ in range(16):
@@ -131,7 +131,7 @@ def _find_unhosted_background_workspace(c: cmux, cli: str, baseline_ws: str) -> 
                 created_workspaces.remove(workspace_ref)
                 return workspace_ref, created_workspaces
 
-        raise cmuxSkip("could not create an unhosted background workspace for helper terminal regression")
+        raise breeSkip("could not create an unhosted background workspace for helper terminal regression")
     except Exception:
         for workspace_ref in created_workspaces:
             try:
@@ -144,7 +144,7 @@ def _find_unhosted_background_workspace(c: cmux, cli: str, baseline_ws: str) -> 
 def main() -> int:
     cli = _find_cli_binary()
 
-    with cmux(SOCKET_PATH) as c:
+    with bree(SOCKET_PATH) as c:
         baseline = c._call("workspace.current") or {}
         baseline_ws = str(baseline.get("workspace_ref") or baseline.get("workspace_id") or "")
         _must(bool(baseline_ws), f"workspace.current returned no workspace_id: {baseline}")
@@ -155,7 +155,7 @@ def main() -> int:
         try:
             try:
                 workspace_ref, cleanup_workspaces = _find_unhosted_background_workspace(c, cli, baseline_ws)
-            except cmuxSkip as exc:
+            except breeSkip as exc:
                 print(f"SKIP: {exc}")
                 return 0
             panes = c._call("pane.list", {"workspace_id": workspace_ref}) or {}

@@ -1,19 +1,19 @@
-# Custom sidebars: vibe-code your own cmux sidebar
+# Custom sidebars: vibe-code your own bree sidebar
 
-cmux lets you build your own sidebar UI by writing a small SwiftUI-style file.
+bree lets you build your own sidebar UI by writing a small SwiftUI-style file.
 It is interpreted at runtime (no Xcode, no build step, no signing), renders as
-native SwiftUI in the real sidebar, hot-reloads on save, binds to live cmux
-state, and can run cmux commands on tap. This guide is the authoring contract
+native SwiftUI in the real sidebar, hot-reloads on save, binds to live bree
+state, and can run bree commands on tap. This guide is the authoring contract
 for you or a coding agent.
 
 This guide covers interpreted custom sidebars, which cannot import frameworks
 or start child processes. For compiled Swift in an ExtensionKit sidebar, start
 with the
 [sample app](../Examples/SampleSidebarExtensionApp/README.md) and the
-[CmuxExtensionKit authoring guide](../Packages/macOS/CmuxExtensionKit/README.md).
+[BreeExtensionKit authoring guide](../Packages/macOS/BreeExtensionKit/README.md).
 Compiled extensions run inside the macOS App Sandbox; if yours launches `git`
 or another external tool, read
-[Running external tools](../Packages/macOS/CmuxExtensionKit/README.md#running-external-tools)
+[Running external tools](../Packages/macOS/BreeExtensionKit/README.md#running-external-tools)
 before choosing an executable or opening a repository.
 
 It is a beta, on by default. Turn it off in **Settings → Custom Sidebars**
@@ -26,14 +26,14 @@ Six curated custom sidebars are available as built-in templates while the Custom
 The same templates are available from the CLI:
 
 ```bash
-cmux sidebar templates
-cmux sidebar templates --json
-cmux sidebar try agents-board
-cmux sidebar new agents-board --from agents-board
-cmux sidebar open agents-board
+bree sidebar templates
+bree sidebar templates --json
+bree sidebar try agents-board
+bree sidebar new agents-board --from agents-board
+bree sidebar open agents-board
 ```
 
-`cmux sidebar try` creates a temporary preview file and prints the command to open and remove it. `cmux sidebar new` accepts kebab-case names and will not replace an existing file unless you add `--force`. The template list includes the intended placement for each file: left sidebar, right panel, or both. The six bundled source files and manifest are mirrored from `Examples/CustomSidebars/`. The remaining examples stay there as authoring references, so you can copy or adapt them into your dotfiles.
+`bree sidebar try` creates a temporary preview file and prints the command to open and remove it. `bree sidebar new` accepts kebab-case names and will not replace an existing file unless you add `--force`. The template list includes the intended placement for each file: left sidebar, right panel, or both. The six bundled source files and manifest are mirrored from `Examples/CustomSidebars/`. The remaining examples stay there as authoring references, so you can copy or adapt them into your dotfiles.
 
 Preview cards ship with the app bundle.
 
@@ -41,12 +41,12 @@ Preview cards ship with the app bundle.
 
 | Template | Use it for | Placement | Preview |
 | --- | --- | --- | --- |
-| Workspaces | A straightforward live workspace list. | Left sidebar | ![Workspaces preview](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/workspaces-light.png) / [dark](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/workspaces-dark.png) |
-| Agents Board | A kanban-style board for agent workspaces. | Left sidebar | ![Agents Board preview](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/agents-board-light.png) / [dark](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/agents-board-dark.png) |
-| Panel Sessions | Searchable sessions for this workspace or all workspaces. | Right panel | ![Panel Sessions preview](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-sessions-light.png) / [dark](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-sessions-dark.png) |
-| Panel Subagents | Coding-agent sessions grouped by workspace with live status. | Right panel | ![Panel Subagents preview](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-subagents-light.png) / [dark](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-subagents-dark.png) |
-| btop Agents | A terminal-inspired monitor for agent activity. | Left sidebar | ![btop Agents preview](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/btop-agents-light.png) / [dark](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/btop-agents-dark.png) |
-| Panel Todo | An interactive scratch checklist for the current workspace. | Right panel | ![Panel Todo preview](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-todo-light.png) / [dark](../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-todo-dark.png) |
+| Workspaces | A straightforward live workspace list. | Left sidebar | ![Workspaces preview](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/workspaces-light.png) / [dark](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/workspaces-dark.png) |
+| Agents Board | A kanban-style board for agent workspaces. | Left sidebar | ![Agents Board preview](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/agents-board-light.png) / [dark](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/agents-board-dark.png) |
+| Panel Sessions | Searchable sessions for this workspace or all workspaces. | Right panel | ![Panel Sessions preview](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-sessions-light.png) / [dark](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-sessions-dark.png) |
+| Panel Subagents | Coding-agent sessions grouped by workspace with live status. | Right panel | ![Panel Subagents preview](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-subagents-light.png) / [dark](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-subagents-dark.png) |
+| btop Agents | A terminal-inspired monitor for agent activity. | Left sidebar | ![btop Agents preview](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/btop-agents-light.png) / [dark](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/btop-agents-dark.png) |
+| Panel Todo | An interactive scratch checklist for the current workspace. | Right panel | ![Panel Todo preview](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-todo-light.png) / [dark](../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-todo-dark.png) |
 
 ## If you are an agent building this for someone
 
@@ -59,7 +59,7 @@ SwiftUI, files, or syntax. Concretely:
 - Default to real, live data. If they mention workspaces/tabs, bind to the
   `workspaces` context (not hard-coded text) so it stays correct on its own.
 - Make it interactive by default. Rows that represent something you can open
-  should be tappable and run the matching `cmux(...)` action (e.g. selecting a
+  should be tappable and run the matching `bree(...)` action (e.g. selecting a
   workspace, focusing a tab). A list that just displays text is rarely what
   they wanted.
 - If the list is something a person would naturally reorder (workspaces, tasks,
@@ -69,7 +69,7 @@ SwiftUI, files, or syntax. Concretely:
   status dot / pill / highlight patterns below so it is scannable at a glance.
 - Lazy-load / cap large lists (see Performance). Do not render hundreds of rows.
 - Iterate by saving the file and opening it as a pane with
-  `cmux sidebar open <name>`; it hot-reloads there while you edit. Verify it
+  `bree sidebar open <name>`; it hot-reloads there while you edit. Verify it
   shows real data and that taps do the right thing before declaring it done.
 - Stay inside the supported subset below. If something is not supported, choose
   the closest supported approach rather than failing.
@@ -78,20 +78,20 @@ SwiftUI, files, or syntax. Concretely:
 
 Write a named file (the name becomes the menu label; use short kebab-case):
 
-    ~/.config/cmux/sidebars/<name>.js        # reactive JS scene runtime (fastest)
-    ~/.config/cmux/sidebars/<name>.swift     # interpreted Swift
-    ~/.config/cmux/sidebars/<name>.json      # declarative JSON (simpler, static)
+    ~/.config/bree/sidebars/<name>.js        # reactive JS scene runtime (fastest)
+    ~/.config/bree/sidebars/<name>.swift     # interpreted Swift
+    ~/.config/bree/sidebars/<name>.json      # declarative JSON (simpler, static)
 
 Each file shows up as an option in the **sidebar toggle button's right-click
 menu** and can also open as a normal Bonsplit pane tab. Pick it from the menu
-for the left sidebar, or run `cmux sidebar open <name>` to show it in a pane;
+for the left sidebar, or run `bree sidebar open <name>` to show it in a pane;
 edit the file and save and it hot-reloads. If several extensions share a base
 name, `.js` wins over `.swift`, which wins over `.json`.
 
 The same files also work as **right-sidebar panels** (extensions next to
-Files/Find/Vault): `cmux right-sidebar set custom <name>` selects one and adds
+Files/Find/Vault): `bree right-sidebar set custom <name>` selects one and adds
 a Custom button to the right sidebar's mode bar. The panel gets the same data
-keys and `cmux(...)` actions as the left sidebar and hot-reloads the same way.
+keys and `bree(...)` actions as the left sidebar and hot-reloads the same way.
 `panel-info` (selected-workspace overview with clickable ports and PRs),
 `panel-sessions` (every session with live search and a this-workspace/all
 scope toggle), `panel-todo` (an interactive scratch checklist),
@@ -133,7 +133,7 @@ you want to paste SwiftUI.
           {
             items: () => data.workspaces() ?? [],
             key: (w) => w.id,
-            onMove: (id, index) => cmux("workspace.reorder", { workspace_id: id, index: index }),
+            onMove: (id, index) => bree("workspace.reorder", { workspace_id: id, index: index }),
           },
           (w) =>
             HStack({ spacing: 8 }, [
@@ -142,7 +142,7 @@ you want to paste SwiftUI.
               Spacer(),
             ])
               .padding(6)
-              .onTap(() => cmux("workspace.select", { workspace_id: w().id }))
+              .onTap(() => bree("workspace.select", { workspace_id: w().id }))
         ),
       ])
     )
@@ -218,7 +218,7 @@ Rules of the runtime:
     items: () => data.workspaces() ?? [],
     key: w => w.id,
     onDragChange: setDrag,
-    onMove: (id, index) => cmux("workspace.reorder", { workspace_id: id, index }),
+    onMove: (id, index) => bree("workspace.reorder", { workspace_id: id, index }),
   }, w => Text(() => w().title)
     .background(() => drag()?.id === w().id ? "accent" : "clear"))
   ```
@@ -233,12 +233,12 @@ Rules of the runtime:
   move_up/move_down/move_top, close_others, set/clear color and description),
   `workspace.close`, `workspace.move_to_window`, `workspace.group.action`
   (pin/unpin/ungroup/delete), `workspace.group.collapse` / `.expand`.
-- Actions: `cmux(method, params)`, `openURL(url)`, `log(message)` anywhere in
+- Actions: `bree(method, params)`, `openURL(url)`, `log(message)` anywhere in
   a handler.
 - Containment: the context has no filesystem, network, or timers, and a
   runaway evaluation is terminated by a watchdog. Errors show in the sidebar
   with a line number.
-- Translucent "liquid glass" behind the sidebar comes from cmux's window
+- Translucent "liquid glass" behind the sidebar comes from bree's window
   chrome, not the sidebar file: pick a glass preset in Settings under sidebar
   appearance (e.g. Raycast Gray / HUD Glass). `sidebar(fn, { surface:
   "glass" })` additionally drops the pane host's opaque backdrop fill when the
@@ -256,16 +256,16 @@ sidebars keep the opaque backdrop. Glass works in the default in-process
 renderer.
 
 By default a custom sidebar renders in-process: the interpreted view mounts
-as real SwiftUI inside the cmux window, so hover styling, focus, keyboard,
+as real SwiftUI inside the bree window, so hover styling, focus, keyboard,
 and same-frame resize all work natively. The tradeoff is that the
 interpreter shares the host process.
 
 For sidebars from sources you do not fully trust you can switch to the
 remote renderer, an out-of-process worker. That is the containment lane: a
-crash or hang caused by the interpreted file cannot take down cmux, but
+crash or hang caused by the interpreted file cannot take down bree, but
 input is limited to forwarded clicks (no hover, focus, or keyboard).
 
-Set it in **Settings → Custom Sidebars**, or in `~/.config/cmux/cmux.json`:
+Set it in **Settings → Custom Sidebars**, or in `~/.config/bree/bree.json`:
 
     { "customSidebars": { "renderer": "remote" } }
 
@@ -287,30 +287,30 @@ The repo includes ready-to-copy sidebars in `Examples/CustomSidebars/`:
   of recent agent activity per workspace, state glyphs, a small progress meter,
   and a header graph of busy workspaces.
 
-Install one from a cmux checkout:
+Install one from a bree checkout:
 
-    mkdir -p ~/.config/cmux/sidebars
-    cp Examples/CustomSidebars/status-board.swift ~/.config/cmux/sidebars/status-board.swift
-    cp Examples/CustomSidebars/finder.swift ~/.config/cmux/sidebars/finder.swift
+    mkdir -p ~/.config/bree/sidebars
+    cp Examples/CustomSidebars/status-board.swift ~/.config/bree/sidebars/status-board.swift
+    cp Examples/CustomSidebars/finder.swift ~/.config/bree/sidebars/finder.swift
 
 Then validate and open it as a Bonsplit pane:
 
-    cmux sidebar validate status-board
-    cmux sidebar open status-board
+    bree sidebar validate status-board
+    bree sidebar open status-board
 
-`cmux sidebar select <name>` still previews a custom sidebar in the left
-sidebar picker. Use `cmux sidebar open <name>` when you want the sidebar as a
+`bree sidebar select <name>` still previews a custom sidebar in the left
+sidebar picker. Use `bree sidebar open <name>` when you want the sidebar as a
 normal pane tab that can live in a right-side split.
 
 ## Quick start
 
-    cat > ~/.config/cmux/sidebars/mine.swift <<'SWIFT'
+    cat > ~/.config/bree/sidebars/mine.swift <<'SWIFT'
     VStack(alignment: .leading, spacing: 8) {
         Text("My sidebar").font(.title3).bold()
         Text(clock.time).font(.caption).foregroundColor(.secondary)
         Divider()
         ForEach(workspaces) { w in
-            Button(action: { cmux("workspace.select", workspace_id: w.id) }) {
+            Button(action: { bree("workspace.select", workspace_id: w.id) }) {
                 HStack {
                     Text(w.selected ? "●" : "○").foregroundColor(w.selected ? "#FF8800" : .secondary)
                     Text(w.title)
@@ -324,7 +324,7 @@ normal pane tab that can live in a right-side split.
 Then right-click the sidebar button and choose **mine**, or open it as a pane
 with:
 
-    cmux sidebar open mine
+    bree sidebar open mine
 
 ## Live data you can bind to (read-only, refreshes ~1s)
 
@@ -333,11 +333,11 @@ with:
   (array of Int) + `portCount`, `unread` (Int notifications), `status`, `tabs` +
   `tabCount`. `status` is the workspace's task-status lane, one of `todo`,
   `working`, `needs-attention`, `review` or `done`. It is the resolved lane:
-  a manual pin set through `cmux workspace status set` or the sidebar menu
-  while that pin still holds, otherwise the lane cmux infers from live signals
+  a manual pin set through `bree workspace status set` or the sidebar menu
+  while that pin still holds, otherwise the lane bree infers from live signals
   (an agent waiting on input, a running agent, a dirty
   working tree). An external tool that pins the lane through
-  `cmux workspace status set` shows up here too.
+  `bree workspace status set` shows up here too.
 
   `status` is always reported, independently of whether the built-in status
   glyph is visible. That glyph needs two further conditions the context does
@@ -370,7 +370,7 @@ with:
   when available it adds `label` and `endedEpoch` (set when the child
   settles; settled children are pruned after a short retention). Headless
   OMP/Pi subagents run inside the parent's process, so they appear here via
-  `cmux hooks omp|pi subagent-start|subagent-stop` with JSON
+  `bree hooks omp|pi subagent-start|subagent-stop` with JSON
   `{"session_id": "<parent session>", "agent_id": "<stable child id>",
   "description": "<child label>"}`: start opens the child on the parent
   record, stop closes the oldest running child (FIFO). The `agent_id` field is
@@ -474,17 +474,17 @@ Array methods: `.filter`, `.map`, `.flatMap`, `.reduce`, `.sorted { $0 > $1 }`,
 `.formatted(.percent)` / `.formatted(.notation(.compactName))`. Builtins:
 `min`, `max`, `abs`, `Int(...)`, `Double(...)`, `String(...)`.
 
-## Actions (run real cmux commands on tap)
+## Actions (run real bree commands on tap)
 
-A button or `.onTapGesture` body calls `cmux("<method>", param: value)`. On tap
-it runs that cmux command through the same dispatcher as the `cmux` CLI:
+A button or `.onTapGesture` body calls `bree("<method>", param: value)`. On tap
+it runs that bree command through the same dispatcher as the `bree` CLI:
 
-    Button(action: { cmux("workspace.select", workspace_id: w.id) }) { ... }
-    ...onTapGesture { cmux("surface.focus", surface_id: t.surfaceId) }
+    Button(action: { bree("workspace.select", workspace_id: w.id) }) { ... }
+    ...onTapGesture { bree("surface.focus", surface_id: t.surfaceId) }
 
 Use real method and parameter names. Common ones: `workspace.select`
 (`workspace_id`), `surface.focus` (`surface_id`), `workspace.reorder`
-(`workspace_id` + `index`). Run `cmux docs api` to discover the full command
+(`workspace_id` + `index`). Run `bree docs api` to discover the full command
 surface.
 
 ## Drag-and-drop reordering (persisted)
@@ -492,11 +492,11 @@ surface.
 Drag-and-drop is achieved with `Reorderable`. This is the supported way to make
 a list draggable, do not reach for `List`/`.onMove`/`.draggable` directly. Wrap
 rows in `Reorderable`; the rows become draggable and dropping one onto another
-runs the `move` command, which both reorders and persists (cmux remembers
+runs the `move` command, which both reorders and persists (bree remembers
 workspace order):
 
     Reorderable(workspaces, move: "workspace.reorder") { w in
-        Button(action: { cmux("workspace.select", workspace_id: w.id) }) {
+        Button(action: { bree("workspace.select", workspace_id: w.id) }) {
             HStack { Text(w.title); Spacer() }.padding(6)
         }
     }
@@ -508,7 +508,7 @@ The dropped item's id and target index are sent as `workspace_id` and `index`.
     HSplitView {
         VStack(alignment: .leading) {
             for i in 0..<workspaces.count {
-                Button(action: { cmux("workspace.select", workspace_id: workspaces[i].id) }) {
+                Button(action: { bree("workspace.select", workspace_id: workspaces[i].id) }) {
                     HStack { Image(systemName: "folder.fill"); Text(workspaces[i].title); Spacer() }.padding(4)
                 }
             }
@@ -518,7 +518,7 @@ The dropped item's id and target index are sent as `workspace_id` and `index`.
                 if workspaces[i].selected {
                     for j in 0..<workspaces[i].tabs.count {
                         if let surfaceId = workspaces[i].tabs[j].surfaceId {
-                            Button(action: { cmux("surface.focus", surface_id: surfaceId, workspace_id: workspaces[i].id) }) {
+                            Button(action: { bree("surface.focus", surface_id: surfaceId, workspace_id: workspaces[i].id) }) {
                                 HStack { Image(systemName: "doc.text"); Text(workspaces[i].tabs[j].title); Spacer() }.padding(4)
                             }
                         }
@@ -535,12 +535,12 @@ The interpreter is a growing subset. `.overlay`/`.background`/`.mask`/
 shape `.stroke`/`.trim`, and user `func` helpers are all supported now.
 
 Still missing: `@State` and the interactive input controls that need it
-(`TextField`, `Toggle`, `Slider`, `Picker`) — buttons/taps that run `cmux(...)`
+(`TextField`, `Toggle`, `Slider`, `Picker`) — buttons/taps that run `bree(...)`
 work, but two-way-bound editing does not yet; `switch`; custom `struct`/`View`
 definitions; `gradients` (`LinearGradient`/…); navigation (`sheet`/`popover`/
 `NavigationStack`); `.keyboardShortcut`; `AsyncImage`/`.resizable`. Workspace
 data (git branch/dirty, ports, unread, remote, latest agent/prompt messages)
-is live; data cmux doesn't track (custom domain collections) won't appear.
+is live; data bree doesn't track (custom domain collections) won't appear.
 
 If your sidebar needs a missing feature, write it the natural Swift way anyway —
 unsupported syntax is skipped (and even deeply nested or pathological source is

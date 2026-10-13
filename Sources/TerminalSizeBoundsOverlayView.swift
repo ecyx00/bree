@@ -1,9 +1,9 @@
 import AppKit
 import Bonsplit
-import CmuxAppKitSupportUI
-import CmuxTerminal
-import CmuxTerminalSharing
-import CmuxTerminalSizing
+import BreeAppKitSupportUI
+import BreeTerminal
+import BreeTerminalSharing
+import BreeTerminalSizing
 import GhosttyKit
 import QuartzCore
 import SwiftUI

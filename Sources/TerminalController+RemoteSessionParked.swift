@@ -1,9 +1,9 @@
-import CmuxFoundation
-import CmuxRemoteSession
+import BreeFoundation
+import BreeRemoteSession
 import Foundation
 
 /// `workspace.remote.pty_bridge` answers for a remote session that gave up
-/// (https://github.com/manaflow-ai/cmux/issues/12813).
+/// (https://github.com/ecyx00/bree/issues/12813).
 ///
 /// The reply carries the structured ``SSHPTYAttachExitCode/sessionParkedErrorCode``
 /// and, as its message, the same app-localized detail the sidebar shows. The

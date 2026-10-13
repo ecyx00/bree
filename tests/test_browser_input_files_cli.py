@@ -6,9 +6,9 @@ import tempfile
 import threading
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 from test_browser_profile_cli import (
-    FakeCmuxHandler,
+    FakeBreeHandler,
     SURFACE_ID,
     ThreadedUnixServer,
     assert_cli_fails,
@@ -28,11 +28,11 @@ class FileInputState:
 
 
 def main():
-    cli = resolve_cmux_cli()
-    with tempfile.TemporaryDirectory(prefix="cmux-input-files-", dir="/tmp") as temporary:
-        socket_path = str(Path(temporary) / "cmux.sock")
+    cli = resolve_bree_cli()
+    with tempfile.TemporaryDirectory(prefix="bree-input-files-", dir="/tmp") as temporary:
+        socket_path = str(Path(temporary) / "bree.sock")
         state = FileInputState()
-        server = ThreadedUnixServer(socket_path, FakeCmuxHandler)
+        server = ThreadedUnixServer(socket_path, FakeBreeHandler)
         server.state = state
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()

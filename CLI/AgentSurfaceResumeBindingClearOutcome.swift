@@ -1,6 +1,6 @@
 import Foundation
 
-extension CMUXCLI {
+extension BREECLI {
     /// The ownership result returned by a guarded agent resume-binding clear.
     enum AgentSurfaceResumeBindingClearOutcome: Equatable {
         case cleared

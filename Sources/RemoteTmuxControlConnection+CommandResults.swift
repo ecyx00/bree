@@ -25,7 +25,7 @@ extension RemoteTmuxControlConnection {
         pendingCommands.removeFirst(count)
         dequeuedCommandCount += count
         #if DEBUG
-        cmuxDebugLog("remote.fifo.skipped count=\(count) kinds=\(skipped)")
+        breeDebugLog("remote.fifo.skipped count=\(count) kinds=\(skipped)")
         #endif
         return skipped
     }
@@ -55,7 +55,7 @@ extension RemoteTmuxControlConnection {
         #if DEBUG
         switch kind {
         case .paneRects, .listWindows, .perWindowSize:
-            cmuxDebugLog(
+            breeDebugLog(
                 "remote.fifo.dequeue \(kind) depth=\(pendingCommands.count)"
                     + " err=\(isError ? 1 : 0) lines=\(lines.count)"
                     + " bytes=\(lines.reduce(0) { $0 + $1.utf8.count })"
@@ -129,7 +129,7 @@ extension RemoteTmuxControlConnection {
             // an invisible %error has already hidden one real bug — an unquoted
             // refresh-client -B that never subscribed — so leave a trace.
             #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "remote.tmux.commandError kind=\(kind) error=\"\(lines.joined(separator: " / "))\""
             )
             #endif
@@ -219,7 +219,7 @@ extension RemoteTmuxControlConnection {
                 if windowsByID.isEmpty {
                     initialBatchAwaiting = Set(order).subtracting(initialBatchStaged.keys)
                     #if DEBUG
-                    cmuxDebugLog("remote.rects.batchArm windows=\(order)")
+                    breeDebugLog("remote.rects.batchArm windows=\(order)")
                     #endif
                 } else if var awaiting = initialBatchAwaiting {
                     awaiting.formIntersection(liveIDs)
@@ -253,7 +253,7 @@ extension RemoteTmuxControlConnection {
                 windowTitleRowPlacements = windowTitleRowPlacements.filter { liveIDs.contains($0.key) }
                 prunePaneState(keeping: paneIDsForStatePruning())
                 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "remote.window.snapshot order=\(order)"
                         + " prior=\(windowOrder)"
                 )

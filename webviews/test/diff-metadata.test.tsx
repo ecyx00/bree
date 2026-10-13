@@ -35,7 +35,7 @@ test("binary and mode-only diffs render explicit localized header metadata", () 
   );
   const dom = new JSDOM(`<div id="root">${html}</div>`);
   const container = dom.window.document.getElementById("root")!;
-  expect(container.querySelector('[data-cmux-diff-metadata="binary"]')?.textContent).toBe("Localized binary");
-  expect(container.querySelector('[data-cmux-diff-metadata="mode"]')?.textContent).toBe("Permissions 100644 to 100755");
+  expect(container.querySelector('[data-bree-diff-metadata="binary"]')?.textContent).toBe("Localized binary");
+  expect(container.querySelector('[data-bree-diff-metadata="mode"]')?.textContent).toBe("Permissions 100644 to 100755");
   dom.window.close();
 });

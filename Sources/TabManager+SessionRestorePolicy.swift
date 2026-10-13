@@ -11,9 +11,9 @@ extension TabManager {
     }
 
     /// Any workspace that hosts a Cloud machine through either transport: the
-    /// legacy managed remote (`managedCloudVMID`) or the cmux-tui binding
+    /// legacy managed remote (`managedCloudVMID`) or the bree-tui binding
     /// (`cloudVM`). `DisableCloud` drops every one of these from restore; the
-    /// one-machine normalization above deliberately keeps cmux-tui workspaces.
+    /// one-machine normalization above deliberately keeps bree-tui workspaces.
     static func isCloudVMWorkspaceSnapshotForManagedPolicy(_ snapshot: SessionWorkspaceSnapshot) -> Bool {
         isManagedCloudVMSessionRestoreWorkspace(snapshot) || snapshot.cloudVM != nil
     }

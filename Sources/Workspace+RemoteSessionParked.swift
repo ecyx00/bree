@@ -1,8 +1,8 @@
-import CmuxCore
+import BreeCore
 import Foundation
 
 /// What the workspace knows about a remote session that gave up
-/// (https://github.com/manaflow-ai/cmux/issues/12813).
+/// (https://github.com/ecyx00/bree/issues/12813).
 @MainActor
 extension Workspace {
     /// Whether the session owner stopped recovering on its own. Terminal

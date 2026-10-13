@@ -1,5 +1,6 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
+import BreeFoundation
 import SwiftUI
 
 /// Cursor-style floating composer card for Design Mode.
@@ -118,13 +119,13 @@ struct BrowserDesignModePopover: View {
     private var errorMessage: some View {
         if let message = controller.errorMessage {
             Label(message, systemImage: "exclamationmark.triangle.fill")
-                .cmuxFont(size: 11)
-                .foregroundStyle(.red)
+                .scaledFont(size: 11)
+                .foregroundStyle(BreeChromePalette.currentSnapshot.signalError)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    /// Circular trailing action, mirroring the cmux agent composer's send
+    /// Circular trailing action, mirroring the bree agent composer's send
     /// button and Cursor's compact pill affordance. Shows a checkmark right
     /// after a successful copy.
     private var copyButton: some View {
@@ -135,7 +136,7 @@ struct BrowserDesignModePopover: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(
                     controller.didCopy
-                        ? AnyShapeStyle(.green)
+                        ? AnyShapeStyle(BreeChromePalette.currentSnapshot.signalSuccess)
                         : AnyShapeStyle(.white.opacity(controller.canCopy ? 0.85 : 0.3))
                 )
                 // Same 26pt footprint as the mode toggle capsule so the
@@ -730,7 +731,7 @@ final class BrowserDesignModeTokenTextView: NSTextView {
 
 enum BrowserDesignModeTokenStyle {
     static var font: NSFont { .systemFont(ofSize: 13.5) }
-    static let blue = NSColor(calibratedRed: 0.35, green: 0.62, blue: 1.0, alpha: 1)
+    static var blue: NSColor { BreeChromePalette.currentSnapshot.ns.accentFill }
     /// The font's natural ascent + descent; pills size to exactly this so no
     /// row's fragment ever grows past a plain text row (selection highlights
     /// and the caret then hug the glyphs instead of floating above them).

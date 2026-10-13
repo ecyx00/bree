@@ -63,7 +63,7 @@ return out;`,
     "reference-b": `return { empty: await E(() => t.goto("")), junk: await E(() => t.goto("not a url")) };`,
     better: {
       "reference-b": {
-        reason: "cmux rejects a URL without a scheme; reference B reports it as an approval or navigation failure",
+        reason: "bree rejects a URL without a scheme; reference B reports it as an approval or navigation failure",
         check: (c, r, h) => h.classifyError(c.empty.error) === "invalid-arg" && h.classifyError(c.junk.error) === "invalid-arg",
       },
       "reference-a": errBetter,
@@ -139,7 +139,7 @@ const fwd = await E(() => t.forward());
 return { back: back.error ? back : null, forward: fwd.error ? fwd : null, url: await t.url() };`,
     better: {
       "reference-b": {
-        reason: "with no history entry cmux resolves null and stays; reference B goes back to the blank page the tab opened on",
+        reason: "with no history entry bree resolves null and stays; reference B goes back to the blank page the tab opened on",
         check: (c, r) => c.back === null && c.url.endsWith('lab.html') && !String(r.url).endsWith('lab.html'),
       },
     },
@@ -510,7 +510,7 @@ return { popup: pop.value ?? pop, console: con.value ?? con };`,
     na: { "reference-b": "playwright.waitForEvent supports only 'download' and 'filechooser' (ported error in page.wait-for-event.errors)" },
     better: {
       "reference-a": {
-        reason: "popup and console page events fire in cmux; reference A's waitForEvent times out on both",
+        reason: "popup and console page events fire in bree; reference A's waitForEvent times out on both",
         check: (c, r) => c.popup === "Next page" && Array.isArray(c.console) && (typeof r.popup !== "string" || !Array.isArray(r.console)),
       },
     },
@@ -523,7 +523,7 @@ return { popup: pop.value ?? pop, console: con.value ?? con };`,
     code: `return { bad: await E(() => $P.waitForEvent("bad-event", $T(200))), none: await ms(() => $P.waitForEvent("filechooser", $T(300))) };`,
     better: {
       "reference-b": {
-        reason: "cmux waits for any Playwright page event (popup, console, dialog, request, ...); reference B only for download and filechooser",
+        reason: "bree waits for any Playwright page event (popup, console, dialog, request, ...); reference B only for download and filechooser",
         check: (c, r, h) => h.classifyError(c.none.error) === "timeout",
       },
       "reference-a": errBetter,
@@ -549,7 +549,7 @@ const logs = await t.dev.logs({});
 return { seen: logs.filter((x) => /^lab/.test(x.message)).map((x) => (x.level === "warn" ? "warning" : x.level) + ":" + x.message) };`,
     better: {
       "reference-b": {
-        reason: "cmux delivers every console message; reference B's Chrome backend returns an empty tab.dev.logs() for the same page",
+        reason: "bree delivers every console message; reference B's Chrome backend returns an empty tab.dev.logs() for the same page",
         check: (c, r) => c.seen.length === 3 && r.seen.length < 3,
       },
       "reference-a": {
@@ -591,7 +591,7 @@ return { ok: !!r.ok, visible: await $P.evaluate(() => document.visibilityState) 
 return { ok: !!r.ok, visible: await $P.evaluate(() => document.visibilityState) };`,
     better: {
       "reference-b": {
-        reason: "cmux shows the tab in its pane so the user can take over; reference B's manual handoff exists only for its Cloud Browser and fails on Chrome",
+        reason: "bree shows the tab in its pane so the user can take over; reference B's manual handoff exists only for its Cloud Browser and fails on Chrome",
         check: (c, r) => c.ok && !r.ok,
       },
     },

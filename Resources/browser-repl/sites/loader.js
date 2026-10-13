@@ -1,9 +1,9 @@
-// cmux browser REPL site tools: the `sites` global
+// bree browser REPL site tools: the `sites` global
 // (docs/browser-repl/site-tools.md). Each file in sites/ registers one tool
 // with register(name, factory); createSites builds them for a REPL session.
 //
 // Rules every tool follows:
-// - It runs through the user's signed-in cmux browser session: the REPL
+// - It runs through the user's signed-in bree browser session: the REPL
 //   `fetch` (cookie-bearing), or a background tab of the same profile where
 //   the call runs in the page's own world, same-origin. A token a site keeps
 //   in the page stays in the page; no tool returns a credential.
@@ -11,7 +11,7 @@
 //   only `tool.method(draftId, { confirm: true })` performs it.
 (function (root) {
   "use strict";
-  const ns = (root.CmuxBrowserRepl = root.CmuxBrowserRepl || {});
+  const ns = (root.BreeBrowserRepl = root.BreeBrowserRepl || {});
   const registry = [];
   const shared = {};
 
@@ -278,7 +278,7 @@
       },
       async run(id, site, action) {
         const entry = drafts.get(id);
-        if (!entry) throw new SiteError("draft_not_found", `sites.${site}.${action}: no draft ${JSON.stringify(id)} in this REPL session. Drafts live in the session that made them; run both calls in one named session (cmux browser repl --session NAME).`);
+        if (!entry) throw new SiteError("draft_not_found", `sites.${site}.${action}: no draft ${JSON.stringify(id)} in this REPL session. Drafts live in the session that made them; run both calls in one named session (bree browser repl --session NAME).`);
         if (entry.site !== site || entry.action !== action) throw new SiteError("draft_mismatch", `sites.${site}.${action}: draft ${id} is a sites.${entry.site}.${entry.action} draft`);
         if (entry.status !== "draft") throw new SiteError("draft_used", `sites.${site}.${action}: draft ${id} is ${entry.status}; make a new draft`);
         if (now() > entry.expiresAt) {
@@ -341,13 +341,13 @@
       // A file path for tool output: options.path, else the session's temp directory.
       outputPath(options, ext, base = "site") {
         if (options && options.path) return path.resolve(String(options.path));
-        const dir = path.join(host.tmpdir, "cmux-browser-repl", String(host.sessionId || "session").replace(/[^\w.-]/g, "_"));
+        const dir = path.join(host.tmpdir, "bree-browser-repl", String(host.sessionId || "session").replace(/[^\w.-]/g, "_"));
         fs.mkdirSync(dir, { recursive: true });
         const safe = String(base).replace(/[^\w.-]+/g, "_").slice(0, 80) || "site";
         return path.join(dir, `${safe}-${++files}${ext}`);
       },
       outputDir(options, base) {
-        const dir = options && options.dir ? path.resolve(String(options.dir)) : path.join(host.tmpdir, "cmux-browser-repl", String(host.sessionId || "session").replace(/[^\w.-]/g, "_"), `${base}-${++files}`);
+        const dir = options && options.dir ? path.resolve(String(options.dir)) : path.join(host.tmpdir, "bree-browser-repl", String(host.sessionId || "session").replace(/[^\w.-]/g, "_"), `${base}-${++files}`);
         fs.mkdirSync(dir, { recursive: true });
         return dir;
       },
@@ -407,7 +407,7 @@
       // Throws not_signed_in when a tab landed on a sign-in page.
       assertSignedIn(name, page, patterns) {
         const url = page.url();
-        if (patterns.some((p) => p.test(url))) throw new SiteError("not_signed_in", `${name}: the cmux browser is not signed in (landed on ${url.split("?")[0]}). Open the site with tabs.open(url) and ask the user to sign in, or use sites.browserAuth.request().`);
+        if (patterns.some((p) => p.test(url))) throw new SiteError("not_signed_in", `${name}: the bree browser is not signed in (landed on ${url.split("?")[0]}). Open the site with tabs.open(url) and ask the user to sign in, or use sites.browserAuth.request().`);
       },
       // A private deep copy of plain data (see copyInput).
       copyInput,

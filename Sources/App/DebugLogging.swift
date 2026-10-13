@@ -1,12 +1,12 @@
 #if DEBUG
-import CMUXDebugLog
+import BREEDebugLog
 
 @inline(__always)
-func cmuxDebugLog(_ message: @autoclosure () -> String) {
-    CMUXDebugLog.logDebugEvent(message())
+func breeDebugLog(_ message: @autoclosure () -> String) {
+    BREEDebugLog.logDebugEvent(message())
 }
 #else
 // Release no-op so call sites need no #if DEBUG guards.
 @inline(__always)
-func cmuxDebugLog(_ message: @autoclosure () -> String) {}
+func breeDebugLog(_ message: @autoclosure () -> String) {}
 #endif

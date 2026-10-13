@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import WebKit
 
 /// Reads a web view's frame tree.

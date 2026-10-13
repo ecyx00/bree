@@ -1,6 +1,6 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
+import BreeAppKitSupportUI
+import BreeFoundation
 import SwiftUI
 
 /// Stacks the workspace's main split above its bottom panel and owns the

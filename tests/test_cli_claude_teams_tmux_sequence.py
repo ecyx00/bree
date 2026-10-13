@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: `cmux claude-teams` supports Claude's tmux teammate flow.
+Regression test: `bree claude-teams` supports Claude's tmux teammate flow.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli, stable_tmux_numeric_id
+from claude_teams_test_utils import resolve_bree_cli, stable_tmux_numeric_id
 from fake_socket_env import cli_environment, unwrap_capability
 
 INITIAL_WORKSPACE_ID = "11111111-1111-4111-8111-111111111111"
@@ -36,7 +36,7 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8").strip()
 
 
-class FakeCmuxState:
+class FakeBreeState:
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.requests: list[str] = []
@@ -212,7 +212,7 @@ class FakeCmuxState:
                 return {"ok": True}
             if method == "surface.send_text":
                 return {"ok": True}
-            raise RuntimeError(f"Unsupported fake cmux method: {method}")
+            raise RuntimeError(f"Unsupported fake bree method: {method}")
 
     def _pane_by_id(self, pane_id: str) -> dict[str, object]:
         for pane in self.panes:
@@ -233,15 +233,15 @@ class FakeCmuxState:
         return self._surface_by_id(surface_id)["ref"]  # type: ignore[return-value]
 
 
-class FakeCmuxUnixServer(socketserver.ThreadingUnixStreamServer):
+class FakeBreeUnixServer(socketserver.ThreadingUnixStreamServer):
     allow_reuse_address = True
 
-    def __init__(self, socket_path: str, state: FakeCmuxState) -> None:
+    def __init__(self, socket_path: str, state: FakeBreeState) -> None:
         self.state = state
-        super().__init__(socket_path, FakeCmuxHandler)
+        super().__init__(socket_path, FakeBreeHandler)
 
 
-class FakeCmuxHandler(socketserver.StreamRequestHandler):
+class FakeBreeHandler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         while True:
             line = self.rfile.readline()
@@ -262,19 +262,19 @@ class FakeCmuxHandler(socketserver.StreamRequestHandler):
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-teams-seq-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-teams-seq-") as td:
         tmp = Path(td)
         home = tmp / "home"
         home.mkdir(parents=True, exist_ok=True)
 
-        socket_path = tmp / "fake-cmux.sock"
-        state = FakeCmuxState()
-        server = FakeCmuxUnixServer(str(socket_path), state)
+        socket_path = tmp / "fake-bree.sock"
+        state = FakeBreeState()
+        server = FakeBreeUnixServer(str(socket_path), state)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
 
@@ -292,7 +292,7 @@ def main() -> int:
             """#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\\n' "${TMUX_PANE-__UNSET__}" > "$FAKE_TMUX_PANE_LOG"
-printf '%s\\n' "${CMUX_SOCKET_PATH-__UNSET__}" > "$FAKE_SOCKET_LOG"
+printf '%s\\n' "${BREE_SOCKET_PATH-__UNSET__}" > "$FAKE_SOCKET_LOG"
 window_target="$(tmux display-message -t "${TMUX_PANE}" -p '#{session_name}:#{window_index}')"
 printf '%s\\n' "$window_target" > "$FAKE_WINDOW_TARGET_LOG"
 split_pane="$(tmux split-window -t "${TMUX_PANE}" -h -l 70% -P -F '#{pane_id}')"
@@ -305,9 +305,9 @@ tmux list-panes -t "$window_target" -F '#{pane_id}' > "$FAKE_PANE_LIST_LOG"
 
         env = cli_environment(home=home)
         env["PATH"] = f"{real_bin}:/usr/bin:/bin"
-        env["CMUX_SOCKET_PATH"] = str(socket_path)
-        env["CMUX_WORKSPACE_ID"] = INITIAL_WORKSPACE_ID
-        env["CMUX_SURFACE_ID"] = INITIAL_SURFACE_ID
+        env["BREE_SOCKET_PATH"] = str(socket_path)
+        env["BREE_WORKSPACE_ID"] = INITIAL_WORKSPACE_ID
+        env["BREE_SURFACE_ID"] = INITIAL_SURFACE_ID
         env["FAKE_TMUX_PANE_LOG"] = str(tmux_pane_log)
         env["FAKE_SOCKET_LOG"] = str(tmux_socket_log)
         env["FAKE_WINDOW_TARGET_LOG"] = str(window_target_log)
@@ -324,7 +324,7 @@ tmux list-panes -t "$window_target" -F '#{pane_id}' > "$FAKE_PANE_LIST_LOG"
                 timeout=30,
             )
         except subprocess.TimeoutExpired as exc:
-            print("FAIL: `cmux claude-teams --version` timed out")
+            print("FAIL: `bree claude-teams --version` timed out")
             print(f"cmd={exc.cmd!r}")
             return 1
         finally:
@@ -333,7 +333,7 @@ tmux list-panes -t "$window_target" -F '#{pane_id}' > "$FAKE_PANE_LIST_LOG"
             thread.join(timeout=2)
 
         if proc.returncode != 0:
-            print("FAIL: `cmux claude-teams --version` exited non-zero")
+            print("FAIL: `bree claude-teams --version` exited non-zero")
             print(f"exit={proc.returncode}")
             print(f"stdout={proc.stdout.strip()}")
             print(f"stderr={proc.stderr.strip()}")
@@ -349,12 +349,12 @@ tmux list-panes -t "$window_target" -F '#{pane_id}' > "$FAKE_PANE_LIST_LOG"
 
         socket_value = read_text(tmux_socket_log)
         if socket_value != str(socket_path):
-            print(f"FAIL: expected CMUX_SOCKET_PATH={socket_path}, got {socket_value!r}")
+            print(f"FAIL: expected BREE_SOCKET_PATH={socket_path}, got {socket_value!r}")
             return 1
 
         window_target = read_text(window_target_log)
-        if window_target != "cmux:1":
-            print(f"FAIL: expected tmux window target 'cmux:1', got {window_target!r}")
+        if window_target != "bree:1":
+            print(f"FAIL: expected tmux window target 'bree:1', got {window_target!r}")
             return 1
 
         split_pane = read_text(split_pane_log)
@@ -391,7 +391,7 @@ tmux list-panes -t "$window_target" -F '#{pane_id}' > "$FAKE_PANE_LIST_LOG"
             print(f"requests={state.requests!r}")
             return 1
 
-    print("PASS: cmux claude-teams supports Claude's tmux teammate flow")
+    print("PASS: bree claude-teams supports Claude's tmux teammate flow")
     return 0
 
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Regression: shell integration must not spawn work for disabled features.
 
-Every new cmux terminal pays for the integration's source and first prompt
+Every new bree terminal pays for the integration's source and first prompt
 before the user can type. With git watching turned off
-(CMUX_NO_GIT_WATCH=1) the integrations used to:
+(BREE_NO_GIT_WATCH=1) the integrations used to:
 
-- create a `cmux-git-active-pwd.XXXXXX` temp file with `/usr/bin/mktemp` at
+- create a `bree-git-active-pwd.XXXXXX` temp file with `/usr/bin/mktemp` at
   source time, a file only the git watchers read;
 
 zsh also scanned Ghostty's `_ghostty_deferred_init` body once per patched hook
@@ -28,8 +28,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 INTEGRATION_DIR = ROOT / "Resources" / "shell-integration"
-ZSH_INTEGRATION = INTEGRATION_DIR / "cmux-zsh-integration.zsh"
-BASH_INTEGRATION = INTEGRATION_DIR / "cmux-bash-integration.bash"
+ZSH_INTEGRATION = INTEGRATION_DIR / "bree-zsh-integration.zsh"
+BASH_INTEGRATION = INTEGRATION_DIR / "bree-bash-integration.bash"
 GHOSTTY_HOOKS = (
     "_ghostty_precmd",
     "_ghostty_preexec",
@@ -47,7 +47,7 @@ def shell_argv(shell_name: str) -> list[str]:
 
 
 def prompt_function(shell_name: str) -> str:
-    return "_cmux_precmd" if shell_name == "zsh" else "_cmux_prompt_command"
+    return "_bree_precmd" if shell_name == "zsh" else "_bree_prompt_command"
 
 
 def xtrace_on(shell_name: str) -> str:
@@ -69,17 +69,17 @@ def base_environment(
     home = directory / "home"
     home.mkdir(exist_ok=True)
     environment = {
-        "CMUX_PANEL_ID": panel_id,
-        "CMUX_SHELL_INTEGRATION": "1",
-        "CMUX_SOCKET_PATH": str(socket_path),
-        "CMUX_TAB_ID": "11111111-1111-1111-1111-111111111111",
+        "BREE_PANEL_ID": panel_id,
+        "BREE_SHELL_INTEGRATION": "1",
+        "BREE_SOCKET_PATH": str(socket_path),
+        "BREE_TAB_ID": "11111111-1111-1111-1111-111111111111",
         "HOME": str(home),
         "PATH": "/usr/bin:/bin",
         "TERM": "xterm-256color",
         "TMPDIR": str(tmpdir),
     }
     if not watch:
-        environment["CMUX_NO_GIT_WATCH"] = "1"
+        environment["BREE_NO_GIT_WATCH"] = "1"
     return environment
 
 
@@ -102,7 +102,7 @@ def run(shell_name: str, script: str, environment: dict[str, str], cwd: Path) ->
 
 
 def active_pwd_files(environment: dict[str, str]) -> list[Path]:
-    return sorted(Path(environment["TMPDIR"]).glob("cmux-git-active-pwd.*"))
+    return sorted(Path(environment["TMPDIR"]).glob("bree-git-active-pwd.*"))
 
 
 def trace_mentions_command(trace: str, command: str) -> list[str]:
@@ -134,7 +134,7 @@ def assert_disabled_features_do_not_spawn(shell_name: str, directory: Path, sock
     leaked = active_pwd_files(environment)
     if leaked:
         failures.append(
-            f"{shell_name}: created {[p.name for p in leaked]} with CMUX_NO_GIT_WATCH=1"
+            f"{shell_name}: created {[p.name for p in leaked]} with BREE_NO_GIT_WATCH=1"
         )
     for command in ("/bin/rm", "/usr/bin/mktemp"):
         hits = trace_mentions_command(result.stderr, command)
@@ -153,14 +153,14 @@ def assert_git_watch_still_records_active_pwd(shell_name: str, directory: Path, 
     environment = base_environment(case_directory, socket_path, panel_id, watch=True)
     workdir = case_directory / "work"
     workdir.mkdir()
-    marker_variable = "_CMUX_GIT_ACTIVE_PWD_FILE"
+    marker_variable = "_BREE_GIT_ACTIVE_PWD_FILE"
     script = (
         f'source "{integration_path(shell_name)}"\n'
         f'cd "{workdir}"\n'
         f"{prompt_function(shell_name)}\n"
         f'printf "MARKER=%s\\n" "${marker_variable}"\n'
-        f'IFS= read -r _cmux_test_recorded < "${marker_variable}" && '
-        'printf "RECORDED=%s\\n" "$_cmux_test_recorded"\n'
+        f'IFS= read -r _bree_test_recorded < "${marker_variable}" && '
+        'printf "RECORDED=%s\\n" "$_bree_test_recorded"\n'
     )
     result = run(shell_name, script, environment, case_directory)
     match = re.search(r"^MARKER=(.*)$", result.stdout, re.MULTILINE)
@@ -185,7 +185,7 @@ def assert_zsh_subshell_cd_does_not_leak_marker(directory: Path, socket_path: Pa
     script = (
         f'source "{ZSH_INTEGRATION}"\n'
         "for i in 1 2 3; do x=$(cd / && pwd); (cd /usr); done\n"
-        'print -r -- "PARENT=${_CMUX_GIT_ACTIVE_PWD_FILE}"\n'
+        'print -r -- "PARENT=${_BREE_GIT_ACTIVE_PWD_FILE}"\n'
         "sleep 0\n"
     )
     run("zsh", script, environment, case_directory)
@@ -198,10 +198,10 @@ def assert_zsh_subshell_cd_does_not_leak_marker(directory: Path, socket_path: Pa
 def synthetic_ghostty_deferred_init() -> str:
     lines = ["_ghostty_deferred_init() {"]
     for index in range(DEFERRED_FILLER_LINES):
-        lines.append(f"  typeset -g _cmux_test_filler_{index}={index}")
+        lines.append(f"  typeset -g _bree_test_filler_{index}={index}")
     for hook in GHOSTTY_HOOKS:
         lines.append(f"  {hook}() {{")
-        lines.append(f"    typeset -g _cmux_test_{hook}_ran=1")
+        lines.append(f"    typeset -g _bree_test_{hook}_ran=1")
         lines.append("  }")
     lines.append("}")
     return "\n".join(lines) + "\n"
@@ -217,7 +217,7 @@ def assert_zsh_job_table_guard_scans_once(directory: Path) -> list[str]:
         "PATH": "/usr/bin:/bin",
         "TERM": "xterm-256color",
         "TMPDIR": str(case_directory),
-        "CMUX_NO_GIT_WATCH": "1",
+        "BREE_NO_GIT_WATCH": "1",
     }
     script = (
         f'source "{definition}"\n'
@@ -225,21 +225,21 @@ def assert_zsh_job_table_guard_scans_once(directory: Path) -> list[str]:
         "unfunction _ghostty_deferred_init\n"
         f'source "{definition}"\n'
         "setopt xtrace\n"
-        "_cmux_patch_ghostty_job_table_guard\n"
+        "_bree_patch_ghostty_job_table_guard\n"
         "unsetopt xtrace\n"
         "print -r -- \"${functions[_ghostty_deferred_init]}\"\n"
     )
     result = run("zsh", script, environment, case_directory)
     failures: list[str] = []
     for hook in GHOSTTY_HOOKS:
-        guard = f"__cmux_{hook}_saved_status"
+        guard = f"__bree_{hook}_saved_status"
         if guard not in result.stdout:
             failures.append(f"zsh: job-table guard for {hook} was not inserted")
     body_lines = DEFERRED_FILLER_LINES + 3 * len(GHOSTTY_HOOKS)
     appended = sum(
         1
         for line in result.stderr.splitlines()
-        if "_cmux_insert_job_table_guard_after_declaration" in line and "> patched_lines+=" in line
+        if "_bree_insert_job_table_guard_after_declaration" in line and "> patched_lines+=" in line
     )
     # One pass appends each body line once plus the inserted guard lines.
     budget = body_lines + 3 * len(GHOSTTY_HOOKS) + 5
@@ -253,9 +253,9 @@ def assert_zsh_job_table_guard_scans_once(directory: Path) -> list[str]:
 
 def main() -> int:
     failures: list[str] = []
-    with tempfile.TemporaryDirectory(prefix="cmux-first-prompt-", dir="/tmp") as temp:
+    with tempfile.TemporaryDirectory(prefix="bree-first-prompt-", dir="/tmp") as temp:
         directory = Path(temp)
-        socket_path = directory / "cmux.sock"
+        socket_path = directory / "bree.sock"
         # Bound but not listening: `-S` passes, and background sends fail fast.
         listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         listener.bind(str(socket_path))

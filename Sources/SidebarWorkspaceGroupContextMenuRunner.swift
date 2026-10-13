@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 enum SidebarWorkspaceGroupContextMenuRunner {
     static func run(
-        item: CmuxResolvedConfigMenuAction,
+        item: BreeResolvedConfigMenuAction,
         tabManager: TabManager,
         groupId: UUID
     ) {

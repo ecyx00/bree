@@ -104,7 +104,7 @@ struct NotificationSoundStagingArtifactCleaner: Sendable {
                 && current.sourceFileIdentifier == metadata.sourceFileIdentifier
         }
         // A missing source is a normal orphan state after a user moves or
-        // deletes the original file. The legacy sidecar itself is the cmux
+        // deletes the original file. The legacy sidecar itself is the bree
         // ownership marker; retain only structurally valid absolute paths and
         // finite metadata so the orphan can be reclaimed by age/count policy.
         return sourceURL.path.hasPrefix("/")

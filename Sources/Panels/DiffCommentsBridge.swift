@@ -1,6 +1,6 @@
 import AppKit
-import CmuxBrowser
-import CmuxDiffComments
+import BreeBrowser
+import BreeDiffComments
 import Foundation
 import WebKit
 
@@ -9,11 +9,11 @@ import WebKit
 /// submission pool (consumed by whichever terminal TextBox submits first).
 ///
 /// Only main-frame pages served from a registered diff viewer session (custom
-/// `cmux-diff-viewer://` scheme or the local HTTP server form) may call it;
+/// `bree-diff-viewer://` scheme or the local HTTP server form) may call it;
 /// every other page gets a `not_allowed` reply.
 @MainActor
 final class DiffCommentsBridge: NSObject, WKScriptMessageHandlerWithReply {
-    static let handlerName = "cmuxDiffComments"
+    static let handlerName = "breeDiffComments"
     static let shared = DiffCommentsBridge()
 
     private static var handlerInstalledKey: UInt8 = 0
@@ -131,12 +131,12 @@ final class DiffCommentsBridge: NSObject, WKScriptMessageHandlerWithReply {
 
     /// Extracts the diff viewer session token from a live page URL. Unlike
     /// `diffViewerComponents(from:)` this ignores the fragment: the viewer's
-    /// in-page router rewrites `#cmux-diff-viewer` to `#/cmux-diff-viewer`
+    /// in-page router rewrites `#bree-diff-viewer` to `#/bree-diff-viewer`
     /// once the app boots, so live bridge messages carry a different fragment
     /// than the URL the page was opened with. Token registration (checked by
     /// the caller) remains the trust authority.
     static func diffViewerToken(from url: URL?) -> String? {
-        if let components = CmuxDiffViewerURLSchemeHandler.diffViewerComponents(from: url) {
+        if let components = BreeDiffViewerURLSchemeHandler.diffViewerComponents(from: url) {
             return components.token
         }
         guard let url,
@@ -147,8 +147,8 @@ final class DiffCommentsBridge: NSObject, WKScriptMessageHandlerWithReply {
         let rawPath = URLComponents(url: url, resolvingAgainstBaseURL: false)?.percentEncodedPath ?? url.path
         let parts = rawPath.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
         guard parts.count >= 2,
-              CmuxDiffViewerURLSchemeHandler.isValidToken(parts[0]),
-              CmuxDiffViewerURLSchemeHandler.isValidRequestPath("/" + parts.dropFirst().joined(separator: "/")) else {
+              BreeDiffViewerURLSchemeHandler.isValidToken(parts[0]),
+              BreeDiffViewerURLSchemeHandler.isValidRequestPath("/" + parts.dropFirst().joined(separator: "/")) else {
             return nil
         }
         return parts[0]
@@ -321,8 +321,8 @@ extension BrowserPanel {
         guard expectedURL.map(hasCurrentURL) != false else { return nil }
         let targetURL: URL
         if let internalURL = URL(string: url),
-           internalURL.scheme == CmuxDiffViewerURLSchemeHandler.scheme {
-            guard CmuxDiffViewerURLSchemeHandler.shared.allowsNavigation(to: internalURL) else { return nil }
+           internalURL.scheme == BreeDiffViewerURLSchemeHandler.scheme {
+            guard BreeDiffViewerURLSchemeHandler.shared.allowsNavigation(to: internalURL) else { return nil }
             targetURL = internalURL
         } else {
             guard let resolvedNavigation = resolveSmartNavigation(from: url) else { return nil }
@@ -339,7 +339,7 @@ extension BrowserPanel {
     }
 }
 
-extension CmuxDiffViewerURLSchemeHandler {
+extension BreeDiffViewerURLSchemeHandler {
     func allowsNavigation(to url: URL) -> Bool {
         guard url.scheme == Self.scheme,
               url.user == nil,

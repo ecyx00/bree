@@ -137,7 +137,7 @@ struct FilePreviewPDFZoomChromeView: View {
         } else {
             Button(action: action) {
                 Image(systemName: systemName)
-                    .cmuxFont(size: 16, weight: .regular)
+                    .scaledFont(size: 16, weight: .regular)
                     .frame(width: 38, height: 36)
                     .contentShape(Rectangle())
             }

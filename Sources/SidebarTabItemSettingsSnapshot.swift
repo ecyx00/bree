@@ -1,6 +1,6 @@
-import CmuxFoundation
-import CmuxSettings
-import CmuxSidebar
+import BreeFoundation
+import BreeSettings
+import BreeSidebar
 import CoreGraphics
 import Foundation
 
@@ -26,7 +26,7 @@ struct SidebarTabItemSettingsSnapshot: Equatable {
     let branchDirectory: SidebarWorkspaceBranchDirectorySettings
     let details: SidebarWorkspaceDetailSettings
     let showsGitBranchIcon: Bool
-    let openPortLinksInCmuxBrowser: Bool
+    let openPortLinksInBreeBrowser: Bool
     let showsNotificationMessage: Bool
     let notificationMessageLineLimit: Int
     let activeTabIndicatorStyle: WorkspaceIndicatorStyle
@@ -36,9 +36,9 @@ struct SidebarTabItemSettingsSnapshot: Equatable {
     let visibleAuxiliaryDetails: SidebarWorkspaceAuxiliaryDetailVisibility
     let iMessageModeEnabled: Bool
     let workspaceTodoChecklistStyle: WorkspaceTodoChecklistStyle
-    /// The resolved cmux accent. Rows draw selection, progress, drop
+    /// The resolved bree accent. Rows draw selection, progress, drop
     /// indicators and agent status with it, and reconfigure when it changes.
-    let accentColor: CmuxAccentColor
+    let accentColor: BreeAccentColor
 
     var usesLastSegmentPath: Bool { branchDirectory.usesLastSegmentPath }
     var showsSSH: Bool { details.showSSH }
@@ -46,7 +46,7 @@ struct SidebarTabItemSettingsSnapshot: Equatable {
     init(
         defaults: UserDefaults = .standard,
         sidebarFontSize: CGFloat? = nil,
-        accentColor: CmuxAccentColor = CmuxAccentColor()
+        accentColor: BreeAccentColor = BreeAccentColor()
     ) {
         let settings = UserDefaultsSettingsClient(defaults: defaults)
         let sidebar = SidebarCatalogSection()
@@ -66,7 +66,7 @@ struct SidebarTabItemSettingsSnapshot: Equatable {
         sidebarFontScale = SidebarTabItemFontScale.scale(for: baseSize)
         showsGitBranch = Self.bool(defaults: defaults, key: "sidebarShowGitBranch", defaultValue: true)
         showsGitBranchIcon = Self.bool(defaults: defaults, key: "sidebarShowGitBranchIcon", defaultValue: false)
-        openPortLinksInCmuxBrowser = BrowserLinkOpenSettings.openSidebarPortLinksInCmuxBrowser(
+        openPortLinksInBreeBrowser = BrowserLinkOpenSettings.openSidebarPortLinksInBreeBrowser(
             defaults: defaults
         )
         hidesAllDetails = settings.value(for: sidebar.hideAllDetails)

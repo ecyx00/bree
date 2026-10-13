@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 
 /// Builds bonsplit drop geometry only while an AppKit drag requests it.
 /// Workspace reorder drops resolve their targets through the dedicated overlay

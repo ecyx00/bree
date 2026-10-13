@@ -16,22 +16,22 @@ import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / "tests/cloud_task_local"
-CLOUD = ROOT / "Packages/macOS/CmuxCloud/Sources/CmuxCloud"
+CLOUD = ROOT / "Packages/macOS/BreeCloud/Sources/BreeCloud"
 
 
 @unittest.skipUnless(platform.system() == "Darwin", "requires the macOS Swift runtime")
 class CloudTaskLocalLifecycleTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.temp = tempfile.TemporaryDirectory(prefix="cmux-task-local-")
+        cls.temp = tempfile.TemporaryDirectory(prefix="bree-task-local-")
         cls.addClassCleanup(cls.temp.cleanup)
         directory = Path(cls.temp.name)
         target = platform.machine() + "-apple-macos14.0"
         flags = ["-target", target, "-swift-version", "5", "-warnings-as-errors"]
         subprocess.run([
             "xcrun", "swiftc", *flags, "-emit-module", "-emit-object", "-parse-as-library",
-            "-module-name", "CmuxAuthRuntime", str(FIXTURE / "AuthFixture.swift"),
-            "-emit-module-path", str(directory / "CmuxAuthRuntime.swiftmodule"),
+            "-module-name", "BreeAuthRuntime", str(FIXTURE / "AuthFixture.swift"),
+            "-emit-module-path", str(directory / "BreeAuthRuntime.swiftmodule"),
             "-o", str(directory / "auth.o"),
         ], check=True)
         subprocess.run([
@@ -63,10 +63,10 @@ class CloudTaskLocalLifecycleTests(unittest.TestCase):
 
     def run_probe(self, legacy):
         environment = os.environ.copy()
-        environment.pop("CMUX_TEST_LEGACY_TASK_LOCAL", None)
+        environment.pop("BREE_TEST_LEGACY_TASK_LOCAL", None)
         environment["SWIFT_BACKTRACE"] = "interactive=no,timeout=0s,symbolicate=off,color=no"
         if legacy:
-            environment["CMUX_TEST_LEGACY_TASK_LOCAL"] = "1"
+            environment["BREE_TEST_LEGACY_TASK_LOCAL"] = "1"
         result = subprocess.run(
             [str(self.binary)], env=environment, capture_output=True, text=True,
         )

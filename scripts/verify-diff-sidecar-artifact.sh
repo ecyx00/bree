@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 <cmux-diff-sidecar> [--archs \"arm64 x86_64\"] [--require-signed]" >&2
+  echo "usage: $0 <bree-diff-sidecar> [--archs \"arm64 x86_64\"] [--require-signed]" >&2
   exit 2
 }
 
@@ -29,7 +29,7 @@ done
 [[ -f "$BINARY" ]] || { echo "error: missing diff sidecar at $BINARY" >&2; exit 1; }
 [[ -x "$BINARY" ]] || { echo "error: diff sidecar is not executable: $BINARY" >&2; exit 1; }
 
-MAX_BYTES="${CMUX_DIFF_SIDECAR_MAX_BYTES:-5242880}"
+MAX_BYTES="${BREE_DIFF_SIDECAR_MAX_BYTES:-5242880}"
 SIZE_BYTES="$(stat -f %z "$BINARY")"
 if (( SIZE_BYTES > MAX_BYTES )); then
   echo "error: diff sidecar is ${SIZE_BYTES} bytes; limit is ${MAX_BYTES} bytes" >&2

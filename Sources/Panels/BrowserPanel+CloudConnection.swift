@@ -1,6 +1,6 @@
-import CmuxCloud
-import CmuxCore
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeCore
+import BreeSurfaceCatalogModel
 import Foundation
 import WebKit
 
@@ -66,7 +66,7 @@ extension BrowserPanel {
     /// machine's provider team, else the restored team, else the selected team.
     var cloudTeamIDForSession: String? {
         guard let machineID = cloudResourceForSession?.machine.cloudMachineID else { return nil }
-        if let owner = CmuxTuiSurfaceProviderRegistry.shared.ownerTeamID(forMachineID: machineID) {
+        if let owner = BreeTuiSurfaceProviderRegistry.shared.ownerTeamID(forMachineID: machineID) {
             return owner
         }
         return restoredCloudTeamID ?? WorkspaceCloudVMBinding.owningTeamID(forVMID: machineID, previous: nil)
@@ -86,7 +86,7 @@ extension BrowserPanel {
         retainTransferredSurfaceMachine(resource.machine)
         catalog.restore([SurfaceProjectionRecord(panelID: id, resource: resource)], workspaceID: workspaceId)
         guard activate else { return }
-        guard let provider = catalog.provider(for: resource.machine) as? CmuxTuiSurfaceProvider,
+        guard let provider = catalog.provider(for: resource.machine) as? BreeTuiSurfaceProvider,
               let known = catalog.resources[resource] else {
             cloudAccess.showUnavailable(String(localized: "cloud.display.restoreUnavailable", defaultValue: "This Cloud display or browser is unavailable. Refresh its machine to reconnect."))
             return
@@ -130,7 +130,7 @@ extension BrowserPanel {
     ///
     /// SSH machines all use this Mac's loopback as their private address, so
     /// a loopback URL routes only to the machine that owns this browser.
-    func privateAddressRouteProvider(for url: URL) -> CmuxTuiSurfaceProvider? {
+    func privateAddressRouteProvider(for url: URL) -> BreeTuiSurfaceProvider? {
         let catalog = SurfaceCatalog.shared
         let addresses = catalog.machines.compactMapValues(\.privateAddress)
         let machine = PrivateAddressRouteSelector<SurfaceMachineID>().machine(
@@ -138,7 +138,7 @@ extension BrowserPanel {
             owner: privateAddressRouteOwner,
             addresses: addresses
         )
-        return machine.flatMap { catalog.provider(for: $0) as? CmuxTuiSurfaceProvider }
+        return machine.flatMap { catalog.provider(for: $0) as? BreeTuiSurfaceProvider }
     }
 
     /// The machine this browser belongs to: its current cloud route, or the

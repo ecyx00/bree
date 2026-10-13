@@ -1,9 +1,9 @@
-import CmuxNotifications
-import CmuxSettings
+import BreeNotifications
+import BreeSettings
 import Foundation
 
 /// Live-retargeting delivery and clear semantics for agent notifications
-/// (https://github.com/manaflow-ai/cmux/issues/7939): a notification addressed
+/// (https://github.com/ecyx00/bree/issues/7939): a notification addressed
 /// with a stale claimed workspace follows its surface to the workspace that
 /// CURRENTLY owns it, and clears must use the same live identity so a
 /// stale-keyed pending entry can never outlive a clear and resurrect. Split
@@ -55,7 +55,7 @@ extension TerminalController {
             )
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "notification.sync.deliver workspace=\(target.tabId.uuidString.prefix(8)) surface=\(target.surfaceId?.uuidString.prefix(8) ?? "nil") claimedWorkspace=\(tabId.uuidString.prefix(8)) titleLen=\(title.count) subtitleLen=\(subtitle.count) bodyLen=\(body.count)"
         )
 #endif
@@ -99,14 +99,14 @@ extension TerminalNotificationStore {
             surfaceId: surfaceId
         ) else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "notification.queue.deliver.skip workspace=\(claimedTabId.uuidString.prefix(8)) surface=\(surfaceId?.uuidString.prefix(8) ?? "nil") reason=targetMissing titleLen=\(title.count) subtitleLen=\(subtitle.count) bodyLen=\(body.count)"
             )
 #endif
             return
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "notification.queue.deliver workspace=\(target.tabId.uuidString.prefix(8)) surface=\(target.surfaceId?.uuidString.prefix(8) ?? "nil") claimedWorkspace=\(claimedTabId.uuidString.prefix(8)) titleLen=\(title.count) subtitleLen=\(subtitle.count) bodyLen=\(body.count)"
         )
 #endif

@@ -5,17 +5,17 @@ import type { DiffViewerOptions } from "./pierre-options";
  * Globally persisted diff viewer display preferences: the split/unified layout
  * plus the options-menu toggles. `collapsed` is intentionally session-local.
  *
- * Persistence goes through the native `cmuxDiffComments` bridge
+ * Persistence goes through the native `breeDiffComments` bridge
  * (`viewerPrefs.get` / `viewerPrefs.set`) so preferences survive page reloads,
  * new diff panels, and app restarts (#5284). `localStorage` is kept as a
- * best-effort fallback for pages opened outside cmux, because generated viewer
+ * best-effort fallback for pages opened outside bree, because generated viewer
  * origins do not reliably persist web storage.
  */
 export type ViewerPrefs = Partial<Omit<DiffViewerOptions, "collapsed">>;
 
-const persistedOptionsKey = "cmux.diffViewer.options";
+const persistedOptionsKey = "bree.diffViewer.options";
 // Layout-only key from before options were persisted as one object.
-const legacyLayoutKey = "cmux.diffViewer.layout";
+const legacyLayoutKey = "bree.diffViewer.layout";
 
 export function sanitizeViewerPrefs(raw: unknown): ViewerPrefs {
   if (raw == null || typeof raw !== "object") {

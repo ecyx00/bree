@@ -1,8 +1,8 @@
 import Bonsplit
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxSettings
-import CmuxTerminal
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeSettings
+import BreeTerminal
 import CoreGraphics
 
 extension DockSplitStore {
@@ -16,7 +16,7 @@ extension DockSplitStore {
 
     /// Applies Dock chrome using the window's already-resolved theme color.
     /// Bonsplit is an AppKit-hosted subtree, so it cannot safely infer the
-    /// active cmux scheme from the ambient window appearance.
+    /// active bree scheme from the ambient window appearance.
     func applyGhosttyChrome(
         from config: GhosttyConfig,
         windowAppearance: WindowAppearanceSnapshot
@@ -28,7 +28,7 @@ extension DockSplitStore {
     }
 
     static func makeConfiguration() -> BonsplitConfiguration {
-        let config = GhosttyConfig.loadForCmux()
+        let config = GhosttyConfig.loadForBree()
         return BonsplitConfiguration(
             allowSplits: true,
             allowCloseTabs: !CloseTabWarningStore(defaults: .standard).hidesTabCloseButton,
@@ -135,8 +135,7 @@ enum BonsplitBreeTheme {
             hoverFill: role(.hoverFill),
             pressedFill: role(.pressedFill),
             selectedQuiet: role(.selectedQuiet),
-            activeIndicator: role(.activeIndicator),
-            signalInfo: role(.signalInfo)
+            activeIndicator: role(.activeIndicator)
         )
     }
 

@@ -1,4 +1,4 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Foundation
 
 extension SessionRestorableAgentSnapshot {
@@ -28,7 +28,7 @@ extension SessionRestorableAgentSnapshot {
         return retargeted
     }
 
-    /// Builds the shell-free fork argv used by the `cmux fork` record path.
+    /// Builds the shell-free fork argv used by the `bree fork` record path.
     ///
     /// The app and CLI share the same `AgentForkArgv` rules. Registry-owned agents
     /// are expanded here while the snapshot still carries their registration; the
@@ -49,10 +49,10 @@ extension SessionRestorableAgentSnapshot {
         )
     }
 
-    /// Returns a compact `cmux fork` selector for a local startup shell.
+    /// Returns a compact `bree fork` selector for a local startup shell.
     ///
     /// When `useLocalForkVerb` is false, this preserves the existing rendered
-    /// shell command behavior for hosts where the local cmux CLI is not reachable
+    /// shell command behavior for hosts where the local bree CLI is not reachable
     /// (for example an SSH tmux mirror).
     func forkStartupInput(
         useLocalForkVerb: Bool,

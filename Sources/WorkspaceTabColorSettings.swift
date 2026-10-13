@@ -1,14 +1,14 @@
 import AppKit
-import CmuxSettings
+import BreeSettings
 import SwiftUI
 
 /// Workspace tab color palette: persistence, legacy migration, palette
 /// math, and display-color rendering.
 ///
 /// Fused-enum split status (TabManager decomposition): the storage key is
-/// the CmuxSettings catalog's `workspaceColors.palette` entry (sourced below
+/// the BreeSettings catalog's `workspaceColors.palette` entry (sourced below
 /// so the wire string is defined once); the pure palette math is **staged
-/// for CmuxWorkspaces (Wave 4)**; the `NSColor`/SwiftUI rendering stays
+/// for BreeWorkspaces (Wave 4)**; the `NSColor`/SwiftUI rendering stays
 /// app-side until the workspace UI package exists. Moved out of
 /// `TabManager.swift` verbatim.
 enum WorkspaceTabColorSettings {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Behavior coverage for preserving cmux's app-installed command-shim root."""
+"""Behavior coverage for preserving bree's app-installed command-shim root."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def run_integration(
     if executable is None:
         raise RuntimeError(f"required shell is unavailable: {shell}")
     env = environment.copy()
-    env["CMUX_TEST_INTEGRATION"] = str(integration)
+    env["BREE_TEST_INTEGRATION"] = str(integration)
     return subprocess.run(
         [executable, *argv, driver],
         capture_output=True,
@@ -45,49 +45,49 @@ def main() -> int:
     integrations = {
         "bash": (
             ["--noprofile", "--norc", "-c"],
-            'source "$CMUX_TEST_INTEGRATION"\n'
-            '_cmux_install_cli_command_shim claude "$CMUX_TEST_WRAPPER"\n'
-            'printf "%s\\n" "$CMUX_CLAUDE_WRAPPER_SHIM_ROOT"',
-            REPO_ROOT / "Resources/shell-integration/cmux-bash-integration.bash",
+            'source "$BREE_TEST_INTEGRATION"\n'
+            '_bree_install_cli_command_shim claude "$BREE_TEST_WRAPPER"\n'
+            'printf "%s\\n" "$BREE_CLAUDE_WRAPPER_SHIM_ROOT"',
+            REPO_ROOT / "Resources/shell-integration/bree-bash-integration.bash",
         ),
         "zsh": (
             ["-f", "-c"],
-            'source "$CMUX_TEST_INTEGRATION"\n'
-            '_cmux_install_cli_command_shim claude "$CMUX_TEST_WRAPPER"\n'
-            'printf "%s\\n" "$CMUX_CLAUDE_WRAPPER_SHIM_ROOT"',
-            REPO_ROOT / "Resources/shell-integration/cmux-zsh-integration.zsh",
+            'source "$BREE_TEST_INTEGRATION"\n'
+            '_bree_install_cli_command_shim claude "$BREE_TEST_WRAPPER"\n'
+            'printf "%s\\n" "$BREE_CLAUDE_WRAPPER_SHIM_ROOT"',
+            REPO_ROOT / "Resources/shell-integration/bree-zsh-integration.zsh",
         ),
     }
     fish = shutil.which("fish")
     if fish is not None:
         integrations["fish"] = (
             ["--no-config", "-c"],
-            'source "$CMUX_TEST_INTEGRATION"\n'
-            '_cmux_install_cli_command_shim claude "$CMUX_TEST_WRAPPER"\n'
-            'printf "%s\\n" "$CMUX_CLAUDE_WRAPPER_SHIM_ROOT"',
+            'source "$BREE_TEST_INTEGRATION"\n'
+            '_bree_install_cli_command_shim claude "$BREE_TEST_WRAPPER"\n'
+            'printf "%s\\n" "$BREE_CLAUDE_WRAPPER_SHIM_ROOT"',
             REPO_ROOT / "Resources/shell-integration/fish/config.fish",
         )
 
-    with tempfile.TemporaryDirectory(prefix="cmux-shim-root-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-shim-root-") as td:
         root = Path(td)
-        managed_root = root / "app installed" / "cmux-cli-shims" / SURFACE_ID
+        managed_root = root / "app installed" / "bree-cli-shims" / SURFACE_ID
         changed_tmpdir = root / "profile tmp"
-        wrapper = root / "cmux-claude-wrapper"
+        wrapper = root / "bree-claude-wrapper"
         managed_root.mkdir(parents=True)
         changed_tmpdir.mkdir()
         make_executable(wrapper)
 
         env = {
-            key: value for key, value in os.environ.items() if not key.startswith("CMUX_")
+            key: value for key, value in os.environ.items() if not key.startswith("BREE_")
         }
         env.update(
             {
-                "CMUX_CLAUDE_WRAPPER_SHIM_ROOT": str(managed_root),
-                "CMUX_LOAD_GHOSTTY_ZSH_INTEGRATION": "0",
-                "CMUX_SHELL_INTEGRATION_DIR": "",
-                "CMUX_SOCKET_PATH": "",
-                "CMUX_SURFACE_ID": SURFACE_ID,
-                "CMUX_TEST_WRAPPER": str(wrapper),
+                "BREE_CLAUDE_WRAPPER_SHIM_ROOT": str(managed_root),
+                "BREE_LOAD_GHOSTTY_ZSH_INTEGRATION": "0",
+                "BREE_SHELL_INTEGRATION_DIR": "",
+                "BREE_SOCKET_PATH": "",
+                "BREE_SURFACE_ID": SURFACE_ID,
+                "BREE_TEST_WRAPPER": str(wrapper),
                 "GHOSTTY_RESOURCES_DIR": "",
                 "TMPDIR": str(changed_tmpdir),
             }
@@ -107,7 +107,7 @@ def main() -> int:
             if not (managed_root / "claude").is_file():
                 print(f"FAIL: {shell} did not write into the app-installed shim root")
                 return 1
-            fallback = changed_tmpdir / "cmux-cli-shims" / SURFACE_ID / "claude"
+            fallback = changed_tmpdir / "bree-cli-shims" / SURFACE_ID / "claude"
             if fallback.exists():
                 print(f"FAIL: {shell} re-derived the shim root from changed TMPDIR")
                 return 1

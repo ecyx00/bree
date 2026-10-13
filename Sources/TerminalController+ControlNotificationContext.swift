@@ -1,5 +1,5 @@
-import CmuxControlSocket
-import CmuxNotifications
+import BreeControlSocket
+import BreeNotifications
 import Foundation
 
 /// The notification-domain witnesses are the byte-faithful bodies of the former

@@ -1,10 +1,10 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// The geometry a machine workspace should open with on this Mac: the daemon screen's
 /// split tree, with the catalog placements (resource + exact tab view) that belong in
 /// each pane. Pure data; `SurfaceCatalog.projectGroupAsNewLocalWorkspace(_:layout:)`
-/// walks it so a clicked workspace row (or `cmux vm workspace open`) reproduces the
+/// walks it so a clicked workspace row (or `bree vm workspace open`) reproduces the
 /// machine's splits, ratios and tabs instead of a generic grid.
 indirect enum SurfaceProjectionLayout: Hashable, Sendable {
     /// One local pane in tab-bar order; the provider's selected tab is shown first.
@@ -49,7 +49,7 @@ protocol SurfaceProjectionLayoutProviding: AnyObject {
     func projectionLayout(workspaceID: String) async throws -> SurfaceProjectionLayout?
 }
 
-/// Turns a cmux-tui `session snapshot` into the `SurfaceProjectionLayout` of one workspace.
+/// Turns a bree-tui `session snapshot` into the `SurfaceProjectionLayout` of one workspace.
 ///
 /// The daemon's `LayoutDocument` (spec `resource-operations-v2.json`) is walked node for
 /// node: a `leaf` is a pane and its tabs, a `split` keeps its direction and ratio, a
@@ -195,7 +195,7 @@ enum CloudWorkspaceLayoutTranslator {
             switch tab.contentKind {
             case "terminal": kind = .terminal
             case "browser": kind = .browser
-            // The daemon has used both words for a VNC screen tab (CmuxTuiSnapshotParser reads both).
+            // The daemon has used both words for a VNC screen tab (BreeTuiSnapshotParser reads both).
             case "display", "screen": kind = .display
             default: return nil
             }
@@ -269,7 +269,7 @@ enum CloudWorkspaceLayoutTranslator {
     }
 
     /// Daemon words → local split direction. `horizontal` is side by side and `vertical` is
-    /// stacked (cmux-tui-core `resource_topology.rs`: horizontal ⇔ right, vertical ⇔ down).
+    /// stacked (bree-tui-core `resource_topology.rs`: horizontal ⇔ right, vertical ⇔ down).
     static func splitDirection(_ raw: String?) -> SurfaceSplitDirection? {
         switch raw {
         case "horizontal", "right": return .right

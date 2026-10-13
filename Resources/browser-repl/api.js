@@ -1,9 +1,9 @@
-// cmux browser REPL globals (docs/browser-repl/README.md, Globals): page,
+// bree browser REPL globals (docs/browser-repl/README.md, Globals): page,
 // tabs, snapshot, screenshot, fetch, fs/path/os/Buffer, sleep, display,
 // session, console. Built on runtime-core (Playwright model) and snapshot.js.
 (function (root) {
   "use strict";
-  const ns = (root.CmuxBrowserRepl = root.CmuxBrowserRepl || {});
+  const ns = (root.BreeBrowserRepl = root.BreeBrowserRepl || {});
   const core = ns.core;
   const { Buffer } = core;
 
@@ -489,7 +489,7 @@
     function importModule(specifier) {
       const name = String(specifier).replace(/^node:/, "");
       const mod = modules[name];
-      if (!mod) throw new Error(`Cannot import ${specifier}: the cmux browser REPL provides node:fs, node:fs/promises, node:path, node:os and node:buffer`);
+      if (!mod) throw new Error(`Cannot import ${specifier}: the bree browser REPL provides node:fs, node:fs/promises, node:path, node:os and node:buffer`);
       return Object.assign({ default: mod }, mod);
     }
 
@@ -640,7 +640,7 @@
         const list = await session.call("tabs.list", options && options.all ? { all: true } : {});
         const current = state.current && state.current._targetId;
         return list.map((t) => {
-          // state: "live", "hibernated" (cmux unloaded the hidden page to
+          // state: "live", "hibernated" (bree unloaded the hidden page to
           // save memory; the next call on it loads it again), "waking" or
           // "crashed" (page.reload() loads it again).
           const row = { id: t.targetId, title: t.title, url: t.url, active: !!t.active, current: t.targetId === current, state: t.state || "live" };
@@ -679,7 +679,7 @@
         for (let i = 0; i < urls.length; i += 4) out.push(...(await Promise.all(urls.slice(i, i + 4).map(one))));
         return out;
       },
-      // cmux's browser history, most recent first: [{ url, title, dateVisited }].
+      // bree's browser history, most recent first: [{ url, title, dateVisited }].
       async history(options = {}) {
         if (options === null || typeof options !== "object") throw new Error(`tabs.history: options: expected an object, got ${JSON.stringify(options)}`);
         const limit = options.limit === undefined ? 100 : options.limit;

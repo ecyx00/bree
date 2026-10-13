@@ -1,6 +1,6 @@
 import Bonsplit
-import CmuxCloud
-import CmuxFoundation
+import BreeCloud
+import BreeFoundation
 import AppKit
 import Combine
 import Foundation
@@ -351,10 +351,10 @@ enum FileExplorerWorkspaceRoot: Equatable {
 /// core): a few stuck calls (TCC prompts, slow volumes) would starve every other async task.
 enum BlockingFileSystem {
     /// General blocking work (stat, process wait, scans).
-    private static let queue = BoundedBlockingQueue(label: "com.cmux.blocking-fs", maxConcurrent: 6)
+    private static let queue = BoundedBlockingQueue(label: "com.bree.blocking-fs", maxConcurrent: 6)
     /// Directory listings get their own small lane so a burst of stuck `open()` calls
     /// (TCC prompt, dead volume) can pin at most this many threads and never starves other work.
-    private static let listingQueue = BoundedBlockingQueue(label: "com.cmux.blocking-fs.listing", maxConcurrent: 3)
+    private static let listingQueue = BoundedBlockingQueue(label: "com.bree.blocking-fs.listing", maxConcurrent: 3)
 
     static func run<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
         await withCheckedContinuation { continuation in
@@ -960,7 +960,7 @@ final class FileExplorerStore: ObservableObject {
     var provider: FileExplorerProvider?
 
     static let showHiddenFilesDefaultsKey = "fileExplorer.showHidden"
-    static let showHiddenFilesDidChange = Notification.Name("cmux.fileExplorer.showHiddenFilesDidChange")
+    static let showHiddenFilesDidChange = Notification.Name("bree.fileExplorer.showHiddenFilesDidChange")
 
     /// Whether hidden files are shown. Persisted, default off; every store follows `toggleShowHiddenFiles()`.
     private(set) var showHiddenFiles: Bool = UserDefaults.standard.bool(forKey: FileExplorerStore.showHiddenFilesDefaultsKey)
@@ -1270,7 +1270,7 @@ final class FileExplorerStore: ObservableObject {
         expectedWorkspaceRootIdentity: UUID? = nil
     ) async throws -> URL {
         // `DisableFileTransfer` (MDM): a preview copies the file off the remote
-        // host onto this Mac, which is a cmux-mediated download.
+        // host onto this Mac, which is a bree-mediated download.
         guard !ManagedFileTransferPolicy.isDisabled else {
             throw ManagedFileTransferPolicy.refusalError()
         }
@@ -1727,7 +1727,7 @@ final class FileExplorerStore: ObservableObject {
 
     private static func remotePreviewCacheURL(displayTarget: String, remotePath: String) -> URL {
         let cacheRoot = FileManager.default.temporaryDirectory
-            .appendingPathComponent("\(CmuxIdentity.current.tempNamePrefix)-remote-file-previews", isDirectory: true)
+            .appendingPathComponent("\(BreeIdentity.current.tempNamePrefix)-remote-file-previews", isDirectory: true)
         let target = sanitizedCacheComponent(displayTarget)
         let remote = sanitizedCacheComponent(remotePath)
         let basename = URL(fileURLWithPath: remotePath).lastPathComponent
@@ -1764,9 +1764,9 @@ enum FileExplorerNavigationStorage {
         guard !isRunningUnderAutomatedTests,
               let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         else { return nil }
-        let id = (bundleIdentifier?.isEmpty == false ? bundleIdentifier! : "com.cmuxterm.app")
+        let id = (bundleIdentifier?.isEmpty == false ? bundleIdentifier! : "com.bree.app")
             .replacingOccurrences(of: "[^A-Za-z0-9._-]", with: "_", options: .regularExpression)
-        return base.appendingPathComponent(CmuxIdentity.current.applicationSupportDirectoryName, isDirectory: true)
+        return base.appendingPathComponent(BreeIdentity.current.applicationSupportDirectoryName, isDirectory: true)
             .appendingPathComponent("file-explorer-navigation-\(id).json", isDirectory: false)
     }
 

@@ -2,7 +2,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
-const outDir = process.env.CMUX_WEBVIEWS_OUT_DIR ?? "../Resources/markdown-viewer/webviews-app";
+const outDir = process.env.BREE_WEBVIEWS_OUT_DIR ?? "../Resources/markdown-viewer/webviews-app";
 
 export default defineConfig({
   define: {
@@ -20,7 +20,7 @@ export default defineConfig({
       // `@pierre/diffs` declares `sideEffects: false`, which is right for the
       // main-thread exports but tree-shakes the worker entry (a self-registering
       // `onmessage` script with no exports) down to an empty chunk.
-      name: "cmux-diff-worker-side-effects",
+      name: "bree-diff-worker-side-effects",
       transform(code, id) {
         if (id.endsWith("/@pierre/diffs/dist/worker/worker.js")) {
           return { code, map: null, moduleSideEffects: true };
@@ -49,7 +49,7 @@ export default defineConfig({
         // sits under `chunks/` so `diffSurface.mjs` can spawn it as a sibling.
         entryFileNames: (chunk) => (chunk.name === "main" ? "main.mjs" : "chunks/[name].mjs"),
         // Stable (un-hashed) chunk names. The diff viewer copies these into its
-        // long-lived `/tmp/cmux-diff-viewer-$uid/assets/cmux-webviews-app`
+        // long-lived `/tmp/bree-diff-viewer-$uid/assets/bree-webviews-app`
         // cache and overwrites in place via a size+mtime check; content hashes
         // would instead orphan a new ~10MB diff-vendor copy there on every
         // rebuild since nothing prunes that dir. The bundle is served via the

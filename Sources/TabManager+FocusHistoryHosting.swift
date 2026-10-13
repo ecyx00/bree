@@ -1,7 +1,7 @@
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
-/// The window-side host for the CmuxWorkspaceNavigation focus-history
+/// The window-side host for the BreeWorkspaceNavigation focus-history
 /// model: snapshot reads of workspace/panel existence, titles, and
 /// remembered focus, plus the synchronous selection/focus mutations a
 /// history navigation performs. Lookups mirror the legacy optional-chained

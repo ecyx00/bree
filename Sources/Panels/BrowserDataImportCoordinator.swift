@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 import Observation
 
@@ -159,8 +159,8 @@ final class BrowserDataImportCoordinator {
         destinationProfiles: [BrowserProfileDefinition]?
     ) -> Bool {
         let environment = ProcessInfo.processInfo.environment
-        guard environment["CMUX_UI_TEST_BROWSER_IMPORT_MODE"] == "capture-only" else { return false }
-        guard let path = environment["CMUX_UI_TEST_BROWSER_IMPORT_CAPTURE_PATH"], !path.isEmpty else {
+        guard environment["BREE_UI_TEST_BROWSER_IMPORT_MODE"] == "capture-only" else { return false }
+        guard let path = environment["BREE_UI_TEST_BROWSER_IMPORT_CAPTURE_PATH"], !path.isEmpty else {
             return true
         }
 

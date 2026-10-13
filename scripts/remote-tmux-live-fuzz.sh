@@ -13,22 +13,22 @@
 #      pane surface.
 # Every failure prints the seed and iteration so the run reproduces exactly.
 #
-# Usage: CMUX_TAG=main scripts/remote-tmux-live-fuzz.sh <ssh-host> [seed] [iters]
+# Usage: BREE_TAG=main scripts/remote-tmux-live-fuzz.sh <ssh-host> [seed] [iters]
 # Requires: the tagged DEBUG app running with remoteTmux enabled, an isolated
 # tmux server behind <ssh-host> (TMUX_TMPDIR wrapper), and the debug CLI.
 set -u
 umask 077
 
-HOST="${1:?usage: CMUX_TAG=<tag> $0 <ssh-host> [seed] [iters]}"
+HOST="${1:?usage: BREE_TAG=<tag> $0 <ssh-host> [seed] [iters]}"
 SEED="${2:-1}"
 ITERS="${3:-25}"
-: "${CMUX_TAG:?CMUX_TAG is required}"
+: "${BREE_TAG:?BREE_TAG is required}"
 FUZZ_HOST_NAME="${HOST##*@}"
 case "$FUZZ_HOST_NAME" in
   ''|*[!A-Za-z0-9._-]*) echo "invalid fuzz host name: $FUZZ_HOST_NAME" >&2; exit 2 ;;
 esac
-DEFAULT_TMUX_TMPDIR="$HOME/Library/Caches/cmux/remote-tmux-fuzz/${FUZZ_HOST_NAME}-tmux"
-TMPDIR_REMOTE="${CMUX_FUZZ_TMUX_TMPDIR:-$DEFAULT_TMUX_TMPDIR}"
+DEFAULT_TMUX_TMPDIR="$HOME/Library/Caches/bree/remote-tmux-fuzz/${FUZZ_HOST_NAME}-tmux"
+TMPDIR_REMOTE="${BREE_FUZZ_TMUX_TMPDIR:-$DEFAULT_TMUX_TMPDIR}"
 # tmux ignores a TMUX_TMPDIR that does not exist and falls back to /tmp/tmux-$UID
 # — the user's own default server, which this harness kills and resizes freely.
 # The isolation is only real while the directory is there, so refuse to run
@@ -36,30 +36,30 @@ TMPDIR_REMOTE="${CMUX_FUZZ_TMUX_TMPDIR:-$DEFAULT_TMUX_TMPDIR}"
 [ -d "$TMPDIR_REMOTE" ] || {
   echo "ERROR: tmux socket dir does not exist: $TMPDIR_REMOTE" >&2
   echo "  tmux would silently fall back to the DEFAULT server (/tmp/tmux-$(id -u))." >&2
-  echo "  Run scripts/remote-tmux-fuzz-host.sh first, or set CMUX_FUZZ_TMUX_TMPDIR." >&2
+  echo "  Run scripts/remote-tmux-fuzz-host.sh first, or set BREE_FUZZ_TMUX_TMPDIR." >&2
   exit 2
 }
-DEBUG_LOG="${CMUX_FUZZ_DEBUG_LOG:-/tmp/cmux-debug-${CMUX_TAG}.log}"
+DEBUG_LOG="${BREE_FUZZ_DEBUG_LOG:-/tmp/bree-debug-${BREE_TAG}.log}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-CLI="$HERE/cmux-debug-cli.sh"
+CLI="$HERE/bree-debug-cli.sh"
 TIMEOUT_BIN="$(command -v timeout || command -v gtimeout || true)"
 [ -n "$TIMEOUT_BIN" ] || {
   echo "ERROR: neither 'timeout' nor 'gtimeout' found; install GNU coreutils (brew install coreutils)" >&2
   exit 2
 }
 . "$HERE/remote-tmux-fuzz-lock.sh"
-SETTLE="${CMUX_FUZZ_SETTLE_SECS:-6}"
+SETTLE="${BREE_FUZZ_SETTLE_SECS:-6}"
 SESSION=fuzz
-DRY="${CMUX_FUZZ_DRY:-0}"
+DRY="${BREE_FUZZ_DRY:-0}"
 LOCAL_TMP_ROOT="${TMPDIR:-/tmp}"
 LOCAL_TMP_ROOT="${LOCAL_TMP_ROOT%/}"
-RUN_DIR=$(mktemp -d "$LOCAL_TMP_ROOT/cmux-remote-tmux-fuzz.XXXXXXXX") || {
+RUN_DIR=$(mktemp -d "$LOCAL_TMP_ROOT/bree-remote-tmux-fuzz.XXXXXXXX") || {
   echo "could not create private fuzz run directory" >&2
   exit 2
 }
 RULER="$RUN_DIR/ruler.sh"
 WORKSPACE_REF=""
-CMUX_FUZZ_LOCK_OWNED=0
+BREE_FUZZ_LOCK_OWNED=0
 FUZZ_SERVER_OWNED=0
 
 cleanup() {
@@ -73,7 +73,7 @@ cleanup() {
   if [ "$FUZZ_SERVER_OWNED" = 1 ] && [ "${FUZZ_KEEP_STATE:-0}" != 1 ]; then
     t kill-server >/dev/null 2>&1 || true
   fi
-  cmux_fuzz_lock_release
+  bree_fuzz_lock_release
   rm -rf -- "$RUN_DIR"
   exit "$status"
 }
@@ -91,10 +91,10 @@ rand() { state=$(( (state * 1103515245 + 12345) % 2147483648 )); R=$(( state % $
 # kill-server yanks layouts out from under the first, manufacturing
 # failures no code produced. The marathon holds the lock for its whole
 # run and passes its private directory + token to each child.
-if [ "${CMUX_FUZZ_LOCK_HELD:-0}" = 1 ]; then
-  cmux_fuzz_lock_validate_inherited || exit $?
+if [ "${BREE_FUZZ_LOCK_HELD:-0}" = 1 ]; then
+  bree_fuzz_lock_validate_inherited || exit $?
 else
-  cmux_fuzz_lock_acquire "$LOCAL_TMP_ROOT" || exit $?
+  bree_fuzz_lock_acquire "$LOCAL_TMP_ROOT" || exit $?
 fi
 
 t() { TMUX_TMPDIR="$TMPDIR_REMOTE" tmux "$@"; }
@@ -103,7 +103,7 @@ fail=0
 # exercised the reveal path, and a green run would be reporting coverage it never
 # delivered — the exact way this class stayed invisible.
 OP10_SWITCHES=0
-EVIDENCE_DIR="${CMUX_FUZZ_EVIDENCE_DIR:-}"
+EVIDENCE_DIR="${BREE_FUZZ_EVIDENCE_DIR:-}"
 
 # The end-of-seed debug-log capture cannot cover a mid-seed failure: later
 # iterations churn the log past the failure window before the seed ends
@@ -112,7 +112,7 @@ EVIDENCE_DIR="${CMUX_FUZZ_EVIDENCE_DIR:-}"
 snapshot_debug_evidence() {
   [ -f "$DEBUG_LOG" ] || return 0
   if [ -z "$EVIDENCE_DIR" ]; then
-    EVIDENCE_DIR=$(mktemp -d "$LOCAL_TMP_ROOT/cmux-remote-tmux-fuzz-evidence.XXXXXXXX") \
+    EVIDENCE_DIR=$(mktemp -d "$LOCAL_TMP_ROOT/bree-remote-tmux-fuzz-evidence.XXXXXXXX") \
       || { EVIDENCE_DIR=""; return 0; }
     echo "evidence dir: $EVIDENCE_DIR"
   fi
@@ -216,9 +216,9 @@ capture_remote_screen() {
   REMOTE_SCREEN=$(printf '%s\n' "$raw" | normalize_screen)
 }
 
-# tmux pane id -> cmux surface id (plus whether that surface is on screen),
+# tmux pane id -> bree surface id (plus whether that surface is on screen),
 # from `remote.tmux.pane_surfaces`. This map is what makes the text oracle
-# exact. Reading "the focused surface" cannot verify a NAMED pane: cmux does
+# exact. Reading "the focused surface" cannot verify a NAMED pane: bree does
 # not follow tmux's active pane or current window, so `select-pane` then read
 # returns whichever pane the app already showed — which matches the target's
 # capture whenever the two panes happen to share dimensions (the ruler prints
@@ -510,7 +510,7 @@ if [ "$DRY" = 1 ]; then
 else
   CONNECT_OUT=$("$CLI" ssh-tmux "$HOST" 2>/dev/null | tail -1)
 fi
-WINDOW_ID="${CMUX_FUZZ_WINDOW_ID:-$(printf '%s' "$CONNECT_OUT" | sed -n 's/.*window=\([A-F0-9-]*\).*/\1/p')}"
+WINDOW_ID="${BREE_FUZZ_WINDOW_ID:-$(printf '%s' "$CONNECT_OUT" | sed -n 's/.*window=\([A-F0-9-]*\).*/\1/p')}"
 
 # Attach barrier: the gate judges STEADY-STATE churn, so iteration 1 must
 # not begin until the initial claim/layout handshake has settled once.
@@ -665,9 +665,9 @@ app_resize() {
     "{\"window_id\":\"$WINDOW_ID\",\"width\":$width,\"height\":$height}" >/dev/null 2>&1
 }
 
-# Switch the cmux TAB to a different mirrored window.
+# Switch the bree TAB to a different mirrored window.
 #
-# Op 1's `select-window` cannot reach this: cmux never follows tmux's current
+# Op 1's `select-window` cannot reach this: bree never follows tmux's current
 # window, so a tmux-side switch changes nothing about which tab is on screen.
 # Until this op existed the fuzz had never once switched a mirror tab — which is
 # exactly where the workspace reuses the mounted view and swaps the mirror
@@ -767,10 +767,10 @@ do_op() {
   random_window; w="$RW"
   rand 11
   # Reconnect-during-churn (op 9) exercises the control-mode reconnect
-  # concurrency, a separate subsystem from sizing. CMUX_FUZZ_NO_RECONNECT
+  # concurrency, a separate subsystem from sizing. BREE_FUZZ_NO_RECONNECT
   # remaps it to a benign op so a run can isolate steady-state sizing
   # correctness from reconnect-race robustness. Default keeps op 9.
-  if [ "${CMUX_FUZZ_NO_RECONNECT:-0}" = 1 ] && [ "$R" = 9 ]; then R=1; fi
+  if [ "${BREE_FUZZ_NO_RECONNECT:-0}" = 1 ] && [ "$R" = 9 ]; then R=1; fi
   # Record the op behind each iteration. Without it a failure names an iteration
   # and nothing else, and the first question about any fuzz failure — which
   # operation produced this state — can only be answered by re-running the seed
@@ -857,7 +857,7 @@ do_op() {
       rand 50; t resize-pane -t "$pane" -x $(( 10 + R )) 2>/dev/null ;;
     9) # drop and re-establish the control connection (reseed + re-impose)
       "$CLI" workspace reconnect --workspace "$WORKSPACE_REF" >/dev/null 2>&1 ;;
-    10) # switch the cmux TAB (mirror->mirror), which op 1 cannot do
+    10) # switch the bree TAB (mirror->mirror), which op 1 cannot do
       switch_mirror_tab "$iter" ;;
   esac
 }

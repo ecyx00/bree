@@ -1,13 +1,13 @@
 import AppKit
 import Foundation
-import CmuxFoundation
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeFoundation
+import BreeTerminal
+import BreeTerminalCore
 import GhosttyKit
-import CmuxSettings
-import struct CmuxSettings.AgentIntegrationSettingsStore
+import BreeSettings
+import struct BreeSettings.AgentIntegrationSettingsStore
 
-// The app-side conformances and bridges injected into the CmuxTerminal
+// The app-side conformances and bridges injected into the BreeTerminal
 // package through `GhosttyApp.terminalSurfaceRuntimeDependencies`. Each type
 // here carries behavior verbatim from the legacy god-file reach-up it
 // replaces; this file is intended composition-root residue.
@@ -86,7 +86,7 @@ final class TerminalSurfaceSpawnPolicyBridge: TerminalSurfaceSpawnPolicyProvidin
         workspaceId: UUID,
         startupCommand: String?
     ) {
-        // The `cmux ssh` first terminal starts before `workspace.remote.configure`
+        // The `bree ssh` first terminal starts before `workspace.remote.configure`
         // and runs a script file, so it relies on the token the CLI passed in
         // its initial environment. Leave that environment as it is.
         guard let startupCommand,
@@ -152,14 +152,14 @@ final class TerminalOutputByteTeeBridge: TerminalByteTeeBinding {
         let teeContext = Unmanaged.passRetained(TerminalOutputTeeContext(
             workspaceID: workspaceID,
             surfaceID: surfaceID,
-            agentDefinitions: CmuxTaskManagerCodingAgentDefinition.builtIns,
+            agentDefinitions: BreeTaskManagerCodingAgentDefinition.builtIns,
             promptDetectionGate: TerminalPromptDetectionGateController.shared.gate(for: surfaceID),
             scrollbackCheckpointFlags: scrollbackCheckpointActivity
                 .register(surfaceID: surfaceID)
         ))
         ghostty_surface_set_pty_tee_cb(
             surface,
-            cmuxTerminalOutputTeeCallback,
+            breeTerminalOutputTeeCallback,
             teeContext.toOpaque()
         )
         return Lease(context: teeContext, scrollbackCheckpointActivity: scrollbackCheckpointActivity)
@@ -201,10 +201,10 @@ extension TerminalSurfaceRuntimeFilesystem {
                 .appendingPathComponent(".local/bin", isDirectory: true)
         )
         // Per-surface command shims are part of the lifetime of their pane.
-        // Keep them beside cmux's durable state so macOS's periodic `$TMPDIR`
+        // Keep them beside bree's durable state so macOS's periodic `$TMPDIR`
         // cleanup cannot remove a live pane's Claude entry from `PATH`.
         let agentCommandShimRootDirectory = homeDirectory
-            .appendingPathComponent(CmuxIdentity.current.dotDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.dotDirectoryName, isDirectory: true)
         return TerminalSurfaceRuntimeFilesystem(
             agentCommandShimRootDirectory: agentCommandShimRootDirectory,
             installAgentCommandShims: {
@@ -235,7 +235,7 @@ extension TerminalSurface {
         id: UUID = UUID(),
         tabId: UUID,
         context: ghostty_surface_context_e,
-        configTemplate: CmuxSurfaceConfigTemplate?,
+        configTemplate: BreeSurfaceConfigTemplate?,
         workingDirectory: String? = nil,
         portOrdinal: Int = 0,
         initialCommand: String? = nil,

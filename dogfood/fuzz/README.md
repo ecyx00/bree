@@ -1,6 +1,6 @@
 # UI fuzzer
 
-`scripts/fuzz` drives a cmux DEV build through random but valid action sequences and checks it after every
+`scripts/fuzz` drives a Bree Dev build through random but valid action sequences and checks it after every
 step. Actions: splits, pane focus, resize, swap and zoom, tab create, close, move, reorder and drag, divider
 drags, workspace create, close, select, reorder, rename and actions, the sidebar, the command palette, terminal
 typing bursts and keys, window resize, new window and full screen, browser splits and Settings. Pointer
@@ -23,8 +23,8 @@ Only on a Mac whose console nobody is using. The app starts in a sandboxed home 
 frames show no user, host or files.
 
 ```bash
-scripts/fuzz run --app "<path>/cmux DEV.app" --minutes 20 [--seed S] [--focus splits,drag]
-scripts/fuzz replay <finding>/repro.json --app "<path>/cmux DEV.app"
+scripts/fuzz run --app "<path>/Bree Dev.app" --minutes 20 [--seed S] [--focus splits,drag]
+scripts/fuzz replay <finding>/repro.json --app "<path>/Bree Dev.app"
 scripts/fuzz issue <finding>              # the issue it would file, or the existing one it matches
 scripts/fuzz issue <finding> --file       # upload the repro frames and file it
 ```
@@ -36,9 +36,9 @@ any crash report. To fix a finding, replay its `repro.json` against your build; 
 Pull request CI replays every repro in `regressions/` when a same-repository pull request without the
 `no-full-ci` label touches what they exercise: the sidebar, splits and panes, the main window's size, or the
 fuzzer and its repros. A fork pull request gets no replay. The `ui-tests` job asks for
-`cmuxUITests/FuzzRegressions` (`scripts/ci/ui_tests_dispatch.py` lists the paths), and the UI test lane runs
+`breeUITests/FuzzRegressions` (`scripts/ci/ui_tests_dispatch.py` lists the paths), and the UI test lane runs
 `scripts/fuzz regressions` on an owned Mac against the app it already adopted. `scripts/run-e2e.sh
-cmuxUITests/FuzzRegressions` runs the same replay for any pushed commit.
+breeUITests/FuzzRegressions` runs the same replay for any pushed commit.
 
 Steps address panes, tabs and workspaces by position (a fraction of whatever exists), never by id, so any
 subsequence of a run still executes. `tests/test_ui_fuzzer_engine.py` covers the parts that need no app.

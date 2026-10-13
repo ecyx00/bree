@@ -9,11 +9,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 const DEFAULT_SOCKET = `${os.homedir()}/.config/bree/bree.sock`;
-const SOCKET_PATH = process.env.CMUX_SOCKET_PATH || DEFAULT_SOCKET;
+const SOCKET_PATH = process.env.BREE_SOCKET_PATH || DEFAULT_SOCKET;
 const REPLY_TIMEOUT_MS = 120_000;
 const MAX_PLAN_BYTES = 128 * 1024;
 
-const createCMUXFeed = async (ctx) => {
+const createBREEFeed = async (ctx) => {
   let client = null;
   let buffered = "";
   let telemetrySequence = 0;
@@ -527,12 +527,12 @@ const createCMUXFeed = async (ctx) => {
     const state = sessionState(sessionId);
     const context = extra?.context || contextForSession(sessionId);
     const workspaceId =
-      typeof process.env.CMUX_WORKSPACE_ID === "string" && process.env.CMUX_WORKSPACE_ID.trim()
-        ? process.env.CMUX_WORKSPACE_ID.trim()
+      typeof process.env.BREE_WORKSPACE_ID === "string" && process.env.BREE_WORKSPACE_ID.trim()
+        ? process.env.BREE_WORKSPACE_ID.trim()
         : null;
     const surfaceId =
-      typeof process.env.CMUX_SURFACE_ID === "string" && process.env.CMUX_SURFACE_ID.trim()
-        ? process.env.CMUX_SURFACE_ID.trim()
+      typeof process.env.BREE_SURFACE_ID === "string" && process.env.BREE_SURFACE_ID.trim()
+        ? process.env.BREE_SURFACE_ID.trim()
         : null;
     const event = {
       session_id: `opencode-${sessionId}`,
@@ -819,13 +819,13 @@ const createCMUXFeed = async (ctx) => {
   return { event: async ({ event }) => handleEvent(event?.event || event) };
 };
 
-export const CMUXFeed = createCMUXFeed;
+export const BREEFeed = createBREEFeed;
 
 export default {
-  id: "cmux.feed",
+  id: "bree.feed",
   async setup(ctx) {
     const controller = new AbortController();
-    const hooks = await createCMUXFeed(ctx);
+    const hooks = await createBREEFeed(ctx);
     void (async () => {
       try {
         for await (const event of ctx.event.subscribe({ signal: controller.signal })) {

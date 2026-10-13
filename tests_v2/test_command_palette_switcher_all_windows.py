@@ -12,10 +12,10 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
 def _wait_until(predicate, timeout_s: float = 6.0, interval_s: float = 0.05, message: str = "timeout") -> None:
@@ -24,19 +24,19 @@ def _wait_until(predicate, timeout_s: float = 6.0, interval_s: float = 0.05, mes
         if predicate():
             return
         time.sleep(interval_s)
-    raise cmuxError(message)
+    raise breeError(message)
 
 
-def _palette_visible(client: cmux, window_id: str) -> bool:
+def _palette_visible(client: bree, window_id: str) -> bool:
     payload = client._call("debug.command_palette.visible", {"window_id": window_id}) or {}
     return bool(payload.get("visible"))
 
 
-def _palette_results(client: cmux, window_id: str, limit: int = 20) -> dict:
+def _palette_results(client: bree, window_id: str, limit: int = 20) -> dict:
     return client.command_palette_results(window_id=window_id, limit=limit)
 
 
-def _set_palette_visible(client: cmux, window_id: str, visible: bool) -> None:
+def _set_palette_visible(client: bree, window_id: str, visible: bool) -> None:
     if _palette_visible(client, window_id) == visible:
         return
     client._call("debug.command_palette.toggle", {"window_id": window_id})
@@ -47,7 +47,7 @@ def _set_palette_visible(client: cmux, window_id: str, visible: bool) -> None:
 
 
 def main() -> int:
-    with cmux(SOCKET_PATH) as client:
+    with bree(SOCKET_PATH) as client:
         client.activate_app()
         time.sleep(0.2)
 
@@ -101,7 +101,7 @@ def main() -> int:
         result_rows = (_palette_results(client, window_a, limit=64).get("results") or [])
         target_workspace_command = f"switcher.workspace.{workspace_b.lower()}"
         if not any(str((row or {}).get("command_id") or "") == target_workspace_command for row in result_rows):
-            raise cmuxError(
+            raise breeError(
                 f"cmd+p switcher in window A did not include workspace from window B "
                 f"(expected {target_workspace_command}); rows={result_rows[:8]}"
             )

@@ -13,7 +13,7 @@ type DiffEventListener = (event: DiffEvent) => void;
 
 declare global {
   interface Window {
-    cmuxDiffBridge?: {
+    breeDiffBridge?: {
       receive(event: DiffEvent): void;
     };
   }
@@ -95,15 +95,15 @@ export class FetchDiffTransport extends BaseDiffTransport {
 }
 
 export class WebKitDiffTransport extends BaseDiffTransport {
-  private readonly handler: NonNullable<NonNullable<NonNullable<Window["webkit"]>["messageHandlers"]>["cmuxDiff"]>;
+  private readonly handler: NonNullable<NonNullable<NonNullable<Window["webkit"]>["messageHandlers"]>["breeDiff"]>;
 
   constructor(
-    handler: NonNullable<NonNullable<NonNullable<Window["webkit"]>["messageHandlers"]>["cmuxDiff"]>,
+    handler: NonNullable<NonNullable<NonNullable<Window["webkit"]>["messageHandlers"]>["breeDiff"]>,
     version: number,
   ) {
     super(version);
     this.handler = handler;
-    window.cmuxDiffBridge = { receive: (event) => this.receive(event) };
+    window.breeDiffBridge = { receive: (event) => this.receive(event) };
   }
 
   async request(command: DiffCommand): Promise<DiffResult> {
@@ -111,7 +111,7 @@ export class WebKitDiffTransport extends BaseDiffTransport {
   }
 
   override close(): void {
-    delete window.cmuxDiffBridge;
+    delete window.breeDiffBridge;
   }
 }
 
@@ -206,7 +206,7 @@ export function createDiffTransport(config: DiffTransportConfig | undefined): Di
   if (!config) {
     return null;
   }
-  const webKitHandler = window.webkit?.messageHandlers?.cmuxDiff;
+  const webKitHandler = window.webkit?.messageHandlers?.breeDiff;
   if (config.kind === "webKit" && webKitHandler) {
     return new WebKitDiffTransport(webKitHandler, config.protocolVersion);
   }

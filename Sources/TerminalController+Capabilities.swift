@@ -1,5 +1,5 @@
-import CmuxControlSocket
-import CmuxRemoteWorkspace
+import BreeControlSocket
+import BreeRemoteWorkspace
 import Foundation
 
 /// Discovery responses for local callers and authenticated remote relays.
@@ -10,7 +10,7 @@ extension TerminalController {
             // A capability name is discovery, never a grant. Do not return the
             // local socket or access mode.
             return [
-                "protocol": "cmux-socket", "version": 2, "scope": "remote_workspace",
+                "protocol": "bree-socket", "version": 2, "scope": "remote_workspace",
                 "methods": RemoteRelayCommandPolicy().permittedMethods(
                     from: capabilities["methods"] as? [String] ?? []
                 )
@@ -348,7 +348,7 @@ extension TerminalController {
 #endif
 
         return [
-            "protocol": "cmux-socket",
+            "protocol": "bree-socket",
             "version": 2,
             "socket_path": socketServer.currentSocketPath,
             "access_mode": socketServer.accessMode.rawValue,

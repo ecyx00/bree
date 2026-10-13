@@ -1,6 +1,6 @@
 import Foundation
-import CmuxSettings
-import CmuxTerminalCore
+import BreeSettings
+import BreeTerminalCore
 
 extension TabManager {
     struct WorkspaceCreationTabSnapshot {

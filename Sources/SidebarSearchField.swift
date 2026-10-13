@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 
 /// Native search control shared by Find and Vault.
 @MainActor

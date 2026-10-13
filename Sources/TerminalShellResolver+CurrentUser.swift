@@ -1,4 +1,4 @@
-import CmuxTerminal
+import BreeTerminal
 import Darwin
 import Foundation
 

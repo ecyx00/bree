@@ -1,0 +1,97 @@
+#!/bin/bash
+# bree's per-surface Pi launcher. It injects the bundled extension only when
+# Pi would otherwise discover no bree-managed copy, leaving the user's Pi
+# configuration and other extensions untouched.
+
+set -u
+
+bree_pi_wrapper_shim="${BREE_PI_WRAPPER_SHIM:-}"
+bree_pi_wrapper_root="${BREE_PI_WRAPPER_SHIM_ROOT:-}"
+self_path="$0"
+
+resolve_pi() {
+    local entry candidate
+    local old_ifs="$IFS"
+    IFS=:
+    for entry in ${PATH:-}; do
+        [ -n "$entry" ] || continue
+        if [ -n "$bree_pi_wrapper_root" ] && [ "$entry" = "$bree_pi_wrapper_root" ]; then
+            continue
+        fi
+        case "$entry" in
+            */bree-cli-shims|*/bree-cli-shims/*) continue ;;
+        esac
+        candidate="$entry/pi"
+        if [ -x "$candidate" ] && [ "$candidate" != "$self_path" ] &&
+           { [ -z "$bree_pi_wrapper_shim" ] || [ "$candidate" != "$bree_pi_wrapper_shim" ]; }; then
+            printf '%s' "$candidate"
+            IFS="$old_ifs"
+            return 0
+        fi
+    done
+    IFS="$old_ifs"
+    return 1
+}
+
+bree_pi="$(resolve_pi 2>/dev/null || true)"
+if [ -z "$bree_pi" ]; then
+    echo "Configured agent is unavailable. Install it or check the command configuration." >&2
+    exit 127
+fi
+
+if [ "${BREE_PI_HOOKS_DISABLED:-0}" = "1" ]; then
+    exec "$bree_pi" "$@"
+fi
+
+bree_pi_managed_extension() {
+    local candidate="$1"
+    [ -f "$candidate" ] || return 1
+    grep -q "bree-pi-session-extension-marker" "$candidate" 2>/dev/null
+}
+
+bree_pi_agent_dir="${PI_CODING_AGENT_DIR:-${HOME:-}/.pi/agent}"
+if bree_pi_managed_extension "$bree_pi_agent_dir/extensions/bree-session.ts" ||
+   bree_pi_managed_extension "$PWD/.pi/extensions/bree-session.ts"; then
+    exec "$bree_pi" "$@"
+fi
+
+bree_cli="${BREE_BUNDLED_CLI_PATH:-}"
+if [ -z "$bree_cli" ] || [ ! -x "$bree_cli" ]; then
+    bree_cli="$(command -v bree 2>/dev/null || true)"
+fi
+if [ -z "$bree_cli" ] || [ ! -x "$bree_cli" ]; then
+    exec "$bree_pi" "$@"
+fi
+
+bree_surface_tag="${BREE_SURFACE_ID:-default}"
+bree_extension_root="${TMPDIR:-/tmp}/bree-pi-extensions/$bree_surface_tag"
+bree_extension="$bree_extension_root/bree-session.ts"
+bree_extension_tmp="$bree_extension_root/.bree-session.ts.$$"
+if [ -s "$bree_extension" ] && bree_pi_managed_extension "$bree_extension"; then
+    # Refresh a valid per-surface copy when the bundled source changes. If the
+    # CLI is temporarily unavailable, keep the last known-good copy.
+    if "$bree_cli" hooks pi extension-source >"$bree_extension_tmp" 2>/dev/null &&
+       bree_pi_managed_extension "$bree_extension_tmp"; then
+        if ! cmp -s "$bree_extension_tmp" "$bree_extension"; then
+            mv -f "$bree_extension_tmp" "$bree_extension"
+            chmod 600 "$bree_extension" 2>/dev/null || true
+        else
+            rm -f "$bree_extension_tmp"
+        fi
+    else
+        rm -f "$bree_extension_tmp"
+    fi
+fi
+if [ ! -s "$bree_extension" ] || ! bree_pi_managed_extension "$bree_extension"; then
+    if mkdir -p "$bree_extension_root" &&
+       "$bree_cli" hooks pi extension-source >"$bree_extension_tmp" 2>/dev/null &&
+       bree_pi_managed_extension "$bree_extension_tmp"; then
+        mv -f "$bree_extension_tmp" "$bree_extension"
+        chmod 600 "$bree_extension" 2>/dev/null || true
+    else
+        rm -f "$bree_extension_tmp"
+        exec "$bree_pi" "$@"
+    fi
+fi
+
+exec "$bree_pi" -e "$bree_extension" "$@"

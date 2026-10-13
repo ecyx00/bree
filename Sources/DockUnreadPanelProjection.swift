@@ -1,4 +1,4 @@
-import CmuxNotifications
+import BreeNotifications
 import Foundation
 import Observation
 

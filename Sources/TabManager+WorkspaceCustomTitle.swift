@@ -65,7 +65,7 @@ extension TabManager {
                 title: title
             )
         }
-        // A local workspace standing for a cloud machine's cmux-tui workspace writes a
+        // A local workspace standing for a cloud machine's bree-tui workspace writes a
         // USER rename through to that daemon (persisted there, broadcast to every
         // client). Auto titles never propagate. Workspace names stay non-empty,
         // so clearing remains a local title operation only.

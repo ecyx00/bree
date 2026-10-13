@@ -29,14 +29,14 @@ body {
 }
 /* Bree is monochrome: no blue accent. Links read as body text with an underline; hover thickens it. */
 .markdown-body { --fgColor-accent: var(--fgColor-default); }
-.markdown-body a:not(.cmux-wiki-chip) {
+.markdown-body a:not(.bree-wiki-chip) {
   color: var(--fgColor-default);
   text-decoration: underline;
   text-decoration-color: var(--fgColor-muted);
   text-underline-offset: 2px;
 }
-.markdown-body a:not(.cmux-wiki-chip):hover,
-.markdown-body a:not(.cmux-wiki-chip):focus-visible {
+.markdown-body a:not(.bree-wiki-chip):hover,
+.markdown-body a:not(.bree-wiki-chip):focus-visible {
   text-decoration-color: currentColor;
   text-decoration-thickness: 2px;
 }
@@ -63,18 +63,18 @@ body {
   padding: 0; /* hljs class already pads */
   overflow: auto;
 }
-.cmux-code-block {
+.bree-code-block {
   position: relative;
   margin: 0 0 16px 0;
 }
-.cmux-code-block pre {
+.bree-code-block pre {
   margin: 0;
 }
-.cmux-code-block .markdown-body pre,
-.markdown-body .cmux-code-block pre {
+.bree-code-block .markdown-body pre,
+.markdown-body .bree-code-block pre {
   margin: 0;
 }
-.cmux-code-copy-button {
+.bree-code-copy-button {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -91,17 +91,17 @@ body {
   box-shadow: none;
   transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease;
 }
-.cmux-code-block:hover .cmux-code-copy-button,
-.cmux-code-copy-button:focus-visible {
+.bree-code-block:hover .bree-code-copy-button,
+.bree-code-copy-button:focus-visible {
   opacity: 1;
   pointer-events: auto;
 }
-.cmux-code-copy-button:hover,
-.cmux-code-copy-button:focus-visible {
+.bree-code-copy-button:hover,
+.bree-code-copy-button:focus-visible {
   color: var(--fgColor-default);
   background: var(--bgColor-muted);
 }
-.cmux-remote-image-placeholder {
+.bree-remote-image-placeholder {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
@@ -115,18 +115,18 @@ body {
   color: var(--fgColor-muted);
   font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-.cmux-remote-image-placeholder strong {
+.bree-remote-image-placeholder strong {
   color: var(--fgColor-default);
   font-weight: 600;
 }
-.cmux-remote-image-url {
+.bree-remote-image-url {
   flex-basis: 100%;
   min-width: 0;
   overflow-wrap: anywhere;
   font: 12px/1.4 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   color: var(--fgColor-muted);
 }
-.cmux-remote-image-placeholder button {
+.bree-remote-image-placeholder button {
   padding: 3px 7px;
   border: 1px solid var(--borderColor-default);
   border-radius: 6px;
@@ -135,49 +135,49 @@ body {
   font: inherit;
   cursor: pointer;
 }
-.cmux-remote-image-placeholder button:hover,
-.cmux-remote-image-placeholder button:focus-visible {
+.bree-remote-image-placeholder button:hover,
+.bree-remote-image-placeholder button:focus-visible {
   background: var(--bgColor-neutral-muted);
 }
 /* Mermaid + Vega-Lite blocks. Both libs render into these containers
-   lazily; the .cmux-source <pre> holds the raw block source for the
+   lazily; the .bree-source <pre> holds the raw block source for the
    library to read, hidden from view. */
-.cmux-mermaid, .cmux-vega {
+.bree-mermaid, .bree-vega {
   display: block;
   margin: 0.6em 0 0.9em 0;
   overflow-x: auto;
   text-align: center;
 }
-.cmux-mermaid svg {
+.bree-mermaid svg {
   max-width: 100%;
   height: auto;
 }
-.cmux-mermaid svg[data-cmux-mermaid-scaled="1"] {
+.bree-mermaid svg[data-bree-mermaid-scaled="1"] {
   display: block;
   margin-inline: auto;
   max-width: none;
 }
-.cmux-vega canvas, .cmux-vega svg {
+.bree-vega canvas, .bree-vega svg {
   max-width: 100%;
   height: auto;
 }
-.cmux-mermaid .cmux-source, .cmux-vega .cmux-source { display: none; }
-.markdown-body code[data-cmux-file] {
+.bree-mermaid .bree-source, .bree-vega .bree-source { display: none; }
+.markdown-body code[data-bree-file] {
   cursor: default;
   border-bottom: 1px dotted var(--fgColor-muted);
 }
-.markdown-body code[data-cmux-file][data-cmux-file-exists="1"] {
+.markdown-body code[data-bree-file][data-bree-file-exists="1"] {
   cursor: pointer;
   color: var(--fgColor-accent);
   border-bottom-color: var(--fgColor-accent);
 }
-.markdown-body a[data-cmux-file-exists="1"]::after,
-.markdown-body code[data-cmux-file][data-cmux-file-exists="1"]::after {
+.markdown-body a[data-bree-file-exists="1"]::after,
+.markdown-body code[data-bree-file][data-bree-file-exists="1"]::after {
   content: " ↗";
   font-size: 0.82em;
   opacity: 0.65;
 }
-.cmux-wiki-chip {
+.bree-wiki-chip {
   display: inline-block;
   padding: 0 6px;
   border-radius: 4px;
@@ -187,67 +187,67 @@ body {
   text-decoration: none;
   cursor: default;
 }
-.cmux-wiki-chip[href^="chip:doc:" i], .cmux-wiki-chip[href^="chip:yakala:" i], .cmux-wiki-chip[href^="src:" i], .cmux-wiki-chip[href^="srcweb:" i] { cursor: pointer; }
+.bree-wiki-chip[href^="chip:doc:" i], .bree-wiki-chip[href^="chip:yakala:" i], .bree-wiki-chip[href^="src:" i], .bree-wiki-chip[href^="srcweb:" i] { cursor: pointer; }
 /* Source file pages of the Wiki popover: one block per line, number from data-n, target line marked. */
 .bree-ln { display: block; position: relative; padding-left: 3.6em; white-space: pre; }
 /* A wrapped line hangs: continuation lines start at the line's own indent (--ind, in ch) plus 4ch. */
 .bree-ln { padding-left: calc(3.6em + var(--ind, 0ch) + 4ch); text-indent: calc(-1 * (var(--ind, 0ch) + 4ch)); }
 .bree-ln::before { text-indent: 0; content: attr(data-n); position: absolute; left: 0; width: 2.8em; text-align: right; opacity: 0.45; user-select: none; -webkit-user-select: none; }
 .bree-ln-target { background: rgba(255, 200, 0, 0.22); }
-/* Wiki pages only (html.cmux-wiki): Claude Desktop-like type scale, written for 14 px (WikiFontSize). */
-html.cmux-wiki .markdown-body { font-size: 14px; line-height: 1.55; }
-html.cmux-wiki .markdown-body h1 { font-size: 20px; font-weight: 600; line-height: 1.3; }
-html.cmux-wiki .markdown-body h2 { font-size: 16px; font-weight: 600; line-height: 1.35; }
-html.cmux-wiki .markdown-body h3 { font-size: 14.5px; font-weight: 600; }
-html.cmux-wiki .markdown-body h4, html.cmux-wiki .markdown-body h5, html.cmux-wiki .markdown-body h6 { font-size: 13.5px; font-weight: 600; }
-html.cmux-wiki .markdown-body code, html.cmux-wiki .markdown-body tt, html.cmux-wiki .markdown-body pre code.hljs { font-size: 12px; }
-html.cmux-wiki .markdown-body table { display: block; max-width: 100%; overflow-x: auto; font-size: 12.5px; }
-html.cmux-wiki .markdown-body th, html.cmux-wiki .markdown-body td { white-space: normal; min-width: 4em; }
-html.cmux-wiki .cmux-wiki-chip { font-size: 11px; line-height: 1.5; padding: 0 7px; border-radius: 999px; vertical-align: 1px; white-space: nowrap; }
-html.cmux-wiki .cmux-wiki-chip[href^="chip:" i]:not([href^="chip:inert:" i]):not([href^="chip:broken:" i]) { cursor: pointer; }
+/* Wiki pages only (html.bree-wiki): Claude Desktop-like type scale, written for 14 px (WikiFontSize). */
+html.bree-wiki .markdown-body { font-size: 14px; line-height: 1.55; }
+html.bree-wiki .markdown-body h1 { font-size: 20px; font-weight: 600; line-height: 1.3; }
+html.bree-wiki .markdown-body h2 { font-size: 16px; font-weight: 600; line-height: 1.35; }
+html.bree-wiki .markdown-body h3 { font-size: 14.5px; font-weight: 600; }
+html.bree-wiki .markdown-body h4, html.bree-wiki .markdown-body h5, html.bree-wiki .markdown-body h6 { font-size: 13.5px; font-weight: 600; }
+html.bree-wiki .markdown-body code, html.bree-wiki .markdown-body tt, html.bree-wiki .markdown-body pre code.hljs { font-size: 12px; }
+html.bree-wiki .markdown-body table { display: block; max-width: 100%; overflow-x: auto; font-size: 12.5px; }
+html.bree-wiki .markdown-body th, html.bree-wiki .markdown-body td { white-space: normal; min-width: 4em; }
+html.bree-wiki .bree-wiki-chip { font-size: 11px; line-height: 1.5; padding: 0 7px; border-radius: 999px; vertical-align: 1px; white-space: nowrap; }
+html.bree-wiki .bree-wiki-chip[href^="chip:" i]:not([href^="chip:inert:" i]):not([href^="chip:broken:" i]) { cursor: pointer; }
 /* In a table cell a chip may wrap (long file names), so a chip-only column stays narrow. */
-html.cmux-wiki .markdown-body td .cmux-wiki-chip, html.cmux-wiki .markdown-body th .cmux-wiki-chip { white-space: nowrap; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
+html.bree-wiki .markdown-body td .bree-wiki-chip, html.bree-wiki .markdown-body th .bree-wiki-chip { white-space: nowrap; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
 /* Wiki tables: horizontal hairlines only, cells top-aligned. */
-html.cmux-wiki .markdown-body table th, html.cmux-wiki .markdown-body table td { border: 0; border-bottom: 1px solid var(--borderColor-muted, rgba(128,128,128,0.25)); vertical-align: top; }
-html.cmux-wiki .markdown-body table tr { background: none; border-top: 0; }
-html.cmux-wiki .markdown-body table tr:nth-child(2n) { background: none; }
+html.bree-wiki .markdown-body table th, html.bree-wiki .markdown-body table td { border: 0; border-bottom: 1px solid var(--borderColor-muted, rgba(128,128,128,0.25)); vertical-align: top; }
+html.bree-wiki .markdown-body table tr { background: none; border-top: 0; }
+html.bree-wiki .markdown-body table tr:nth-child(2n) { background: none; }
 /* A table that still does not fit is stacked by the page script: one block per row, the column header above each value. */
-html.cmux-wiki .markdown-body table.cmux-stacked { display: block; overflow: visible; width: 100%; }
-html.cmux-wiki .markdown-body table.cmux-stacked thead { display: none; }
-html.cmux-wiki .markdown-body table.cmux-stacked tbody, html.cmux-wiki .markdown-body table.cmux-stacked tr { display: block; width: 100%; }
-html.cmux-wiki .markdown-body table.cmux-stacked tr { margin: 0 0 10px 0; border: 1px solid var(--borderColor-default, rgba(128,128,128,0.4)); border-radius: 6px; background: none; }
-html.cmux-wiki .markdown-body table.cmux-stacked td { display: block; min-width: 0; border: 0; padding: 4px 10px; overflow-wrap: anywhere; }
-html.cmux-wiki .markdown-body table.cmux-stacked td:empty { display: none; }
-html.cmux-wiki .markdown-body table.cmux-stacked td::before {
+html.bree-wiki .markdown-body table.bree-stacked { display: block; overflow: visible; width: 100%; }
+html.bree-wiki .markdown-body table.bree-stacked thead { display: none; }
+html.bree-wiki .markdown-body table.bree-stacked tbody, html.bree-wiki .markdown-body table.bree-stacked tr { display: block; width: 100%; }
+html.bree-wiki .markdown-body table.bree-stacked tr { margin: 0 0 10px 0; border: 1px solid var(--borderColor-default, rgba(128,128,128,0.4)); border-radius: 6px; background: none; }
+html.bree-wiki .markdown-body table.bree-stacked td { display: block; min-width: 0; border: 0; padding: 4px 10px; overflow-wrap: anywhere; }
+html.bree-wiki .markdown-body table.bree-stacked td:empty { display: none; }
+html.bree-wiki .markdown-body table.bree-stacked td::before {
   content: attr(data-label); display: block; font-size: 11px; line-height: 1.4; font-weight: 600;
   color: color-mix(in srgb, var(--fgColor-default, #1f2328) 72%, var(--bgColor-default, #fff));
 }
 /* A chip with no handler is a plain label (its tooltip comes from the link title). */
-html.cmux-wiki .cmux-wiki-chip.cmux-wiki-inert { cursor: default; text-decoration: none; }
+html.bree-wiki .bree-wiki-chip.bree-wiki-inert { cursor: default; text-decoration: none; }
 /* Chip text is opaque and at least 4.5:1 on the page (the link colour of `.markdown-body a` was 4.49:1, the quiet
    tag was 2.95:1 through opacity). Quiet chips: the body colour a little softened; clickable chips: the accent
    lightened toward the body colour. Colours mix two opaque colours, so no text opacity is involved. */
-.markdown-body a.cmux-wiki-chip { color: color-mix(in srgb, var(--fgColor-default, #1f2328) 82%, var(--bgColor-default, #fff)); }
-.markdown-body a.cmux-wiki-chip[href^="chip:doc:" i], .markdown-body a.cmux-wiki-chip[href^="chip:yakala:" i],
-.markdown-body a.cmux-wiki-chip[href^="chip:" i]:not([href^="chip:inert:" i]):not([href^="chip:broken:" i]),
-.markdown-body a.cmux-wiki-chip[href^="chip:commit:" i], .markdown-body a.cmux-wiki-chip[href^="src:" i],
-.markdown-body a.cmux-wiki-chip[href^="srcweb:" i] {
+.markdown-body a.bree-wiki-chip { color: color-mix(in srgb, var(--fgColor-default, #1f2328) 82%, var(--bgColor-default, #fff)); }
+.markdown-body a.bree-wiki-chip[href^="chip:doc:" i], .markdown-body a.bree-wiki-chip[href^="chip:yakala:" i],
+.markdown-body a.bree-wiki-chip[href^="chip:" i]:not([href^="chip:inert:" i]):not([href^="chip:broken:" i]),
+.markdown-body a.bree-wiki-chip[href^="chip:commit:" i], .markdown-body a.bree-wiki-chip[href^="src:" i],
+.markdown-body a.bree-wiki-chip[href^="srcweb:" i] {
   color: color-mix(in srgb, var(--fgColor-accent, #0969da) 78%, var(--fgColor-default, #1f2328));
 }
 /* The page's metadata comes last: the title is the first thing on a wiki page. */
-html.cmux-wiki .cmux-frontmatter { margin: 28px 0 0 0; }
+html.bree-wiki .bree-frontmatter { margin: 28px 0 0 0; }
 /* Long lines of source pages wrap (the number column stays), instead of being cut at the popover edge. */
-html.cmux-wiki .bree-ln { white-space: pre-wrap; overflow-wrap: anywhere; }
-.cmux-math-display { margin: 0.8em 0; overflow-x: auto; text-align: center; }
-.cmux-wiki-chip[href^="chip:broken:" i] { text-decoration: line-through dotted; }
-.cmux-frontmatter {
+html.bree-wiki .bree-ln { white-space: pre-wrap; overflow-wrap: anywhere; }
+.bree-math-display { margin: 0.8em 0; overflow-x: auto; text-align: center; }
+.bree-wiki-chip[href^="chip:broken:" i] { text-decoration: line-through dotted; }
+.bree-frontmatter {
   margin: 0 0 16px 0;
   border: 1px solid var(--borderColor-default);
   border-radius: 6px;
   background: var(--bgColor-muted);
   color: var(--fgColor-muted);
 }
-.cmux-frontmatter summary {
+.bree-frontmatter summary {
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -257,10 +257,10 @@ html.cmux-wiki .bree-ln { white-space: pre-wrap; overflow-wrap: anywhere; }
   font-weight: 600;
   user-select: none;
 }
-.cmux-frontmatter summary::-webkit-details-marker {
+.bree-frontmatter summary::-webkit-details-marker {
   display: none;
 }
-.cmux-frontmatter summary::before {
+.bree-frontmatter summary::before {
   content: "▸";
   display: inline-flex;
   align-items: center;
@@ -272,25 +272,25 @@ html.cmux-wiki .bree-ln { white-space: pre-wrap; overflow-wrap: anywhere; }
   opacity: 0.82;
   transform: translateY(0.5px);
 }
-.cmux-frontmatter[open] summary {
+.bree-frontmatter[open] summary {
   border-bottom: 1px solid var(--borderColor-default);
 }
-.cmux-frontmatter[open] summary::before {
+.bree-frontmatter[open] summary::before {
   content: "▾";
 }
-.cmux-frontmatter pre {
+.bree-frontmatter pre {
   margin: 0;
   padding: 0;
   background: transparent;
   border-radius: 0;
 }
-.cmux-frontmatter pre code.hljs {
+.bree-frontmatter pre code.hljs {
   padding: 10px 12px;
   background: transparent;
   font-size: 12.5px;
   line-height: 1.45;
 }
-.cmux-render-error {
+.bree-render-error {
   color: #f85149;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 12.5px;
@@ -347,12 +347,12 @@ html { scroll-behavior: smooth; }
   window.onunhandledrejection = function(ev) {
     showBootError((ev.reason && ev.reason.stack) || ev.reason || 'unhandled rejection');
   };
-  if (!window.marked || !window.hljs || !window.CmuxMarkdownSanitizer) {
+  if (!window.marked || !window.hljs || !window.BreeMarkdownSanitizer) {
     showBootError('marked/highlight/sanitizer libraries did not load');
   }
-  var cmuxStrings = {{localizedStringsJSON}};
-  function cmuxString(key, fallback, replacements) {
-    var value = String((cmuxStrings && cmuxStrings[key]) || fallback || key);
+  var breeStrings = {{localizedStringsJSON}};
+  function breeString(key, fallback, replacements) {
+    var value = String((breeStrings && breeStrings[key]) || fallback || key);
     Object.keys(replacements || {}).forEach(function(name) {
       value = value.split('{' + name + '}').join(String(replacements[name]));
     });
@@ -478,7 +478,7 @@ html { scroll-behavior: smooth; }
     } catch (e) {
       highlighted = escapeHtml(raw);
     }
-    return '<details class="cmux-frontmatter">'
+    return '<details class="bree-frontmatter">'
       + '<summary><span>Show frontmatter</span></summary>'
       + '<pre><code class="hljs language-yaml">' + highlighted + '</code></pre>'
       + '</details>';
@@ -674,7 +674,7 @@ html { scroll-behavior: smooth; }
     return true;
   }
 
-  function cmuxLocalImageURL(value) {
+  function breeLocalImageURL(value) {
     var raw = String(value || '').trim();
     if (!isRelativeLocalImagePath(raw)) {
       return null;
@@ -683,7 +683,7 @@ html { scroll-behavior: smooth; }
     try {
       var parsed = new URL(raw, document.baseURI || window.location.href);
       if ((parsed.protocol || '').toLowerCase() !== 'file:') { return null; }
-      return 'cmux-local-image://image?url=' + encodeURIComponent(parsed.href);
+      return 'bree-local-image://image?url=' + encodeURIComponent(parsed.href);
     } catch (e) {
       return null;
     }
@@ -692,45 +692,45 @@ html { scroll-behavior: smooth; }
   function rewriteLocalImageSources() {
     contentEl.querySelectorAll('img[src]').forEach(function(img) {
       var raw = img.getAttribute('src') || '';
-      var rewritten = cmuxLocalImageURL(raw);
+      var rewritten = breeLocalImageURL(raw);
       if (!rewritten) { return; }
-      img.setAttribute('data-cmux-original-src', raw);
+      img.setAttribute('data-bree-original-src', raw);
       img.setAttribute('src', rewritten);
     });
   }
 
   var remoteImageAllowedURLs = Object.create(null);
 
-  function cmuxRemoteImageURL(value) {
+  function breeRemoteImageURL(value) {
     var info = remoteImageInfo(value);
     if (!info || !info.https) { return null; }
-    return 'cmux-remote-image://image?url=' + encodeURIComponent(info.href);
+    return 'bree-remote-image://image?url=' + encodeURIComponent(info.href);
   }
 
   function removeRemoteImagePlaceholder(img) {
-    var id = img && img.getAttribute('data-cmux-remote-placeholder-id');
+    var id = img && img.getAttribute('data-bree-remote-placeholder-id');
     if (!id) { return; }
-    var placeholder = contentEl.querySelector('[data-cmux-remote-placeholder-for="' + id + '"]');
+    var placeholder = contentEl.querySelector('[data-bree-remote-placeholder-for="' + id + '"]');
     if (placeholder) { placeholder.remove(); }
   }
 
   function remoteImagePlaceholderForImage(img) {
-    var id = img && img.getAttribute('data-cmux-remote-placeholder-id');
+    var id = img && img.getAttribute('data-bree-remote-placeholder-id');
     if (!id) { return null; }
-    return contentEl.querySelector('[data-cmux-remote-placeholder-for="' + id + '"]');
+    return contentEl.querySelector('[data-bree-remote-placeholder-for="' + id + '"]');
   }
 
   function setRemoteImageLoadingState(img, loading) {
     var placeholder = remoteImagePlaceholderForImage(img);
     if (!placeholder) { return; }
-    var buttons = placeholder.querySelectorAll('button[data-cmux-remote-action="load"]');
+    var buttons = placeholder.querySelectorAll('button[data-bree-remote-action="load"]');
     Array.prototype.slice.call(buttons).forEach(function(button) {
       if (loading) {
-        button.textContent = cmuxString('remoteImageLoading', 'Loading');
+        button.textContent = breeString('remoteImageLoading', 'Loading');
         button.disabled = true;
         button.setAttribute('data-loading', '1');
       } else {
-        button.textContent = cmuxString('remoteImageLoadImage', 'Load this image');
+        button.textContent = breeString('remoteImageLoadImage', 'Load this image');
         button.disabled = false;
         button.removeAttribute('data-loading');
       }
@@ -738,16 +738,16 @@ html { scroll-behavior: smooth; }
   }
 
   function loadRemoteImage(img) {
-    var raw = unescapeDataAttribute(img.getAttribute('data-cmux-remote-src'));
-    var rewritten = cmuxRemoteImageURL(raw);
+    var raw = unescapeDataAttribute(img.getAttribute('data-bree-remote-src'));
+    var rewritten = breeRemoteImageURL(raw);
     if (!rewritten) { return false; }
-    if (img.getAttribute('data-cmux-remote-loading') === '1') { return true; }
-    img.setAttribute('data-cmux-remote-loading', '1');
+    if (img.getAttribute('data-bree-remote-loading') === '1') { return true; }
+    img.setAttribute('data-bree-remote-loading', '1');
     setRemoteImageLoadingState(img, true);
     function cleanup() {
       img.removeEventListener('load', onLoad);
       img.removeEventListener('error', onError);
-      img.removeAttribute('data-cmux-remote-loading');
+      img.removeAttribute('data-bree-remote-loading');
     }
     function onLoad() {
       cleanup();
@@ -771,8 +771,8 @@ html { scroll-behavior: smooth; }
 
   function remoteImagesForHref(href) {
     var matches = [];
-    contentEl.querySelectorAll('img[data-cmux-remote-src]').forEach(function(img) {
-      var raw = unescapeDataAttribute(img.getAttribute('data-cmux-remote-src'));
+    contentEl.querySelectorAll('img[data-bree-remote-src]').forEach(function(img) {
+      var raw = unescapeDataAttribute(img.getAttribute('data-bree-remote-src'));
       var info = remoteImageInfo(raw);
       if (info && remoteImageCanOfferLoad(info) && info.href === href) {
         matches.push(img);
@@ -782,12 +782,12 @@ html { scroll-behavior: smooth; }
   }
 
   // The host keeps the authoritative per-view approval record: its
-  // cmux-remote-image handler fetches only URLs the reader approved here.
+  // bree-remote-image handler fetches only URLs the reader approved here.
   function loadApprovedRemoteImage(href) {
     var images = remoteImagesForHref(href);
     images.forEach(function(img) { setRemoteImageLoadingState(img, true); });
     try {
-      window.webkit.messageHandlers.cmuxLib.postMessage({ action: 'approveRemoteImage', url: href });
+      window.webkit.messageHandlers.breeLib.postMessage({ action: 'approveRemoteImage', url: href });
     } catch (e) {
       images.forEach(function(img) { setRemoteImageLoadingState(img, false); });
       return false;
@@ -795,27 +795,27 @@ html { scroll-behavior: smooth; }
     return true;
   }
 
-  window.__cmuxRemoteImageApproved = function(href) {
+  window.__breeRemoteImageApproved = function(href) {
     remoteImageAllowedURLs[href] = true;
     remoteImagesForHref(href).forEach(loadRemoteImage);
   };
 
-  window.__cmuxRemoteImageRejected = function(href) {
+  window.__breeRemoteImageRejected = function(href) {
     delete remoteImageAllowedURLs[href];
     remoteImagesForHref(href).forEach(function(img) { setRemoteImageLoadingState(img, false); });
   };
 
   function appendRemoteImageText(placeholder, key, fallback, replacements) {
     var detail = document.createElement('span');
-    detail.textContent = cmuxString(key, fallback, replacements || {});
+    detail.textContent = breeString(key, fallback, replacements || {});
     placeholder.appendChild(detail);
     return detail;
   }
 
   function appendRemoteImageURL(placeholder, href) {
     var url = document.createElement('span');
-    url.className = 'cmux-remote-image-url';
-    url.textContent = cmuxString(
+    url.className = 'bree-remote-image-url';
+    url.textContent = breeString(
       'remoteImageURL',
       'Image URL: {url}',
       { url: href }
@@ -839,21 +839,21 @@ html { scroll-behavior: smooth; }
 
   function openRemoteImageURL(href) {
     try {
-      window.webkit.messageHandlers.cmuxLib.postMessage({ action: 'openRemoteImage', url: href });
+      window.webkit.messageHandlers.breeLib.postMessage({ action: 'openRemoteImage', url: href });
     } catch (e) { /* no bridge */ }
   }
 
   function temporarilySetButtonLabel(button, label, restoreLabel) {
     if (!button) { return; }
-    if (button._cmuxResetLabelTimer) {
-      window.clearTimeout(button._cmuxResetLabelTimer);
+    if (button._breeResetLabelTimer) {
+      window.clearTimeout(button._breeResetLabelTimer);
     }
     button.textContent = label;
     button.setAttribute('data-copied', '1');
-    button._cmuxResetLabelTimer = window.setTimeout(function() {
+    button._breeResetLabelTimer = window.setTimeout(function() {
       button.textContent = restoreLabel;
       button.removeAttribute('data-copied');
-      button._cmuxResetLabelTimer = null;
+      button._breeResetLabelTimer = null;
     }, 1200);
   }
 
@@ -861,7 +861,7 @@ html { scroll-behavior: smooth; }
     copyTextToClipboard(href).then(function() {
       temporarilySetButtonLabel(
         button,
-        cmuxString('remoteImageCopied', 'Copied'),
+        breeString('remoteImageCopied', 'Copied'),
         restoreLabel
       );
     }).catch(function() {});
@@ -877,37 +877,37 @@ html { scroll-behavior: smooth; }
   }
 
   function ensureRemoteImagePlaceholder(img) {
-    if (!img || img.getAttribute('data-cmux-remote-processed') === '1') { return; }
-    var raw = unescapeDataAttribute(img.getAttribute('data-cmux-remote-src'));
+    if (!img || img.getAttribute('data-bree-remote-processed') === '1') { return; }
+    var raw = unescapeDataAttribute(img.getAttribute('data-bree-remote-src'));
     var info = remoteImageInfo(raw);
     if (!info) { return; }
 
-    img.setAttribute('data-cmux-remote-processed', '1');
+    img.setAttribute('data-bree-remote-processed', '1');
     img.hidden = true;
     var canOfferLoad = remoteImageCanOfferLoad(info);
 
     var placeholderId = 'remote-image-' + Math.floor(Math.random() * 1e9).toString(36) + '-' + Date.now().toString(36);
-    img.setAttribute('data-cmux-remote-placeholder-id', placeholderId);
+    img.setAttribute('data-bree-remote-placeholder-id', placeholderId);
 
     var placeholder = document.createElement('span');
-    placeholder.className = 'cmux-remote-image-placeholder';
-    placeholder.setAttribute('data-cmux-remote-placeholder-for', placeholderId);
+    placeholder.className = 'bree-remote-image-placeholder';
+    placeholder.setAttribute('data-bree-remote-placeholder-for', placeholderId);
     placeholder.setAttribute('role', 'group');
 
     var title = document.createElement('strong');
-    title.textContent = cmuxString('remoteImageBlocked', 'Remote image blocked');
+    title.textContent = breeString('remoteImageBlocked', 'Remote image blocked');
     placeholder.appendChild(title);
 
     if (canOfferLoad) {
       appendRemoteImageText(
         placeholder,
         'remoteImageConsentMessage',
-        'cmux will not contact this image URL until you load this image.'
+        'bree will not contact this image URL until you load this image.'
       );
       appendRemoteImageURL(placeholder, info.href);
       var loadButton = appendRemoteImageButton(
         placeholder,
-        cmuxString(
+        breeString(
           'remoteImageLoadImage',
           'Load this image'
         ),
@@ -915,7 +915,7 @@ html { scroll-behavior: smooth; }
           loadApprovedRemoteImage(info.href);
         }
       );
-      loadButton.setAttribute('data-cmux-remote-action', 'load');
+      loadButton.setAttribute('data-bree-remote-action', 'load');
     } else if (!info.https) {
       appendRemoteImageText(
         placeholder,
@@ -931,7 +931,7 @@ html { scroll-behavior: smooth; }
       );
       appendRemoteImageURL(placeholder, info.href);
     }
-    var copyURLLabel = cmuxString('remoteImageCopyURL', 'Copy image URL');
+    var copyURLLabel = breeString('remoteImageCopyURL', 'Copy image URL');
     appendRemoteImageButton(
       placeholder,
       copyURLLabel,
@@ -941,7 +941,7 @@ html { scroll-behavior: smooth; }
     );
     appendRemoteImageButton(
       placeholder,
-      cmuxString('remoteImageOpenURL', 'Open image URL'),
+      breeString('remoteImageOpenURL', 'Open image URL'),
       function() {
         openRemoteImageURL(info.href);
       }
@@ -954,7 +954,7 @@ html { scroll-behavior: smooth; }
   }
 
   function rewriteRemoteImageSources() {
-    contentEl.querySelectorAll('img[data-cmux-remote-src]').forEach(ensureRemoteImagePlaceholder);
+    contentEl.querySelectorAll('img[data-bree-remote-src]').forEach(ensureRemoteImagePlaceholder);
   }
 
   var WIKI_HREF = /^(code|board|wiki|chip|src|srcweb):/i;
@@ -963,7 +963,7 @@ html { scroll-behavior: smooth; }
     var raw = String(value || '').trim();
     if (!raw) { return true; }
     // Wiki pages only (<global wiki folder>/<project>/*.md): internal schemes routed by Swift on click.
-    if (name === 'href' && window.__cmuxWiki && WIKI_HREF.test(raw)) { return true; }
+    if (name === 'href' && window.__breeWiki && WIKI_HREF.test(raw)) { return true; }
 
     // Reject before URL parsing so whitespace-obfuscated active
     // protocols do not get normalized into something executable.
@@ -997,7 +997,7 @@ html { scroll-behavior: smooth; }
   // Every rendered fragment goes through the shared allowlist sanitizer
   // (markdown-sanitizer.js). It parses in an inert document and returns DOM
   // nodes, which are inserted directly so nothing is re-parsed live.
-  function makeMarkdownProfile(obsidian) { return CmuxMarkdownSanitizer.markdownProfile({
+  function makeMarkdownProfile(obsidian) { return BreeMarkdownSanitizer.markdownProfile({
     obsidian: obsidian,
     extraAttributes: { div: ['data-vega-mode'] },
     inlineSVGAsImage: true,
@@ -1018,10 +1018,10 @@ html { scroll-behavior: smooth; }
       if (tag === 'img') {
         var remoteInfo = remoteImageInfo(source.getAttribute('src'));
         if (remoteInfo) {
-          clean.setAttribute('data-cmux-remote-src', escapeDataAttribute(remoteInfo.href));
-          clean.setAttribute('data-cmux-remote-host', escapeDataAttribute(remoteInfo.host));
+          clean.setAttribute('data-bree-remote-src', escapeDataAttribute(remoteInfo.href));
+          clean.setAttribute('data-bree-remote-host', escapeDataAttribute(remoteInfo.host));
           if (!remoteInfo.https) {
-            clean.setAttribute('data-cmux-remote-blocked-reason', 'https-only');
+            clean.setAttribute('data-bree-remote-blocked-reason', 'https-only');
           }
         }
       }
@@ -1036,17 +1036,17 @@ html { scroll-behavior: smooth; }
   }); }
   var markdownSanitizerProfile = makeMarkdownProfile(false);
   var vaultSanitizerProfile = makeMarkdownProfile(true);
-  var diagramSanitizerProfile = CmuxMarkdownSanitizer.diagramProfile();
+  var diagramSanitizerProfile = BreeMarkdownSanitizer.diagramProfile();
 
   function sanitizeMarkdownFragment(html) {
-    return CmuxMarkdownSanitizer.sanitizeToFragment(html, {
+    return BreeMarkdownSanitizer.sanitizeToFragment(html, {
       document: document,
-      profile: window.__cmuxVault ? vaultSanitizerProfile : markdownSanitizerProfile
+      profile: window.__breeVault ? vaultSanitizerProfile : markdownSanitizerProfile
     });
   }
 
   function sanitizeDiagramFragment(svg) {
-    return CmuxMarkdownSanitizer.sanitizeToFragment(svg, {
+    return BreeMarkdownSanitizer.sanitizeToFragment(svg, {
       document: document,
       profile: diagramSanitizerProfile
     });
@@ -1054,7 +1054,7 @@ html { scroll-behavior: smooth; }
 
   function renderErrorBox(el, label, message) {
     var box = document.createElement('div');
-    box.className = 'cmux-render-error';
+    box.className = 'bree-render-error';
     box.textContent = label + ': ' + String(message);
     el.replaceChildren(box);
   }
@@ -1174,15 +1174,15 @@ html { scroll-behavior: smooth; }
 
         // Mermaid: ```mermaid ... ``` -> div the lib will swap with SVG.
         if (langName === 'mermaid') {
-          return '<div class="cmux-mermaid"><pre class="cmux-source">'
+          return '<div class="bree-mermaid"><pre class="bree-source">'
             + escapeHtml(raw)
             + '</pre></div>\n';
         }
         // Vega / Vega-Lite: ```vega-lite ... ``` (also vega, vegalite).
         if (langName === 'vega' || langName === 'vega-lite' || langName === 'vegalite') {
           var vegaMode = (langName === 'vega') ? 'vega' : 'vega-lite';
-          return '<div class="cmux-vega" data-vega-mode="' + vegaMode + '">'
-            + '<pre class="cmux-source">' + escapeHtml(raw) + '</pre></div>\n';
+          return '<div class="bree-vega" data-vega-mode="' + vegaMode + '">'
+            + '<pre class="bree-source">' + escapeHtml(raw) + '</pre></div>\n';
         }
 
         var highlighted;
@@ -1212,11 +1212,11 @@ html { scroll-behavior: smooth; }
     }
   });
 
-  // cmux-obsidian:begin
+  // bree-obsidian:begin
   // Obsidian vault syntax for marked: wikilinks and embeds, callouts, tag chips, and the
   // frontmatter properties table. Everything is inert until a note inside a vault is rendered
   // (setEnabled(true)); the output still goes through the vault sanitizer profile.
-  var CmuxObsidian = (function() {
+  var BreeObsidian = (function() {
     var enabled = false;
     var embedDepth = 0;
 
@@ -1260,9 +1260,9 @@ html { scroll-behavior: smooth; }
     function renderProperties(yaml) {
       var props = parseProperties(yaml);
       if (!props.length) { return ''; }
-      return '<table class="cmux-props"><tbody>' + props.map(function(p) {
+      return '<table class="bree-props"><tbody>' + props.map(function(p) {
         var cell = /^tags?$/i.test(p.key)
-          ? p.values.map(function(v) { return '<span class="cmux-tag">#' + esc(v.replace(/^#/, '')) + '</span>'; }).join(' ')
+          ? p.values.map(function(v) { return '<span class="bree-tag">#' + esc(v.replace(/^#/, '')) + '</span>'; }).join(' ')
           : p.values.map(esc).join(', ');
         return '<tr><th>' + esc(p.key) + '</th><td>' + cell + '</td></tr>';
       }).join('') + '</tbody></table>';
@@ -1289,29 +1289,29 @@ html { scroll-behavior: smooth; }
       var firstBody = nl >= 0 ? m[3].slice(nl + 1).trim() : '';
       if (!title) { title = esc(type.charAt(0).toUpperCase() + type.slice(1)); }
       var body = (firstBody ? '<p>' + firstBody + '</p>' : '') + m[4];
-      var cls = 'cmux-callout cmux-callout-' + kind;
-      var inner = '<div class="cmux-callout-body">' + body + '</div>';
+      var cls = 'bree-callout bree-callout-' + kind;
+      var inner = '<div class="bree-callout-body">' + body + '</div>';
       if (m[2]) {
-        return '<details class="' + cls + '"' + (m[2] === '+' ? ' open' : '') + '><summary class="cmux-callout-title">'
+        return '<details class="' + cls + '"' + (m[2] === '+' ? ' open' : '') + '><summary class="bree-callout-title">'
           + title + '</summary>' + inner + '</details>\n';
       }
-      return '<div class="' + cls + '"><div class="cmux-callout-title">' + title + '</div>' + inner + '</div>\n';
+      return '<div class="' + cls + '"><div class="bree-callout-title">' + title + '</div>' + inner + '</div>\n';
     }
 
     function markNoTag(tokens) {
-      (tokens || []).forEach(function(t) { t.cmuxNoTag = true; markNoTag(t.tokens); });
+      (tokens || []).forEach(function(t) { t.breeNoTag = true; markNoTag(t.tokens); });
     }
 
     var TAG_RE = /(^|[\s(\[{,;])#([\p{L}\p{N}_\/-]*[\p{L}_\/-][\p{L}\p{N}_\/-]*)/gu;
     function tagify(escapedText) {
       return escapedText.replace(TAG_RE, function(all, pre, tag) {
-        return pre + '<span class="cmux-tag">#' + tag + '</span>';
+        return pre + '<span class="bree-tag">#' + tag + '</span>';
       });
     }
 
     marked.use({
       extensions: [{
-        name: 'cmuxWikilink',
+        name: 'breeWikilink',
         level: 'inline',
         start: function(src) {
           if (!enabled) { return undefined; }
@@ -1322,20 +1322,20 @@ html { scroll-behavior: smooth; }
           if (!enabled) { return undefined; }
           var m = /^(!?)\[\[([^\[\]\n|]+?)(?:\|([^\[\]\n]*))?\]\]/.exec(src);
           if (!m) { return undefined; }
-          return { type: 'cmuxWikilink', raw: m[0], embed: m[1] === '!', target: m[2].trim(), alias: (m[3] || '').trim() };
+          return { type: 'breeWikilink', raw: m[0], embed: m[1] === '!', target: m[2].trim(), alias: (m[3] || '').trim() };
         },
         renderer: function(t) {
           var label = esc(t.alias || t.target.replace('#', ' > '));
           if (t.embed && embedDepth === 0) {
-            return '<span class="cmux-embed" data-wikilink="' + esc(t.target) + '">' + label + '</span>';
+            return '<span class="bree-embed" data-wikilink="' + esc(t.target) + '">' + label + '</span>';
           }
-          return '<a class="cmux-wikilink" data-wikilink="' + esc(t.target) + '">' + label + '</a>';
+          return '<a class="bree-wikilink" data-wikilink="' + esc(t.target) + '">' + label + '</a>';
         }
       }],
       walkTokens: function(token) {
         if (!enabled) { return; }
         if (token.type === 'heading') { markNoTag(token.tokens); return; }
-        if (token.type === 'text' && !token.tokens && !token.cmuxNoTag && typeof token.text === 'string') {
+        if (token.type === 'text' && !token.tokens && !token.breeNoTag && typeof token.text === 'string') {
           var html = tagify(token.text);
           if (html !== token.text) { token.type = 'html'; token.text = html; }
         }
@@ -1359,7 +1359,7 @@ html { scroll-behavior: smooth; }
       renderEmbed: renderEmbed
     };
   })();
-  // cmux-obsidian:end
+  // bree-obsidian:end
 
   // Lazy-loader: ask Swift to ship a library only when a document
   // actually contains a block that needs it.
@@ -1371,14 +1371,14 @@ html { scroll-behavior: smooth; }
     if (libState[name] !== 'pending') {
       libState[name] = 'pending';
       try {
-        window.webkit.messageHandlers.cmuxLib.postMessage({ lib: name });
+        window.webkit.messageHandlers.breeLib.postMessage({ lib: name });
       } catch (e) {
         libState[name] = undefined;
         renderLibError(name, 'bridge unavailable');
       }
     }
   }
-  window.__cmuxLibLoaded = function(name) {
+  window.__breeLibLoaded = function(name) {
     libState[name] = 'ready';
     var q = libQueue[name] || [];
     libQueue[name] = [];
@@ -1386,7 +1386,7 @@ html { scroll-behavior: smooth; }
   };
 
   function renderLibError(libName, msg) {
-    var sel = libName === 'mermaid' ? '.cmux-mermaid' : '.cmux-vega';
+    var sel = libName === 'mermaid' ? '.bree-mermaid' : '.bree-vega';
     contentEl.querySelectorAll(sel + ':not([data-rendered])').forEach(function(el) {
       el.setAttribute('data-rendered', '1');
       renderErrorBox(el, libName, msg);
@@ -1546,12 +1546,12 @@ html { scroll-behavior: smooth; }
   }
 
   var mermaidInitialized = false;
-  var cmuxMarkdownZoom = 1;
+  var breeMarkdownZoom = 1;
   // Whether this engine's pageZoom scales the whole CSS viewport (newer WebKit,
   // where fixed-px SVG bounds already track the prose) or only text metrics
   // (older WebKit, where Mermaid SVGs need manual compensation). Unknown until
   // the first non-default zoom supplies both host and CSS viewport widths.
-  var cmuxEngineScalesSVG = null;
+  var breeEngineScalesSVG = null;
   var mermaidResizeObserver = null;
   var mermaidObservedWidth = 0;
 
@@ -1584,24 +1584,24 @@ html { scroll-behavior: smooth; }
   }
 
   function mermaidRememberOriginalSizing(svg) {
-    if (svg.hasAttribute('data-cmux-mermaid-original-max-width')) { return; }
-    svg.setAttribute('data-cmux-mermaid-original-max-width', svg.style.maxWidth || '');
-    svg.setAttribute('data-cmux-mermaid-original-width', svg.style.width || '');
-    svg.setAttribute('data-cmux-mermaid-original-height', svg.style.height || '');
+    if (svg.hasAttribute('data-bree-mermaid-original-max-width')) { return; }
+    svg.setAttribute('data-bree-mermaid-original-max-width', svg.style.maxWidth || '');
+    svg.setAttribute('data-bree-mermaid-original-width', svg.style.width || '');
+    svg.setAttribute('data-bree-mermaid-original-height', svg.style.height || '');
   }
 
   function mermaidRestoreOriginalSizing(svg) {
     mermaidRememberOriginalSizing(svg);
-    svg.removeAttribute('data-cmux-mermaid-scaled');
-    svg.style.maxWidth = svg.getAttribute('data-cmux-mermaid-original-max-width') || '';
-    svg.style.width = svg.getAttribute('data-cmux-mermaid-original-width') || '';
-    svg.style.height = svg.getAttribute('data-cmux-mermaid-original-height') || '';
+    svg.removeAttribute('data-bree-mermaid-scaled');
+    svg.style.maxWidth = svg.getAttribute('data-bree-mermaid-original-max-width') || '';
+    svg.style.width = svg.getAttribute('data-bree-mermaid-original-width') || '';
+    svg.style.height = svg.getAttribute('data-bree-mermaid-original-height') || '';
   }
 
   function mermaidIntrinsicSize(svg) {
     mermaidRememberOriginalSizing(svg);
-    var cachedWidth = Number(svg.getAttribute('data-cmux-mermaid-natural-width'));
-    var cachedHeight = Number(svg.getAttribute('data-cmux-mermaid-natural-height'));
+    var cachedWidth = Number(svg.getAttribute('data-bree-mermaid-natural-width'));
+    var cachedHeight = Number(svg.getAttribute('data-bree-mermaid-natural-height'));
     if (
       Number.isFinite(cachedWidth) &&
       cachedWidth > 0 &&
@@ -1612,9 +1612,9 @@ html { scroll-behavior: smooth; }
     }
 
     var viewBox = mermaidViewBoxSize(svg);
-    var width = mermaidNumericLength(svg.getAttribute('data-cmux-mermaid-original-max-width'));
+    var width = mermaidNumericLength(svg.getAttribute('data-bree-mermaid-original-max-width'));
     if (!Number.isFinite(width) || width <= 0) {
-      width = mermaidNumericLength(svg.getAttribute('data-cmux-mermaid-original-width'));
+      width = mermaidNumericLength(svg.getAttribute('data-bree-mermaid-original-width'));
     }
     if (!Number.isFinite(width) || width <= 0) {
       width = mermaidNumericLength(svg.getAttribute('width'));
@@ -1623,7 +1623,7 @@ html { scroll-behavior: smooth; }
       width = viewBox.width;
     }
 
-    var height = mermaidNumericLength(svg.getAttribute('data-cmux-mermaid-original-height'));
+    var height = mermaidNumericLength(svg.getAttribute('data-bree-mermaid-original-height'));
     if (!Number.isFinite(height) || height <= 0) {
       height = mermaidNumericLength(svg.getAttribute('height'));
     }
@@ -1638,13 +1638,13 @@ html { scroll-behavior: smooth; }
       return null;
     }
 
-    svg.setAttribute('data-cmux-mermaid-natural-width', String(width));
-    svg.setAttribute('data-cmux-mermaid-natural-height', String(height));
+    svg.setAttribute('data-bree-mermaid-natural-width', String(width));
+    svg.setAttribute('data-bree-mermaid-natural-height', String(height));
     return { width: width, height: height };
   }
 
   function mermaidCurrentBaseSize(svg, natural, containerScale) {
-    var container = svg.closest ? svg.closest('.cmux-mermaid') : svg.parentElement;
+    var container = svg.closest ? svg.closest('.bree-mermaid') : svg.parentElement;
     var rect = container && container.getBoundingClientRect ? container.getBoundingClientRect() : null;
     var containerWidth = rect ? rect.width : NaN;
     if (!Number.isFinite(containerWidth) || containerWidth <= 0) {
@@ -1673,7 +1673,7 @@ html { scroll-behavior: smooth; }
     mermaidResizeObserver = new ResizeObserver(function(entries) {
       var width = mermaidContentWidth(entries && entries[0]);
       if (width <= 0) { return; }
-      if (Math.abs(cmuxMarkdownZoom - 1) <= 0.0001) {
+      if (Math.abs(breeMarkdownZoom - 1) <= 0.0001) {
         mermaidObservedWidth = width;
         return;
       }
@@ -1688,41 +1688,41 @@ html { scroll-behavior: smooth; }
     if (!svg) { return; }
     var natural = mermaidIntrinsicSize(svg);
     if (!natural) { return; }
-    if (Math.abs(cmuxMarkdownZoom - 1) <= 0.0001) {
+    if (Math.abs(breeMarkdownZoom - 1) <= 0.0001) {
       mermaidRestoreOriginalSizing(svg);
-      svg.setAttribute('data-cmux-mermaid-zoom', '1');
+      svg.setAttribute('data-bree-mermaid-zoom', '1');
       return;
     }
     var width;
     var height;
-    if (cmuxEngineScalesSVG === true) {
+    if (breeEngineScalesSVG === true) {
       // This engine's pageZoom scales the whole viewport: the container's CSS
       // width is already divided by the zoom, and the engine multiplies any
       // CSS size we set. Pin the zoom-1 fitted size (letting a wide diagram
       // overflow and scroll at its enlarged size) and let the engine scale it;
       // multiplying here as well renders the diagram zoom-squared.
-      var pinned = mermaidCurrentBaseSize(svg, natural, cmuxMarkdownZoom);
+      var pinned = mermaidCurrentBaseSize(svg, natural, breeMarkdownZoom);
       width = Math.max(1, pinned.width);
       height = Math.max(1, pinned.height);
     } else {
       // Older WKWebView pageZoom scales markdown text metrics but leaves fixed
       // px SVG bounds alone, so the shell must size the diagram up itself.
       var base = mermaidCurrentBaseSize(svg, natural, 1);
-      width = Math.max(1, base.width * cmuxMarkdownZoom);
-      height = Math.max(1, base.height * cmuxMarkdownZoom);
+      width = Math.max(1, base.width * breeMarkdownZoom);
+      height = Math.max(1, base.height * breeMarkdownZoom);
     }
     svg.style.maxWidth = '';
-    svg.setAttribute('data-cmux-mermaid-scaled', '1');
+    svg.setAttribute('data-bree-mermaid-scaled', '1');
     svg.style.width = width + 'px';
     svg.style.height = height + 'px';
-    svg.setAttribute('data-cmux-mermaid-zoom', String(cmuxMarkdownZoom));
+    svg.setAttribute('data-bree-mermaid-zoom', String(breeMarkdownZoom));
   }
 
   function applyMermaidZoom(root) {
     ensureMermaidResizeObserver();
     var scope = root || contentEl;
     if (!scope || !scope.querySelectorAll) { return; }
-    Array.prototype.forEach.call(scope.querySelectorAll('.cmux-mermaid svg'), applyMermaidZoomToSVG);
+    Array.prototype.forEach.call(scope.querySelectorAll('.bree-mermaid svg'), applyMermaidZoomToSVG);
   }
 
   function detectPageZoomViewportScaling(zoom, hostViewportWidth) {
@@ -1745,14 +1745,14 @@ html { scroll-behavior: smooth; }
     return viewportDistance < legacyDistance;
   }
 
-  window.__cmuxSetMarkdownZoom = function(zoom, hostViewportWidth) {
-    cmuxMarkdownZoom = normalizedMarkdownZoom(zoom);
+  window.__breeSetMarkdownZoom = function(zoom, hostViewportWidth) {
+    breeMarkdownZoom = normalizedMarkdownZoom(zoom);
     // Native supplies the current WKWebView width after setting pageZoom. A
     // single contemporaneous sample distinguishes the engine generations:
     // newer WebKit reports hostWidth / zoom, while older WebKit reports the
     // unscaled hostWidth. No resize-sensitive historical baseline is needed.
-    var detectedScaling = detectPageZoomViewportScaling(cmuxMarkdownZoom, hostViewportWidth);
-    if (detectedScaling !== null) { cmuxEngineScalesSVG = detectedScaling; }
+    var detectedScaling = detectPageZoomViewportScaling(breeMarkdownZoom, hostViewportWidth);
+    if (detectedScaling !== null) { breeEngineScalesSVG = detectedScaling; }
     mermaidObservedWidth = mermaidContentWidth(null);
     applyMermaidZoom(contentEl);
   };
@@ -1771,12 +1771,12 @@ html { scroll-behavior: smooth; }
       }
     } catch (e) { /* ignore reinit failure */ }
 
-    var blocks = contentEl.querySelectorAll('.cmux-mermaid:not([data-rendered])');
+    var blocks = contentEl.querySelectorAll('.bree-mermaid:not([data-rendered])');
     Array.prototype.forEach.call(blocks, function(el, i) {
       el.setAttribute('data-rendered', '1');
-      var srcEl = el.querySelector('.cmux-source');
+      var srcEl = el.querySelector('.bree-source');
       var src = srcEl ? srcEl.textContent : el.textContent;
-      var id = 'cmux-mermaid-' + Date.now() + '-' + i + '-' + Math.floor(Math.random() * 1e6);
+      var id = 'bree-mermaid-' + Date.now() + '-' + i + '-' + Math.floor(Math.random() * 1e6);
       try {
         mermaid.render(id, src).then(function(res) {
           // Generated SVG is untrusted output of untrusted input. Interactive
@@ -1870,10 +1870,10 @@ html { scroll-behavior: smooth; }
   function renderVegaBlocks() {
     if (typeof vegaEmbed === 'undefined') { renderLibError('vega-lite', 'library missing'); return; }
     var isDark = darkMql.matches;
-    var blocks = contentEl.querySelectorAll('.cmux-vega:not([data-rendered])');
+    var blocks = contentEl.querySelectorAll('.bree-vega:not([data-rendered])');
     Array.prototype.forEach.call(blocks, function(el) {
       el.setAttribute('data-rendered', '1');
-      var srcEl = el.querySelector('.cmux-source');
+      var srcEl = el.querySelector('.bree-source');
       var raw = srcEl ? srcEl.textContent : el.textContent;
       var mode = el.getAttribute('data-vega-mode') === 'vega' ? 'vega' : 'vega-lite';
       try {
@@ -1903,10 +1903,10 @@ html { scroll-behavior: smooth; }
   }
 
   function postProcessSpecialBlocks() {
-    if (contentEl.querySelector('.cmux-mermaid:not([data-rendered])')) {
+    if (contentEl.querySelector('.bree-mermaid:not([data-rendered])')) {
       loadLib('mermaid', renderMermaidBlocks);
     }
-    if (contentEl.querySelector('.cmux-vega:not([data-rendered])')) {
+    if (contentEl.querySelector('.bree-vega:not([data-rendered])')) {
       loadLib('vega-lite', renderVegaBlocks);
     }
     addCodeCopyButtons();
@@ -1920,7 +1920,7 @@ html { scroll-behavior: smooth; }
   // They show as raw TeX until KaTeX is loaded; a TeX error keeps the raw TeX in code style.
   var MATH_MARK = '\uE000math:';
   function renderWikiMath() {
-    if (!window.__cmuxWiki) { return; }
+    if (!window.__breeWiki) { return; }
     var items = [];
     contentEl.querySelectorAll('code').forEach(function(code) {
       if (code.closest('pre') || code.textContent.indexOf(MATH_MARK) !== 0) { return; }
@@ -1932,13 +1932,13 @@ html { scroll-behavior: smooth; }
     if (!items.length) { return; }
     items.forEach(function(item) {
       item.el.textContent = item.tex;
-      item.el.classList.add('cmux-math-raw');
+      item.el.classList.add('bree-math-raw');
     });
     loadLib('katex', function() {
       items.forEach(function(item) {
         if (!item.el.isConnected) { return; }
         var host = document.createElement(item.display ? 'div' : 'span');
-        host.className = item.display ? 'cmux-math cmux-math-display' : 'cmux-math';
+        host.className = item.display ? 'bree-math bree-math-display' : 'bree-math';
         try {
           window.katex.render(item.tex, host, {
             displayMode: item.display, throwOnError: true, strict: 'ignore', trust: false, output: 'htmlAndMathml'
@@ -1958,14 +1958,14 @@ html { scroll-behavior: smooth; }
 
   // Wiki pages: style the internal links (chips for source tags). Swift routes the click.
   function markWikiLinks() {
-    document.documentElement.classList.toggle('cmux-wiki', !!(window.__cmuxWiki || window.__cmuxWikiStyle));
-    if (!window.__cmuxWiki) { return; }
+    document.documentElement.classList.toggle('bree-wiki', !!(window.__breeWiki || window.__breeWikiStyle));
+    if (!window.__breeWiki) { return; }
     contentEl.querySelectorAll('a[href]').forEach(function(a) {
       var href = a.getAttribute('href') || '';
       if (!WIKI_HREF.test(href)) { return; }
-      a.classList.add(/^(chip|src|srcweb):/i.test(href) ? 'cmux-wiki-chip' : 'cmux-wiki-link');
+      a.classList.add(/^(chip|src|srcweb):/i.test(href) ? 'bree-wiki-chip' : 'bree-wiki-link');
       var chip = /^chip:([a-z]+):(.*)$/i.exec(href);
-      if (chip && chip[1].toLowerCase() === 'inert') { a.classList.add('cmux-wiki-inert'); return; }
+      if (chip && chip[1].toLowerCase() === 'inert') { a.classList.add('bree-wiki-inert'); return; }
       if (chip && chip[2]) {
         // The chip shows a short label; the full value is its tooltip.
         try { a.title = chip[1] + ':' + decodeURIComponent(chip[2]); } catch (e) { /* bad escape: no tooltip */ }
@@ -1977,11 +1977,11 @@ html { scroll-behavior: smooth; }
   // above each value) instead of being cut off or scrolled sideways. Re-checked whenever the width changes.
   var wikiTableWidth = -1;
   function fitWikiTables() {
-    if (!document.documentElement.classList.contains('cmux-wiki')) { return; }
+    if (!document.documentElement.classList.contains('bree-wiki')) { return; }
     wikiTableWidth = contentEl.clientWidth;
     contentEl.querySelectorAll('table').forEach(function(table) {
-      if (table.closest('.cmux-source, .cmux-frontmatter')) { return; }
-      table.classList.remove('cmux-stacked');
+      if (table.closest('.bree-source, .bree-frontmatter')) { return; }
+      table.classList.remove('bree-stacked');
       if (!table.hasAttribute('data-labelled')) {
         var heads = Array.prototype.map.call(table.querySelectorAll('thead th'), function(th) { return th.textContent.trim(); });
         table.querySelectorAll('tbody tr').forEach(function(tr) {
@@ -1989,7 +1989,7 @@ html { scroll-behavior: smooth; }
         });
         table.setAttribute('data-labelled', '1');
       }
-      if (table.scrollWidth > table.clientWidth + 1) { table.classList.add('cmux-stacked'); }
+      if (table.scrollWidth > table.clientWidth + 1) { table.classList.add('bree-stacked'); }
     });
   }
   if (typeof ResizeObserver !== 'undefined') {
@@ -1998,53 +1998,53 @@ html { scroll-behavior: smooth; }
     }).observe(contentEl);
   }
   document.addEventListener('click', function(ev) {
-    if (!window.__cmuxWiki) { return; }
+    if (!window.__breeWiki) { return; }
     var a = ev.target && ev.target.closest && ev.target.closest('a[href]');
     var href = a && a.getAttribute('href');
     if (!href || !WIKI_HREF.test(href)) { return; }
     ev.preventDefault();
     ev.stopImmediatePropagation();
-    try { window.webkit.messageHandlers.cmuxLib.postMessage({ action: 'openWikiLink', href: href, meta: !!ev.metaKey }); } catch (e) { /* no bridge */ }
+    try { window.webkit.messageHandlers.breeLib.postMessage({ action: 'openWikiLink', href: href, meta: !!ev.metaKey }); } catch (e) { /* no bridge */ }
   }, true);
 
   // Wiki popover: report the scroll offset so Bree can restore it (back, or reopening the popover).
   (function() {
     var pending = false;
     window.addEventListener('scroll', function() {
-      if (!(window.__cmuxWiki || window.__cmuxWikiStyle) || pending) { return; }
+      if (!(window.__breeWiki || window.__breeWikiStyle) || pending) { return; }
       pending = true;
       window.requestAnimationFrame(function() {
         pending = false;
-        try { window.webkit.messageHandlers.cmuxLib.postMessage({ action: 'wikiScroll', y: markdownScrollY() }); } catch (e) { /* no bridge */ }
+        try { window.webkit.messageHandlers.breeLib.postMessage({ action: 'wikiScroll', y: markdownScrollY() }); } catch (e) { /* no bridge */ }
         window.__breeReportHeading();
       });
     }, { passive: true });
     // The header title stays empty while the page's own H1 is on screen. Reported on change only.
     var lastHeading = null;
     window.__breeReportHeading = function(force) {
-      if (!(window.__cmuxWiki || window.__cmuxWikiStyle)) { return; }
+      if (!(window.__breeWiki || window.__breeWikiStyle)) { return; }
       var h1 = contentEl.querySelector('h1');
       var visible = !!h1 && h1.getBoundingClientRect().bottom > 0;
       if (visible === lastHeading && !force) { return; }
       lastHeading = visible;
-      try { window.webkit.messageHandlers.cmuxLib.postMessage({ action: 'wikiHeading', visible: visible }); } catch (e) { /* no bridge */ }
+      try { window.webkit.messageHandlers.breeLib.postMessage({ action: 'wikiHeading', visible: visible }); } catch (e) { /* no bridge */ }
     };
   })();
 
   function addCodeCopyButtons() {
     contentEl.querySelectorAll('pre > code.hljs').forEach(function(code) {
       var pre = code.parentElement;
-      if (!pre || pre.closest('.cmux-source') || pre.closest('.cmux-frontmatter')) { return; }
-      if (pre.parentElement && pre.parentElement.classList.contains('cmux-code-block')) { return; }
+      if (!pre || pre.closest('.bree-source') || pre.closest('.bree-frontmatter')) { return; }
+      if (pre.parentElement && pre.parentElement.classList.contains('bree-code-block')) { return; }
 
       var wrapper = document.createElement('div');
-      wrapper.className = 'cmux-code-block';
+      wrapper.className = 'bree-code-block';
       pre.parentNode.insertBefore(wrapper, pre);
       wrapper.appendChild(pre);
 
       var button = document.createElement('button');
       button.type = 'button';
-      button.className = 'cmux-code-copy-button';
+      button.className = 'bree-code-copy-button';
       button.textContent = 'Copy';
       button.setAttribute('aria-label', 'Copy code');
       button.addEventListener('click', function(ev) {
@@ -2069,15 +2069,15 @@ html { scroll-behavior: smooth; }
   // Local markdown file links and inline-code spans.
   // Resolution is lazy: hover/focus asks Swift whether the path exists
   // relative to the current markdown file (and PWD fallback). Click
-  // opens a new cmux markdown tab when it resolves.
+  // opens a new bree markdown tab when it resolves.
   var mdFileResolveCache = {}; // raw path -> { exists, path }
   var mdFileResolvePending = {}; // requestId -> { rawPath, elements }
   var mdFileRequestSeq = 0;
 
   function markdownCandidateForElement(el) {
     if (!el) { return null; }
-    if (el.matches && el.matches('code[data-cmux-file]')) {
-      return unescapeDataAttribute(el.getAttribute('data-cmux-file'));
+    if (el.matches && el.matches('code[data-bree-file]')) {
+      return unescapeDataAttribute(el.getAttribute('data-bree-file'));
     }
     if (el.matches && el.matches('a[href]')) {
       var href = el.getAttribute('href') || '';
@@ -2090,11 +2090,11 @@ html { scroll-behavior: smooth; }
     mdFileResolveCache[rawPath] = result;
     (elements || []).forEach(function(el) {
       if (!el) { return; }
-      el.setAttribute('data-cmux-file-checked', '1');
+      el.setAttribute('data-bree-file-checked', '1');
       if (result && result.exists) {
-        el.setAttribute('data-cmux-file-exists', '1');
+        el.setAttribute('data-bree-file-exists', '1');
       } else {
-        el.removeAttribute('data-cmux-file-exists');
+        el.removeAttribute('data-bree-file-exists');
       }
     });
   }
@@ -2111,7 +2111,7 @@ html { scroll-behavior: smooth; }
     var requestId = 'mdfile-' + (++mdFileRequestSeq);
     mdFileResolvePending[requestId] = { rawPath: rawPath, elements: [el], openAfterResolve: !!openAfterResolve };
     try {
-      window.webkit.messageHandlers.cmuxLib.postMessage({
+      window.webkit.messageHandlers.breeLib.postMessage({
         action: 'resolveMarkdownFile',
         requestId: requestId,
         path: rawPath
@@ -2120,7 +2120,7 @@ html { scroll-behavior: smooth; }
     return false;
   }
 
-  window.__cmuxMarkdownFileResolved = function(result) {
+  window.__breeMarkdownFileResolved = function(result) {
     var pending = result && mdFileResolvePending[result.requestId];
     if (!pending) { return; }
     delete mdFileResolvePending[result.requestId];
@@ -2132,22 +2132,22 @@ html { scroll-behavior: smooth; }
 
   function openMarkdownCandidate(rawPath) {
     try {
-      window.webkit.messageHandlers.cmuxLib.postMessage({ action: 'openMarkdownFile', path: rawPath });
+      window.webkit.messageHandlers.breeLib.postMessage({ action: 'openMarkdownFile', path: rawPath });
     } catch (e) { /* no bridge */ }
   }
 
   function markMarkdownFileLinks() {
-    contentEl.querySelectorAll('code:not([data-cmux-file])').forEach(function(code) {
-      if (code.closest && code.closest('pre, .cmux-source')) { return; }
+    contentEl.querySelectorAll('code:not([data-bree-file])').forEach(function(code) {
+      if (code.closest && code.closest('pre, .bree-source')) { return; }
       var raw = code.textContent || '';
       if (isMarkdownPathLike(raw)) {
-        code.setAttribute('data-cmux-file', escapeDataAttribute(raw));
+        code.setAttribute('data-bree-file', escapeDataAttribute(raw));
       }
     });
     contentEl.querySelectorAll('a[href]').forEach(function(a) {
       var href = a.getAttribute('href') || '';
       if (isMarkdownPathLike(href)) {
-        a.setAttribute('data-cmux-file-candidate', href);
+        a.setAttribute('data-bree-file-candidate', href);
         // Eagerly resolve visible markdown links so the user gets
         // immediate affordance; inline code spans remain lazy-on-hover.
         resolveMarkdownCandidate(a, false);
@@ -2156,21 +2156,21 @@ html { scroll-behavior: smooth; }
   }
 
   contentEl.addEventListener('mouseover', function(ev) {
-    var el = ev.target && ev.target.closest && ev.target.closest('code[data-cmux-file], a[href]');
+    var el = ev.target && ev.target.closest && ev.target.closest('code[data-bree-file], a[href]');
     if (el) { resolveMarkdownCandidate(el, false); }
   });
   contentEl.addEventListener('focusin', function(ev) {
-    var el = ev.target && ev.target.closest && ev.target.closest('code[data-cmux-file], a[href]');
+    var el = ev.target && ev.target.closest && ev.target.closest('code[data-bree-file], a[href]');
     if (el) { resolveMarkdownCandidate(el, false); }
   });
   contentEl.addEventListener('click', function(ev) {
-    if (ev.target && ev.target.closest && ev.target.closest('.cmux-remote-image-placeholder')) {
+    if (ev.target && ev.target.closest && ev.target.closest('.bree-remote-image-placeholder')) {
       if (ev.target.closest('button')) { return; }
       ev.preventDefault();
       ev.stopPropagation();
       return;
     }
-    var el = ev.target && ev.target.closest && ev.target.closest('code[data-cmux-file], a[href]');
+    var el = ev.target && ev.target.closest && ev.target.closest('code[data-bree-file], a[href]');
     var rawPath = markdownCandidateForElement(el);
     if (!rawPath) { return; }
     // For markdown-looking paths, always stop WebKit navigation first.
@@ -2190,7 +2190,7 @@ html { scroll-behavior: smooth; }
   var wikilinkRequestId = null;
 
   function postBridge(message) {
-    try { window.webkit.messageHandlers.cmuxLib.postMessage(message); } catch (e) { /* no bridge */ }
+    try { window.webkit.messageHandlers.breeLib.postMessage(message); } catch (e) { /* no bridge */ }
   }
 
   function wikilinkNoteTitle(name) {
@@ -2204,7 +2204,7 @@ html { scroll-behavior: smooth; }
     var targets = [];
     els.forEach(function(el) {
       var name = el.getAttribute('data-wikilink');
-      var embed = el.classList.contains('cmux-embed');
+      var embed = el.classList.contains('bree-embed');
       if (el.localName === 'a') { el.setAttribute('role', 'link'); el.setAttribute('tabindex', '0'); }
       if (!byName[name]) { byName[name] = { name: name, embed: false }; targets.push(byName[name]); }
       byName[name].embed = byName[name].embed || embed;
@@ -2216,12 +2216,12 @@ html { scroll-behavior: smooth; }
 
   function embeddedNoteBlock(name, text) {
     var block = document.createElement('blockquote');
-    block.className = 'cmux-embed';
+    block.className = 'bree-embed';
     var title = document.createElement('div');
-    title.className = 'cmux-embed-title';
+    title.className = 'bree-embed-title';
     title.textContent = wikilinkNoteTitle(name);
     var body = document.createElement('div');
-    var fragment = sanitizeMarkdownFragment(CmuxObsidian.renderEmbed(text));
+    var fragment = sanitizeMarkdownFragment(BreeObsidian.renderEmbed(text));
     fragment.querySelectorAll('[id]').forEach(function(node) { node.removeAttribute('id'); });
     body.appendChild(fragment);
     block.appendChild(title);
@@ -2229,14 +2229,14 @@ html { scroll-behavior: smooth; }
     return block;
   }
 
-  window.__cmuxWikilinksResolved = function(res) {
+  window.__breeWikilinksResolved = function(res) {
     if (!res || res.requestId !== wikilinkRequestId) { return; }
     var results = res.results || {};
     contentEl.querySelectorAll('[data-wikilink]').forEach(function(el) {
       var name = el.getAttribute('data-wikilink');
       var hit = results[name];
-      if (!hit) { el.classList.add('cmux-wikilink-missing'); return; }
-      if (!el.classList.contains('cmux-embed')) { return; }
+      if (!hit) { el.classList.add('bree-wikilink-missing'); return; }
+      if (!el.classList.contains('bree-embed')) { return; }
       var host = el;
       var parent = el.parentElement;
       if (parent && parent.localName === 'p' && parent.children.length === 1
@@ -2246,30 +2246,30 @@ html { scroll-behavior: smooth; }
       if (/\.(png|jpe?g|gif|webp|avif)$/i.test(hit.path)) {
         var img = document.createElement('img');
         img.setAttribute('alt', name);
-        img.setAttribute('src', 'cmux-local-image://image?url='
+        img.setAttribute('src', 'bree-local-image://image?url='
           + encodeURIComponent('file://' + String(hit.path).split('/').map(encodeURIComponent).join('/')));
         el.replaceWith(img);
       } else if (typeof hit.text === 'string') {
         host.replaceWith(embeddedNoteBlock(name, hit.text));
       } else {
-        el.classList.add('cmux-wikilink-missing');
+        el.classList.add('bree-wikilink-missing');
       }
     });
   };
 
-  window.__cmuxSetBacklinks = function(items) {
-    var old = contentEl.querySelector('.cmux-backlinks');
+  window.__breeSetBacklinks = function(items) {
+    var old = contentEl.querySelector('.bree-backlinks');
     if (old) { old.remove(); }
-    if (!window.__cmuxVault || !items || !items.length) { return; }
+    if (!window.__breeVault || !items || !items.length) { return; }
     var section = document.createElement('section');
-    section.className = 'cmux-backlinks';
+    section.className = 'bree-backlinks';
     var heading = document.createElement('h2');
-    heading.textContent = cmuxString('backlinks', 'Backlinks ({count})', { count: items.length });
+    heading.textContent = breeString('backlinks', 'Backlinks ({count})', { count: items.length });
     var list = document.createElement('ul');
     items.forEach(function(item) {
       var li = document.createElement('li');
       var a = document.createElement('a');
-      a.className = 'cmux-wikilink';
+      a.className = 'bree-wikilink';
       a.setAttribute('data-backlink-path', item.path);
       a.setAttribute('role', 'link');
       a.setAttribute('tabindex', '0');
@@ -2289,7 +2289,7 @@ html { scroll-behavior: smooth; }
     ev.stopPropagation();
     if (link.hasAttribute('data-backlink-path')) {
       postBridge({ action: 'openMarkdownFile', path: link.getAttribute('data-backlink-path') });
-    } else if (!link.classList.contains('cmux-wikilink-missing')) {
+    } else if (!link.classList.contains('bree-wikilink-missing')) {
       postBridge({ action: 'openWikilink', target: link.getAttribute('data-wikilink') });
     }
   }, true);
@@ -2299,21 +2299,21 @@ html { scroll-behavior: smooth; }
     }
   });
 
-  window.__cmuxRenderMarkdown = function(md) {
+  window.__breeRenderMarkdown = function(md) {
     try {
       headingSlugCounts = Object.create(null);
-      var vault = window.__cmuxVault || null;
-      CmuxObsidian.setEnabled(vault);
+      var vault = window.__breeVault || null;
+      BreeObsidian.setEnabled(vault);
       var documentParts = extractFrontmatter(md || '');
-      var frontmatterHTML = (vault && CmuxObsidian.renderProperties(documentParts.frontmatter))
+      var frontmatterHTML = (vault && BreeObsidian.renderProperties(documentParts.frontmatter))
         || renderFrontmatter(documentParts.frontmatter);
       // Frontmatter and body share one sanitizer pass.
       var bodyHTML = marked.parse(documentParts.body || '');
       var fragment = sanitizeMarkdownFragment(
-        (window.__cmuxWiki || window.__cmuxWikiStyle) ? bodyHTML + frontmatterHTML : frontmatterHTML + bodyHTML
+        (window.__breeWiki || window.__breeWikiStyle) ? bodyHTML + frontmatterHTML : frontmatterHTML + bodyHTML
       );
       // Serialized only to detect an unchanged document; never re-parsed.
-      var html = CmuxMarkdownSanitizer.serializeFragment(fragment, document);
+      var html = BreeMarkdownSanitizer.serializeFragment(fragment, document);
       var didReplaceContent = contentEl.innerHTML !== html;
       var scrollState = didReplaceContent ? captureMarkdownScrollState() : null;
       if (didReplaceContent) {
@@ -2346,23 +2346,23 @@ html { scroll-behavior: smooth; }
     options = options || {};
     var restoreImageSources = options.restoreImageSources !== false;
     var clone = contentEl.cloneNode(true);
-    clone.querySelectorAll('.cmux-code-copy-button').forEach(function(el) {
+    clone.querySelectorAll('.bree-code-copy-button').forEach(function(el) {
       el.remove();
     });
-    clone.querySelectorAll('.cmux-remote-image-placeholder').forEach(function(el) {
+    clone.querySelectorAll('.bree-remote-image-placeholder').forEach(function(el) {
       el.remove();
     });
-    clone.querySelectorAll('img[data-cmux-original-src]').forEach(function(el) {
-      var originalSrc = el.getAttribute('data-cmux-original-src') || '';
+    clone.querySelectorAll('img[data-bree-original-src]').forEach(function(el) {
+      var originalSrc = el.getAttribute('data-bree-original-src') || '';
       if (restoreImageSources && originalSrc) {
         el.setAttribute('src', originalSrc);
       } else if (!restoreImageSources) {
         el.removeAttribute('src');
       }
-      el.removeAttribute('data-cmux-original-src');
+      el.removeAttribute('data-bree-original-src');
     });
-    clone.querySelectorAll('img[data-cmux-remote-src]').forEach(function(el) {
-      var remoteSrc = unescapeDataAttribute(el.getAttribute('data-cmux-remote-src'));
+    clone.querySelectorAll('img[data-bree-remote-src]').forEach(function(el) {
+      var remoteSrc = unescapeDataAttribute(el.getAttribute('data-bree-remote-src'));
       if (restoreImageSources && remoteSrc) {
         el.setAttribute('src', remoteSrc);
         el.hidden = false;
@@ -2376,13 +2376,13 @@ html { scroll-behavior: smooth; }
         el.removeAttribute('srcset');
       });
     }
-    clone.querySelectorAll('.cmux-mermaid svg[data-cmux-mermaid-original-max-width]').forEach(function(el) {
+    clone.querySelectorAll('.bree-mermaid svg[data-bree-mermaid-original-max-width]').forEach(function(el) {
       mermaidRestoreOriginalSizing(el);
     });
     clone.querySelectorAll('*').forEach(function(el) {
       Array.prototype.slice.call(el.attributes || []).forEach(function(attr) {
         var name = String(attr.name || '').toLowerCase();
-        if (name.indexOf('data-cmux-') === 0) {
+        if (name.indexOf('data-bree-') === 0) {
           el.removeAttribute(attr.name);
         }
       });
@@ -2393,13 +2393,13 @@ html { scroll-behavior: smooth; }
     return clone;
   }
 
-  window.__cmuxRenderedHTML = function() {
+  window.__breeRenderedHTML = function() {
     var clone = cleanRenderedContentClone({ restoreImageSources: true });
     if (!clone) { return ''; }
     return clone.innerHTML;
   };
 
-  window.__cmuxRenderedText = function() {
+  window.__breeRenderedText = function() {
     var clone = cleanRenderedContentClone({ restoreImageSources: false });
     if (!clone) { return ''; }
     var wrapper = document.createElement('div');
@@ -2421,7 +2421,7 @@ html { scroll-behavior: smooth; }
   };
 
   var darkMql = window.matchMedia('(prefers-color-scheme: dark)');
-  window.__cmuxApplyTheme = function() {
+  window.__breeApplyTheme = function() {
     var isDark = darkMql.matches;
     if (lightSheet && darkSheet) {
       lightSheet.disabled = !!isDark;
@@ -2432,15 +2432,15 @@ html { scroll-behavior: smooth; }
     mermaidInitialized = false;
   };
   if (darkMql.addEventListener) {
-    darkMql.addEventListener('change', window.__cmuxApplyTheme);
+    darkMql.addEventListener('change', window.__breeApplyTheme);
   } else if (darkMql.addListener) {
-    darkMql.addListener(window.__cmuxApplyTheme);
+    darkMql.addListener(window.__breeApplyTheme);
   }
-  window.__cmuxApplyTheme();
-  window.__cmuxPerformViewerNavigationAction = function(action) {
-    return CmuxViewerNavigation.performAction(action, markdownScroller());
+  window.__breeApplyTheme();
+  window.__breePerformViewerNavigationAction = function(action) {
+    return BreeViewerNavigation.performAction(action, markdownScroller());
   };
-  CmuxViewerNavigation.installManualInputReset({
+  BreeViewerNavigation.installManualInputReset({
     target: document,
     getScroller: markdownScroller
   });

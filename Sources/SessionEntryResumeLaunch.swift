@@ -1,11 +1,11 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Foundation
 
 /// The terminal startup plan shared by every Vault resume entry point.
 struct SessionEntryResumeLaunch: Sendable {
     /// How the terminal starts the selected Vault session.
     enum Strategy: Sendable, Equatable {
-        /// Resolve structured argv and environment through `cmux restore`.
+        /// Resolve structured argv and environment through `bree restore`.
         case restoreVerb
         /// Type the quarantined copyable command for an unsupported registration.
         case legacyCommand
@@ -28,7 +28,7 @@ private struct SessionEntryResumeSnapshotComponents {
     /// Replay-safe environment required by the agent profile.
     let environment: [String: String]
     /// Registration metadata for custom Vault agents.
-    let registration: CmuxVaultAgentRegistration?
+    let registration: BreeVaultAgentRegistration?
     /// Captured permission mode when the agent exposes one separately from argv.
     let permissionMode: String?
 }
@@ -207,7 +207,7 @@ extension SessionEntry {
 
     /// Sandbox-policy values the Codex CLI `--sandbox` flag accepts.
     ///
-    /// cmux captures Codex's internal sandbox-policy `type`, which also includes
+    /// bree captures Codex's internal sandbox-policy `type`, which also includes
     /// values such as `disabled` and `managed` that the CLI rejects.
     private static let codexCLISandboxModes: Set<String> = [
         "read-only",

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Budgets the JavaScript the `cmux diff` viewer evaluates on every open.
+// Budgets the JavaScript the `bree diff` viewer evaluates on every open.
 //
 // The diff surface is `main.mjs` -> `chunks/diffSurface.mjs` plus every chunk
 // those two reach through static imports. The highlight worker entry
@@ -32,13 +32,13 @@ const surfaces = [
   {
     name: "diff surface",
     entries: ["main.mjs", "chunks/diffSurface.mjs"],
-    budgetBytes: budgetFromEnvironment("CMUX_WEBVIEWS_DIFF_EAGER_BUDGET_BYTES", 1_500_000),
+    budgetBytes: budgetFromEnvironment("BREE_WEBVIEWS_DIFF_EAGER_BUDGET_BYTES", 1_500_000),
     forbidden: [],
   },
   {
     name: "diff worker",
     entries: ["chunks/diff-worker.mjs"],
-    budgetBytes: budgetFromEnvironment("CMUX_WEBVIEWS_DIFF_WORKER_EAGER_BUDGET_BYTES", 400_000),
+    budgetBytes: budgetFromEnvironment("BREE_WEBVIEWS_DIFF_WORKER_EAGER_BUDGET_BYTES", 400_000),
     forbidden: ["chunks/diff-vendor.mjs", "chunks/vendor.mjs"],
   },
 ];

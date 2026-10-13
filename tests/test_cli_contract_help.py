@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Executable contract check for no-socket cmux CLI help behavior.
+Executable contract check for no-socket bree CLI help behavior.
 
 The command list lives in docs/cli-contract.md so the human migration spec and
 CI check stay tied together. This test invokes the built CLI binary; it does not
@@ -27,8 +27,8 @@ START_MARKER = "<!-- cli-contract-help-probes:start -->"
 END_MARKER = "<!-- cli-contract-help-probes:end -->"
 NEGATIVE_START_MARKER = "<!-- cli-contract-negative-help-probes:start -->"
 NEGATIVE_END_MARKER = "<!-- cli-contract-negative-help-probes:end -->"
-PROBE_RE = re.compile(r"^- `(?P<command>cmux(?: [^`]+)?)` -> `(?P<needle>[^`]+)`$")
-NEGATIVE_PROBE_RE = re.compile(r"^- `(?P<command>cmux(?: [^`]+)?)` !> `(?P<needle>[^`]+)`$")
+PROBE_RE = re.compile(r"^- `(?P<command>bree(?: [^`]+)?)` -> `(?P<needle>[^`]+)`$")
+NEGATIVE_PROBE_RE = re.compile(r"^- `(?P<command>bree(?: [^`]+)?)` !> `(?P<needle>[^`]+)`$")
 
 
 @dataclass(frozen=True)
@@ -49,19 +49,19 @@ def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit and os.path.exists(explicit) and os.access(explicit, os.X_OK):
         return explicit
 
     candidates: list[str] = []
-    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/cmux")))
+    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/bree")))
     candidates = [path for path in candidates if os.path.exists(path) and os.access(path, os.X_OK)]
     if candidates:
         candidates.sort(key=os.path.getmtime, reverse=True)
         return candidates[0]
 
-    raise RuntimeError("Unable to find cmux CLI binary. Set CMUX_CLI_BIN.")
+    raise RuntimeError("Unable to find bree CLI binary. Set BREE_CLI_BIN.")
 
 
 def load_help_probes() -> list[HelpProbe]:
@@ -109,8 +109,8 @@ def load_probes(start_marker: str, end_marker: str, pattern: re.Pattern[str]) ->
 
 def run_probe(cli_path: str, probe: HelpProbe) -> ProbeResult:
     tokens = shlex.split(probe.command)
-    if not tokens or tokens[0] != "cmux":
-        raise RuntimeError(f"Probe must start with cmux: {probe.command}")
+    if not tokens or tokens[0] != "bree":
+        raise RuntimeError(f"Probe must start with bree: {probe.command}")
 
     return run_cli_args(cli_path, tokens[1:])
 
@@ -147,19 +147,19 @@ def clean_git_env() -> dict[str, str]:
 def run_cli_args(cli_path: str, args: list[str], *, cwd: str | None = None) -> ProbeResult:
     env = clean_git_env()
     for key in [
-        "CMUX_SOCKET_PASSWORD",
-        "CMUX_SOCKET",
-        "CMUX_WORKSPACE_ID",
-        "CMUX_SURFACE_ID",
-        "CMUX_TAB_ID",
+        "BREE_SOCKET_PASSWORD",
+        "BREE_SOCKET",
+        "BREE_WORKSPACE_ID",
+        "BREE_SURFACE_ID",
+        "BREE_TAB_ID",
     ]:
         env.pop(key, None)
-    env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-    env["CMUX_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
+    env["BREE_CLI_SENTRY_DISABLED"] = "1"
+    env["BREE_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
 
-    with tempfile.TemporaryDirectory(prefix="cmux-no-socket-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="bree-no-socket-") as tmpdir:
         no_socket = os.path.join(tmpdir, f"socket-{uuid.uuid4().hex}.sock")
-        env["CMUX_SOCKET_PATH"] = no_socket
+        env["BREE_SOCKET_PATH"] = no_socket
 
         proc = subprocess.run(  # noqa: S603
             [cli_path, *args],
@@ -181,7 +181,7 @@ def run_cli_args(cli_path: str, args: list[str], *, cwd: str | None = None) -> P
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
         probes = load_help_probes()
         negative_probes = load_negative_help_probes()
     except (RuntimeError, OSError, ValueError) as exc:
@@ -251,48 +251,48 @@ def main() -> int:
     try:
         result = run_cli_args(cli_path, [])
     except subprocess.TimeoutExpired:
-        failures.append("cmux: timed out")
+        failures.append("bree: timed out")
     except (RuntimeError, OSError, ValueError) as exc:
-        failures.append(f"cmux: {exc}")
+        failures.append(f"bree: {exc}")
     else:
         if result.returncode != 2:
             failures.append(
-                f"cmux: expected missing-command exit 2, got {result.returncode}\n"
+                f"bree: expected missing-command exit 2, got {result.returncode}\n"
                 f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
             )
         if result.stdout:
             failures.append(
-                f"cmux: missing-command usage should not write stdout\n"
+                f"bree: missing-command usage should not write stdout\n"
                 f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
             )
-        if "Missing command" not in result.stderr or "cmux --help" not in result.stderr:
+        if "Missing command" not in result.stderr or "bree --help" not in result.stderr:
             failures.append(
-                f"cmux: missing-command error should point to cmux --help\n"
+                f"bree: missing-command error should point to bree --help\n"
                 f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
             )
-        if "browser find" in result.stderr or "cmux - control cmux via Unix socket" in result.stderr:
+        if "browser find" in result.stderr or "bree - control bree via Unix socket" in result.stderr:
             failures.append(
-                f"cmux: missing-command error should not dump full help\n"
+                f"bree: missing-command error should not dump full help\n"
                 f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
             )
 
     try:
         result = run_cli_args(cli_path, ["settings", "--help"])
     except subprocess.TimeoutExpired:
-        failures.append("cmux settings --help stale-target check: timed out")
+        failures.append("bree settings --help stale-target check: timed out")
     except (RuntimeError, OSError, ValueError) as exc:
-        failures.append(f"cmux settings --help stale-target check: {exc}")
+        failures.append(f"bree settings --help stale-target check: {exc}")
     else:
-        stale_usage = "Usage: cmux settings [open|path|docs|target]"
-        target_usage = "Usage: cmux settings [open [target]|path|docs|<target>]"
+        stale_usage = "Usage: bree settings [open|path|docs|target]"
+        target_usage = "Usage: bree settings [open [target]|path|docs|<target>]"
         if stale_usage in result.stdout:
             failures.append(
-                f"cmux settings --help: stale literal target usage still present\n"
+                f"bree settings --help: stale literal target usage still present\n"
                 f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
             )
         if target_usage not in result.stdout:
             failures.append(
-                f"cmux settings --help: expected target-placeholder usage {target_usage!r}\n"
+                f"bree settings --help: expected target-placeholder usage {target_usage!r}\n"
                 f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
             )
 
@@ -310,7 +310,7 @@ def main() -> int:
 
 def check_review_ledger_contract(cli_path: str) -> list[str]:
     failures: list[str] = []
-    with tempfile.TemporaryDirectory(prefix="cmux-review-ledger-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="bree-review-ledger-") as tmpdir:
         repository = Path(tmpdir) / "repo"
         init = subprocess.run(
             ["git", "init", "-q", str(repository)],
@@ -321,19 +321,19 @@ def check_review_ledger_contract(cli_path: str) -> list[str]:
             env=clean_git_env(),
         )
         if init.returncode != 0:
-            return [f"cmux review fixture: git init failed: {init.stderr!r}"]
+            return [f"bree review fixture: git init failed: {init.stderr!r}"]
         canonical_repository = str(repository.resolve())
 
         review_id = "aaaaaaaa-bbbbbbbb-" + ("c" * 64)
-        receipt_dir = repository / ".git" / "cmux" / "reviews"
+        receipt_dir = repository / ".git" / "bree" / "reviews"
         receipt_dir.mkdir(parents=True)
         receipt = {
             "schema_version": 1,
-            "policy_version": "cmux-review/v1",
+            "policy_version": "bree-review/v1",
             "repository_root": str(repository),
             "ruleset_sha256": None,
             "source": {
-                "repository_id": "github:manaflow-ai/cmux",
+                "repository_id": "github:ecyx00/bree",
                 "base_sha": "1" * 40,
                 "head_sha": "2" * 40,
                 "tree_sha": "3" * 40,
@@ -346,7 +346,7 @@ def check_review_ledger_contract(cli_path: str) -> list[str]:
                     {
                         "requirement": "Read receipts without a running app",
                         "status": "satisfied",
-                        "evidence": ["cmux review is routed before socket connection"],
+                        "evidence": ["bree review is routed before socket connection"],
                     }
                 ],
                 "out_of_scope_changes": [],
@@ -390,7 +390,7 @@ def check_review_ledger_contract(cli_path: str) -> list[str]:
                         "attempted": True,
                         "result": "fixed",
                         "after_source": {
-                            "repository_id": "github:manaflow-ai/cmux",
+                            "repository_id": "github:ecyx00/bree",
                             "base_sha": "1" * 40,
                             "head_sha": "4" * 40,
                             "tree_sha": "5" * 40,
@@ -471,7 +471,7 @@ def check_review_ledger_contract(cli_path: str) -> list[str]:
                 "show",
                 ["review", "show", "latest", "--json"],
                 lambda payload: (
-                    payload["policy_version"] == "cmux-review/v1"
+                    payload["policy_version"] == "bree-review/v1"
                     and payload["brief"]["requirements"][0]["status"] == "satisfied"
                 ),
             ),
@@ -496,34 +496,34 @@ def check_review_ledger_contract(cli_path: str) -> list[str]:
             try:
                 result = run_cli_args(cli_path, args, cwd=str(repository))
             except (subprocess.TimeoutExpired, OSError, ValueError) as exc:
-                failures.append(f"cmux review {label}: {exc}")
+                failures.append(f"bree review {label}: {exc}")
                 continue
             if result.returncode != 0 or result.stderr:
                 failures.append(
-                    f"cmux review {label}: expected clean exit\n"
+                    f"bree review {label}: expected clean exit\n"
                     f"stdout={result.stdout!r}\nstderr={result.stderr!r}"
                 )
                 continue
             if result.socket_path in result.stdout:
                 failures.append(
-                    f"cmux review {label}: unexpectedly attempted socket access "
+                    f"bree review {label}: unexpectedly attempted socket access "
                     f"{result.socket_path!r}"
                 )
                 continue
             try:
                 payload = json.loads(result.stdout)
             except json.JSONDecodeError as exc:
-                failures.append(f"cmux review {label}: invalid JSON: {exc}")
+                failures.append(f"bree review {label}: invalid JSON: {exc}")
                 continue
             if not validate(payload):
                 failures.append(
-                    f"cmux review {label}: unexpected payload {payload!r}"
+                    f"bree review {label}: unexpected payload {payload!r}"
                 )
 
         try:
             text_result = run_cli_args(cli_path, ["review", "show"], cwd=str(repository))
         except (subprocess.TimeoutExpired, OSError, ValueError) as exc:
-            failures.append(f"cmux review show: {exc}")
+            failures.append(f"bree review show: {exc}")
         else:
             if (
                 text_result.returncode != 0
@@ -531,7 +531,7 @@ def check_review_ledger_contract(cli_path: str) -> list[str]:
                 or "Findings: 1 verified · 0 human · 0 refuted · 1 suppressed" not in text_result.stdout
             ):
                 failures.append(
-                    "cmux review show: human output lost review summary\n"
+                    "bree review show: human output lost review summary\n"
                     f"stdout={text_result.stdout!r}\nstderr={text_result.stderr!r}"
                 )
 
@@ -548,14 +548,14 @@ def check_review_ledger_contract(cli_path: str) -> list[str]:
                 cwd=str(repository),
             )
         except (subprocess.TimeoutExpired, OSError, ValueError) as exc:
-            failures.append(f"cmux review list future receipt: {exc}")
+            failures.append(f"bree review list future receipt: {exc}")
         else:
             if (
                 future_result.returncode == 0
                 or "schema_version must be 1" not in future_result.stderr
             ):
                 failures.append(
-                    "cmux review list: future receipt schema should fail closed\n"
+                    "bree review list: future receipt schema should fail closed\n"
                     f"stdout={future_result.stdout!r}\nstderr={future_result.stderr!r}"
                 )
 
@@ -577,7 +577,7 @@ def check_task_help_contract(cli_path: str) -> list[str]:
     headings = {heading for heading, _ in topics.values()}
 
     for topic, (heading, needle) in topics.items():
-        label = f"cmux help {topic}"
+        label = f"bree help {topic}"
         try:
             result = run_cli_args(cli_path, ["help", topic])
         except subprocess.TimeoutExpired:
@@ -619,18 +619,18 @@ def check_task_help_contract(cli_path: str) -> list[str]:
     try:
         fallback = run_cli_args(cli_path, ["help", "unknown-task-topic"])
     except subprocess.TimeoutExpired:
-        failures.append("cmux help unknown-task-topic: timed out")
+        failures.append("bree help unknown-task-topic: timed out")
     except (RuntimeError, OSError, ValueError) as exc:
-        failures.append(f"cmux help unknown-task-topic: {exc}")
+        failures.append(f"bree help unknown-task-topic: {exc}")
     else:
         if (
             fallback.returncode != 0
             or fallback.stderr
-            or "cmux - control cmux via Unix socket" not in fallback.stdout
+            or "bree - control bree via Unix socket" not in fallback.stdout
             or "Start & Resume:" not in fallback.stdout
         ):
             failures.append(
-                "cmux help unknown-task-topic: expected legacy top-level help fallback\n"
+                "bree help unknown-task-topic: expected legacy top-level help fallback\n"
                 f"stdout={fallback.stdout!r}\nstderr={fallback.stderr!r}"
             )
 
@@ -640,18 +640,18 @@ def check_task_help_contract(cli_path: str) -> list[str]:
 def check_guide_contract(cli_path: str) -> list[str]:
     failures: list[str] = []
     # An explicit missing socket and invalid window prove that guides do not
-    # connect, authenticate, or focus a window, even with ambient cmux context.
-    prefix = ["--socket", f"/tmp/cmux-guide-{uuid.uuid4().hex}.sock", "--window", "window:999999"]
+    # connect, authenticate, or focus a window, even with ambient bree context.
+    prefix = ["--socket", f"/tmp/bree-guide-{uuid.uuid4().hex}.sock", "--window", "window:999999"]
     topics = {
-        "cmux": [["guide"], ["--skill"]],
+        "bree": [["guide"], ["--skill"]],
     }
     for topic, aliases in topics.items():
         expected_content = None
         for invocation in aliases:
-            label = "cmux " + " ".join(invocation)
+            label = "bree " + " ".join(invocation)
             try:
                 plain = run_cli_args(cli_path, prefix + invocation)
-                if plain.returncode != 0 or plain.stderr or not plain.stdout.startswith("# cmux"):
+                if plain.returncode != 0 or plain.stderr or not plain.stdout.startswith("# bree"):
                     raise ValueError(f"guide failed: {plain}")
                 if expected_content is None:
                     expected_content = plain.stdout
@@ -664,15 +664,15 @@ def check_guide_contract(cli_path: str) -> list[str]:
                         "topic": topic, "format": "markdown", "content": expected_content,
                     }:
                         raise ValueError(f"JSON guide differs from plain output: {result}")
-                if topic == "cmux":
-                    for needle in ("cmux cloud", "Chrome", "cua-driver"):
+                if topic == "bree":
+                    for needle in ("bree cloud", "Chrome", "cua-driver"):
                         if needle not in plain.stdout:
                             raise ValueError(f"local guide must include the Cloud detail: {needle}")
                 expected = ["agent-browser.dev", "agent-browser --auto-connect", "agent-browser --cdp"]
-                if topic == "cmux":
+                if topic == "bree":
                     expected.append("agent-browser --headed")
                 if topic == "cloud":
-                    expected += ["cua-driver --version", "cua-driver doctor", "cua-driver mcp", "DISPLAY=:1", "cmux cloud route --json", "would_provision", "route --provision", "terminal wait", "terminal read", "google-chrome-stable", "--remote-debugging-port=9222", "cmux cloud dev <machine> --no-open"]
+                    expected += ["cua-driver --version", "cua-driver doctor", "cua-driver mcp", "DISPLAY=:1", "bree cloud route --json", "would_provision", "route --provision", "terminal wait", "terminal read", "google-chrome-stable", "--remote-debugging-port=9222", "bree cloud dev <machine> --no-open"]
                 missing = [needle for needle in expected if needle not in plain.stdout]
                 if missing:
                     raise ValueError(f"guide is missing method details: {missing}")

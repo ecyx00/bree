@@ -1,3 +1,3 @@
-import CmuxTerminal
+import BreeTerminal
 
 extension TerminalSurface: RendererRealizationSurface {}

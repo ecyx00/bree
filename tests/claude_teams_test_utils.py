@@ -15,7 +15,7 @@ import uuid
 from pathlib import Path
 from typing import BinaryIO
 
-FIXTURE_SOCKET_PASSWORD = "cmux-cli-fixture-password"
+FIXTURE_SOCKET_PASSWORD = "bree-cli-fixture-password"
 
 
 def accept_fixture_socket_authentication(line: bytes, stream: BinaryIO) -> bool:
@@ -41,8 +41,8 @@ def stable_tmux_numeric_id(raw: str) -> str:
     return str(value or 1)
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit and os.path.exists(explicit) and os.access(explicit, os.X_OK):
         return explicit
 
@@ -53,21 +53,21 @@ def resolve_cmux_cli() -> str:
             return candidate
 
     raise RuntimeError(
-        "Unable to find cmux CLI binary. Set CMUX_CLI_BIN or run ./scripts/reload.sh --tag <tag> first."
+        "Unable to find bree CLI binary. Set BREE_CLI_BIN or run ./scripts/reload.sh --tag <tag> first."
     )
 
 
 def cli_dot_directory_name(cli_path: str, environment: "dict[str, str] | None" = None) -> str:
-    """The home dot directory the CLI uses (mirrors CmuxIdentity.forCLI + dotDirectoryName).
+    """The home dot directory the CLI uses (mirrors BreeIdentity.forCLI + dotDirectoryName).
 
-    CMUX_BUNDLE_ID wins, then the Info.plist of the .app enclosing the CLI
-    binary, then cmux. ``.bree`` for com.bree.app, ``.bree-dev`` for the
-    tagged dev build, ``.cmuxterm`` for everything else.
+    BREE_BUNDLE_ID wins, then the Info.plist of the .app enclosing the CLI
+    binary, then bree. ``.bree`` for com.bree.app, ``.bree-dev`` for the
+    tagged dev build, ``.bree`` for everything else.
     """
     import plistlib
 
     env = os.environ if environment is None else environment
-    bundle_id = (env.get("CMUX_BUNDLE_ID") or "").strip()
+    bundle_id = (env.get("BREE_BUNDLE_ID") or "").strip()
     if not bundle_id:
         for parent in Path(os.path.realpath(cli_path)).parents:
             if parent.suffix == ".app":
@@ -77,15 +77,15 @@ def cli_dot_directory_name(cli_path: str, environment: "dict[str, str] | None" =
                 break
     return {
         "com.bree.app": ".bree",
-        "com.cmuxterm.app.debug.bree": ".bree-dev",
-    }.get(bundle_id, ".cmuxterm")
+        "com.bree.app.debug.bree": ".bree-dev",
+    }.get(bundle_id, ".bree")
 
 
-class _FocusedCmuxHandler(socketserver.StreamRequestHandler):
+class _FocusedBreeHandler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         while line := self.rfile.readline():
             decoded_line = line.decode("utf-8").rstrip("\r\n")
-            capability_prefix = "_cmux_capability_v1 "
+            capability_prefix = "_bree_capability_v1 "
             if decoded_line.startswith(capability_prefix):
                 envelope_parts = decoded_line.split(" ", 2)
                 if len(envelope_parts) != 3 or not envelope_parts[1] or not envelope_parts[2]:
@@ -137,7 +137,7 @@ class _FocusedCmuxHandler(socketserver.StreamRequestHandler):
             self.wfile.flush()
 
 
-class _FocusedCmuxServer(socketserver.ThreadingUnixStreamServer):
+class _FocusedBreeServer(socketserver.ThreadingUnixStreamServer):
     allow_reuse_address = True
 
     def __init__(
@@ -163,11 +163,11 @@ class _FocusedCmuxServer(socketserver.ThreadingUnixStreamServer):
         self.identified_pane_id = identified_pane_id
         self.identified_surface_id = identified_surface_id
         self.stale_workspace_id = stale_workspace_id
-        super().__init__(socket_path, _FocusedCmuxHandler)
+        super().__init__(socket_path, _FocusedBreeHandler)
 
 
 @contextmanager
-def focused_cmux_server(
+def focused_bree_server(
     socket_path_hint: Path,
     *,
     workspace_id: str = FOCUSED_WORKSPACE_ID,
@@ -189,10 +189,10 @@ def focused_cmux_server(
     """
     del socket_path_hint
     with tempfile.TemporaryDirectory(
-        prefix="cmux-focused-socket-", dir="/tmp"
+        prefix="bree-focused-socket-", dir="/tmp"
     ) as socket_dir:
-        socket_path = Path(socket_dir) / "cmux.sock"
-        server = _FocusedCmuxServer(
+        socket_path = Path(socket_dir) / "bree.sock"
+        server = _FocusedBreeServer(
             str(socket_path),
             workspace_id,
             window_id,
@@ -218,7 +218,7 @@ def focused_cmux_server(
 def canonical_managed_claude_shim_root() -> Iterator[tuple[str, Path]]:
     """Create an isolated per-surface shim at the app-owned temporary root."""
     surface_id = str(uuid.uuid4())
-    parent = Path(tempfile.gettempdir()) / "cmux-cli-shims"
+    parent = Path(tempfile.gettempdir()) / "bree-cli-shims"
     root = parent / surface_id
     root.mkdir(parents=True)
     try:
@@ -235,7 +235,7 @@ def install_pi_extension(config_dir: Path, cli_path: str | None = None) -> Path:
     env = os.environ.copy()
     env["PI_CODING_AGENT_DIR"] = str(config_dir)
     install = subprocess.run(
-        [cli_path or resolve_cmux_cli(), "hooks", "pi", "install", "--yes"],
+        [cli_path or resolve_bree_cli(), "hooks", "pi", "install", "--yes"],
         capture_output=True,
         text=True,
         check=False,
@@ -250,7 +250,7 @@ def install_pi_extension(config_dir: Path, cli_path: str | None = None) -> Path:
     extension_path = config_dir / "extensions" / "bree-session.ts"
     if not extension_path.exists():
         raise RuntimeError(f"expected extension at {extension_path}")
-    override = os.environ.get("CMUX_TEST_PI_EXTENSION_OVERRIDE")
+    override = os.environ.get("BREE_TEST_PI_EXTENSION_OVERRIDE")
     if override:
         shutil.copyfile(override, extension_path)
     return extension_path

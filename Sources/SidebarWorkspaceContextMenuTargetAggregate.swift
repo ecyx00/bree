@@ -1,4 +1,4 @@
-import CmuxCore
+import BreeCore
 import Foundation
 
 /// Shared context-menu facts derived from a target workspace selection.

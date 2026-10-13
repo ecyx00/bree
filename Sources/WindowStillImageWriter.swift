@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import CoreGraphics
 import Foundation
 import ImageIO

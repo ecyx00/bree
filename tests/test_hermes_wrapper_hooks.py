@@ -17,9 +17,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "cmux-hermes-agent-wrapper"
-SOURCE_TUI_PYTHON_WRAPPER = ROOT / "Resources" / "bin" / "cmux-hermes-python-wrapper"
-SOURCE_TUI_SITECUSTOMIZE = ROOT / "Resources" / "bin" / "cmux-hermes-sitecustomize.py"
+SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "bree-hermes-agent-wrapper"
+SOURCE_TUI_PYTHON_WRAPPER = ROOT / "Resources" / "bin" / "bree-hermes-python-wrapper"
+SOURCE_TUI_SITECUSTOMIZE = ROOT / "Resources" / "bin" / "bree-hermes-sitecustomize.py"
 SESSION_ID = "01JZ123456789ABCDEFGHJKMNP"
 # How long the wrapper may wait for its hook installer in launch-path checks.
 INSTALLER_BUDGET_SECONDS = 10
@@ -34,9 +34,9 @@ class WrapperResult:
     returncode: int
     real_argv: list[str]
     real_environment: dict[str, str]
-    cmux_calls: list[list[str]]
-    cmux_payloads: list[str]
-    cmux_environment: dict[str, str]
+    bree_calls: list[list[str]]
+    bree_payloads: list[str]
+    bree_environment: dict[str, str]
     stderr: str
     real_path: str
     shim_directory: str
@@ -53,7 +53,7 @@ class WrapperResult:
 
 
 # Set only while priming a fixture's first exec; every fixture exits at once.
-PRIME_ENVIRONMENT_KEY = "CMUX_HERMES_TEST_PRIME_EXEC"
+PRIME_ENVIRONMENT_KEY = "BREE_HERMES_TEST_PRIME_EXEC"
 
 
 def make_executable(fixtures: list[Path], path: Path, content: str) -> None:
@@ -76,7 +76,7 @@ def prime_first_exec(paths: list[Path]) -> None:
     Hermes and the bundled wrapper and CLI were run before, so priming keeps
     the timed launch to the wrapper's own work.
     """
-    # Without CMUX_SURFACE_ID or a Hermes on PATH, the wrapper exits 127 at once.
+    # Without BREE_SURFACE_ID or a Hermes on PATH, the wrapper exits 127 at once.
     environment = {"PATH": "/usr/bin:/bin", PRIME_ENVIRONMENT_KEY: "1"}
     for path in paths:
         subprocess.run(
@@ -138,7 +138,7 @@ def read_cpu_seconds(path: Path) -> float | None:
 def run_wrapper(
     argv: list[str],
     *,
-    in_cmux: bool = True,
+    in_bree: bool = True,
     hooks_disabled: bool = False,
     installer_exit_code: int = 0,
     installer_blocks: bool = False,
@@ -154,14 +154,14 @@ def run_wrapper(
     tui_gateway_compute_host: bool = False,
     stale_tui_python_wrapper: bool = False,
     shadow_path_bash: bool = False,
-    expected_cmux_call_count: int | None = None,
+    expected_bree_call_count: int | None = None,
 ) -> WrapperResult:
-    with tempfile.TemporaryDirectory(prefix="cmux-hermes-wrapper-test-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-hermes-wrapper-test-") as td:
         tmp = Path(td)
         # Every fixture executable written below, primed before the timed launch.
         fixtures: list[Path] = []
         wrapper_dir = tmp / "wrapper-bin"
-        shim_dir = tmp / "cmux-cli-shims" / "surface-test"
+        shim_dir = tmp / "bree-cli-shims" / "surface-test"
         real_dir = tmp / "real-bin"
         shadow_dir = tmp / "shadow-bin"
         bundled_dir = tmp / "bundled cli"
@@ -195,7 +195,7 @@ def run_wrapper(
                 encoding="utf-8",
             )
 
-        wrapper = wrapper_dir / "cmux-hermes-agent-wrapper"
+        wrapper = wrapper_dir / "bree-hermes-agent-wrapper"
         shutil.copy2(SOURCE_WRAPPER, wrapper)
         wrapper.chmod(0o755)
         if SOURCE_TUI_PYTHON_WRAPPER.is_file():
@@ -216,9 +216,9 @@ def run_wrapper(
 
         real_args_log = tmp / "real-args.log"
         real_env_log = tmp / "real-env.log"
-        cmux_calls_log = tmp / "cmux-calls.log"
-        cmux_payloads_log = tmp / "cmux-payloads.log"
-        cmux_env_log = tmp / "cmux-env.log"
+        bree_calls_log = tmp / "bree-calls.log"
+        bree_payloads_log = tmp / "bree-payloads.log"
+        bree_env_log = tmp / "bree-env.log"
         installer_started_log = tmp / "installer-started.log"
         installer_gate = tmp / "installer-gate"
         tui_watcher_cpu_log = tmp / "tui-watcher-cpu.log"
@@ -227,7 +227,7 @@ def run_wrapper(
         if installer_blocks:
             os.mkfifo(installer_gate)
 
-        stale_tui_python = tmp / "retired-build" / "cmux-hermes-python-wrapper"
+        stale_tui_python = tmp / "retired-build" / "bree-hermes-python-wrapper"
         if stale_tui_python_wrapper:
             stale_tui_python.parent.mkdir(parents=True)
             make_executable(
@@ -256,7 +256,7 @@ def run_wrapper(
                 "\n"
                 "def register_from_config(_config, *, accept_hooks=False):\n"
                 "    global _registered\n"
-                "    target = os.environ.get('CMUX_HERMES_TUI_TARGET_MODULE')\n"
+                "    target = os.environ.get('BREE_HERMES_TUI_TARGET_MODULE')\n"
                 "    if target not in {'tui_gateway.entry', 'tui_gateway.compute_host'}:\n"
                 "        raise RuntimeError(f'missing gateway target marker: {target!r}')\n"
                 "    _registered = True\n"
@@ -296,20 +296,20 @@ set -euo pipefail
 : > "$FAKE_REAL_ARGS_LOG"
 printf '%s\\0' "$@" >> "$FAKE_REAL_ARGS_LOG"
 {
-  printf 'CMUX_SURFACE_ID=%s\\n' "${CMUX_SURFACE_ID-__UNSET__}"
-  printf 'CMUX_WORKSPACE_ID=%s\\n' "${CMUX_WORKSPACE_ID-__UNSET__}"
-  printf 'CMUX_SOCKET_PATH=%s\\n' "${CMUX_SOCKET_PATH-__UNSET__}"
-  printf 'CMUX_BUNDLED_CLI_PATH=%s\\n' "${CMUX_BUNDLED_CLI_PATH-__UNSET__}"
-  printf 'CMUX_HERMES_AGENT_PID=%s\\n' "${CMUX_HERMES_AGENT_PID-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_KIND=%s\\n' "${CMUX_AGENT_LAUNCH_KIND-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_EXECUTABLE=%s\\n' "${CMUX_AGENT_LAUNCH_EXECUTABLE-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_CWD=%s\\n' "${CMUX_AGENT_LAUNCH_CWD-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_ARGV_B64=%s\\n' "${CMUX_AGENT_LAUNCH_ARGV_B64-__UNSET__}"
-  printf 'CMUX_AGENT_RESTORE_LAUNCH=%s\\n' "${CMUX_AGENT_RESTORE_LAUNCH-__UNSET__}"
+  printf 'BREE_SURFACE_ID=%s\\n' "${BREE_SURFACE_ID-__UNSET__}"
+  printf 'BREE_WORKSPACE_ID=%s\\n' "${BREE_WORKSPACE_ID-__UNSET__}"
+  printf 'BREE_SOCKET_PATH=%s\\n' "${BREE_SOCKET_PATH-__UNSET__}"
+  printf 'BREE_BUNDLED_CLI_PATH=%s\\n' "${BREE_BUNDLED_CLI_PATH-__UNSET__}"
+  printf 'BREE_HERMES_AGENT_PID=%s\\n' "${BREE_HERMES_AGENT_PID-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_KIND=%s\\n' "${BREE_AGENT_LAUNCH_KIND-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_EXECUTABLE=%s\\n' "${BREE_AGENT_LAUNCH_EXECUTABLE-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_CWD=%s\\n' "${BREE_AGENT_LAUNCH_CWD-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_ARGV_B64=%s\\n' "${BREE_AGENT_LAUNCH_ARGV_B64-__UNSET__}"
+  printf 'BREE_AGENT_RESTORE_LAUNCH=%s\\n' "${BREE_AGENT_RESTORE_LAUNCH-__UNSET__}"
   printf 'HERMES_HOME=%s\\n' "${HERMES_HOME-__UNSET__}"
   printf 'TMPDIR=%s\\n' "${TMPDIR-__UNSET__}"
   printf 'HERMES_PYTHON=%s\\n' "${HERMES_PYTHON-__UNSET__}"
-  printf 'CMUX_HERMES_TUI_REAL_PYTHON=%s\\n' "${CMUX_HERMES_TUI_REAL_PYTHON-__UNSET__}"
+  printf 'BREE_HERMES_TUI_REAL_PYTHON=%s\\n' "${BREE_HERMES_TUI_REAL_PYTHON-__UNSET__}"
   printf 'PATH=%s\\n' "$PATH"
   printf 'REAL_PID=%s\\n' "$$"
 } > "$FAKE_REAL_ENV_LOG"
@@ -332,8 +332,8 @@ if [[ -n "${FAKE_TUI_SESSION_IDS:-}" ]]; then
       # authoritative active-session file. This keeps the fixture deterministic
       # on loaded runners without synchronizing on the watcher's process shape.
       for _ in {1..200}; do
-        if [[ -f "${FAKE_CMUX_CALLS_LOG:-}" ]] &&
-           /usr/bin/grep -a -q 'session-start' "$FAKE_CMUX_CALLS_LOG"; then
+        if [[ -f "${FAKE_BREE_CALLS_LOG:-}" ]] &&
+           /usr/bin/grep -a -q 'session-start' "$FAKE_BREE_CALLS_LOG"; then
           break
         fi
         /bin/sleep 0.01
@@ -346,7 +346,7 @@ fi
 if [[ "${FAKE_SAMPLE_TUI_WATCHER_CPU:-0}" == "1" ]]; then
   watcher_pid=""
   for _ in {1..100}; do
-    watcher_pid="$(/usr/bin/pgrep -P "$$" -f 'cmux-hermes-agent-wrapper' | /usr/bin/head -n 1 || true)"
+    watcher_pid="$(/usr/bin/pgrep -P "$$" -f 'bree-hermes-agent-wrapper' | /usr/bin/head -n 1 || true)"
     [[ -n "$watcher_pid" ]] && break
     sleep 0.01
   done
@@ -367,7 +367,7 @@ fi
 """,
         )
 
-        bundled_cli = bundled_dir / "cmux"
+        bundled_cli = bundled_dir / "bree"
         if cli_available:
             make_executable(
                 fixtures,
@@ -379,16 +379,16 @@ set -euo pipefail
 if [[ -n "${FAKE_INSTALLER_START_DELAY:-}" ]]; then
   /bin/sleep "$FAKE_INSTALLER_START_DELAY"
 fi
-printf '\\036' >> "$FAKE_CMUX_CALLS_LOG"
-printf '%s\\0' "$@" >> "$FAKE_CMUX_CALLS_LOG"
-fake_cmux_payload_b64="$(/usr/bin/base64 | tr -d '\\n')"
-printf '%s\\n' "$fake_cmux_payload_b64" >> "$FAKE_CMUX_PAYLOADS_LOG"
+printf '\\036' >> "$FAKE_BREE_CALLS_LOG"
+printf '%s\\0' "$@" >> "$FAKE_BREE_CALLS_LOG"
+fake_bree_payload_b64="$(/usr/bin/base64 | tr -d '\\n')"
+printf '%s\\n' "$fake_bree_payload_b64" >> "$FAKE_BREE_PAYLOADS_LOG"
 {
-  printf 'CMUX_SURFACE_ID=%s\\n' "${CMUX_SURFACE_ID-__UNSET__}"
-  printf 'CMUX_WORKSPACE_ID=%s\\n' "${CMUX_WORKSPACE_ID-__UNSET__}"
-  printf 'CMUX_SOCKET_PATH=%s\\n' "${CMUX_SOCKET_PATH-__UNSET__}"
+  printf 'BREE_SURFACE_ID=%s\\n' "${BREE_SURFACE_ID-__UNSET__}"
+  printf 'BREE_WORKSPACE_ID=%s\\n' "${BREE_WORKSPACE_ID-__UNSET__}"
+  printf 'BREE_SOCKET_PATH=%s\\n' "${BREE_SOCKET_PATH-__UNSET__}"
   printf 'HERMES_HOME=%s\\n' "${HERMES_HOME-__UNSET__}"
-} > "$FAKE_CMUX_ENV_LOG"
+} > "$FAKE_BREE_ENV_LOG"
 if [[ -n "${FAKE_INSTALLER_GATE:-}" ]]; then
   : > "$FAKE_INSTALLER_STARTED_LOG"
   IFS= read -r _ < "$FAKE_INSTALLER_GATE"
@@ -399,19 +399,19 @@ exit "${FAKE_INSTALLER_EXIT_CODE:-0}"
         else:
             # A configured-but-missing bundled CLI must fail closed. Put a
             # tempting fallback on PATH so the test does not depend on the
-            # developer or CI machine having another cmux installation.
+            # developer or CI machine having another bree installation.
             make_executable(
                 fixtures,
-                real_dir / "cmux",
+                real_dir / "bree",
                 """#!/usr/bin/env bash
 set -euo pipefail
-printf '\\036' >> "$FAKE_CMUX_CALLS_LOG"
-printf '%s\\0' "$@" >> "$FAKE_CMUX_CALLS_LOG"
+printf '\\036' >> "$FAKE_BREE_CALLS_LOG"
+printf '%s\\0' "$@" >> "$FAKE_BREE_CALLS_LOG"
 exit 0
 """,
             )
 
-        socket_path = str(tmp / "cmux.sock")
+        socket_path = str(tmp / "bree.sock")
         env = os.environ.copy()
         env["PATH"] = (
             f"{shadow_dir}:{shim_dir}:{real_dir}:{env.get('PATH', '/usr/bin:/bin')}"
@@ -419,15 +419,15 @@ exit 0
         env["HOME"] = str(user_home)
         env["HERMES_HOME"] = str(hermes_home)
         env["TMPDIR"] = str(original_tmpdir)
-        env["CMUX_BUNDLED_CLI_PATH"] = str(bundled_cli)
-        env["CMUX_HERMES_AGENT_WRAPPER_SHIM"] = str(shim)
-        env["CMUX_HERMES_AGENT_WRAPPER_SHIM_ROOT"] = str(shim_dir)
-        env["CMUX_AGENT_RESTORE_LAUNCH"] = f"hermes-agent:{SESSION_ID}"
+        env["BREE_BUNDLED_CLI_PATH"] = str(bundled_cli)
+        env["BREE_HERMES_AGENT_WRAPPER_SHIM"] = str(shim)
+        env["BREE_HERMES_AGENT_WRAPPER_SHIM_ROOT"] = str(shim_dir)
+        env["BREE_AGENT_RESTORE_LAUNCH"] = f"hermes-agent:{SESSION_ID}"
         env["FAKE_REAL_ARGS_LOG"] = str(real_args_log)
         env["FAKE_REAL_ENV_LOG"] = str(real_env_log)
-        env["FAKE_CMUX_CALLS_LOG"] = str(cmux_calls_log)
-        env["FAKE_CMUX_PAYLOADS_LOG"] = str(cmux_payloads_log)
-        env["FAKE_CMUX_ENV_LOG"] = str(cmux_env_log)
+        env["FAKE_BREE_CALLS_LOG"] = str(bree_calls_log)
+        env["FAKE_BREE_PAYLOADS_LOG"] = str(bree_payloads_log)
+        env["FAKE_BREE_ENV_LOG"] = str(bree_env_log)
         env["FAKE_INSTALLER_EXIT_CODE"] = str(installer_exit_code)
         env["FAKE_INSTALLER_STARTED_LOG"] = str(installer_started_log)
         if installer_blocks:
@@ -440,7 +440,7 @@ exit 0
         # finish instead of racing its start on a busy runner.
         if installer_timeout_seconds is None:
             installer_timeout_seconds = INSTALLER_BUDGET_SECONDS
-        env["CMUX_HERMES_AGENT_HOOK_INSTALL_TIMEOUT_SECONDS"] = str(installer_timeout_seconds)
+        env["BREE_HERMES_AGENT_HOOK_INSTALL_TIMEOUT_SECONDS"] = str(installer_timeout_seconds)
         if installer_start_delay_seconds:
             env["FAKE_INSTALLER_START_DELAY"] = str(installer_start_delay_seconds)
         else:
@@ -461,17 +461,17 @@ exit 0
             env["HERMES_PYTHON"] = str(stale_tui_python)
         elif tui_gateway_turns:
             env["HERMES_PYTHON"] = sys.executable
-        if in_cmux:
-            env["CMUX_SURFACE_ID"] = "11111111-1111-1111-1111-111111111111"
-            env["CMUX_WORKSPACE_ID"] = "22222222-2222-2222-2222-222222222222"
-            env["CMUX_SOCKET_PATH"] = socket_path
+        if in_bree:
+            env["BREE_SURFACE_ID"] = "11111111-1111-1111-1111-111111111111"
+            env["BREE_WORKSPACE_ID"] = "22222222-2222-2222-2222-222222222222"
+            env["BREE_SOCKET_PATH"] = socket_path
         else:
-            for key in ("CMUX_SURFACE_ID", "CMUX_WORKSPACE_ID", "CMUX_SOCKET_PATH"):
+            for key in ("BREE_SURFACE_ID", "BREE_WORKSPACE_ID", "BREE_SOCKET_PATH"):
                 env.pop(key, None)
         if hooks_disabled:
-            env["CMUX_HERMES_AGENT_HOOKS_DISABLED"] = "1"
+            env["BREE_HERMES_AGENT_HOOKS_DISABLED"] = "1"
         else:
-            env.pop("CMUX_HERMES_AGENT_HOOKS_DISABLED", None)
+            env.pop("BREE_HERMES_AGENT_HOOKS_DISABLED", None)
 
         prime_first_exec([wrapper, *fixtures])
         proc = subprocess.Popen(
@@ -507,9 +507,9 @@ exit 0
         tui_tmpdir_cleaned_before_teardown: bool | None = None
         if tui_session_ids:
             lifecycle_deadline = time.monotonic() + 2
-            expected_call_count = expected_cmux_call_count or len(tui_session_ids) + 2
+            expected_call_count = expected_bree_call_count or len(tui_session_ids) + 2
             while time.monotonic() < lifecycle_deadline:
-                if len(read_calls(cmux_calls_log)) >= expected_call_count:
+                if len(read_calls(bree_calls_log)) >= expected_call_count:
                     break
                 time.sleep(0.01)
             if real_env_log.exists():
@@ -528,9 +528,9 @@ exit 0
             returncode=proc.returncode,
             real_argv=read_nul_values(real_args_log),
             real_environment=read_environment(real_env_log) if real_env_log.exists() else {},
-            cmux_calls=read_calls(cmux_calls_log),
-            cmux_payloads=read_payloads(cmux_payloads_log),
-            cmux_environment=read_environment(cmux_env_log) if cmux_env_log.exists() else {},
+            bree_calls=read_calls(bree_calls_log),
+            bree_payloads=read_payloads(bree_payloads_log),
+            bree_environment=read_environment(bree_env_log) if bree_env_log.exists() else {},
             stderr=stderr.strip(),
             real_path=str(real_hermes),
             shim_directory=str(shim_dir),
@@ -557,7 +557,7 @@ def expect(condition: bool, message: str, failures: list[str]) -> None:
 
 
 def decoded_launch_argv(environment: dict[str, str]) -> list[str]:
-    encoded = environment.get("CMUX_AGENT_LAUNCH_ARGV_B64", "")
+    encoded = environment.get("BREE_AGENT_LAUNCH_ARGV_B64", "")
     if not encoded or encoded == "__UNSET__":
         return []
     raw = base64.b64decode(encoded)
@@ -581,26 +581,26 @@ def assert_instrumented(
     ]
     expect(result.returncode == 0, f"{label}: wrapper exited {result.returncode}: {result.stderr}", failures)
     expect(result.real_argv == argv, f"{label}: original argv changed: {result.real_argv}", failures)
-    expect(result.cmux_calls == [expected_call], f"{label}: unexpected installer calls: {result.cmux_calls}", failures)
-    expect(result.cmux_environment.get("CMUX_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
-           f"{label}: installer lost surface attribution: {result.cmux_environment}", failures)
-    expect(result.cmux_environment.get("CMUX_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
-           f"{label}: installer lost workspace attribution: {result.cmux_environment}", failures)
-    expect(result.real_environment.get("CMUX_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
+    expect(result.bree_calls == [expected_call], f"{label}: unexpected installer calls: {result.bree_calls}", failures)
+    expect(result.bree_environment.get("BREE_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
+           f"{label}: installer lost surface attribution: {result.bree_environment}", failures)
+    expect(result.bree_environment.get("BREE_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
+           f"{label}: installer lost workspace attribution: {result.bree_environment}", failures)
+    expect(result.real_environment.get("BREE_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
            f"{label}: Hermes lost surface attribution: {result.real_environment}", failures)
-    expect(result.real_environment.get("CMUX_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
+    expect(result.real_environment.get("BREE_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
            f"{label}: Hermes lost workspace attribution: {result.real_environment}", failures)
-    expect(result.real_environment.get("CMUX_HERMES_AGENT_PID") == result.real_environment.get("REAL_PID"),
+    expect(result.real_environment.get("BREE_HERMES_AGENT_PID") == result.real_environment.get("REAL_PID"),
            f"{label}: Hermes PID identity does not match exec'd process: {result.real_environment}", failures)
-    expect(result.real_environment.get("CMUX_AGENT_LAUNCH_KIND") == "hermes-agent",
+    expect(result.real_environment.get("BREE_AGENT_LAUNCH_KIND") == "hermes-agent",
            f"{label}: launch kind missing: {result.real_environment}", failures)
-    expect(result.real_environment.get("CMUX_AGENT_LAUNCH_EXECUTABLE") == result.real_path,
+    expect(result.real_environment.get("BREE_AGENT_LAUNCH_EXECUTABLE") == result.real_path,
            f"{label}: real executable was not captured: {result.real_environment}", failures)
-    expect(result.real_environment.get("CMUX_AGENT_LAUNCH_CWD") == result.working_directory,
+    expect(result.real_environment.get("BREE_AGENT_LAUNCH_CWD") == result.working_directory,
            f"{label}: launch cwd was not captured: {result.real_environment}", failures)
     expect(decoded_launch_argv(result.real_environment) == [result.real_path, *argv],
            f"{label}: launch argv was not captured: {decoded_launch_argv(result.real_environment)}", failures)
-    expect(result.real_environment.get("CMUX_AGENT_RESTORE_LAUNCH") == "__UNSET__",
+    expect(result.real_environment.get("BREE_AGENT_RESTORE_LAUNCH") == "__UNSET__",
            f"{label}: one-shot restore authorization leaked to Hermes descendants", failures)
 
 
@@ -648,14 +648,14 @@ def test_tui_active_session_file_bridges_lifecycle(failures: list[str]) -> None:
     ]
 
     expect(result.returncode == 0, f"TUI bridge: wrapper exited {result.returncode}: {result.stderr}", failures)
-    expect(result.cmux_calls == expected_calls, f"TUI bridge: unexpected cmux calls: {result.cmux_calls}", failures)
+    expect(result.bree_calls == expected_calls, f"TUI bridge: unexpected bree calls: {result.bree_calls}", failures)
     expect(
-        len(result.cmux_payloads) == len(expected_calls),
-        f"TUI bridge: lifecycle payload count did not match calls: {result.cmux_payloads}",
+        len(result.bree_payloads) == len(expected_calls),
+        f"TUI bridge: lifecycle payload count did not match calls: {result.bree_payloads}",
         failures,
     )
-    if len(result.cmux_payloads) == len(expected_calls):
-        payloads = [json.loads(payload) if payload else {} for payload in result.cmux_payloads]
+    if len(result.bree_payloads) == len(expected_calls):
+        payloads = [json.loads(payload) if payload else {} for payload in result.bree_payloads]
         expected_events = [
             {},
             {
@@ -725,7 +725,7 @@ def test_tui_bridge_fails_closed_on_untrusted_session_files(failures: list[str])
     for label, kwargs in cases:
         result = run_wrapper(
             ["--tui"],
-            expected_cmux_call_count=1,
+            expected_bree_call_count=1,
             **kwargs,
         )
         expected_install = [
@@ -737,13 +737,13 @@ def test_tui_bridge_fails_closed_on_untrusted_session_files(failures: list[str])
             "--yes",
         ]
         expect(
-            result.cmux_calls == [expected_install],
-            f"TUI bridge {label}: untrusted file emitted lifecycle calls: {result.cmux_calls}",
+            result.bree_calls == [expected_install],
+            f"TUI bridge {label}: untrusted file emitted lifecycle calls: {result.bree_calls}",
             failures,
         )
         expect(
-            result.cmux_payloads == [""],
-            f"TUI bridge {label}: untrusted file emitted lifecycle payloads: {result.cmux_payloads}",
+            result.bree_payloads == [""],
+            f"TUI bridge {label}: untrusted file emitted lifecycle payloads: {result.bree_payloads}",
             failures,
         )
         hermes_tmpdir = result.real_environment.get("TMPDIR")
@@ -781,7 +781,7 @@ def test_tui_gateway_registers_hooks_for_every_turn(failures: list[str]) -> None
 
 
 def test_tui_python_wrapper_prefers_symlinked_venv_interpreter(failures: list[str]) -> None:
-    with tempfile.TemporaryDirectory(prefix="cmux-hermes-python-test-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-hermes-python-test-") as td:
         tmp = Path(td)
         source_root = tmp / "hermes"
         venv_bin = source_root / "venv" / "bin"
@@ -813,7 +813,7 @@ def test_tui_python_wrapper_prefers_symlinked_venv_interpreter(failures: list[st
         )
 
 
-def test_tui_gateway_rejects_retired_cmux_python_wrapper(failures: list[str]) -> None:
+def test_tui_gateway_rejects_retired_bree_python_wrapper(failures: list[str]) -> None:
     expected_events = [
         f"gateway:{event}:{turn}"
         for turn in (1, 2)
@@ -821,7 +821,7 @@ def test_tui_gateway_rejects_retired_cmux_python_wrapper(failures: list[str]) ->
     ]
     cases = (
         ("watcher available", {}, expected_events),
-        # Without a cmux CLI there is no gateway bootstrap to register hooks,
+        # Without a bree CLI there is no gateway bootstrap to register hooks,
         # but Hermes must still launch through its own interpreter.
         ("watcher unavailable", {"cli_available": False}, []),
     )
@@ -835,7 +835,7 @@ def test_tui_gateway_rejects_retired_cmux_python_wrapper(failures: list[str]) ->
 
         expect(
             result.returncode == 0,
-            f"TUI stale Python wrapper ({label}): retired cmux wrapper blocked "
+            f"TUI stale Python wrapper ({label}): retired bree wrapper blocked "
             f"gateway startup: {result.returncode}: {result.stderr}",
             failures,
         )
@@ -891,8 +891,8 @@ def test_profile_scoped_hook_install(failures: list[str]) -> None:
     ):
         result = run_wrapper(argv, profile_names=("coder",))
         expect(
-            result.cmux_environment.get("HERMES_HOME") == result.profile_homes["coder"],
-            f"{label}: installer targeted the wrong profile: {result.cmux_environment}",
+            result.bree_environment.get("HERMES_HOME") == result.profile_homes["coder"],
+            f"{label}: installer targeted the wrong profile: {result.bree_environment}",
             failures,
         )
         expect(
@@ -903,8 +903,8 @@ def test_profile_scoped_hook_install(failures: list[str]) -> None:
 
     sticky = run_wrapper([], active_profile="coder", profile_names=("coder",))
     expect(
-        sticky.cmux_environment.get("HERMES_HOME") == sticky.profile_homes["coder"],
-        f"sticky profile: installer targeted the wrong profile: {sticky.cmux_environment}",
+        sticky.bree_environment.get("HERMES_HOME") == sticky.profile_homes["coder"],
+        f"sticky profile: installer targeted the wrong profile: {sticky.bree_environment}",
         failures,
     )
     expect(
@@ -937,7 +937,7 @@ def test_administrative_entrypoints_bypass_install(failures: list[str]) -> None:
         result = run_wrapper(argv)
         expect(result.returncode == 0, f"{label}: wrapper exited {result.returncode}: {result.stderr}", failures)
         expect(result.real_argv == argv, f"{label}: original argv changed: {result.real_argv}", failures)
-        expect(result.cmux_calls == [], f"{label}: administrative command installed hooks: {result.cmux_calls}", failures)
+        expect(result.bree_calls == [], f"{label}: administrative command installed hooks: {result.bree_calls}", failures)
 
 
 def test_administrative_passthrough_strips_shim_path(failures: list[str]) -> None:
@@ -945,7 +945,7 @@ def test_administrative_passthrough_strips_shim_path(failures: list[str]) -> Non
     passthrough_path = result.real_environment.get("PATH", "").split(os.pathsep)
     expect(
         result.shim_directory not in passthrough_path
-        and all("/cmux-cli-shims/" not in entry for entry in passthrough_path),
+        and all("/bree-cli-shims/" not in entry for entry in passthrough_path),
         f"profile alias: administrative command retained ephemeral shim PATH: {passthrough_path}",
         failures,
     )
@@ -966,13 +966,13 @@ def test_noninteractive_entrypoints_bypass_install(failures: list[str]) -> None:
         result = run_wrapper(argv)
         expect(result.returncode == 0, f"{label}: wrapper exited {result.returncode}: {result.stderr}", failures)
         expect(result.real_argv == argv, f"{label}: original argv changed: {result.real_argv}", failures)
-        expect(result.cmux_calls == [], f"{label}: noninteractive command installed hooks: {result.cmux_calls}", failures)
+        expect(result.bree_calls == [], f"{label}: noninteractive command installed hooks: {result.bree_calls}", failures)
         for key in (
-            "CMUX_SURFACE_ID",
-            "CMUX_WORKSPACE_ID",
-            "CMUX_SOCKET_PATH",
-            "CMUX_AGENT_LAUNCH_KIND",
-            "CMUX_AGENT_RESTORE_LAUNCH",
+            "BREE_SURFACE_ID",
+            "BREE_WORKSPACE_ID",
+            "BREE_SOCKET_PATH",
+            "BREE_AGENT_LAUNCH_KIND",
+            "BREE_AGENT_RESTORE_LAUNCH",
         ):
             expect(
                 result.real_environment.get(key) == "__UNSET__",
@@ -981,20 +981,20 @@ def test_noninteractive_entrypoints_bypass_install(failures: list[str]) -> None:
             )
         expect(
             result.real_environment.get("HERMES_HOME") != "__UNSET__",
-            f"{label}: passthrough cleared non-cmux Hermes configuration: {result.real_environment}",
+            f"{label}: passthrough cleared non-bree Hermes configuration: {result.real_environment}",
             failures,
         )
 
 
-def test_opt_out_and_non_cmux_launches_bypass_install(failures: list[str]) -> None:
+def test_opt_out_and_non_bree_launches_bypass_install(failures: list[str]) -> None:
     for label, kwargs in (
         ("disabled", {"hooks_disabled": True}),
-        ("outside-cmux", {"in_cmux": False}),
+        ("outside-bree", {"in_bree": False}),
     ):
         result = run_wrapper(["--resume", SESSION_ID], **kwargs)
         expect(result.returncode == 0, f"{label}: wrapper exited {result.returncode}: {result.stderr}", failures)
         expect(result.real_argv == ["--resume", SESSION_ID], f"{label}: argv changed: {result.real_argv}", failures)
-        expect(result.cmux_calls == [], f"{label}: hooks were installed: {result.cmux_calls}", failures)
+        expect(result.bree_calls == [], f"{label}: hooks were installed: {result.bree_calls}", failures)
 
 
 def test_installer_failures_never_block_hermes(failures: list[str]) -> None:
@@ -1007,8 +1007,8 @@ def test_installer_failures_never_block_hermes(failures: list[str]) -> None:
         expect(result.real_argv == ["--continue"], f"{label}: argv changed: {result.real_argv}", failures)
         if label == "installer-missing":
             expect(
-                result.cmux_calls == [],
-                f"{label}: wrapper fell back to another cmux executable: {result.cmux_calls}",
+                result.bree_calls == [],
+                f"{label}: wrapper fell back to another bree executable: {result.bree_calls}",
                 failures,
             )
 
@@ -1036,7 +1036,7 @@ def test_non_positive_installer_timeout_skips_setup(failures: list[str]) -> None
         expect(result.returncode == 0, f"{label}: wrapper exited {result.returncode}: {result.stderr}", failures)
         expect(result.launch_observed, f"{label}: Hermes launch signal was not observed", failures)
         expect(result.real_argv == ["--continue"], f"{label}: argv changed: {result.real_argv}", failures)
-        expect(result.cmux_calls == [], f"{label}: installer should have been skipped: {result.cmux_calls}", failures)
+        expect(result.bree_calls == [], f"{label}: installer should have been skipped: {result.bree_calls}", failures)
 
 
 def main() -> int:
@@ -1050,24 +1050,24 @@ def main() -> int:
         test_tui_bridge_fails_closed_on_untrusted_session_files(failures)
         test_tui_gateway_registers_hooks_for_every_turn(failures)
         test_tui_python_wrapper_prefers_symlinked_venv_interpreter(failures)
-        test_tui_gateway_rejects_retired_cmux_python_wrapper(failures)
+        test_tui_gateway_rejects_retired_bree_python_wrapper(failures)
         test_bundled_wrappers_ignore_path_bash_shadow(failures)
         test_explicit_classic_cli_skips_tui_watcher(failures)
         test_profile_scoped_hook_install(failures)
         test_administrative_entrypoints_bypass_install(failures)
         test_administrative_passthrough_strips_shim_path(failures)
         test_noninteractive_entrypoints_bypass_install(failures)
-        test_opt_out_and_non_cmux_launches_bypass_install(failures)
+        test_opt_out_and_non_bree_launches_bypass_install(failures)
         test_installer_failures_never_block_hermes(failures)
         test_stalled_installer_is_bounded(failures)
         test_non_positive_installer_timeout_skips_setup(failures)
 
     if failures:
-        print("FAIL: Hermes session launches do not reliably activate cmux hooks")
+        print("FAIL: Hermes session launches do not reliably activate bree hooks")
         for failure in failures:
             print(f"- {failure}")
         return 1
-    print("PASS: every interactive Hermes launch activates cmux hooks and preserves surface attribution")
+    print("PASS: every interactive Hermes launch activates bree hooks and preserves surface attribution")
     return 0
 
 

@@ -1,12 +1,12 @@
-import CmuxFoundation
-import CmuxTerminal
+import BreeFoundation
+import BreeTerminal
 import Darwin
 import Foundation
 
 /// One resource sample shared by local diagnostics and opt-in Sentry reporting.
 struct MemoryResourceSample: Sendable {
     private let appPID: Int
-    private let appProcess: CmuxTopProcessInfo?
+    private let appProcess: BreeTopProcessInfo?
     private let sampledAt: Date
     private let surfaces: TerminalSurfaceRegistryDiagnosticSnapshot
     private let system: DarwinSystemMemorySnapshot?
@@ -15,7 +15,7 @@ struct MemoryResourceSample: Sendable {
     private let descriptors: DarwinFileDescriptorSnapshot
 
     /// Called on the sampling worker; UI-owned counts are supplied separately.
-    init(processSnapshot: CmuxTopProcessSnapshot, appPID: Int = Int(getpid())) async {
+    init(processSnapshot: BreeTopProcessSnapshot, appPID: Int = Int(getpid())) async {
         self.appPID = appPID
         appProcess = processSnapshot.process(pid: appPID)
         sampledAt = processSnapshot.sampledAt
@@ -35,8 +35,8 @@ struct MemoryResourceSample: Sendable {
         var aggregatePayload = aggregate.privacySafeDiagnosticPayload()
         aggregatePayload["severity"] = MemoryPressureAggregatePolicy.default
             .severity(for: aggregate).logName
-        let memorySource = appProcess?.memorySource.rawValue ?? CmuxTopProcessMemorySource.unavailable.rawValue
-        let residentSource = appProcess?.residentMemorySource.rawValue ?? CmuxTopProcessMemorySource.unavailable.rawValue
+        let memorySource = appProcess?.memorySource.rawValue ?? BreeTopProcessMemorySource.unavailable.rawValue
+        let residentSource = appProcess?.residentMemorySource.rawValue ?? BreeTopProcessMemorySource.unavailable.rawValue
         return [
             "sampled_at": ISO8601DateFormatter().string(from: sampledAt),
             "app": [

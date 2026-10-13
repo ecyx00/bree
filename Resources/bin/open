@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# cmux open wrapper - routes HTTP(S) URLs to cmux's in-app browser
+# bree open wrapper - routes HTTP(S) URLs to bree's in-app browser
 #
-# When running inside a cmux terminal (CMUX_SOCKET_PATH is set), this wrapper
-# intercepts `open https://...` invocations and opens them in cmux's built-in
+# When running inside a bree terminal (BREE_SOCKET_PATH is set), this wrapper
+# intercepts `open https://...` invocations and opens them in bree's built-in
 # browser within the same workspace. All other arguments pass through to
 # /usr/bin/open unchanged.
 
-SYSTEM_OPEN_BIN="${CMUX_OPEN_WRAPPER_SYSTEM_OPEN:-/usr/bin/open}"
-DEFAULTS_BIN="${CMUX_OPEN_WRAPPER_DEFAULTS:-/usr/bin/defaults}"
-PYTHON3_BIN="${CMUX_OPEN_WRAPPER_PYTHON3:-}"
+SYSTEM_OPEN_BIN="${BREE_OPEN_WRAPPER_SYSTEM_OPEN:-/usr/bin/open}"
+DEFAULTS_BIN="${BREE_OPEN_WRAPPER_DEFAULTS:-/usr/bin/defaults}"
+PYTHON3_BIN="${BREE_OPEN_WRAPPER_PYTHON3:-}"
 
 if [[ ! -x "$SYSTEM_OPEN_BIN" ]]; then
     SYSTEM_OPEN_BIN="/usr/bin/open"
@@ -26,7 +26,7 @@ elif command -v python3 >/dev/null 2>&1; then
     PYTHON3_BIN="$(command -v python3)"
 fi
 
-settings_domain="${CMUX_BUNDLE_ID:-}"
+settings_domain="${BREE_BUNDLE_ID:-}"
 whitelist_raw=""
 whitelist_patterns=()
 
@@ -381,7 +381,7 @@ load_whitelist_patterns() {
 }
 
 # Preserve the caller's original locale before forcing C below, so it can be
-# restored for child processes (system_open, the cmux CLI) -- forcing C is
+# restored for child processes (system_open, the bree CLI) -- forcing C is
 # only needed for this script's own bash pattern matching, not for what it
 # dispatches to. ${LC_ALL+is_set} distinguishes "unset" from "set to empty".
 if [[ -n "${LC_ALL+is_set}" ]]; then
@@ -402,8 +402,8 @@ fi
 # purely literal patterns with no wildcards.
 export LC_ALL=C
 
-# Pass through immediately if not in a cmux terminal.
-if [[ -z "$CMUX_SOCKET_PATH" ]]; then
+# Pass through immediately if not in a bree terminal.
+if [[ -z "$BREE_SOCKET_PATH" ]]; then
     system_open "$@"
 fi
 
@@ -413,9 +413,9 @@ if [[ $# -eq 0 ]]; then
 fi
 
 # Scan for flags that indicate explicit user intent → pass through.
-# Also collect non-flag arguments and route eligible browser targets to cmux.
+# Also collect non-flag arguments and route eligible browser targets to bree.
 passthrough=false
-cmux_targets=()
+bree_targets=()
 passthrough_args=()
 for arg in "$@"; do
     case "$arg" in
@@ -430,10 +430,10 @@ for arg in "$@"; do
             ;;
         *)
             if is_http_url "$arg"; then
-                cmux_targets+=("$arg")
+                bree_targets+=("$arg")
             elif is_file_url "$arg"; then
                 if file_url_points_to_html "$arg"; then
-                    cmux_targets+=("$arg")
+                    bree_targets+=("$arg")
                 else
                     passthrough_args+=("$arg")
                 fi
@@ -442,7 +442,7 @@ for arg in "$@"; do
             elif is_html_extension "$arg"; then
                 if is_explicit_local_path "$arg" || [[ -e "$arg" ]]; then
                     if local_file_url="$(path_to_file_url "$arg")"; then
-                        cmux_targets+=("$local_file_url")
+                        bree_targets+=("$local_file_url")
                     else
                         passthrough_args+=("$arg")
                     fi
@@ -456,7 +456,7 @@ for arg in "$@"; do
     esac
 done
 
-if [[ "$passthrough" == true ]] || [[ ${#cmux_targets[@]} -eq 0 ]]; then
+if [[ "$passthrough" == true ]] || [[ ${#bree_targets[@]} -eq 0 ]]; then
     system_open "$@"
     exit $?
 fi
@@ -469,12 +469,12 @@ if [[ -n "$settings_domain" ]]; then
         exit $?
     fi
 
-    open_in_cmux="$("$DEFAULTS_BIN" read "$settings_domain" browserInterceptTerminalOpenCommandInCmuxBrowser 2>/dev/null || true)"
-    if [[ -z "$open_in_cmux" ]]; then
+    open_in_bree="$("$DEFAULTS_BIN" read "$settings_domain" browserInterceptTerminalOpenCommandInBreeBrowser 2>/dev/null || true)"
+    if [[ -z "$open_in_bree" ]]; then
         # Backward compatibility for installs that predate the dedicated open-wrapper toggle.
-        open_in_cmux="$("$DEFAULTS_BIN" read "$settings_domain" browserOpenTerminalLinksInCmuxBrowser 2>/dev/null || true)"
+        open_in_bree="$("$DEFAULTS_BIN" read "$settings_domain" browserOpenTerminalLinksInBreeBrowser 2>/dev/null || true)"
     fi
-    if is_false_setting "$open_in_cmux"; then
+    if is_false_setting "$open_in_bree"; then
         system_open "$@"
         exit $?
     fi
@@ -486,20 +486,20 @@ if [[ -n "$settings_domain" ]]; then
 
 fi
 
-# Find cmux CLI (same directory as this script).
+# Find bree CLI (same directory as this script).
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-CMUX_CLI="$SELF_DIR/bree"
+BREE_CLI="$SELF_DIR/bree"
 
-if [[ ! -x "$CMUX_CLI" ]]; then
+if [[ ! -x "$BREE_CLI" ]]; then
     system_open "$@"
     exit $?
 fi
 
-# Open each URL in cmux's in-app browser; track failures individually.
+# Open each URL in bree's in-app browser; track failures individually.
 # External-open pattern rules are evaluated in-app (NSRegularExpression) so
 # terminal link clicks and intercepted `open` commands share one regex dialect.
 failed_urls=()
-for url in "${cmux_targets[@]}"; do
+for url in "${bree_targets[@]}"; do
     if is_http_url "$url" && ! host_matches_whitelist "$url"; then
         failed_urls+=("$url")
         continue
@@ -510,8 +510,8 @@ for url in "${cmux_targets[@]}"; do
         else
             unset LC_ALL
         fi
-        export CMUX_RESPECT_EXTERNAL_OPEN_RULES=1
-        exec "$CMUX_CLI" browser open "$url"
+        export BREE_RESPECT_EXTERNAL_OPEN_RULES=1
+        exec "$BREE_CLI" browser open "$url"
     ) 2>/dev/null || failed_urls+=("$url")
 done
 

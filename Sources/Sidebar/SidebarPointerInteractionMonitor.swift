@@ -60,7 +60,7 @@ final class SidebarPointerEventHostView: NSView {
 @MainActor
 @Observable
 final class SidebarPointerInteractionMonitor {
-    nonisolated static let coordinateSpaceName = "cmux.sidebar.workspace-pointer"
+    nonisolated static let coordinateSpaceName = "bree.sidebar.workspace-pointer"
 
     private(set) var hoveredRowId: SidebarWorkspaceRenderItemID?
 

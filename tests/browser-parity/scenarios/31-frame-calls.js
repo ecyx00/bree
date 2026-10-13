@@ -7,7 +7,7 @@
 // the runtime with itself so a loaded machine does not fail them; the
 // absolute limits only catch a hang.
 // oracle: skip (driver timing and snapshot text)
-// ---- cell cmux-only
+// ---- cell bree-only
 await page.setViewportSize({ width: 1280, height: 800 });
 const iframes = (n) => `${PRIMARY}/stress/stress.html?kind=iframes&n=${n}&peer=${encodeURIComponent(PEER)}`;
 const timed = async (fn) => {
@@ -24,16 +24,16 @@ const snapshotMs = async (n) => {
 };
 const [, smallMs] = await snapshotMs(30);
 const [s, bigMs] = await snapshotMs(300);
-emitCmux("frame-buttons", (s.tree.match(/button "(Frame|Inner) /g) || []).length);
+emitBree("frame-buttons", (s.tree.match(/button "(Frame|Inner) /g) || []).length);
 // Ten times the frames; 30 is generous for linear, quadratic was over 30.
-emitCmux("snapshot-scales-linearly", (bigMs < 30 * Math.max(smallMs, 50) && bigMs < 20000) || `30 iframes ${smallMs}ms, 300 iframes ${bigMs}ms`);
+emitBree("snapshot-scales-linearly", (bigMs < 30 * Math.max(smallMs, 50) && bigMs < 20000) || `30 iframes ${smallMs}ms, 300 iframes ${bigMs}ms`);
 const main = page.mainFrame();
 const burst = (n) => timed(() => Promise.all(Array.from({ length: n }, (_, i) => main.evaluate((k) => k + 1, i))));
 const [, fewMs] = await burst(40);
 const [results, manyMs] = await burst(400);
-emitCmux("main-calls", results.every((v, i) => v === i + 1));
-emitCmux("main-calls-scale-linearly", (manyMs < 30 * Math.max(fewMs, 50) && manyMs < 20000) || `40 calls ${fewMs}ms, 400 calls ${manyMs}ms`);
+emitBree("main-calls", results.every((v, i) => v === i + 1));
+emitBree("main-calls-scale-linearly", (manyMs < 30 * Math.max(fewMs, 50) && manyMs < 20000) || `40 calls ${fewMs}ms, 400 calls ${manyMs}ms`);
 const frames = page.frames().slice(1);
 const [frameResults, framesMs] = await timed(() => Promise.all(frames.map((f) => f.evaluate(() => (document.querySelector("button") ? 1 : 0)))));
-emitCmux("frame-calls", `${frameResults.length} frames, ${frameResults.filter((v) => v === 1).length} with a button`);
-emitCmux("frame-calls-finish", framesMs < 20000 || `took ${framesMs}ms`);
+emitBree("frame-calls", `${frameResults.length} frames, ${frameResults.filter((v) => v === 1).length} with a button`);
+emitBree("frame-calls-finish", framesMs < 20000 || `took ${framesMs}ms`);

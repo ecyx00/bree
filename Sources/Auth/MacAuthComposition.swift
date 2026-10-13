@@ -1,7 +1,7 @@
-import CmuxCloud
-import CmuxFoundation
-import CMUXAuthCore
-import CmuxAuthRuntime
+import BreeCloud
+import BreeFoundation
+import BREEAuthCore
+import BreeAuthRuntime
 import AppKit
 import Foundation
 import Network
@@ -11,8 +11,8 @@ import StackAuth
 ///
 /// Constructs the de-singletonized auth graph once at app startup, mirroring
 /// the iOS `MobileAuthComposition`: the keychain/file fallback token store, a
-/// `StackClientApp` over it (wrapped in ``CmuxAuthRuntime/StackAuthClient``),
-/// the shared ``CmuxAuthRuntime/AuthCoordinator`` bound to the historical mac
+/// `StackClientApp` over it (wrapped in ``BreeAuthRuntime/StackAuthClient``),
+/// the shared ``BreeAuthRuntime/AuthCoordinator`` bound to the historical mac
 /// defaults keys, and the ``HostBrowserSignInFlow``. Replaces
 /// `AuthManager.shared`.
 @MainActor
@@ -25,7 +25,7 @@ struct MacAuthComposition {
     let tokenStore: any StackAuthTokenStoreProtocol
     /// The hosted-browser sign-in flow used by app-session recovery.
     let browserSignIn: HostBrowserSignInFlow
-    /// Bridges the native Stack session into explicitly opened cmux web panes.
+    /// Bridges the native Stack session into explicitly opened bree web panes.
     let browserAppSession: BrowserAppSessionController
     /// Shared observable account projection used by Settings and sidebar UI.
     let accountFlow: HostAccountFlow
@@ -37,7 +37,7 @@ struct MacAuthComposition {
     /// - Parameters:
     ///   - environment: The process environment (UI-test launch options).
     ///   - defaults: Persistence for the cached user / has-tokens flag /
-    ///     selected team (historical `cmux.auth.*` keys).
+    ///     selected team (historical `bree.auth.*` keys).
     init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         defaults: UserDefaults = .standard
@@ -65,20 +65,20 @@ struct MacAuthComposition {
 
         // Auth starts and stays signed out: drop any cached identity so the
         // coordinator primes as signed out and nothing tries to restore it.
-        for key in ["cmux.auth.cachedUser", "cmux.auth.hasTokens", "cmux.auth.selectedTeamID"] {
+        for key in ["bree.auth.cachedUser", "bree.auth.hasTokens", "bree.auth.selectedTeamID"] {
             defaults.removeObject(forKey: key)
         }
-        let userCache = CMUXAuthIdentityStore(
+        let userCache = BREEAuthIdentityStore(
             keyValueStore: defaults,
-            key: "cmux.auth.cachedUser"
+            key: "bree.auth.cachedUser"
         )
-        let sessionCache = CMUXAuthSessionCache(
+        let sessionCache = BREEAuthSessionCache(
             keyValueStore: defaults,
-            key: "cmux.auth.hasTokens"
+            key: "bree.auth.hasTokens"
         )
 
         let config = AuthConfig(
-            stack: CMUXAuthConfig(
+            stack: BREEAuthConfig(
                 projectId: stackProjectID,
                 publishableClientKey: stackPublishableClientKey
             ),
@@ -103,9 +103,9 @@ struct MacAuthComposition {
             resolvedAuthEnvironment: resolvedAuthEnvironment
         )
         let replacesStoredDevSession = includesDevAuth
-            && resolvedEnvironment["CMUX_DEV_AUTH_CREDENTIALS_RESOLVED"] == "1"
+            && resolvedEnvironment["BREE_DEV_AUTH_CREDENTIALS_RESOLVED"] == "1"
         let launch = AuthLaunchOptions(
-            clearAuthRequested: resolvedEnvironment["CMUX_UITEST_CLEAR_AUTH"] == "1",
+            clearAuthRequested: resolvedEnvironment["BREE_UITEST_CLEAR_AUTH"] == "1",
             mockDataEnabled: false,
             environment: resolvedEnvironment,
             includesDevAuth: includesDevAuth,
@@ -119,9 +119,9 @@ struct MacAuthComposition {
             client: client,
             sessionCache: sessionCache,
             userCache: userCache,
-            teamSelection: CMUXAuthTeamSelectionStore(
+            teamSelection: BREEAuthTeamSelectionStore(
                 keyValueStore: defaults,
-                key: "cmux.auth.selectedTeamID"
+                key: "bree.auth.selectedTeamID"
             ),
             anchor: anchor,
             config: config,
@@ -130,7 +130,7 @@ struct MacAuthComposition {
                 browserAppSessionSignInRelay.sessionWillTransition()
             },
             onSignedIn: {
-                await CmuxTuiSurfaceProviderRegistry.shared.resumeAfterSignIn()
+                await BreeTuiSurfaceProviderRegistry.shared.resumeAfterSignIn()
                 await browserAppSessionSignInRelay.signedIn()
             }
         )
@@ -162,17 +162,17 @@ struct MacAuthComposition {
             makeSignInURL: { AuthEnvironment.signInURL(callbackState: $0) },
             callbackScheme: { AuthEnvironment.callbackScheme },
             // Single chokepoint for every sign-in entry point (settings, menu,
-            // auth.* socket, `cmux auth`): Bree never opens a sign-in page.
+            // auth.* socket, `bree auth`): Bree never opens a sign-in page.
             openExternalURL: { _ in false },
             approveUnsolicitedCallback: { _ in false },
             beginSignOut: {
                 // Tell surface observers to drop account-scoped state
                 // before the coordinator clears auth.
-                NotificationCenter.default.post(name: .cmuxCloudVMAccessDidEnd, object: AppDelegate.shared)
+                NotificationCenter.default.post(name: .breeCloudVMAccessDidEnd, object: AppDelegate.shared)
                 browserAppSession.beginAuthTransition()
             },
             localSignOut: {
-                await browserAppSession.clearCmuxWebSession()
+                await browserAppSession.clearBreeWebSession()
             }
         )
         self.browserSignIn = browserSignIn
@@ -184,7 +184,7 @@ struct MacAuthComposition {
         self.cloudTeamScopeObserver = CloudTeamScopeObserver(auth: coordinator) { isSameAccount in
             // Same-account team switches keep Cloud state; an account change drops it.
             guard !isSameAccount else { return }
-            NotificationCenter.default.post(name: .cmuxCloudVMAccessDidEnd, object: AppDelegate.shared)
+            NotificationCenter.default.post(name: .breeCloudVMAccessDidEnd, object: AppDelegate.shared)
         }
     }
 
@@ -198,8 +198,8 @@ struct MacAuthComposition {
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
-        return CmuxIdentity.current.applicationSupportDirectory(in: support)
-            .appendingPathComponent(bundleIdentifier ?? "cmux", isDirectory: true)
+        return BreeIdentity.current.applicationSupportDirectory(in: support)
+            .appendingPathComponent(bundleIdentifier ?? "bree", isDirectory: true)
     }
 
     private static var isDebugBuild: Bool {
@@ -211,12 +211,12 @@ struct MacAuthComposition {
     }
 
     private static func includesDevAuth(
-        resolvedAuthEnvironment: CMUXAuthEnvironment
+        resolvedAuthEnvironment: BREEAuthEnvironment
     ) -> Bool {
         isDebugBuild && resolvedAuthEnvironment == .development
     }
 
-    nonisolated static let storedStackProjectIDKey = "cmux.auth.stackProjectID"
+    nonisolated static let storedStackProjectIDKey = "bree.auth.stackProjectID"
 
     /// Keep cached identities and Stack tokens from crossing projects when one
     /// tagged Debug bundle is rebuilt with `--prod-auth`, or switched back.
@@ -237,8 +237,8 @@ struct SignedOutAuthClient: AuthClient {
     func resolvedAccessToken(forceRefresh: Bool) async throws -> String? { nil }
     func refreshToken() async -> String? { nil }
     func forceRefreshAccessToken() async -> String? { nil }
-    func currentUser(throwOnMissing: Bool) async throws -> CMUXAuthUser? { nil }
-    func listTeams() async throws -> [CMUXAuthTeam] { [] }
+    func currentUser(throwOnMissing: Bool) async throws -> BREEAuthUser? { nil }
+    func listTeams() async throws -> [BREEAuthTeam] { [] }
     func sendMagicLinkEmail(email: String, callbackURL: String) async throws -> String {
         throw AuthClientError.unsupported
     }
@@ -292,7 +292,7 @@ final class MacAuthTeamScopeRecoveryTriggers {
         pathMonitor.pathUpdateHandler = { path in
             continuation.yield(path.status == .satisfied)
         }
-        pathMonitor.start(queue: DispatchQueue(label: "com.cmux.auth.team-scope-path"))
+        pathMonitor.start(queue: DispatchQueue(label: "com.bree.auth.team-scope-path"))
         tasks.append(Task { @MainActor [weak self] in
             var wasSatisfied = false
             for await satisfied in pathSatisfied {
@@ -304,8 +304,8 @@ final class MacAuthTeamScopeRecoveryTriggers {
     }
 }
 
-/// Native confirmation shown before a stateless auth callback that cmux did
-/// not request (for example a `cmux://auth-callback` link opened by a web
+/// Native confirmation shown before a stateless auth callback that bree did
+/// not request (for example a `bree://auth-callback` link opened by a web
 /// page) may sign the app in. Declining is the default action.
 @MainActor
 enum UnsolicitedAuthCallbackApprovalPrompt {

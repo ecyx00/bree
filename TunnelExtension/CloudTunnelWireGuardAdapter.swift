@@ -1,10 +1,10 @@
 import Foundation
 import NetworkExtension
 import WireGuardKit
-import CmuxCloudTunnelCore
+import BreeCloudTunnelCore
 import os
 
-nonisolated private let logger = Logger(subsystem: "com.cmuxterm.app.tunnel", category: "WireGuardAdapter")
+nonisolated private let logger = Logger(subsystem: "com.bree.app.tunnel", category: "WireGuardAdapter")
 
 /// WireGuardKit confines its mutable state to its own work queue. This wrapper
 /// is immutable after initialization; the lifecycle calls start/stop in order.
@@ -23,7 +23,7 @@ final class CloudTunnelWireGuardAdapter: CloudTunnelAdapter, @unchecked Sendable
     func start(configuration: String, completion: @escaping CloudTunnelProviderStartGate.Completion) {
         let parsed: TunnelConfiguration
         do {
-            parsed = try TunnelConfiguration(fromWgQuickConfig: configuration, called: "cmux Cloud")
+            parsed = try TunnelConfiguration(fromWgQuickConfig: configuration, called: "bree Cloud")
         } catch {
             // Parse failures may contain keys. Report only a stable error case.
             completion(.invalidConfiguration)

@@ -1,4 +1,4 @@
-import CmuxSidebar
+import BreeSidebar
 import Foundation
 
 /// Formats coding-agent usage for the sidebar and appends it to the matching

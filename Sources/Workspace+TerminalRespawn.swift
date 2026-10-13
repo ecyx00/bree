@@ -1,10 +1,10 @@
 import AppKit
 import Bonsplit
-import CmuxCore
-import CmuxRemoteSession
-import CmuxTerminal
-import CmuxTerminalCore
-import CmuxWorkspaces
+import BreeCore
+import BreeRemoteSession
+import BreeTerminal
+import BreeTerminalCore
+import BreeWorkspaces
 import Foundation
 
 extension Workspace {
@@ -40,7 +40,7 @@ extension Workspace {
         if command != nil, trimmedCommand?.isEmpty != false { return nil }
 
         var inheritedConfig = inheritedTerminalConfig(preferredPanelId: panelId, inPane: paneId)
-        var respawnConfig = inheritedConfig ?? CmuxSurfaceConfigTemplate()
+        var respawnConfig = inheritedConfig ?? BreeSurfaceConfigTemplate()
         respawnConfig.waitAfterCommand = waitAfterCommand ?? oldPanel.surface.debugWaitAfterCommand()
         inheritedConfig = respawnConfig
         let requestedWorkingDirectory = resolvedTerminalStartupWorkingDirectory(

@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 
 final class FileExplorerRowView: NSTableRowView {
     override func drawSelection(in dirtyRect: NSRect) {

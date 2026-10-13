@@ -5,7 +5,7 @@
 // accept the browser session, so nothing here uses it.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
   const ORIGIN = "https://github.com";
   const SIGN_IN = [/github\.com\/(login|session)/];
@@ -119,7 +119,7 @@
           const out = [];
           for (let page = 1; out.length < limit && page <= 10; page++) {
             const r = await t.fetch(`${ORIGIN}/search?q=${encodeURIComponent(q)}&type=issues&p=${page}`, { headers: { accept: "application/json" } });
-            if (r.status === 401 || /\/login/.test(r.url)) throw new S.SiteError("not_signed_in", "github.assigned: the cmux browser is not signed in to GitHub; open https://github.com with tabs.open() and ask the user to sign in");
+            if (r.status === 401 || /\/login/.test(r.url)) throw new S.SiteError("not_signed_in", "github.assigned: the bree browser is not signed in to GitHub; open https://github.com with tabs.open() and ask the user to sign in");
             if (!r.ok) throw new S.SiteError("http", `github.assigned: HTTP ${r.status}`);
             let json;
             try {

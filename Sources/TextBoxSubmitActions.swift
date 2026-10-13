@@ -1,7 +1,7 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeWorkspaces
 import SwiftUI
 
 extension TextBoxInputContainer {
@@ -308,7 +308,7 @@ extension TextBoxInputContainer {
             submit()
         } label: {
             submitButtonActionImage(presentation.action, canSend: canSend)
-                .cmuxFont(size: TextBoxLayout.sendSymbolSize, weight: .bold)
+                .scaledFont(size: TextBoxLayout.sendSymbolSize, weight: .bold)
                 .frame(
                     width: TextBoxSubmitActionImageSupport.iconSize,
                     height: TextBoxSubmitActionImageSupport.iconSize
@@ -369,7 +369,7 @@ extension TextBoxInputContainer {
                     height: TextBoxSubmitActionImageSupport.iconSize
                 )
         } else if let assetName = resolvedSubmitActionAssetName(for: action) {
-            CmuxResolvedIconImage(request: submitActionIconRequest(
+            BreeResolvedIconImage(request: submitActionIconRequest(
                 assetName: assetName,
                 tintColor: action.id == "codex" ? BreeChromePalette.currentSnapshot.ns.surfaceOverlay : nil
             ))
@@ -400,7 +400,7 @@ extension TextBoxInputContainer {
                     height: TextBoxSubmitActionImageSupport.iconSize
                 )
         } else if let assetName = resolvedSubmitActionAssetName(for: action) {
-            CmuxResolvedIconImage(request: submitActionIconRequest(assetName: assetName))
+            BreeResolvedIconImage(request: submitActionIconRequest(assetName: assetName))
                 .frame(
                     width: TextBoxSubmitActionImageSupport.iconSize,
                     height: TextBoxSubmitActionImageSupport.iconSize
@@ -600,7 +600,7 @@ extension TextBoxInputContainer {
     }
 
     func openSubmitActionsDocumentation() {
-        guard let url = URL(string: "https://github.com/manaflow-ai/cmux/blob/main/docs/configuration.md#terminaltextboxsubmitactions") else {
+        guard let url = URL(string: "https://github.com/ecyx00/bree/blob/main/docs/configuration.md#terminaltextboxsubmitactions") else {
             return
         }
         NSWorkspace.shared.open(url)

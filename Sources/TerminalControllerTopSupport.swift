@@ -38,7 +38,7 @@ extension TerminalController {
     }
 
     nonisolated func v2TopMemoryDiagnosticPayload(
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         annotatedWindows: [[String: Any]],
         topGroupLimit: Int = 12
     ) -> [String: Any] {
@@ -51,7 +51,7 @@ extension TerminalController {
 
     nonisolated func v2AnnotateTopWindows(
         _ windows: inout [[String: Any]],
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         browserPIDOccurrences: [Int: Int],
         includeProcesses: Bool
     ) -> Set<Int> {
@@ -61,7 +61,7 @@ extension TerminalController {
             let appProcessPIDs = Set(v2TopIntArray(windows[index]["app_process_pids"]))
             // Launch evidence for TTY ownership: a process the app forked onto a surface
             // TTY is the surface's, an arbitrary off-TTY parent proves nothing. (#11004)
-            let cmuxOwnedPIDs = processSnapshot.expandedPIDs(rootPIDs: appProcessPIDs)
+            let breeOwnedPIDs = processSnapshot.expandedPIDs(rootPIDs: appProcessPIDs)
             var windowPIDs = appProcessPIDs
             var windowTopLevelPIDs: Set<Int> = []
             var windowForegroundProcessGroupIDs: Set<Int> = []
@@ -71,7 +71,7 @@ extension TerminalController {
                         &workspaces[workspaceIndex],
                         processSnapshot: processSnapshot,
                         browserPIDOccurrences: browserPIDOccurrences,
-                        cmuxOwnedPIDs: cmuxOwnedPIDs,
+                        breeOwnedPIDs: breeOwnedPIDs,
                         includeProcesses: includeProcesses
                     )
                 )
@@ -94,9 +94,9 @@ extension TerminalController {
 
     nonisolated func v2AnnotateTopWorkspace(
         _ workspace: inout [String: Any],
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         browserPIDOccurrences: [Int: Int],
-        cmuxOwnedPIDs: Set<Int>,
+        breeOwnedPIDs: Set<Int>,
         includeProcesses: Bool
     ) -> Set<Int> {
         var workspacePIDs: Set<Int> = []
@@ -110,7 +110,7 @@ extension TerminalController {
                     &panes[paneIndex],
                     processSnapshot: processSnapshot,
                     browserPIDOccurrences: browserPIDOccurrences,
-                    cmuxOwnedPIDs: cmuxOwnedPIDs,
+                    breeOwnedPIDs: breeOwnedPIDs,
                     includeProcesses: includeProcesses
                 )
             )
@@ -141,9 +141,9 @@ extension TerminalController {
 
     nonisolated func v2AnnotateTopPane(
         _ pane: inout [String: Any],
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         browserPIDOccurrences: [Int: Int],
-        cmuxOwnedPIDs: Set<Int>,
+        breeOwnedPIDs: Set<Int>,
         includeProcesses: Bool
     ) -> Set<Int> {
         var panePIDs: Set<Int> = []
@@ -156,7 +156,7 @@ extension TerminalController {
                     &surfaces[surfaceIndex],
                     processSnapshot: processSnapshot,
                     browserPIDOccurrences: browserPIDOccurrences,
-                    cmuxOwnedPIDs: cmuxOwnedPIDs,
+                    breeOwnedPIDs: breeOwnedPIDs,
                     includeProcesses: includeProcesses
                 )
             )
@@ -172,9 +172,9 @@ extension TerminalController {
 
     nonisolated func v2AnnotateTopSurface(
         _ surface: inout [String: Any],
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         browserPIDOccurrences: [Int: Int],
-        cmuxOwnedPIDs: Set<Int>,
+        breeOwnedPIDs: Set<Int>,
         includeProcesses: Bool
     ) -> Set<Int> {
         var rootPIDs: Set<Int> = []
@@ -182,24 +182,24 @@ extension TerminalController {
         let surfaceID = v2TopUUID(surface["id"])
 
         if let surfaceID {
-            let cmuxPIDs = processSnapshot.pids(forCMUXSurfaceID: surfaceID)
-            surface["cmux_process_pids"] = cmuxPIDs.sorted()
-            rootPIDs.formUnion(cmuxPIDs)
-            surfacePIDs.formUnion(processSnapshot.expandedPIDs(rootPIDs: cmuxPIDs))
+            let breePIDs = processSnapshot.pids(forBREESurfaceID: surfaceID)
+            surface["bree_process_pids"] = breePIDs.sorted()
+            rootPIDs.formUnion(breePIDs)
+            surfacePIDs.formUnion(processSnapshot.expandedPIDs(rootPIDs: breePIDs))
         } else {
-            surface["cmux_process_pids"] = []
+            surface["bree_process_pids"] = []
         }
 
         // Sharing the surface's TTY is not ownership. A process reparented to launchd
         // keeps the terminal's controlling TTY, so promoting the whole TTY population to
-        // roots charges a detached REPL or dev server to cmux. Attribute only what the
+        // roots charges a detached REPL or dev server to bree. Attribute only what the
         // snapshot can prove, and report the rest separately. (#11004)
         var unattributedRootPIDs: Set<Int> = []
         if let ttyName = surface["tty"] as? String {
             let ownership = processSnapshot.ttyOwnership(
                 ttyPIDs: processSnapshot.pids(forTTYName: ttyName),
                 surfaceID: surfaceID,
-                cmuxOwnedPIDs: cmuxOwnedPIDs,
+                breeOwnedPIDs: breeOwnedPIDs,
                 provenPIDs: surfacePIDs
             )
             surface["tty_process_pids"] = ownership.provenPIDs.sorted()
@@ -250,7 +250,7 @@ extension TerminalController {
 
     nonisolated func v2AnnotateTopWebView(
         _ webview: inout [String: Any],
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         browserPIDOccurrences: [Int: Int],
         includeProcesses: Bool
     ) -> Set<Int> {
@@ -279,7 +279,7 @@ extension TerminalController {
 
     nonisolated func v2AnnotateTopTag(
         _ tag: inout [String: Any],
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         includeProcesses: Bool
     ) -> Set<Int> {
         guard let pid = v2TopInt(tag["pid"]) else {
@@ -338,8 +338,8 @@ extension TerminalController {
         return nil
     }
 
-    private nonisolated func v2TopMemoryAttributionByPID(in windows: [[String: Any]]) -> [Int: CmuxTopProcessAttribution] {
-        var result: [Int: CmuxTopProcessAttribution] = [:]
+    private nonisolated func v2TopMemoryAttributionByPID(in windows: [[String: Any]]) -> [Int: BreeTopProcessAttribution] {
+        var result: [Int: BreeTopProcessAttribution] = [:]
         var ambiguousSpecificityByPID: [Int: Int] = [:]
         var commonOwnerSourceSpecificityByPID: [Int: Int] = [:]
         for window in windows {
@@ -350,7 +350,7 @@ extension TerminalController {
 
                 let tags = workspace["tags"] as? [[String: Any]] ?? []
                 for tag in tags {
-                    let attribution = CmuxTopProcessAttribution(
+                    let attribution = BreeTopProcessAttribution(
                         workspaceID: workspaceID,
                         workspaceRef: workspaceRef,
                         paneID: nil,
@@ -375,7 +375,7 @@ extension TerminalController {
                     let paneRef = v2TopString(pane["ref"])
                     let surfaces = pane["surfaces"] as? [[String: Any]] ?? []
                     for surface in surfaces {
-                        let attribution = CmuxTopProcessAttribution(
+                        let attribution = BreeTopProcessAttribution(
                             workspaceID: workspaceID,
                             workspaceRef: workspaceRef,
                             paneID: paneID,
@@ -411,9 +411,9 @@ extension TerminalController {
     }
 
     private nonisolated func assignTopMemoryAttribution(
-        _ attribution: CmuxTopProcessAttribution,
+        _ attribution: BreeTopProcessAttribution,
         from node: [String: Any],
-        to result: inout [Int: CmuxTopProcessAttribution],
+        to result: inout [Int: BreeTopProcessAttribution],
         ambiguousSpecificityByPID: inout [Int: Int],
         commonOwnerSourceSpecificityByPID: inout [Int: Int]
     ) {
@@ -443,7 +443,7 @@ extension TerminalController {
                 case 2: sharedReason = "shared-pane-process-tree"
                 default: sharedReason = "shared-workspace-process-tree"
                 }
-                result[pid] = CmuxTopProcessAttribution(owner: commonOwner, reason: sharedReason)
+                result[pid] = BreeTopProcessAttribution(owner: commonOwner, reason: sharedReason)
                 commonOwnerSourceSpecificityByPID[pid] = mergedSourceSpecificity
             } else if newSpecificity > existingSourceSpecificity {
                 result[pid] = attribution
@@ -458,7 +458,7 @@ extension TerminalController {
         }
     }
 
-    private nonisolated func v2TopMemoryAttributionSpecificity(_ attribution: CmuxTopProcessAttribution) -> Int {
+    private nonisolated func v2TopMemoryAttributionSpecificity(_ attribution: BreeTopProcessAttribution) -> Int {
         attribution.owner.specificity
     }
 

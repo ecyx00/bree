@@ -1,5 +1,5 @@
 // sites.browserAuth: a secure sign-in handoff (reference B's
-// browserAuth). The agent names the visible credential fields; cmux shows
+// browserAuth). The agent names the visible credential fields; bree shows
 // its own sheet on the browser window, naming the origin of the frame that
 // holds them, the user types there, and the app fills the fields in the page
 // (sites/auth-fill.js). Only password, username and one-time-code fields are
@@ -8,9 +8,9 @@
 // agent runs in the page, can read a filled field like any other.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
-  const { URL } = root.CmuxBrowserRepl.core;
+  const { URL } = root.BreeBrowserRepl.core;
   const TYPES = ["text", "email", "password", "tel", "number", "url"];
   // The credential kind of a field, or null. The app runs the same rule
   // (sites/auth-fill.js) before it fills anything.
@@ -75,7 +75,7 @@
             if (marked.length && fid !== frameId) return { status: "locator_invalid", locator_error: { field_id: f.id, reason: "fields_in_different_frames" } };
             frameId = fid;
             const marker = `${f.id}-${Math.floor(Math.random() * 1e12).toString(36)}`;
-            await loc.evaluate((el, m) => el.setAttribute("data-cmux-auth", m), marker);
+            await loc.evaluate((el, m) => el.setAttribute("data-bree-auth", m), marker);
             marked.push({ loc, field: f, marker });
           }
           // The user should see the page they are signing in to under the sheet.
@@ -106,10 +106,10 @@
           }
           return { status: "submitted" };
         } finally {
-          for (const { loc } of marked) await loc.evaluate((el) => el.removeAttribute("data-cmux-auth")).catch(() => {});
+          for (const { loc } of marked) await loc.evaluate((el) => el.removeAttribute("data-bree-auth")).catch(() => {});
         }
       },
     }),
-    { summary: "Secure sign-in: a cmux sheet collects credentials and fills the page; values never reach the agent" },
+    { summary: "Secure sign-in: a bree sheet collects credentials and fills the page; values never reach the agent" },
   );
 })(typeof globalThis !== "undefined" ? globalThis : this);

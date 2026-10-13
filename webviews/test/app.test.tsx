@@ -71,19 +71,19 @@ test("patch-file viewer keeps its configured title when repo context is present"
           repoRoot: "/tmp/repo",
           sourceLabel: "git branch",
           statusMessage: "Rendered diff",
-          title: "cmux diff",
+          title: "bree diff",
         },
       }}
       initialStatus={createDiffViewerStatus("Rendered diff", { loading: false, statusOnly: true })}
     />,
   );
 
-  await waitFor(() => dom?.window.document.title === "cmux diff");
-  expect(dom.window.document.title).toBe("cmux diff");
+  await waitFor(() => dom?.window.document.title === "bree diff");
+  expect(dom.window.document.title).toBe("bree diff");
 });
 
 test("custom-scheme pending pages wait for native navigation without HTTP polling", () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/opening.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/opening.html");
   let fetched = false;
   installDomGlobals(dom, () => {
     fetched = true;
@@ -105,11 +105,11 @@ test("custom-scheme pending pages wait for native navigation without HTTP pollin
 
   expect(dom.window.document.getElementById("status-text")?.textContent).toBe("Loading diff");
   expect(fetched).toBe(false);
-  expect(dom.window.document.documentElement.dataset.cmuxDiffWait).toBeUndefined();
+  expect(dom.window.document.documentElement.dataset.breeDiffWait).toBeUndefined();
 });
 
 test("custom-scheme pending pages stream exactly one typed Rust session", async () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/branch.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/branch.html");
   const requests: any[] = [];
   const commentRequests: any[] = [];
   const fetched: string[] = [];
@@ -120,7 +120,7 @@ test("custom-scheme pending pages stream exactly one typed Rust session", async 
   });
   (dom.window as any).webkit = {
     messageHandlers: {
-      cmuxDiff: {
+      breeDiff: {
         async postMessage(request: any) {
           requests.push(request);
           if (request.method === "sessionClose") {
@@ -139,7 +139,7 @@ test("custom-scheme pending pages stream exactly one typed Rust session", async 
               value: {
                 sessionId: "01234567-89ab-cdef-0123-456789abcdef",
                 patch: {
-                  id: "cmux-diff-viewer://0123456789abcdef/diff-session.patch",
+                  id: "bree-diff-viewer://0123456789abcdef/diff-session.patch",
                   mediaType: "text/x-diff",
                   byteLength: 128,
                   revision: 1,
@@ -151,7 +151,7 @@ test("custom-scheme pending pages stream exactly one typed Rust session", async 
           };
         },
       },
-      cmuxDiffComments: {
+      breeDiffComments: {
         async postMessage(request: any) {
           commentRequests.push(request);
           return { ok: true, value: { comments: [] } };
@@ -180,7 +180,7 @@ test("custom-scheme pending pages stream exactly one typed Rust session", async 
           ],
           statusMessage: "Loading diff",
           title: "Branch diff",
-          transport: { kind: "webKit", endpoint: "cmuxDiff", protocolVersion: 1 },
+          transport: { kind: "webKit", endpoint: "breeDiff", protocolVersion: 1 },
         },
       }}
       initialStatus={createDiffViewerStatus("Loading diff", { loading: true, pending: true })}
@@ -195,7 +195,7 @@ test("custom-scheme pending pages stream exactly one typed Rust session", async 
   await waitFor(() => commentLists().length === 1);
   expect(commentLists()[0].params.repoRoot).toBe("/tmp/repo");
   expect(requests[0].params.source).toEqual({ kind: "branch", repoRoot: "/tmp/repo", baseRef: "main" });
-  expect(fetched).toEqual(["cmux-diff-viewer://0123456789abcdef/diff-session.patch"]);
+  expect(fetched).toEqual(["bree-diff-viewer://0123456789abcdef/diff-session.patch"]);
   expect(requests.filter((request) => request.method === "sessionClose")).toHaveLength(0);
   const repoSelect = dom.window.document.getElementById("repo-select") as HTMLSelectElement;
   expect(repoSelect.title).toBe("/tmp/repo");
@@ -244,7 +244,7 @@ test("custom-scheme pending pages stream exactly one typed Rust session", async 
 });
 
 test("typed Rust empty diffs keep the localized source-specific message", async () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/unstaged.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/unstaged.html");
   let fetched = false;
   installDomGlobals(dom, () => {
     fetched = true;
@@ -252,7 +252,7 @@ test("typed Rust empty diffs keep the localized source-specific message", async 
   });
   (dom.window as any).webkit = {
     messageHandlers: {
-      cmuxDiff: {
+      breeDiff: {
         async postMessage(request: any) {
           return {
             id: request.id,
@@ -274,7 +274,7 @@ test("typed Rust empty diffs keep the localized source-specific message", async 
           pendingReplacement: true,
           sessionSource: { kind: "unstaged", repoRoot: "/tmp/repo" },
           statusMessage: "Loading diff",
-          transport: { kind: "webKit", endpoint: "cmuxDiff", protocolVersion: 1 },
+          transport: { kind: "webKit", endpoint: "breeDiff", protocolVersion: 1 },
         },
       }}
       initialStatus={createDiffViewerStatus("Loading diff", { loading: true, pending: true })}
@@ -286,11 +286,11 @@ test("typed Rust empty diffs keep the localized source-specific message", async 
 });
 
 test("typed branch empty diffs keep the base picker available before base resolution", async () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/branch.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/branch.html");
   installDomGlobals(dom, () => new Response("", { status: 200 }));
   (dom.window as any).webkit = {
     messageHandlers: {
-      cmuxDiff: {
+      breeDiff: {
         async postMessage(request: any) {
           if (request.method === "sessionOpen") {
             return {
@@ -318,7 +318,7 @@ test("typed branch empty diffs keep the base picker available before base resolu
           capabilityToken: "0123456789abcdef",
           emptyMessage: "No branch changes to diff.",
           sessionSource: { kind: "branch", repoRoot: "/tmp/repo" },
-          transport: { kind: "webKit", endpoint: "cmuxDiff", protocolVersion: 1 },
+          transport: { kind: "webKit", endpoint: "breeDiff", protocolVersion: 1 },
         },
       }}
       initialStatus={createDiffViewerStatus("Loading diff", { loading: true })}
@@ -330,12 +330,12 @@ test("typed branch empty diffs keep the base picker available before base resolu
 });
 
 test("typed source switching preserves the last resolved branch base", async () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/branch.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/branch.html");
   const requests: any[] = [];
   installDomGlobals(dom, () => new Response("", { status: 200 }));
   (dom.window as any).webkit = {
     messageHandlers: {
-      cmuxDiff: {
+      breeDiff: {
         async postMessage(request: any) {
           requests.push(request);
           if (request.method === "sessionClose") {
@@ -379,7 +379,7 @@ test("typed source switching preserves the last resolved branch base", async () 
           { label: "repo", selected: true, sessionSource: { kind: "branch", repoRoot: "/tmp/repo" }, value: "/tmp/repo" },
           { label: "other-repo", selected: false, sessionSource: { kind: "branch", repoRoot: "/tmp/other-repo" }, value: "/tmp/other-repo" },
         ],
-        transport: { kind: "webKit", endpoint: "cmuxDiff", protocolVersion: 1 },
+        transport: { kind: "webKit", endpoint: "breeDiff", protocolVersion: 1 },
       } }}
       initialStatus={createDiffViewerStatus("Loading diff", { loading: true })}
     />,
@@ -410,12 +410,12 @@ test("typed source switching preserves the last resolved branch base", async () 
 });
 
 test("pagehide cancels a typed session while its initial open is pending", async () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/unstaged.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/unstaged.html");
   const requests: any[] = [];
   installDomGlobals(dom, () => new Response("", { status: 200 }));
   (dom.window as any).webkit = {
     messageHandlers: {
-      cmuxDiff: {
+      breeDiff: {
         async postMessage(request: any) {
           requests.push(request);
           if (request.method === "sessionClose") {
@@ -431,7 +431,7 @@ test("pagehide cancels a typed session while its initial open is pending", async
       config={{ payload: {
         capabilityToken: "0123456789abcdef",
         sessionSource: { kind: "unstaged", repoRoot: "/tmp/repo" },
-        transport: { kind: "webKit", endpoint: "cmuxDiff", protocolVersion: 1 },
+        transport: { kind: "webKit", endpoint: "breeDiff", protocolVersion: 1 },
       } }}
       initialStatus={createDiffViewerStatus("Loading diff", { loading: true })}
     />,
@@ -444,12 +444,12 @@ test("pagehide cancels a typed session while its initial open is pending", async
 });
 
 test("Last Turn reveals repo selection after switching to a typed git source", async () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/last-turn.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/last-turn.html");
   const requests: any[] = [];
   installDomGlobals(dom, () => new Response("", { status: 200 }));
   (dom.window as any).webkit = {
     messageHandlers: {
-      cmuxDiff: {
+      breeDiff: {
         async postMessage(request: any) {
           requests.push(request);
           if (request.method === "sessionClose") {
@@ -485,7 +485,7 @@ test("Last Turn reveals repo selection after switching to a typed git source", a
           { label: "repo", selected: true, sessionSource: { kind: "unstaged", repoRoot: "/tmp/repo" }, value: "/tmp/repo" },
           { label: "other", selected: false, sessionSource: { kind: "unstaged", repoRoot: "/tmp/other" }, value: "/tmp/other" },
         ],
-        transport: { kind: "webKit", endpoint: "cmuxDiff", protocolVersion: 1 },
+        transport: { kind: "webKit", endpoint: "breeDiff", protocolVersion: 1 },
       } }}
       initialStatus={createDiffViewerStatus("Loading diff", { loading: true })}
     />,
@@ -605,7 +605,7 @@ test("layout toggle persists user choice while explicit payload layout wins", as
   expect(dom.window.document.documentElement.dataset.layout).toBe("unified");
   dom.window.document.getElementById("layout-toggle")?.click();
   await waitFor(() => {
-    const raw = dom?.window.localStorage.getItem("cmux.diffViewer.options");
+    const raw = dom?.window.localStorage.getItem("bree.diffViewer.options");
     return raw != null && JSON.parse(raw).layout === "split";
   });
   expect(dom.window.document.documentElement.dataset.layout).toBe("split");
@@ -651,7 +651,7 @@ test("layout persisted under the legacy localStorage key is still honored", asyn
   installDomGlobals(dom, () => {
     throw new Error("unexpected fetch");
   });
-  dom.window.localStorage.setItem("cmux.diffViewer.layout", "split");
+  dom.window.localStorage.setItem("bree.diffViewer.layout", "split");
 
   renderApp(
     <App
@@ -695,14 +695,14 @@ test("viewerOptions payload seeds persisted display toggles", async () => {
 });
 
 test("viewer preferences sync from the native bridge and persist option changes", async () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/diff.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/diff.html");
   installDomGlobals(dom, () => {
     throw new Error("unexpected fetch");
   });
   const prefsRequests: any[] = [];
   (dom.window as any).webkit = {
     messageHandlers: {
-      cmuxDiffComments: {
+      breeDiffComments: {
         async postMessage(request: any) {
           prefsRequests.push(request);
           if (request.method === "viewerPrefs.get") {
@@ -747,7 +747,7 @@ test("viewer preferences sync from the native bridge and persist option changes"
 });
 
 test("refresh re-streams the typed session in place and keeps viewer options", async () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/unstaged.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/unstaged.html");
   const requests: any[] = [];
   const fetched: string[] = [];
   installDomGlobals(dom, (input) => {
@@ -756,7 +756,7 @@ test("refresh re-streams the typed session in place and keeps viewer options", a
   });
   (dom.window as any).webkit = {
     messageHandlers: {
-      cmuxDiff: {
+      breeDiff: {
         async postMessage(request: any) {
           requests.push(request);
           if (request.method === "sessionClose") {
@@ -770,7 +770,7 @@ test("refresh re-streams the typed session in place and keeps viewer options", a
               value: {
                 sessionId: "01234567-89ab-cdef-0123-456789abcdef",
                 patch: {
-                  id: "cmux-diff-viewer://0123456789abcdef/diff-session.patch",
+                  id: "bree-diff-viewer://0123456789abcdef/diff-session.patch",
                   mediaType: "text/x-diff",
                   byteLength: 128,
                   revision: 1,
@@ -796,7 +796,7 @@ test("refresh re-streams the typed session in place and keeps viewer options", a
           sourceLabel: "git unstaged",
           statusMessage: "Loading diff",
           title: "Unstaged diff",
-          transport: { kind: "webKit", endpoint: "cmuxDiff", protocolVersion: 1 },
+          transport: { kind: "webKit", endpoint: "breeDiff", protocolVersion: 1 },
         },
       }}
       initialStatus={createDiffViewerStatus("Loading diff", { loading: true, pending: true })}
@@ -837,7 +837,7 @@ test("hunk navigation actions are handled by the viewer app", () => {
     />,
   );
 
-  const action = dom.window.__cmuxPerformDiffViewerNavigationAction;
+  const action = dom.window.__breePerformDiffViewerNavigationAction;
   // Handled even with nothing to jump to: a false reply marks the renderer
   // unavailable on the native side.
   expect(action?.("diffViewerNextHunk")).toBe(true);
@@ -887,11 +887,11 @@ test("native viewer navigation remains installed after an unrelated render", asy
     />,
   );
 
-  const action = dom.window.__cmuxPerformDiffViewerNavigationAction;
+  const action = dom.window.__breePerformDiffViewerNavigationAction;
   expect(action).toBeFunction();
   dom.window.document.getElementById("layout-toggle")?.click();
   await waitFor(() => dom?.window.document.documentElement.dataset.layout === "split");
-  expect(dom.window.__cmuxPerformDiffViewerNavigationAction).toBe(action);
+  expect(dom.window.__breePerformDiffViewerNavigationAction).toBe(action);
   expect(action?.("diffViewerOpenFileSearch")).toBe(true);
   expect(action?.("unknown")).toBe(false);
   await waitFor(() => dom?.window.document.getElementById("file-search-toggle")?.getAttribute("aria-pressed") === "true");
@@ -928,12 +928,12 @@ test("files sidebar shows the viewed progress, path filter, and status toggles",
 });
 
 test("viewed files load for the resolved typed session scope", async () => {
-  dom = createDom("cmux-diff-viewer://0123456789abcdef/unstaged.html");
+  dom = createDom("bree-diff-viewer://0123456789abcdef/unstaged.html");
   const commentRequests: any[] = [];
   installDomGlobals(dom, () => new Response("", { status: 200 }));
   (dom.window as any).webkit = {
     messageHandlers: {
-      cmuxDiff: {
+      breeDiff: {
         async postMessage(request: any) {
           if (request.method === "sessionClose") {
             return { id: request.id, version: 1, result: { type: "sessionClosed" }, error: null };
@@ -945,7 +945,7 @@ test("viewed files load for the resolved typed session scope", async () => {
               type: "sessionOpened",
               value: {
                 sessionId: "01234567-89ab-cdef-0123-456789abcdef",
-                patch: { id: "cmux-diff-viewer://0123456789abcdef/diff-session.patch", mediaType: "text/x-diff", byteLength: 128, revision: 1 },
+                patch: { id: "bree-diff-viewer://0123456789abcdef/diff-session.patch", mediaType: "text/x-diff", byteLength: 128, revision: 1 },
                 source: request.params.source,
                 generatedPaths: ["dist/bundle.js"],
               },
@@ -954,7 +954,7 @@ test("viewed files load for the resolved typed session scope", async () => {
           };
         },
       },
-      cmuxDiffComments: {
+      breeDiffComments: {
         async postMessage(request: any) {
           commentRequests.push(request);
           if (request.method === "viewedFiles.list") {
@@ -975,7 +975,7 @@ test("viewed files load for the resolved typed session scope", async () => {
           sessionSource: { kind: "unstaged", repoRoot: "/tmp/repo" },
           statusMessage: "Loading diff",
           title: "Unstaged diff",
-          transport: { kind: "webKit", endpoint: "cmuxDiff", protocolVersion: 1 },
+          transport: { kind: "webKit", endpoint: "breeDiff", protocolVersion: 1 },
         },
       }}
       initialStatus={createDiffViewerStatus("Loading diff", { loading: true, pending: true })}
@@ -998,7 +998,7 @@ test("toggle viewed action is handled by the viewer app", () => {
       initialStatus={createDiffViewerStatus("Rendered diff", { loading: false, statusOnly: true })}
     />,
   );
-  const action = dom.window.__cmuxPerformDiffViewerNavigationAction;
+  const action = dom.window.__breePerformDiffViewerNavigationAction;
   expect(action?.("diffViewerToggleViewed")).toBe(true);
 });
 
@@ -1042,7 +1042,7 @@ function copyGitApplyButton(): HTMLButtonElement | undefined {
 }
 
 function contentFilesWidth(): string | undefined {
-  return dom?.window.document.getElementById("content")?.style.getPropertyValue("--cmux-diff-files-width");
+  return dom?.window.document.getElementById("content")?.style.getPropertyValue("--bree-diff-files-width");
 }
 
 async function waitFor(predicate: () => boolean): Promise<void> {

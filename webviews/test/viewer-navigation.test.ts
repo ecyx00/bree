@@ -19,7 +19,7 @@ test("viewer navigation shares smooth Vim and Emacs motions", () => {
   const calls: Array<["to", ScrollToOptions]> = [];
   viewer.scrollTo = ((options: ScrollToOptions) => { calls.push(["to", options]); }) as typeof viewer.scrollTo;
 
-  const dispose = CmuxViewerNavigation.install({
+  const dispose = BreeViewerNavigation.install({
     target: dom.window.document,
     getScroller: () => viewer,
     shortcuts: {
@@ -64,7 +64,7 @@ test("viewer navigation leaves editable controls and unbound shortcuts alone", (
   const viewer = dom.window.document.getElementById("viewer") as HTMLElement;
   let scrollCount = 0;
   viewer.scrollTo = () => { scrollCount += 1; };
-  const dispose = CmuxViewerNavigation.install({
+  const dispose = BreeViewerNavigation.install({
     target: dom.window.document,
     getScroller: () => viewer,
     shortcuts: {
@@ -90,18 +90,18 @@ test("direct viewer actions reset their smooth target after manual input", () =>
   });
   const tops: number[] = [];
   viewer.scrollTo = ((options: ScrollToOptions) => { tops.push(Number(options.top)); }) as typeof viewer.scrollTo;
-  const dispose = CmuxViewerNavigation.installManualInputReset({
+  const dispose = BreeViewerNavigation.installManualInputReset({
     target: dom.window.document,
     getScroller: () => viewer,
   });
 
-  CmuxViewerNavigation.performAction("diffViewerScrollDown", viewer);
+  BreeViewerNavigation.performAction("diffViewerScrollDown", viewer);
   viewer.scrollTop = 600;
   dom.window.document.dispatchEvent(new dom.window.KeyboardEvent("keydown", { bubbles: true, key: "PageDown" }));
-  CmuxViewerNavigation.performAction("diffViewerScrollDown", viewer);
+  BreeViewerNavigation.performAction("diffViewerScrollDown", viewer);
   viewer.scrollTop = 900;
   dom.window.document.dispatchEvent(new dom.window.WheelEvent("wheel", { bubbles: true }));
-  CmuxViewerNavigation.performAction("diffViewerScrollDown", viewer);
+  BreeViewerNavigation.performAction("diffViewerScrollDown", viewer);
 
   expect(tops).toEqual([72, 672, 972]);
   dispose();
@@ -117,10 +117,10 @@ test("programmatic jumps can reset a pending smooth target", () => {
   const tops: number[] = [];
   viewer.scrollTo = ((options: ScrollToOptions) => { tops.push(Number(options.top)); }) as typeof viewer.scrollTo;
 
-  CmuxViewerNavigation.performAction("diffViewerScrollDown", viewer);
+  BreeViewerNavigation.performAction("diffViewerScrollDown", viewer);
   viewer.scrollTop = 1_000;
-  CmuxViewerNavigation.resetSmoothTarget(viewer);
-  CmuxViewerNavigation.performAction("diffViewerScrollDown", viewer);
+  BreeViewerNavigation.resetSmoothTarget(viewer);
+  BreeViewerNavigation.performAction("diffViewerScrollDown", viewer);
 
   expect(tops).toEqual([72, 1_072]);
 });

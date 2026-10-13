@@ -1,12 +1,12 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
-import CmuxAuthRuntime
-import CmuxBrowser
+import BreeAuthRuntime
+import BreeBrowser
 import Foundation
 import WebKit
 
-/// Decides what to do with browser navigations that target cmux auth-callback
-/// scheme URLs (`cmux://auth-callback`, `cmux-dev-<tag>://auth-callback`, ...)
+/// Decides what to do with browser navigations that target bree auth-callback
+/// scheme URLs (`bree://auth-callback`, `bree-dev-<tag>://auth-callback`, ...)
 /// delivered by the hosted after-sign-in page. WKWebView cannot open native
 /// schemes itself, so the navigation delegate consumes the URL and hands it to
 /// the app's shared native callback entrypoint as a `.trustedEmbeddedBrowser`
@@ -19,7 +19,7 @@ import WebKit
 /// - Only a user-activated main-frame link whose source frame is the app's
 ///   own web origin (the page `/handler/after-sign-in` is served from), and
 ///   which targets THIS build's own registered callback scheme, is delivered.
-///   Never a sibling build's `cmux-nightly` or `cmux-dev-*` scheme, which
+///   Never a sibling build's `bree-nightly` or `bree-dev-*` scheme, which
 ///   another app could have registered.
 /// - EVERY other auth-callback-shaped navigation is blocked outright
 ///   (`.block`), never passed to the generic external-app prompt: JS
@@ -198,11 +198,11 @@ struct BrowserAuthCallbackNavigationPolicy {
         return await delegate.handleAuthCallbackURLInProcess(url, delivery: .trustedEmbeddedBrowser)
     }
 
-    /// Any cmux-family scheme pointing at the auth-callback target, including
+    /// Any bree-family scheme pointing at the auth-callback target, including
     /// schemes this build does not accept (those must be blocked, not opened).
     private static func isAuthCallbackShapedURL(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased(),
-              scheme == "cmux" || scheme.hasPrefix("cmux-") else {
+              scheme == "bree" || scheme.hasPrefix("bree-") else {
             return false
         }
         return AuthCallbackRouter(extraAllowedScheme: scheme).isAuthCallbackURL(url)

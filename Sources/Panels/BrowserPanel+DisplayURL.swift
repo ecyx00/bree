@@ -1,5 +1,5 @@
 import Foundation
-import CmuxCore
+import BreeCore
 
 extension BrowserPanel {
     static func restorableDisplayURL(

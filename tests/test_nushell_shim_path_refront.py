@@ -2,21 +2,21 @@
 """
 Regression coverage for nushell wrapper-shim shadowing.
 
-cmux routes ``claude`` through a per-surface shim in ``$TMPDIR/cmux-cli-shims/
-<surface-id>/`` so ``cmux-claude-wrapper`` can inject session tracking and
+bree routes ``claude`` through a per-surface shim in ``$TMPDIR/bree-cli-shims/
+<surface-id>/`` so ``bree-claude-wrapper`` can inject session tracking and
 notification hooks. The shim directory is prepended to ``PATH`` when the
 terminal spawns, but a nushell user's ``env.nu`` typically re-prepends their
 own directories (``~/.local/bin`` and friends) on top of the inherited
-``PATH``, shadowing the shim. zsh/bash/fish recover via cmux shell
+``PATH``, shadowing the shim. zsh/bash/fish recover via bree shell
 integration that re-fronts the shim after user config runs; nushell had no
 integration at all, so the wrapper never ran, sessions were never captured
-into ``~/.cmuxterm/claude-hook-sessions.json``, and Claude session resume
+into ``~/.bree/claude-hook-sessions.json``, and Claude session resume
 never worked.
 
 This test drives the *actual* bundled nushell bootstrap
-(``Resources/shell-integration/nushell/cmux-nushell-bootstrap.nu``) through
-real ``nu``, launched the same way cmux launches it (``nu -l`` with the
-squashed bootstrap; the test appends its probe where cmux's ``-e`` payload
+(``Resources/shell-integration/nushell/bree-nushell-bootstrap.nu``) through
+real ``nu``, launched the same way bree launches it (``nu -l`` with the
+squashed bootstrap; the test appends its probe where bree's ``-e`` payload
 would sit, which shares the same post-config execution point). It asserts:
 
 1. Control: with a user ``env.nu`` that prepends a decoy ``claude`` dir, plain
@@ -26,7 +26,7 @@ would sit, which shares the same post-config execution point). It asserts:
 4. The bootstrap normalizes a user config that left ``PATH`` a string.
 5. Only the surface's shim root moves, and only when it is a real directory
    this user owns: a symlinked root, a root another user owns and any other
-   ``cmux-cli-shims`` entry stay where they are.
+   ``bree-cli-shims`` entry stay where they are.
 6. The shim root still moves when Claude integration is off, since the
    Codex, Pi, Amp and Hermes shims live there too.
 
@@ -45,14 +45,14 @@ from pathlib import Path
 from typing import Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-BOOTSTRAP = REPO_ROOT / "Resources/shell-integration/nushell/cmux-nushell-bootstrap.nu"
+BOOTSTRAP = REPO_ROOT / "Resources/shell-integration/nushell/bree-nushell-bootstrap.nu"
 
 SURFACE_ID = "nushell-refront-test"
 
 
 def _find_nu() -> Optional[str]:
-    """Locate a nu binary: CMUX_TEST_NU_BIN override, PATH, then Homebrew paths."""
-    override = os.environ.get("CMUX_TEST_NU_BIN")
+    """Locate a nu binary: BREE_TEST_NU_BIN override, PATH, then Homebrew paths."""
+    override = os.environ.get("BREE_TEST_NU_BIN")
     candidates = [
         override,
         shutil.which("nu"),
@@ -104,7 +104,7 @@ def _write_executable(path: Path, contents: str) -> None:
 
 
 def _make_sandbox(tmp: Path, env_nu_body: str, symlinked_root: bool = False) -> dict:
-    """Build an isolated HOME/XDG tree with a decoy claude, a shim claude, and the env cmux would spawn with.
+    """Build an isolated HOME/XDG tree with a decoy claude, a shim claude, and the env bree would spawn with.
 
     With `symlinked_root`, the shim root is a symlink to a directory holding the shim claude.
     """
@@ -124,7 +124,7 @@ def _make_sandbox(tmp: Path, env_nu_body: str, symlinked_root: bool = False) -> 
         '#!/bin/sh\nprintf \'DECOY-CLAUDE %s\\n\' "$*"\n',
     )
 
-    shim_dir = tmp / "cmux-cli-shims" / SURFACE_ID
+    shim_dir = tmp / "bree-cli-shims" / SURFACE_ID
     if symlinked_root:
         target = tmp / "elsewhere"
         target.mkdir()
@@ -137,7 +137,7 @@ def _make_sandbox(tmp: Path, env_nu_body: str, symlinked_root: bool = False) -> 
         '#!/bin/sh\nprintf \'SHIM-CLAUDE %s\\n\' "$*"\n',
     )
 
-    env = {key: value for key, value in os.environ.items() if not key.startswith("CMUX")}
+    env = {key: value for key, value in os.environ.items() if not key.startswith("BREE")}
     env.update(
         {
             "LC_ALL": "C",
@@ -145,21 +145,21 @@ def _make_sandbox(tmp: Path, env_nu_body: str, symlinked_root: bool = False) -> 
             "TERM": "xterm-256color",
             "HOME": str(home),
             "XDG_CONFIG_HOME": str(xdg),
-            # cmux spawns the surface with the shim dir already first on PATH.
+            # bree spawns the surface with the shim dir already first on PATH.
             "PATH": os.pathsep.join(
                 [str(shim_dir), "/usr/bin", "/bin", "/usr/sbin", "/sbin"]
             ),
-            "CMUX_SURFACE_ID": SURFACE_ID,
+            "BREE_SURFACE_ID": SURFACE_ID,
             # The app sets both when the Claude shim is installed.
-            "CMUX_AGENT_COMMAND_SHIM_ROOT": str(shim_dir),
-            "CMUX_CLAUDE_WRAPPER_SHIM_ROOT": str(shim_dir),
+            "BREE_AGENT_COMMAND_SHIM_ROOT": str(shim_dir),
+            "BREE_CLAUDE_WRAPPER_SHIM_ROOT": str(shim_dir),
         }
     )
     return {"env": env, "decoy_dir": decoy_dir, "shim_dir": shim_dir}
 
 
 def _run_nu(nu: str, env: dict, script: str) -> subprocess.CompletedProcess:
-    """Run `script` through `nu -l -c`, mirroring how cmux launches login nushell."""
+    """Run `script` through `nu -l -c`, mirroring how bree launches login nushell."""
     return subprocess.run(
         [nu, "-l", "-c", script],
         env=env,
@@ -200,7 +200,7 @@ def test_nushell_bootstrap_refronts_shim_over_user_path_prepends() -> None:
         return
     one_liner = _bootstrap_one_liner()
 
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-refront-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-refront-") as td:
         tmp = Path(td)
         sandbox = _make_sandbox(
             tmp,
@@ -219,12 +219,12 @@ def test_nushell_bootstrap_refronts_shim_over_user_path_prepends() -> None:
             + _debug(control)
         )
 
-        # With the bootstrap (same post-config execution point as cmux's -e
+        # With the bootstrap (same post-config execution point as bree's -e
         # payload), the shim must win again.
         fixed = _run_nu(nu, env, one_liner + "; which claude | get 0.path")
         assert fixed.returncode == 0, "bootstrap run failed" + _debug(fixed)
         assert fixed.stdout.strip() == shim_claude, (
-            "bootstrap did not re-front the cmux shim dir over the user's "
+            "bootstrap did not re-front the bree shim dir over the user's "
             f"PATH prepends (got {fixed.stdout.strip()!r})" + _debug(fixed)
         )
 
@@ -232,7 +232,7 @@ def test_nushell_bootstrap_refronts_shim_over_user_path_prepends() -> None:
         ran = _run_nu(nu, env, one_liner + "; claude --resume 0123-fake-id")
         assert ran.returncode == 0, "running claude via bootstrap failed" + _debug(ran)
         assert "SHIM-CLAUDE --resume 0123-fake-id" in ran.stdout, (
-            "running `claude` did not execute the cmux shim" + _debug(ran)
+            "running `claude` did not execute the bree shim" + _debug(ran)
         )
         assert "DECOY-CLAUDE" not in ran.stdout, (
             "running `claude` executed the user binary instead of the shim"
@@ -246,7 +246,7 @@ def test_nushell_bootstrap_normalizes_string_path() -> None:
         return
     one_liner = _bootstrap_one_liner()
 
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-strpath-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-strpath-") as td:
         tmp = Path(td)
         sandbox = _make_sandbox(
             tmp,
@@ -278,28 +278,28 @@ def test_nushell_bootstrap_normalizes_string_path() -> None:
         )
 
 
-def test_nushell_bootstrap_noops_outside_cmux() -> None:
+def test_nushell_bootstrap_noops_outside_bree() -> None:
     nu = _require_nu()
     if nu is None:
         return
     one_liner = _bootstrap_one_liner()
 
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-noop-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-noop-") as td:
         tmp = Path(td)
         sandbox = _make_sandbox(
             tmp,
             _DECOY_PREPEND_ENV_NU.replace("__DECOY_DIR__", str(tmp / "decoy-bin")),
         )
         env = sandbox["env"]
-        env.pop("CMUX_SURFACE_ID", None)
+        env.pop("BREE_SURFACE_ID", None)
         decoy_claude = str(sandbox["decoy_dir"] / "claude")
 
         outside = _run_nu(nu, env, one_liner + "; which claude | get 0.path")
         assert outside.returncode == 0, (
-            "bootstrap errored outside a cmux surface" + _debug(outside)
+            "bootstrap errored outside a bree surface" + _debug(outside)
         )
         assert outside.stdout.strip() == decoy_claude, (
-            "bootstrap must not reorder PATH outside a cmux surface "
+            "bootstrap must not reorder PATH outside a bree surface "
             f"(got {outside.stdout.strip()!r})" + _debug(outside)
         )
 
@@ -310,7 +310,7 @@ def test_nushell_bootstrap_skips_a_symlinked_shim_root() -> None:
         return
     one_liner = _bootstrap_one_liner()
 
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-symlink-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-symlink-") as td:
         tmp = Path(td)
         sandbox = _make_sandbox(
             tmp,
@@ -339,15 +339,15 @@ def test_nushell_bootstrap_skips_a_shim_root_another_user_owns() -> None:
     other_owner = "/usr/share"
     assert os.stat(other_owner).st_uid != os.geteuid()
 
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-owner-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-owner-") as td:
         tmp = Path(td)
         sandbox = _make_sandbox(
             tmp,
             _DECOY_PREPEND_ENV_NU.replace("__DECOY_DIR__", str(tmp / "decoy-bin")),
         )
         env = sandbox["env"]
-        env["CMUX_AGENT_COMMAND_SHIM_ROOT"] = other_owner
-        env["CMUX_CLAUDE_WRAPPER_SHIM_ROOT"] = other_owner
+        env["BREE_AGENT_COMMAND_SHIM_ROOT"] = other_owner
+        env["BREE_CLAUDE_WRAPPER_SHIM_ROOT"] = other_owner
         env["PATH"] = os.pathsep.join([other_owner, "/usr/bin", "/bin", "/usr/sbin", "/sbin"])
         decoy_dir = str(sandbox["decoy_dir"])
 
@@ -370,7 +370,7 @@ def test_nushell_bootstrap_skips_an_owned_but_group_or_other_writable_root() -> 
     one_liner = _bootstrap_one_liner()
 
     for permissions in (0o770, 0o777):
-        with tempfile.TemporaryDirectory(prefix="cmux-nu-writable-") as td:
+        with tempfile.TemporaryDirectory(prefix="bree-nu-writable-") as td:
             tmp = Path(td)
             sandbox = _make_sandbox(
                 tmp,
@@ -396,7 +396,7 @@ def test_nushell_bootstrap_checks_shim_ancestry() -> None:
         return
     one_liner = _bootstrap_one_liner()
     for permissions, use_alias in ((0o777, False), (0o777, True), (0o1777, False)):
-        with tempfile.TemporaryDirectory(prefix="cmux-nu-ancestry-") as td:
+        with tempfile.TemporaryDirectory(prefix="bree-nu-ancestry-") as td:
             tmp = Path(td)
             sandbox = _make_sandbox(tmp, _DECOY_PREPEND_ENV_NU.replace("__DECOY_DIR__", str(tmp / "decoy-bin")))
             shim_dir = sandbox["shim_dir"]
@@ -407,8 +407,8 @@ def test_nushell_bootstrap_checks_shim_ancestry() -> None:
                 alias.symlink_to(shim_dir.parent, target_is_directory=True)
                 root = alias / shim_dir.name
             env = sandbox["env"]
-            env["CMUX_AGENT_COMMAND_SHIM_ROOT"] = str(root)
-            env["CMUX_CLAUDE_WRAPPER_SHIM_ROOT"] = str(root)
+            env["BREE_AGENT_COMMAND_SHIM_ROOT"] = str(root)
+            env["BREE_CLAUDE_WRAPPER_SHIM_ROOT"] = str(root)
             env["PATH"] = os.pathsep.join([str(root), "/usr/bin", "/bin", "/usr/sbin", "/sbin"])
             ran = _run_nu(nu, env, one_liner + "; which claude | get 0.path")
             assert ran.returncode == 0, "bootstrap run failed" + _debug(ran)
@@ -424,7 +424,7 @@ def test_nushell_bootstrap_moves_only_the_shim_root() -> None:
         return
     one_liner = _bootstrap_one_liner()
 
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-only-root-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-only-root-") as td:
         tmp = Path(td)
         sandbox = _make_sandbox(
             tmp,
@@ -433,7 +433,7 @@ def test_nushell_bootstrap_moves_only_the_shim_root() -> None:
         env = sandbox["env"]
         shim_dir = str(sandbox["shim_dir"])
         decoy_dir = str(sandbox["decoy_dir"])
-        other_shims = tmp / "cmux-cli-shims" / "other-surface"
+        other_shims = tmp / "bree-cli-shims" / "other-surface"
         other_shims.mkdir()
         env["PATH"] = os.pathsep.join(
             [shim_dir, str(other_shims), "/usr/bin", "/bin", "/usr/sbin", "/sbin"]
@@ -455,7 +455,7 @@ def test_nushell_bootstrap_refronts_shim_root_without_claude_integration() -> No
         return
     one_liner = _bootstrap_one_liner()
 
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-no-claude-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-no-claude-") as td:
         tmp = Path(td)
         sandbox = _make_sandbox(
             tmp,
@@ -463,7 +463,7 @@ def test_nushell_bootstrap_refronts_shim_root_without_claude_integration() -> No
         )
         env = sandbox["env"]
         # Without the Claude shim, the app sets only the shared agent root.
-        env.pop("CMUX_CLAUDE_WRAPPER_SHIM_ROOT", None)
+        env.pop("BREE_CLAUDE_WRAPPER_SHIM_ROOT", None)
         shim_claude = str(sandbox["shim_dir"] / "claude")
 
         ran = _run_nu(nu, env, one_liner + "; which claude | get 0.path")
@@ -477,7 +477,7 @@ def test_nushell_bootstrap_refronts_shim_root_without_claude_integration() -> No
 if __name__ == "__main__":
     test_nushell_bootstrap_refronts_shim_over_user_path_prepends()
     test_nushell_bootstrap_normalizes_string_path()
-    test_nushell_bootstrap_noops_outside_cmux()
+    test_nushell_bootstrap_noops_outside_bree()
     test_nushell_bootstrap_skips_a_symlinked_shim_root()
     test_nushell_bootstrap_skips_a_shim_root_another_user_owns()
     test_nushell_bootstrap_skips_an_owned_but_group_or_other_writable_root()
@@ -487,4 +487,4 @@ if __name__ == "__main__":
     if _find_nu() is None:
         print("SKIP: nushell (nu) not found; nothing was verified")
     else:
-        print("PASS: cmux nushell bootstrap re-fronts the CLI shim over user PATH prepends")
+        print("PASS: bree nushell bootstrap re-fronts the CLI shim over user PATH prepends")

@@ -9,7 +9,7 @@ The capture still turns the run red so it stays visible.
 update-homebrew.yml used to gate on `github.event.workflow_run.conclusion ==
 'success'`, so that deliberate redness stopped the cask update too. The tap sat
 at 0.64.22 from 2026-08-03 while v0.64.23, v0.64.24 and v0.64.25 each published
-a signed, notarized cmux-macos.dmg.
+a signed, notarized bree-macos.dmg.
 
 These assertions pin the two halves of the arrangement: the gate reads the build
 job's own conclusion, and the job it names keeps that exact name.

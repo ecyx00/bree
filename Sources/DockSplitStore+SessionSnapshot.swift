@@ -1,6 +1,6 @@
-import CmuxFoundation
+import BreeFoundation
 import Bonsplit
-import CmuxWorkspaces
+import BreeWorkspaces
 import Darwin
 import Foundation
 

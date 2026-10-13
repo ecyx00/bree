@@ -726,7 +726,7 @@ public final class BonsplitController {
     }
 
     /// Add a pane holding `tab` and arrange all panes in Zellij's default
-    /// tiled layout (cmux-tui's Alt-n "new pane"). Panes fill a right-hand
+    /// tiled layout (bree-tui's Alt-n "new pane"). Panes fill a right-hand
     /// column of up to four before a new column opens, and every column and
     /// row gets an equal share. Existing panes keep their tabs and identity.
     ///

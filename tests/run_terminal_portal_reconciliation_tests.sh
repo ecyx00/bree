@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-fixture="$(mktemp -d "${TMPDIR:-/tmp}/cmux-portal-reconciliation.XXXXXX")"
+fixture="$(mktemp -d "${TMPDIR:-/tmp}/bree-portal-reconciliation.XXXXXX")"
 trap 'rm -rf "$fixture"' EXIT
 
 # Compile the actual app-owned scheduler and its actual regression tests in a
@@ -19,9 +19,9 @@ tests.mkdir()
 for name in ("Reasons", "Request", "Scheduler"):
     path = root / f"Sources/TerminalPortalReconciliation{name}.swift"
     (sources / path.name).symlink_to(path)
-path = root / "cmuxTests/TerminalPortalReconciliationReentrancyTests.swift"
+path = root / "breeTests/TerminalPortalReconciliationReentrancyTests.swift"
 (tests / path.name).symlink_to(path)
-dependency = json.dumps(str(root / "Packages/Shared/CMUXMobileCore"))
+dependency = json.dumps(str(root / "Packages/Shared/BREEMobileCore"))
 (fixture / "Package.swift").write_text(f'''// swift-tools-version: 6.0
 import PackageDescription
 let package = Package(
@@ -29,8 +29,8 @@ let package = Package(
     platforms: [.macOS(.v14)],
     dependencies: [.package(path: {dependency})],
     targets: [
-        .target(name: "cmux", dependencies: ["CMUXMobileCore"], path: "Sources"),
-        .testTarget(name: "ReconciliationTests", dependencies: ["cmux", "CMUXMobileCore"], path: "Tests")
+        .target(name: "bree", dependencies: ["BREEMobileCore"], path: "Sources"),
+        .testTarget(name: "ReconciliationTests", dependencies: ["bree", "BREEMobileCore"], path: "Tests")
     ]
 )
 ''')

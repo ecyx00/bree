@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import Foundation
 import SwiftUI
 
@@ -238,10 +238,10 @@ struct SidebarWorkspaceTaskStatusGlyph: View {
         case .working:
             return palette.activeIndicator
         case .attention:
-            // Loudest lane: the theme's attention signal (the mark differs per state).
-            return palette.signalAttention
+            // Lane glyphs are neutral; the mark (fill, bang, check) carries the state.
+            return palette.textSecondary
         case .review:
-            return palette.signalSuccess
+            return palette.textSecondary
         case .done:
             // Quiet tertiary glyph so finished rows read as settled, not celebratory.
             return palette.glyphTertiary

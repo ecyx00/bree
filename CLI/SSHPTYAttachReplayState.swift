@@ -9,7 +9,7 @@ import Foundation
 /// the replacement snapshot. The lifecycle identifier keeps a fresh attach
 /// from inheriting offsets from an older shell generation.
 struct SSHPTYAttachReplayState: Sendable {
-    private static let filePrefix = "cmux-ssh-pty-replay"
+    private static let filePrefix = "bree-ssh-pty-replay"
 
     private let sessionID: String
     private let lifecycleID: String

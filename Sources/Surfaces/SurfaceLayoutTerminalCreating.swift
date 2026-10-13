@@ -1,5 +1,5 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// A Cloud provider can author a native new-tab/split intent in the daemon's

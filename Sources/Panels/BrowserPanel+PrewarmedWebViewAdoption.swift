@@ -1,5 +1,5 @@
 import Foundation
-import CmuxBrowser
+import BreeBrowser
 import WebKit
 
 /// Hover-prewarm adoption support for ``BrowserPanel``: profile resolution
@@ -20,9 +20,9 @@ extension BrowserPanel {
     /// configuration so the page keeps its opener, that the next panel created
     /// for `url` adopts instead of making its own. Set and consumed within one
     /// main-actor turn by ``BrowserReplTabAttachment/adoptPopup``.
-    @MainActor static var pendingPopupWebView: (url: URL, webView: CmuxWebView)?
+    @MainActor static var pendingPopupWebView: (url: URL, webView: BreeWebView)?
 
-    @MainActor static func takePendingPopupWebView(for url: URL?) -> CmuxWebView? {
+    @MainActor static func takePendingPopupWebView(for url: URL?) -> BreeWebView? {
         guard let pending = pendingPopupWebView, let url, pending.url == url else { return nil }
         pendingPopupWebView = nil
         return pending.webView
@@ -38,7 +38,7 @@ extension BrowserPanel {
         initialURL: URL?,
         profileID: UUID,
         websiteDataStore: WKWebsiteDataStore
-    ) -> CmuxWebView? {
+    ) -> BreeWebView? {
         guard !isRemoteWorkspace,
               initialRequest == nil,
               renderInitialNavigation,

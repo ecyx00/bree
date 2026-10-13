@@ -1,14 +1,14 @@
-#ifndef CMUX_TERMINATION_WATCHDOG_ATOMIC_H
-#define CMUX_TERMINATION_WATCHDOG_ATOMIC_H
+#ifndef BREE_TERMINATION_WATCHDOG_ATOMIC_H
+#define BREE_TERMINATION_WATCHDOG_ATOMIC_H
 
 #include <stdbool.h>
 #include <stdatomic.h>
 
 typedef struct {
     atomic_bool isArmed;
-} CMUXTerminationWatchdogLatch;
+} BREEinationWatchdogLatch;
 
-CMUXTerminationWatchdogLatch CMUXTerminationWatchdogLatchMake(void);
-bool CMUXTerminationWatchdogLatchClaim(CMUXTerminationWatchdogLatch *latch);
+BREEinationWatchdogLatch BREEinationWatchdogLatchMake(void);
+bool BREEinationWatchdogLatchClaim(BREEinationWatchdogLatch *latch);
 
 #endif

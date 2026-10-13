@@ -1,6 +1,6 @@
 # Stable identity in catalog projections
 
-`cmux surface ls --json` (`surface.catalog`) and `cmux vm tree --json` expose
+`bree surface ls --json` (`surface.catalog`) and `bree vm tree --json` expose
 two nullable read fields on each local projection:
 
 ```json

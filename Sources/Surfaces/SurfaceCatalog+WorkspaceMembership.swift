@@ -1,6 +1,6 @@
-import CmuxCloud
-import CmuxCore
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeCore
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension SurfaceCatalog {

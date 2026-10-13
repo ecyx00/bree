@@ -1,5 +1,5 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// A browser pane opened at the New Display click, before the guest has

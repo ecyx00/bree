@@ -4,7 +4,7 @@ import Testing
 
 @testable import Bonsplit
 
-/// Mirrors cmux's file-preview panel body: an editable `NSTextView` inside an
+/// Mirrors bree's file-preview panel body: an editable `NSTextView` inside an
 /// `NSScrollView`, hosted through `NSViewRepresentable` as pane content.
 private struct EditableTextEditorHost: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
@@ -22,7 +22,7 @@ private struct EditableTextEditorHost: NSViewRepresentable {
     func updateNSView(_ nsView: NSScrollView, context: Context) {}
 }
 
-/// Drives the real tab strip the way cmux opens a file from the file explorer
+/// Drives the real tab strip the way bree opens a file from the file explorer
 /// (`Workspace.newFilePreviewSurface`): create the tab, focus the pane, select
 /// the tab, push its metadata, then hand first responder to the editor.
 @MainActor

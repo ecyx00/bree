@@ -4,7 +4,7 @@
     "Sources/*Terminal*Link*",
     "Sources/*Hover*",
     "Sources/*Modifier*",
-    "Packages/macOS/CmuxTerminal/*"
+    "Packages/macOS/BreeTerminal/*"
   ],
   "steps": [
     {
@@ -79,7 +79,7 @@
       "socket": "workspace.create",
       "params": {
         "title": "GitHub URL",
-        "initial_input": "clear; for i in $(seq 60); do echo 'https://github.com/manaflow-ai/cmux https://github.com/manaflow-ai/cmux https://github.com/manaflow-ai/cmux https://github.com/manaflow-ai/cmux '; done\n",
+        "initial_input": "clear; for i in $(seq 60); do echo 'https://github.com/ecyx00/bree https://github.com/ecyx00/bree https://github.com/ecyx00/bree https://github.com/ecyx00/bree '; done\n",
         "focus": true
       }
     },

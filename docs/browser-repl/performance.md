@@ -6,20 +6,20 @@ Playwright AI snapshot. Measured 2026-09-30 on an M-series Mac (the dev machine)
 the frozen corpus, synthetic stress pages and four live pages.
 
 ```sh
-node tests/browser-parity/perf/bench.mjs --backend cmux-dev --pages all --label after
+node tests/browser-parity/perf/bench.mjs --backend bree-dev --pages all --label after
 node tests/browser-parity/perf/bench.mjs --backend chrome   --pages all --label ref   # Playwright AI snapshot
 node tests/browser-parity/perf/bench.mjs --backend reference-a --pages all --label ref   # PARITY_REFERENCE_A_CLI, one call per page
-PARITY_CMUX_CLI=<tagged cmux CLI> CMUX_SOCKET_PATH=/tmp/cmux-debug-<tag>.sock \
-  node tests/browser-parity/perf/bench.mjs --backend cmux --pages all --label after
-node tests/browser-parity/perf/report.mjs before-cmux after-cmux ref-chrome ref-reference-a
+PARITY_BREE_CLI=<tagged bree CLI> BREE_SOCKET_PATH=/tmp/bree-debug-<tag>.sock \
+  node tests/browser-parity/perf/bench.mjs --backend bree --pages all --label after
+node tests/browser-parity/perf/report.mjs before-bree after-bree ref-chrome ref-reference-a
 ```
 
-`perf/results/*.json` holds every number below. "cmux app" is the fleet
-build `brepl-perf1` running the runtime from `CMUX_BROWSER_REPL_RUNTIME_DIR`:
+`perf/results/*.json` holds every number below. "bree app" is the fleet
+build `brepl-perf1` running the runtime from `BREE_BROWSER_REPL_RUNTIME_DIR`:
 `f38f867647b` (before this work) and this branch (after), so both columns
-use the same binary. "cmux dev" is the same runtime on Playwright WebKit. Each page gets one program:
+use the same binary. "bree dev" is the same runtime on Playwright WebKit. Each page gets one program:
 load, five full snapshots, one small change (a heading's text) and one more
-snapshot, then a locator resolving the last ref. For cmux the snapshot also
+snapshot, then a locator resolving the last ref. For bree the snapshot also
 reports where its time went: traversal in the page, the driver round trip,
 and host work (stitching, shaping, the diff).
 
@@ -30,7 +30,7 @@ script, deterministic): `cards-50k` and `cards-200k` (cards of heading, text,
 link, button; the count is DOM elements), `table-10k` (a data table of
 10,000 rows), `list-5k` (a navigation list), `deep-500` and `deep-1k` (nested
 divs; WebKit lays out no box past about 512 levels, so the button at the
-bottom of `deep-1k` is not visible there and cmux leaves it out), `iframes-300` (100 srcdoc,
+bottom of `deep-1k` is not visible there and bree leaves it out), `iframes-300` (100 srcdoc,
 100 cross-origin, 100 same-origin frames that each nest a cross-origin one:
 401 frames), `shadow-2k` (2,000 open shadow roots), `text-2m` (one text node of
 2,000,000 characters), `select-5k` (a drop-down and a list box of 5,000
@@ -57,7 +57,7 @@ binary:
 Where the time goes after (app, p50 of snapshots 2 to 5): `cards-50k` 279 ms
 in the page, 13 ms transport, 134 ms host (shaping, render, diff);
 `cards-200k` 1,470 / 104 / 512 ms; `table-10k` 224 / 24 / 121 ms. A
-`cmux browser repl '1'` call costs about 50 to 60 ms end to end (process start
+`bree browser repl '1'` call costs about 50 to 60 ms end to end (process start
 and socket round trip; the evaluation itself 0 ms); a reference A REPL call of `1` about
 450 ms. A ref resolves through a locator in 3 to 10 ms in the app on every
 page, including in-frame refs on `iframes-300` (34 ms). Ref tables over 100
@@ -79,7 +79,7 @@ smaller page.
 
 ### Snapshot time, p50 of 5 (ms; first snapshot in parentheses)
 
-| Page | cmux app before | cmux app after | cmux dev before | cmux dev after | Reference A | Playwright AI snapshot | Reference B AX |
+| Page | bree app before | bree app after | bree dev before | bree dev after | Reference A | Playwright AI snapshot | Reference B AX |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | cards-50k | 3,297 (3,443) | 427 (527) | 4,193 (4,301) | 529 (780) | 7,374 (12,042) | 631 (3,125) | 21,897 (18,561) |
 | table-10k | 471 (524) | 372 (508) | 534 (712) | 454 (619) | 1,202 (1,156) | 875 (927) | 10,889 (10,889) |
@@ -108,7 +108,7 @@ smaller page.
 
 ### Printed characters (what the agent reads by default)
 
-| Page | cmux app before | cmux app after | cmux dev before | cmux dev after | Reference A | Playwright AI snapshot | Reference B AX |
+| Page | bree app before | bree app after | bree dev before | bree dev after | Reference A | Playwright AI snapshot | Reference B AX |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | cards-50k | 1,480,540 | 19,967 | 1,480,540 | 19,967 | 1,655,559 | 2,679,497 | 28,989 |
 | table-10k | 533,767 | 19,864 | 533,767 | 19,864 | 299,755 | 2,543,522 | 92,749 |
@@ -137,7 +137,7 @@ smaller page.
 
 ### Snapshot after one change (ms)
 
-| Page | cmux app before | cmux app after | cmux dev before | cmux dev after | Reference A | Playwright AI snapshot | Reference B AX |
+| Page | bree app before | bree app after | bree dev before | bree dev after | Reference A | Playwright AI snapshot | Reference B AX |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | cards-50k | 3,313 | 477 | 4,379 | 506 | 2,636 | 577 | 8,285 |
 | table-10k | 424 | 390 | 496 | 397 | 1,445 | 896 | 15,150 |
@@ -175,7 +175,7 @@ are higher than in the idle runs above; compare within a row. p50 / p95 of
 five snapshots in milliseconds; p95 is the first, cold snapshot on most
 pages.
 
-| Page | cmux app before | cmux app after | Playwright AI snapshot | cmux printed | Playwright AI snapshot printed |
+| Page | bree app before | bree app after | Playwright AI snapshot | bree printed | Playwright AI snapshot printed |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | iframes-300 | 6,216 / 6,980 | 179 / 686 | 155 / 4,522 | 19,876 | 30,964 |
 | nested-frames | 14 / 34 | 6 / 38 | 9 / 35 | 490 | 511 |
@@ -199,11 +199,11 @@ pages.
 | live GitHub PR files | | 225 / 282 | 1,820 / 3,073 | 19,607 | 1,433,802 |
 | live Hacker News thread | | 187 / 265 | 788 / 859 | 19,932 | 2,884,237 |
 
-By p50, cmux is as fast as Playwright AI snapshot or faster on every page but two: on
+By p50, bree is as fast as Playwright AI snapshot or faster on every page but two: on
 `iframes-300` its warm p50 is 24 ms slower (its cold first snapshot is 6.6x
 faster), and on `text-2m` 5 ms. On Amazon Playwright's Chrome got a
 703-character bot page, so that row is left out. Playwright AI snapshot prints the
-whole tree (up to 2.9 MB); cmux prints at most 20,000 characters and keeps
+whole tree (up to 2.9 MB); bree prints at most 20,000 characters and keeps
 the rest in `.tree`. `perf/results/round2*.json` has every number.
 
 ## What was slow, and the fixes
@@ -246,7 +246,7 @@ calls in flight never finished (CPU idle, every later call on the tab
 queued too). Plain WebKit with the frame infos cached answers 400
 concurrent calls in 25 ms. Now:
 
-- `BrowserReplFrameRegistry` (CmuxBrowser) keeps one tree read per web
+- `BrowserReplFrameRegistry` (BreeBrowser) keeps one tree read per web
   view. A frame call finds its frame by id without a read (frame ids are
   stable for a frame's life); an unknown id reads once. Callers that need
   the tree as it is now (`frames.list`, iframe to frame, the owner box) get
@@ -281,21 +281,21 @@ collected).
 What each tool does when a page or an output is too big to read. Sources:
 the tools' own code and guides, and runs of each (2026-09-30).
 
-| | Reference A (CLI 1.26.916) | Reference B | Playwright AI snapshot | cmux |
+| | Reference A (CLI 1.26.916) | Reference B | Playwright AI snapshot | bree |
 | --- | --- | --- | --- | --- |
 | Default snapshot size | everything (`list-5k`: 404 KB) | AX text: first 500 children of a node, depth 200, URLs to about 4,000 characters in all; visible DOM: 20,000 characters or 200 elements | everything (`list-5k`: 713 KB); after actions it writes the snapshot to a file and returns the link | at most 20,000 characters printed, condensed; `.tree` complete |
 | When cut | `maxChars` throws `Output exceeds N character limit`; per frame, so the stitched tree can exceed it | children: ` (showing 0-500 of N items)` on the parent; depth and the DOM view: nothing | not cut | a line at each cut with count, refs and scope ref, and a closing `# condensed` line |
 | Per-call output | none: 5 MB printed in one call came back whole | results: strings past 200,000 characters are cut, arrays past 2,000 items are sliced | none; Claude Code saves results past 25,000 tokens to a file | 25,000 characters (`--max-output`), the rest to a file named in the output |
 | Guidance | "NEVER truncate snapshot with `substring()`, `slice()`" and a runtime warning on `tree.slice()` | none | `browser_snapshot` takes `depth` and a target | `snapshot(ref)`, `{ viewport: true }`, `{ maxChars: Infinity }`, search `.tree` |
 
-cmux's budget (`maxChars`, 20,000 characters by default, about 6,000 o200k
+bree's budget (`maxChars`, 20,000 characters by default, about 6,000 o200k
 tokens of snapshot text) was chosen from these measurements: it prints five of
 the nine frozen corpus pages whole (the median page is 16,616 characters) and
 condenses the four above it and every live page measured (51,000 to 396,000
 characters). With the header and a few other lines it stays under the
 per-call cap, and the cap (25,000) stays under Claude Code's 30,000-character
 inline limit and Codex's 10,000-token cut (about 40,000 characters), so the
-harness never truncates cmux output blindly.
+harness never truncates bree output blindly.
 
 The condensed print keeps, in order: on-screen controls and the focused
 element with their ancestors; the outline (landmarks and frames, then
@@ -330,7 +330,7 @@ url: http://localhost:60483/stress/stress.html?kind=list&n=5000
   200 with at most a count, and its visible-DOM view stops at 20,000
   characters without a note. Reference A prints everything, and its own guide tells
   the agent never to slice the tree, so a 5,000-item page is a 400 KB tool
-  result that the harness then truncates in the middle. cmux marks every cut
+  result that the harness then truncates in the middle. bree marks every cut
   where it happens, with a count, the refs it holds and the ref to scope to.
 - **The cut keeps what an agent acts on.** On-screen controls, the focused
   element and the outline survive any budget; the page reads top down; long
@@ -344,7 +344,7 @@ url: http://localhost:60483/stress/stress.html?kind=list&n=5000
 - **The REPL, not the harness, decides what is dropped.** 25,000 characters a
   call sits under Claude Code's 30,000 (inline, then a 2,000-character
   preview) and Codex's 10,000 tokens (head and tail around a gap), so neither
-  cuts cmux output. What does not fit is in a file named in the output,
+  cuts bree output. What does not fit is in a file named in the output,
   written as it arrives.
 - **Refs keep working.** A ref in a condensed-away region resolves like any
   other (`page.locator("e4000")`); reference B's cut children have no index.

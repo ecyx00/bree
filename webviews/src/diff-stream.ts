@@ -247,7 +247,7 @@ export async function streamPatch(options: StreamPatchOptions): Promise<void> {
       currentPatchPrefix = commitMetadataLabel(metadata, patchMetadataIndex, options.label);
       patchMetadataIndex += 1;
     }
-    const cacheKey = `cmux-diff-file-${model.fileIndex}`;
+    const cacheKey = `bree-diff-file-${model.fileIndex}`;
     const fileDiff = options.processFile(fileText, { cacheKey, isGitDiff: true });
     annotateDiffMetadata(fileDiff, fileText);
     annotatePatchIdentity(fileDiff, fileText);
@@ -534,7 +534,7 @@ async function appendParsedPatchText(
   options: StreamPatchOptions,
   enqueueFileDiff: (fileDiff: any, patchPrefix: string | undefined) => Promise<void>,
 ): Promise<void> {
-  const patches = options.parsePatchFiles(patchText, "cmux-diff");
+  const patches = options.parsePatchFiles(patchText, "bree-diff");
   const hasMultiplePatches = patches.length > 1;
   for (const [patchIndex, patch] of patches.entries()) {
     const patchPrefix = hasMultiplePatches ? commitMetadataLabel(patch.patchMetadata, patchIndex, options.label) : undefined;
@@ -718,8 +718,8 @@ function annotatePatchIdentity(fileDiff: any, fileText: string): void {
   if (fileDiff == null || typeof fileDiff !== "object") {
     return;
   }
-  fileDiff.cmuxPatchFingerprint = patchFingerprint(fileText);
-  fileDiff.cmuxPatchByteLength = fileText.length;
+  fileDiff.breePatchFingerprint = patchFingerprint(fileText);
+  fileDiff.breePatchByteLength = fileText.length;
 }
 
 export function fileName(fileDiff: any, fallback = "Untitled"): string {

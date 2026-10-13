@@ -8,7 +8,7 @@ enum IdentityColdStartFixture {
     @MainActor
     static func main() async throws {
         let environment = ProcessInfo.processInfo.environment
-        guard let requestedHome = environment["CMUX_IDENTITY_FIXTURE_HOME"],
+        guard let requestedHome = environment["BREE_IDENTITY_FIXTURE_HOME"],
               let fixedHome = environment["CFFIXED_USER_HOME"],
               let support = FileManager.default.urls(
                 for: .applicationSupportDirectory,
@@ -31,12 +31,12 @@ enum IdentityColdStartFixture {
         guard canonicalPath(support.path).hasPrefix(home + "/") else {
             fail("application support escaped the fixture home")
         }
-        guard let expectedBundleID = environment["CMUX_IDENTITY_FIXTURE_BUNDLE_ID"],
-              expectedBundleID.hasPrefix("com.cmuxterm.fixture.identity."),
+        guard let expectedBundleID = environment["BREE_IDENTITY_FIXTURE_BUNDLE_ID"],
+              expectedBundleID.hasPrefix("com.bree.fixture.identity."),
               Bundle.main.bundleIdentifier == expectedBundleID else {
             fail("fixture must have its own preference domain")
         }
-        let directory = support.appendingPathComponent("cmux", isDirectory: true)
+        let directory = support.appendingPathComponent("bree", isDirectory: true)
         let sharedURL = directory.appendingPathComponent("mobile-host-device-id")
         guard !FileManager.default.fileExists(atPath: sharedURL.path),
               UserDefaults.standard.object(forKey: "mobileHost.deviceID") == nil else {

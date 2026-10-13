@@ -1,6 +1,6 @@
 import Foundation
-import CmuxCore
-import CmuxFoundation
+import BreeCore
+import BreeFoundation
 #if canImport(Security)
 import Security
 #endif
@@ -293,9 +293,9 @@ extension SessionRemoteWorkspaceSnapshot {
             shellFeatures: RemoteInteractiveShellBootstrapBuilder.shellFeatures(),
             configuredRemoteCommand: configuredRemoteCommand,
             bundledZshIntegration: RemoteInteractiveShellBootstrapBuilder
-                .bundledShellIntegrationScript(named: "cmux-zsh-integration.zsh"),
+                .bundledShellIntegrationScript(named: "bree-zsh-integration.zsh"),
             bundledBashIntegration: RemoteInteractiveShellBootstrapBuilder
-                .bundledShellIntegrationScript(named: "cmux-bash-integration.bash"),
+                .bundledShellIntegrationScript(named: "bree-bash-integration.bash"),
             bundledFishIntegration: RemoteInteractiveShellBootstrapBuilder
                 .bundledShellIntegrationScript(named: "fish/config.fish"),
             terminalProfile: terminalProfile
@@ -334,25 +334,25 @@ extension SessionRemoteWorkspaceSnapshot {
         // outermost interpreter explicitly.
         let remoteCommandTemplate = "/bin/sh -c \(Self.shellQuote(remoteCommandScript))"
         let script = ([
-            "cmux_restore_fail() { \(failureScript); }",
-            "cmux_restore_cli=\"${CMUX_BUNDLED_CLI_PATH:-}\"",
-            "if [ -z \"$cmux_restore_cli\" ] || [ ! -x \"$cmux_restore_cli\" ]; then cmux_restore_cli=\"$(command -v bree 2>/dev/null || true)\"; fi",
-            "if [ -z \"$cmux_restore_cli\" ] || [ -z \"${CMUX_SOCKET_PATH:-}\" ] || [ -z \"${CMUX_WORKSPACE_ID:-}\" ] || [ -z \"${CMUX_SURFACE_ID:-}\" ] || [ -z \"${CMUX_TERMINAL_LIFECYCLE_ID:-}\" ]; then cmux_restore_fail; fi",
-            "cmux_restore_register_attempt() { cmux_restore_launch_payload=\"{\\\"workspace_id\\\":\\\"$CMUX_WORKSPACE_ID\\\",\\\"surface_id\\\":\\\"$CMUX_SURFACE_ID\\\",\\\"terminal_lifecycle_id\\\":\\\"$CMUX_TERMINAL_LIFECYCLE_ID\\\",\\\"attempt_id\\\":\\\"$CMUX_SSH_ATTEMPT_ID\\\"}\"; CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC=2 \"$cmux_restore_cli\" --socket \"$CMUX_SOCKET_PATH\" rpc workspace.remote.terminal_session_launching \"$cmux_restore_launch_payload\" >/dev/null 2>&1; }",
-        ] + SSHPTYAttachRetryScriptBuilder().launchRegistrationRetryLines(functionPrefix: "cmux_restore") + [
-            "cmux_restore_begin_attempt",
-            "cmux_restore_launch_status=$?",
-            "if [ \"$cmux_restore_launch_status\" -ne 0 ]; then cmux_restore_fail; fi",
+            "bree_restore_fail() { \(failureScript); }",
+            "bree_restore_cli=\"${BREE_BUNDLED_CLI_PATH:-}\"",
+            "if [ -z \"$bree_restore_cli\" ] || [ ! -x \"$bree_restore_cli\" ]; then bree_restore_cli=\"$(command -v bree 2>/dev/null || true)\"; fi",
+            "if [ -z \"$bree_restore_cli\" ] || [ -z \"${BREE_SOCKET_PATH:-}\" ] || [ -z \"${BREE_WORKSPACE_ID:-}\" ] || [ -z \"${BREE_SURFACE_ID:-}\" ] || [ -z \"${BREE_TERMINAL_LIFECYCLE_ID:-}\" ]; then bree_restore_fail; fi",
+            "bree_restore_register_attempt() { bree_restore_launch_payload=\"{\\\"workspace_id\\\":\\\"$BREE_WORKSPACE_ID\\\",\\\"surface_id\\\":\\\"$BREE_SURFACE_ID\\\",\\\"terminal_lifecycle_id\\\":\\\"$BREE_TERMINAL_LIFECYCLE_ID\\\",\\\"attempt_id\\\":\\\"$BREE_SSH_ATTEMPT_ID\\\"}\"; BREE_CLI_RESPONSE_TIMEOUT_SEC=2 \"$bree_restore_cli\" --socket \"$BREE_SOCKET_PATH\" rpc workspace.remote.terminal_session_launching \"$bree_restore_launch_payload\" >/dev/null 2>&1; }",
+        ] + SSHPTYAttachRetryScriptBuilder().launchRegistrationRetryLines(functionPrefix: "bree_restore") + [
+            "bree_restore_begin_attempt",
+            "bree_restore_launch_status=$?",
+            "if [ \"$bree_restore_launch_status\" -ne 0 ]; then bree_restore_fail; fi",
             staging.preparationShellScript,
-            "if [ \"$cmux_remote_install_status\" -ne 0 ]; then cmux_restore_fail; fi",
-            "unset cmux_remote_install_status",
-            "cmux_restore_workspace_id=\"${CMUX_WORKSPACE_ID:-}\"",
-            "cmux_restore_surface_id=\"${CMUX_SURFACE_ID:-}\"",
-            "cmux_restore_terminal_lifecycle_id=\"${CMUX_TERMINAL_LIFECYCLE_ID:-}\"",
-            "cmux_restore_attempt_id=\"${CMUX_SSH_ATTEMPT_ID:-}\"",
-            "cmux_restore_remote_command_template=\(Self.shellQuote(remoteCommandTemplate))",
-            "cmux_restore_remote_command=\"$(printf '%s' \"$cmux_restore_remote_command_template\" | sed \"s/__CMUX_WORKSPACE_ID__/$cmux_restore_workspace_id/g; s/__CMUX_SURFACE_ID__/$cmux_restore_surface_id/g; s/__CMUX_TERMINAL_LIFECYCLE_ID__/$cmux_restore_terminal_lifecycle_id/g; s/__CMUX_SSH_ATTEMPT_ID__/$cmux_restore_attempt_id/g\")\"",
-            "exec \(sshInvocation) \"$cmux_restore_remote_command\"",
+            "if [ \"$bree_remote_install_status\" -ne 0 ]; then bree_restore_fail; fi",
+            "unset bree_remote_install_status",
+            "bree_restore_workspace_id=\"${BREE_WORKSPACE_ID:-}\"",
+            "bree_restore_surface_id=\"${BREE_SURFACE_ID:-}\"",
+            "bree_restore_terminal_lifecycle_id=\"${BREE_TERMINAL_LIFECYCLE_ID:-}\"",
+            "bree_restore_attempt_id=\"${BREE_SSH_ATTEMPT_ID:-}\"",
+            "bree_restore_remote_command_template=\(Self.shellQuote(remoteCommandTemplate))",
+            "bree_restore_remote_command=\"$(printf '%s' \"$bree_restore_remote_command_template\" | sed \"s/__BREE_WORKSPACE_ID__/$bree_restore_workspace_id/g; s/__BREE_SURFACE_ID__/$bree_restore_surface_id/g; s/__BREE_TERMINAL_LIFECYCLE_ID__/$bree_restore_terminal_lifecycle_id/g; s/__BREE_SSH_ATTEMPT_ID__/$bree_restore_attempt_id/g\")\"",
+            "exec \(sshInvocation) \"$bree_restore_remote_command\"",
         ]).joined(separator: "\n")
         return "/bin/sh -c \(Self.shellQuote(script))"
     }
@@ -361,23 +361,23 @@ extension SessionRemoteWorkspaceSnapshot {
         remoteRelayPort: Int
     ) -> String {
         [
-            "if [ -n \"__CMUX_SURFACE_ID__\" ]; then",
-            "  cmux_restore_terminal_connected='{\"workspace_id\":\"__CMUX_WORKSPACE_ID__\",\"surface_id\":\"__CMUX_SURFACE_ID__\",\"relay_port\":\(remoteRelayPort),\"terminal_lifecycle_id\":\"__CMUX_TERMINAL_LIFECYCLE_ID__\",\"attempt_id\":\"__CMUX_SSH_ATTEMPT_ID__\"}'",
-            "  cmux_restore_terminal_connected_acknowledged=0",
-            "  cmux_restore_terminal_connected_retry=0",
-            "  while [ \"$cmux_restore_terminal_connected_retry\" -lt 4 ]; do",
-            "    cmux_restore_remote_cli=\"$HOME/\(CmuxIdentity.remoteDotDirectoryName)/bin/cmux\"",
-            "    if [ ! -x \"$cmux_restore_remote_cli\" ]; then cmux_restore_remote_cli=\"$(command -v cmux 2>/dev/null || true)\"; fi",
-            "    if [ -n \"$cmux_restore_remote_cli\" ] && env -u CMUX_SOCKET CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC=0.5 CMUX_SOCKET_PATH=\"127.0.0.1:\(remoteRelayPort)\" \"$cmux_restore_remote_cli\" rpc workspace.remote.terminal_session_connected \"$cmux_restore_terminal_connected\" >/dev/null 2>&1; then",
-            "      cmux_restore_terminal_connected_acknowledged=1",
+            "if [ -n \"__BREE_SURFACE_ID__\" ]; then",
+            "  bree_restore_terminal_connected='{\"workspace_id\":\"__BREE_WORKSPACE_ID__\",\"surface_id\":\"__BREE_SURFACE_ID__\",\"relay_port\":\(remoteRelayPort),\"terminal_lifecycle_id\":\"__BREE_TERMINAL_LIFECYCLE_ID__\",\"attempt_id\":\"__BREE_SSH_ATTEMPT_ID__\"}'",
+            "  bree_restore_terminal_connected_acknowledged=0",
+            "  bree_restore_terminal_connected_retry=0",
+            "  while [ \"$bree_restore_terminal_connected_retry\" -lt 4 ]; do",
+            "    bree_restore_remote_cli=\"$HOME/\(BreeIdentity.remoteDotDirectoryName)/bin/bree\"",
+            "    if [ ! -x \"$bree_restore_remote_cli\" ]; then bree_restore_remote_cli=\"$(command -v bree 2>/dev/null || true)\"; fi",
+            "    if [ -n \"$bree_restore_remote_cli\" ] && env -u BREE_SOCKET BREE_CLI_RESPONSE_TIMEOUT_SEC=0.5 BREE_SOCKET_PATH=\"127.0.0.1:\(remoteRelayPort)\" \"$bree_restore_remote_cli\" rpc workspace.remote.terminal_session_connected \"$bree_restore_terminal_connected\" >/dev/null 2>&1; then",
+            "      bree_restore_terminal_connected_acknowledged=1",
             "      break",
             "    fi",
-            "    cmux_restore_terminal_connected_retry=$((cmux_restore_terminal_connected_retry + 1))",
-            "    if [ \"$cmux_restore_terminal_connected_retry\" -lt 4 ]; then /bin/sleep 0.1; fi",
+            "    bree_restore_terminal_connected_retry=$((bree_restore_terminal_connected_retry + 1))",
+            "    if [ \"$bree_restore_terminal_connected_retry\" -lt 4 ]; then /bin/sleep 0.1; fi",
             "  done",
-            "  if [ \"$cmux_restore_terminal_connected_acknowledged\" -ne 1 ]; then exit 255; fi",
+            "  if [ \"$bree_restore_terminal_connected_acknowledged\" -ne 1 ]; then exit 255; fi",
             "fi",
-            "unset cmux_restore_remote_cli cmux_restore_terminal_connected cmux_restore_terminal_connected_acknowledged cmux_restore_terminal_connected_retry",
+            "unset bree_restore_remote_cli bree_restore_terminal_connected bree_restore_terminal_connected_acknowledged bree_restore_terminal_connected_retry",
         ].joined(separator: "\n")
     }
 
@@ -412,10 +412,10 @@ extension SessionRemoteWorkspaceSnapshot {
                 shellFeatures: RemoteInteractiveShellBootstrapBuilder.shellFeatures(),
                 configuredRemoteCommand: configuredRemoteCommand,
                 bundledZshIntegration: RemoteInteractiveShellBootstrapBuilder.bundledShellIntegrationScript(
-                    named: "cmux-zsh-integration.zsh"
+                    named: "bree-zsh-integration.zsh"
                 ),
                 bundledBashIntegration: RemoteInteractiveShellBootstrapBuilder.bundledShellIntegrationScript(
-                    named: "cmux-bash-integration.bash"
+                    named: "bree-bash-integration.bash"
                 ),
                 bundledFishIntegration: RemoteInteractiveShellBootstrapBuilder.bundledShellIntegrationScript(
                     named: "fish/config.fish"
@@ -487,7 +487,7 @@ extension SessionRemoteWorkspaceSnapshot {
             "/bin/sh",
             "-c",
             #"exec "${SHELL:-/bin/sh}" -c "$1""#,
-            "cmux-remote-command",
+            "bree-remote-command",
             configuredRemoteCommand,
         ]
     }
@@ -527,16 +527,16 @@ extension SessionRemoteWorkspaceSnapshot {
         SSHAgentSocketResolver().removingOptions(named: "RemoteCommand", from: options)
     }
 
-    private static let defaultFreestylePersistentDaemonSlot = "cmux-default-freestyle-sshd-v1"
+    private static let defaultFreestylePersistentDaemonSlot = "bree-default-freestyle-sshd-v1"
 
     private static func legacyDefaultFreestyleVMID(destination: String, skipDaemonBootstrap: Bool?) -> String? {
         guard skipDaemonBootstrap == true else { return nil }
-        let pattern = #"^([A-Za-z0-9._-]+)\+cmux@vm-ssh\.freestyle\.sh$"#
+        let pattern = #"^([A-Za-z0-9._-]+)\+bree@vm-ssh\.freestyle\.sh$"#
         guard let match = destination.range(of: pattern, options: .regularExpression) else {
             return nil
         }
         let matched = String(destination[match])
-        guard let plusRange = matched.range(of: "+cmux@vm-ssh.freestyle.sh") else {
+        guard let plusRange = matched.range(of: "+bree@vm-ssh.freestyle.sh") else {
             return nil
         }
         return String(matched[..<plusRange.lowerBound])
@@ -544,35 +544,35 @@ extension SessionRemoteWorkspaceSnapshot {
 
     private static func defaultFreestyleSSHAttachCommand(vmID: String) -> String {
         let lines = [
-            "cmux_freestyle_cli=\"${CMUX_BUNDLED_CLI_PATH:-}\"",
-            "if [ -z \"$cmux_freestyle_cli\" ] || [ ! -x \"$cmux_freestyle_cli\" ]; then cmux_freestyle_cli=\"$(command -v bree 2>/dev/null || true)\"; fi",
-            "if [ -z \"$cmux_freestyle_cli\" ]; then printf '%s\\n' '[Bree] bundled CLI not found for Cloud VM SSH attach.' >&2; exit 127; fi",
-            "CMUX_SSH_RECONNECT_LIMIT=\"${CMUX_SSH_RECONNECT_LIMIT:-\(SSHReconnectBudget().maximumLimit)}\"",
-            "CMUX_SSH_RECONNECT_DELAY_SECONDS=\"${CMUX_SSH_RECONNECT_DELAY_SECONDS:-2}\"",
-            "CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT=\"${CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT:-$CMUX_SSH_RECONNECT_LIMIT}\"",
-            "CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS=\"${CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS:-$CMUX_SSH_RECONNECT_DELAY_SECONDS}\"",
-            "export CMUX_SSH_RECONNECT_LIMIT CMUX_SSH_RECONNECT_DELAY_SECONDS",
-            "export CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS",
-            "cmux_freestyle_attach() {",
-            "  if [ -n \"${CMUX_SOCKET_PATH:-}\" ]; then",
-            "    \"$cmux_freestyle_cli\" --socket \"$CMUX_SOCKET_PATH\" vm-pty-attach --id \(shellQuote(vmID)) --default-freestyle-sshd",
+            "bree_freestyle_cli=\"${BREE_BUNDLED_CLI_PATH:-}\"",
+            "if [ -z \"$bree_freestyle_cli\" ] || [ ! -x \"$bree_freestyle_cli\" ]; then bree_freestyle_cli=\"$(command -v bree 2>/dev/null || true)\"; fi",
+            "if [ -z \"$bree_freestyle_cli\" ]; then printf '%s\\n' '[Bree] bundled CLI not found for Cloud VM SSH attach.' >&2; exit 127; fi",
+            "BREE_SSH_RECONNECT_LIMIT=\"${BREE_SSH_RECONNECT_LIMIT:-\(SSHReconnectBudget().maximumLimit)}\"",
+            "BREE_SSH_RECONNECT_DELAY_SECONDS=\"${BREE_SSH_RECONNECT_DELAY_SECONDS:-2}\"",
+            "BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT=\"${BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT:-$BREE_SSH_RECONNECT_LIMIT}\"",
+            "BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS=\"${BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS:-$BREE_SSH_RECONNECT_DELAY_SECONDS}\"",
+            "export BREE_SSH_RECONNECT_LIMIT BREE_SSH_RECONNECT_DELAY_SECONDS",
+            "export BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS",
+            "bree_freestyle_attach() {",
+            "  if [ -n \"${BREE_SOCKET_PATH:-}\" ]; then",
+            "    \"$bree_freestyle_cli\" --socket \"$BREE_SOCKET_PATH\" vm-pty-attach --id \(shellQuote(vmID)) --default-freestyle-sshd",
             "  else",
-            "    \"$cmux_freestyle_cli\" vm-pty-attach --id \(shellQuote(vmID)) --default-freestyle-sshd",
+            "    \"$bree_freestyle_cli\" vm-pty-attach --id \(shellQuote(vmID)) --default-freestyle-sshd",
             "  fi",
             "}",
-            "cmux_freestyle_retry=0",
+            "bree_freestyle_retry=0",
             "while :; do",
-            "  if [ \"$cmux_freestyle_retry\" -gt 0 ]; then",
-            "    export CMUX_CLOUD_RECONNECT_ATTEMPT=\"$cmux_freestyle_retry\"",
+            "  if [ \"$bree_freestyle_retry\" -gt 0 ]; then",
+            "    export BREE_CLOUD_RECONNECT_ATTEMPT=\"$bree_freestyle_retry\"",
             "  else",
-            "    unset CMUX_CLOUD_RECONNECT_ATTEMPT",
+            "    unset BREE_CLOUD_RECONNECT_ATTEMPT",
             "  fi",
-            "  cmux_freestyle_attach",
-            "  cmux_freestyle_status=$?",
-            "  case \"$cmux_freestyle_status\" in 254|255) ;; *) exit \"$cmux_freestyle_status\" ;; esac",
-            "  if [ \"$cmux_freestyle_retry\" -ge \"$CMUX_SSH_RECONNECT_LIMIT\" ]; then exit \"$cmux_freestyle_status\"; fi",
-            "  cmux_freestyle_retry=$((cmux_freestyle_retry + 1))",
-            "  sleep \"$CMUX_SSH_RECONNECT_DELAY_SECONDS\"",
+            "  bree_freestyle_attach",
+            "  bree_freestyle_status=$?",
+            "  case \"$bree_freestyle_status\" in 254|255) ;; *) exit \"$bree_freestyle_status\" ;; esac",
+            "  if [ \"$bree_freestyle_retry\" -ge \"$BREE_SSH_RECONNECT_LIMIT\" ]; then exit \"$bree_freestyle_status\"; fi",
+            "  bree_freestyle_retry=$((bree_freestyle_retry + 1))",
+            "  sleep \"$BREE_SSH_RECONNECT_DELAY_SECONDS\"",
             "done",
         ]
         return "/bin/sh -c \(shellQuote(lines.joined(separator: "\n")))"

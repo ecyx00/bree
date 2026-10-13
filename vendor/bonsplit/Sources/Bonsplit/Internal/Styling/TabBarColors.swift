@@ -357,7 +357,7 @@ enum TabBarColors {
     }
 
     static var dropIndicator: Color {
-        Color.accentColor
+        Color.primary
     }
 
     static func dropIndicator(for appearance: BonsplitConfiguration.Appearance) -> Color {
@@ -396,7 +396,7 @@ enum TabBarColors {
     }
 
     static var focusRing: Color {
-        Color.accentColor.opacity(0.5)
+        Color.primary.opacity(0.5)
     }
 
     static var dirtyIndicator: Color {
@@ -410,11 +410,11 @@ enum TabBarColors {
     }
 
     static var notificationBadge: Color {
-        Color(nsColor: .systemBlue)
+        Color.primary
     }
 
     static func notificationBadge(for appearance: BonsplitConfiguration.Appearance) -> Color {
-        if let palette = appearance.palette { return Color(nsColor: palette.signalInfo.nsColor) }
+        if let palette = appearance.palette { return Color(nsColor: palette.activeIndicator.nsColor) }
         return notificationBadge
     }
 

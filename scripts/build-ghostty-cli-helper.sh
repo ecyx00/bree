@@ -12,9 +12,9 @@ Options:
   --output <path>  Destination path for the built helper.
 
 Environment:
-  CMUX_GHOSTTY_HELPER_CACHE_DIR
+  BREE_GHOSTTY_HELPER_CACHE_DIR
                    Override the local helper cache directory.
-  CMUX_DISABLE_GHOSTTY_HELPER_CACHE=1
+  BREE_DISABLE_GHOSTTY_HELPER_CACHE=1
                    Disable cache reads and writes for this invocation.
 EOF
 }
@@ -30,10 +30,10 @@ ZIG_REQUIRED="${ZIG_REQUIRED:-$(ghostty_minimum_zig_version "$REPO_ROOT")}"
 OUTPUT_PATH=""
 TARGET_TRIPLE=""
 UNIVERSAL="false"
-if [[ -n "${CMUX_GHOSTTY_HELPER_CACHE_DIR:-}" ]]; then
-  CACHE_ROOT="$CMUX_GHOSTTY_HELPER_CACHE_DIR"
+if [[ -n "${BREE_GHOSTTY_HELPER_CACHE_DIR:-}" ]]; then
+  CACHE_ROOT="$BREE_GHOSTTY_HELPER_CACHE_DIR"
 elif [[ -n "${HOME:-}" ]]; then
-  CACHE_ROOT="$HOME/Library/Caches/cmux/ghostty-cli-helper"
+  CACHE_ROOT="$HOME/Library/Caches/bree/ghostty-cli-helper"
 else
   CACHE_ROOT=""
 fi
@@ -53,7 +53,7 @@ target_arch_for_triple() {
 
 ghostty_cache_is_safe() {
   [[ -n "$CACHE_ROOT" ]] || return 1
-  [[ "${CMUX_DISABLE_GHOSTTY_HELPER_CACHE:-0}" != "1" ]] || return 1
+  [[ "${BREE_DISABLE_GHOSTTY_HELPER_CACHE:-0}" != "1" ]] || return 1
   git -C "$GHOSTTY_DIR" rev-parse --verify -q HEAD:./ >/dev/null || return 1
   # A dirty or caller-owned Ghostty tree must never be substituted by a
   # revision-only cache entry. Ignored Zig build output is intentionally fine.
@@ -167,16 +167,16 @@ select_zig_for_target() {
   local host_arch
   host_arch="$(detected_host_arch)"
 
-  if [[ -n "${CMUX_ZIG:-}" ]]; then
-    if [[ ! -x "$CMUX_ZIG" ]]; then
-      echo "error: CMUX_ZIG is not executable: $CMUX_ZIG" >&2
+  if [[ -n "${BREE_ZIG:-}" ]]; then
+    if [[ ! -x "$BREE_ZIG" ]]; then
+      echo "error: BREE_ZIG is not executable: $BREE_ZIG" >&2
       return 1
     fi
-    if ! zig_has_required_version "$CMUX_ZIG"; then
-      echo "error: CMUX_ZIG must be zig ${ZIG_REQUIRED}: $CMUX_ZIG" >&2
+    if ! zig_has_required_version "$BREE_ZIG"; then
+      echo "error: BREE_ZIG must be zig ${ZIG_REQUIRED}: $BREE_ZIG" >&2
       return 1
     fi
-    echo "$CMUX_ZIG"
+    echo "$BREE_ZIG"
     return 0
   fi
 
@@ -313,10 +313,10 @@ EOF
 # Allow CI to skip the Zig helper build where only a valid app bundle shape is
 # required. The stub is a Mach-O binary so architecture validation still checks
 # the bundle layout and slices instead of accepting a shell script placeholder.
-if [[ "${CMUX_SKIP_ZIG_BUILD:-}" == "1" ]]; then
-  echo "Skipping zig CLI helper build (CMUX_SKIP_ZIG_BUILD=1)"
+if [[ "${BREE_SKIP_ZIG_BUILD:-}" == "1" ]]; then
+  echo "Skipping zig CLI helper build (BREE_SKIP_ZIG_BUILD=1)"
   mkdir -p "$(dirname "$OUTPUT_PATH")"
-  STUB_TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cmux-ghostty-helper-stub.XXXXXX")"
+  STUB_TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bree-ghostty-helper-stub.XXXXXX")"
   trap 'rm -rf "$STUB_TMP_DIR"' EXIT
   if [[ "$UNIVERSAL" == "true" ]]; then
     write_macho_stub "$STUB_TMP_DIR/ghostty-arm64" "arm64-apple-macos14" "$STUB_TMP_DIR"
@@ -376,7 +376,7 @@ build_helper() {
     build
     cli-helper
     -Dapp-runtime=none
-    -Dcrash-report-subdir=cmux/crash
+    -Dcrash-report-subdir=bree/crash
     -Demit-macos-app=false
     -Demit-xcframework=false
     -Doptimize=ReleaseFast
@@ -408,7 +408,7 @@ build_helper() {
   fi
 }
 
-TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cmux-ghostty-helper.XXXXXX")"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bree-ghostty-helper.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 mkdir -p "$(dirname "$OUTPUT_PATH")"

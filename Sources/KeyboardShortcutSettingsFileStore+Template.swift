@@ -1,9 +1,9 @@
-import CmuxBrowser
-import CmuxFoundation
-import CmuxSettings
+import BreeBrowser
+import BreeFoundation
+import BreeSettings
 import Foundation
 
-extension CmuxSettingsFileStore {
+extension BreeSettingsFileStore {
     static func defaultTemplate() -> String {
         var lines: [String] = [
             "{",
@@ -13,7 +13,7 @@ extension CmuxSettingsFileStore {
             "  // This file uses JSON with comments (JSONC).",
             "  // Uncomment and edit any setting to make it file-managed.",
             "  // Remove a setting to fall back to the value saved in Settings.",
-            "  // Bree creates this template on launch when \(CmuxIdentity.current.configFileDisplayPath) is missing.",
+            "  // Bree creates this template on launch when \(BreeIdentity.current.configFileDisplayPath) is missing.",
             "  // Legacy settings.json files are read only as fallback for keys not present here.",
             "",
         ]
@@ -77,8 +77,8 @@ extension CmuxSettingsFileStore {
                     "equalizeSplitsOnCreate": SettingCatalog().app.equalizeSplitsOnCreate.defaultValue,
                     "preferredEditor": "",
                     "defaultWorkspacePath": AppCatalogSection().defaultWorkspacePath.defaultValue,
-                    "openSupportedFilesInCmux": AppCatalogSection().openSupportedFilesInCmux.defaultValue,
-                    "openMarkdownInCmuxViewer": AppCatalogSection().openMarkdownInCmuxViewer.defaultValue,
+                    "openSupportedFilesInBree": AppCatalogSection().openSupportedFilesInBree.defaultValue,
+                    "openMarkdownInBreeViewer": AppCatalogSection().openMarkdownInBreeViewer.defaultValue,
                     "reorderOnNotification": SettingCatalog().app.reorderOnNotification.defaultValue.encodeForJSON(),
                     "iMessageMode": IMessageModeSettings.defaultValue,
                     "confirmQuit": AppCatalogSection().confirmQuitMode.defaultValue.rawValue,
@@ -160,7 +160,7 @@ extension CmuxSettingsFileStore {
                     "notificationMessageLineLimit": SettingCatalog().sidebar.notificationMessageLineLimit.defaultValue,
                     "showBranchDirectory": SidebarWorkspaceDetailDefaults.showBranchDirectory,
                     "watchGitStatus": SidebarWorkspaceDetailDefaults.watchGitStatus,
-                    "openPortLinksInCmuxBrowser": BrowserLinkOpenSettings.defaultOpenSidebarPortLinksInCmuxBrowser,
+                    "openPortLinksInBreeBrowser": BrowserLinkOpenSettings.defaultOpenSidebarPortLinksInBreeBrowser,
                     "showSSH": SidebarWorkspaceDetailDefaults.showSSH,
                     "showPorts": SidebarWorkspaceDetailDefaults.showPorts,
                     "showLog": SidebarWorkspaceDetailDefaults.showLog,
@@ -223,8 +223,8 @@ extension CmuxSettingsFileStore {
                     "hiddenWebViewDiscardDelaySeconds": BrowserHiddenWebViewDiscardPolicy.defaultHiddenDelay,
                     "autoRestoreUnloadedPages": BrowserHiddenWebViewDiscardPolicy.defaultAutoRestore,
                     "askWhereToSaveDownloads": SettingCatalog().browser.askWhereToSaveDownloads.defaultValue,
-                    "openTerminalLinksInCmuxBrowser": BrowserLinkOpenSettings.defaultOpenTerminalLinksInCmuxBrowser,
-                    "interceptTerminalOpenCommandInCmuxBrowser": BrowserLinkOpenSettings.defaultInterceptTerminalOpenCommandInCmuxBrowser,
+                    "openTerminalLinksInBreeBrowser": BrowserLinkOpenSettings.defaultOpenTerminalLinksInBreeBrowser,
+                    "interceptTerminalOpenCommandInBreeBrowser": BrowserLinkOpenSettings.defaultInterceptTerminalOpenCommandInBreeBrowser,
                     "hostsToOpenInEmbeddedBrowser": [String](),
                     "urlsToAlwaysOpenExternally": [String](),
                     "insecureHttpHostsAllowedInEmbeddedBrowser": BrowserInsecureHTTPSettings.defaultAllowlistPatterns,

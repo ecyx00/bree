@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 struct SessionTranscriptTurn: Identifiable, Equatable, Sendable {
@@ -34,7 +34,7 @@ enum SessionTranscriptRole: Equatable, Sendable {
         case .user: return palette.activeIndicator
         case .assistant: return palette.signalSuccess
         case .system: return palette.textSecondary
-        case .tool: return palette.signalAttention
+        case .tool: return palette.textSecondary
         case .event: return palette.textSecondary
         }
     }
@@ -44,7 +44,7 @@ enum SessionTranscriptRole: Equatable, Sendable {
         case .user: return palette.activeIndicator.opacity(0.05)
         case .assistant: return palette.signalSuccess.opacity(0.05)
         case .system: return palette.hoverFill.opacity(0.4)
-        case .tool: return palette.signalAttention.opacity(0.05)
+        case .tool: return palette.textSecondary.opacity(0.05)
         case .event: return palette.hoverFill.opacity(0.4)
         }
     }

@@ -1,6 +1,6 @@
 import AppKit
-import CMUXAgentLaunch
-import CmuxControlSocket
+import BREEAgentLaunch
+import BreeControlSocket
 import Foundation
 
 extension TerminalController {
@@ -136,7 +136,7 @@ extension TerminalController {
         // while the restore-time agent snapshot still names the previous
         // conversation. Reuse the session-restore identity gate so the record
         // returned to the CLI always agrees with the binding that generated its
-        // typed `cmux restore`/`cmux fork` selector.
+        // typed `bree restore`/`bree fork` selector.
         let restoredAgent = target.restorableAgent
         let compatibleAgent: (
             snapshot: SessionRestorableAgentSnapshot,

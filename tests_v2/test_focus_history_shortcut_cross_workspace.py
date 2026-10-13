@@ -2,7 +2,7 @@
 """Regression: Cmd+[ / Cmd+] traverse the GLOBAL workspace focus history.
 
 Ghostty's macOS defaults bind goto_split:previous/next to cmd+[ / cmd+], the
-same keys as cmux's Focus Back/Forward defaults. The app-level dispatch mirrors
+same keys as bree's Focus Back/Forward defaults. The app-level dispatch mirrors
 those Ghostty triggers to cycle pane focus and used to run that mirror BEFORE
 the focus-history branch, so cmd+[ / cmd+] cycled panes within the current
 workspace (or did nothing) while the titlebar arrow buttons navigated across
@@ -10,7 +10,7 @@ workspaces. The mirror must yield the keys to a bound Focus Back/Forward
 shortcut.
 
 Run against a TAGGED build only (never the user's default socket):
-  CMUX_SOCKET_PATH=/tmp/cmux-debug-<tag>.sock python3 tests_v2/test_focus_history_shortcut_cross_workspace.py
+  BREE_SOCKET_PATH=/tmp/bree-debug-<tag>.sock python3 tests_v2/test_focus_history_shortcut_cross_workspace.py
 
 simulate_shortcut routes through AppDelegate.debugHandleCustomShortcut, the
 same matcher and dispatch order as real keystrokes from the app-level monitor.
@@ -21,22 +21,22 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
 def _must(cond: bool, msg: str) -> None:
     if not cond:
-        raise cmuxError(msg)
+        raise breeError(msg)
 
 
-def _selected_workspace(c: cmux) -> str:
+def _selected_workspace(c: bree) -> str:
     for _idx, wsid, _title, selected in c.list_workspaces():
         if selected:
             return wsid
-    raise cmuxError("no selected workspace")
+    raise breeError("no selected workspace")
 
 
-def _press_and_wait(c: cmux, combo: str, expected_ws: str, timeout: float = 5.0) -> str:
+def _press_and_wait(c: bree, combo: str, expected_ws: str, timeout: float = 5.0) -> str:
     c.simulate_shortcut(combo)
     deadline = time.time() + timeout
     current = _selected_workspace(c)
@@ -48,26 +48,26 @@ def _press_and_wait(c: cmux, combo: str, expected_ws: str, timeout: float = 5.0)
     return current
 
 
-def _wait_selected(c: cmux, wsid: str, timeout: float = 5.0) -> None:
+def _wait_selected(c: bree, wsid: str, timeout: float = 5.0) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
         if _selected_workspace(c) == wsid:
             return
         time.sleep(0.1)
-    raise cmuxError(f"workspace {wsid} never became selected")
+    raise breeError(f"workspace {wsid} never became selected")
 
 
-def _wait_closed(c: cmux, wsid: str, timeout: float = 5.0) -> None:
+def _wait_closed(c: bree, wsid: str, timeout: float = 5.0) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
         if all(listed != wsid for _i, listed, _t, _s in c.list_workspaces()):
             return
         time.sleep(0.1)
-    raise cmuxError(f"workspace {wsid} still listed after close")
+    raise breeError(f"workspace {wsid} still listed after close")
 
 
 def main() -> int:
-    c = cmux()
+    c = bree()
     c.connect()
     _must(c.ping(), "socket ping failed")
     c.activate_app()
@@ -109,7 +109,7 @@ def main() -> int:
     for wsid in (created[0], created[2]):
         try:
             c.close_workspace(wsid)
-        except cmuxError:
+        except breeError:
             pass
 
     print("PASS: cmd+[ / cmd+] traverse global workspace focus history")

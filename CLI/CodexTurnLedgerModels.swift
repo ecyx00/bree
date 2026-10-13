@@ -1,18 +1,18 @@
 import Foundation
-import CmuxFoundation
+import BreeFoundation
 
 /// The process identity carried by one Codex hook invocation.
 ///
-/// CMUX_CODEX_PID is a launch-time claim and is inherited by descendants.
-/// The hook shell also supplies CMUX_CODEX_HOOK_PID, identifying the process
+/// BREE_CODEX_PID is a launch-time claim and is inherited by descendants.
+/// The hook shell also supplies BREE_CODEX_HOOK_PID, identifying the process
 /// that actually caused the callback.
 struct CodexHookInvocation: Equatable, Sendable {
-    static let tokenEnvironmentKey = "CMUX_CODEX_INVOCATION_ID"
-    static let parentTokenEnvironmentKey = "CMUX_CODEX_PARENT_INVOCATION_ID"
-    static let ownerPIDEnvironmentKey = "CMUX_CODEX_PID"
-    static let observedPIDEnvironmentKey = "CMUX_CODEX_HOOK_PID"
-    static let ledgerPathEnvironmentKey = "CMUX_CODEX_TURN_LEDGER_PATH"
-    static let forkSessionEnvironmentKey = "CMUX_CODEX_FORK_SESSION"
+    static let tokenEnvironmentKey = "BREE_CODEX_INVOCATION_ID"
+    static let parentTokenEnvironmentKey = "BREE_CODEX_PARENT_INVOCATION_ID"
+    static let ownerPIDEnvironmentKey = "BREE_CODEX_PID"
+    static let observedPIDEnvironmentKey = "BREE_CODEX_HOOK_PID"
+    static let ledgerPathEnvironmentKey = "BREE_CODEX_TURN_LEDGER_PATH"
+    static let forkSessionEnvironmentKey = "BREE_CODEX_FORK_SESSION"
 
     let token: String?
     let parentToken: String?
@@ -219,7 +219,7 @@ struct CodexTurnLedgerFile: Codable {
     }
 }
 
-extension CMUXCLI {
+extension BREECLI {
     /// Builds one Codex invocation identity per hook. The inherited owner PID
     /// remains a claim and never supplies the nested decision alone.
     func codexHookInvocation(environment: [String: String]) -> CodexHookInvocation {

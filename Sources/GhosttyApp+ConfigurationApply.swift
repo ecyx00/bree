@@ -1,5 +1,5 @@
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeTerminal
+import BreeTerminalCore
 import Foundation
 import os
 
@@ -36,7 +36,7 @@ extension GhosttyApp {
         let completionBox =
             TerminalConfigurationApplyCompletion(completion)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "reload.config.surfaceApply.begin source=\(snapshot.source) prioritized=\(prioritizedLifecycleIDs.count)"
         )
 #endif
@@ -81,7 +81,7 @@ extension GhosttyApp {
             },
             completion: {
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "reload.config.surfaceApply.end source=\(snapshot.source)"
                 )
 #endif

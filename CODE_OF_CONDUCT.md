@@ -2,7 +2,7 @@
 
 Be nice. Assume the best about the person you are replying to.
 
-Almost everyone who shows up here is trying to make cmux better, and most
+Almost everyone who shows up here is trying to make bree better, and most
 friction is a missing sentence rather than bad intent. Ask what someone meant
 before deciding they meant the worst thing.
 
@@ -10,7 +10,7 @@ before deciding they meant the worst thing.
 
 - Talk about the code, not the person. "This drops the last keystroke" is a
   review. "Did you even test this" is not.
-- Take the other reading seriously. If two people disagree about what cmux
+- Take the other reading seriously. If two people disagree about what bree
   should do, say what each choice costs and let a maintainer decide.
 - Say what you know and how you know it. Guesses are welcome when they are
   labeled as guesses.
@@ -34,8 +34,8 @@ under your account, its output is yours, including its tone.
 ## Scope
 
 This applies in this repository (issues, pull requests, reviews, discussions,
-commit messages) and in cmux spaces elsewhere, including Discord, when you are
-taking part as a cmux contributor.
+commit messages) and in bree spaces elsewhere, including Discord, when you are
+taking part as a bree contributor.
 
 ## Reporting
 

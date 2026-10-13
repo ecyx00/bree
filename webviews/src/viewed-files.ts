@@ -8,10 +8,10 @@ import { fileName } from "./diff-stream";
  * An entry records the fingerprint of the file's patch at the time it was
  * marked viewed. When the patch later changes the file shows as "changed
  * since viewed" and counts as unviewed again. Entries persist natively through
- * the `cmuxDiffComments` bridge (`viewedFiles.list` / `.set` / `.clear`),
+ * the `breeDiffComments` bridge (`viewedFiles.list` / `.set` / `.clear`),
  * keyed by (repository root, diff source identity, path); generated viewer
  * origins do not reliably persist web storage, so there is no localStorage
- * fallback and pages opened outside cmux keep session-local state only.
+ * fallback and pages opened outside bree keep session-local state only.
  */
 export type ViewedFileEntry = { path: string; fingerprint: string };
 export type ViewedFileState = "unviewed" | "viewed" | "changed";
@@ -58,8 +58,8 @@ function fnv1a(text: string): string {
  * (patches parsed from a single text blob have no per-file raw text).
  */
 export function fileDiffFingerprint(fileDiff: any): string {
-  if (typeof fileDiff?.cmuxPatchFingerprint === "string" && fileDiff.cmuxPatchFingerprint !== "") {
-    return fileDiff.cmuxPatchFingerprint;
+  if (typeof fileDiff?.breePatchFingerprint === "string" && fileDiff.breePatchFingerprint !== "") {
+    return fileDiff.breePatchFingerprint;
   }
   const cacheable = fileDiff != null && typeof fileDiff === "object";
   const cached = cacheable ? fallbackFingerprints.get(fileDiff) : undefined;
@@ -258,7 +258,7 @@ export function persistViewedChange(scope: ViewedScope | null, change: ViewedCha
   const request = change.kind === "set"
     ? callDiffComments<unknown>("viewedFiles.set", { scope, file: change.entry })
     : callDiffComments<unknown>("viewedFiles.clear", { scope, path: change.path });
-  request.catch((error) => console.warn("cmux diff viewed state save failed", error));
+  request.catch((error) => console.warn("bree diff viewed state save failed", error));
 }
 
 function isViewedFileEntry(value: unknown): value is ViewedFileEntry {

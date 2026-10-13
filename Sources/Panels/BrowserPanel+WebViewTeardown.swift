@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import WebKit
 
 extension BrowserPanel {
@@ -29,23 +29,23 @@ extension BrowserPanel {
         oldWebView.stopLoading()
         oldWebView.navigationDelegate = nil
         oldWebView.uiDelegate = nil
-        oldWebView.cmuxBrowserViewportHostView = nil
+        oldWebView.breeBrowserViewportHostView = nil
 
-        if let oldCmuxWebView = oldWebView as? CmuxWebView {
-            oldCmuxWebView.cmuxDownloadDelegate = nil
-            oldCmuxWebView.clearBrowserDownloadCallbacks()
-            oldCmuxWebView.browserViewportModel = nil
-            oldCmuxWebView.onBrowserViewportHierarchyChanged = nil
-            oldCmuxWebView.onMouseBackButton = nil
-            oldCmuxWebView.onMouseForwardButton = nil
-            oldCmuxWebView.onContextMenuDownloadStateChanged = nil
-            oldCmuxWebView.onSessionDownloadEvent = nil
-            oldCmuxWebView.onScreenshotCopied = nil
-            oldCmuxWebView.onContextMenuOpenLinkInNewTab = nil
-            oldCmuxWebView.contextMenuLinkURLProvider = nil
-            oldCmuxWebView.contextMenuCanMoveTabToNewWorkspace = nil
-            oldCmuxWebView.contextMenuMoveTabToNewWorkspace = nil
-            oldCmuxWebView.onSubframeDownloadIntent = nil
+        if let oldBreeWebView = oldWebView as? BreeWebView {
+            oldBreeWebView.breeDownloadDelegate = nil
+            oldBreeWebView.clearBrowserDownloadCallbacks()
+            oldBreeWebView.browserViewportModel = nil
+            oldBreeWebView.onBrowserViewportHierarchyChanged = nil
+            oldBreeWebView.onMouseBackButton = nil
+            oldBreeWebView.onMouseForwardButton = nil
+            oldBreeWebView.onContextMenuDownloadStateChanged = nil
+            oldBreeWebView.onSessionDownloadEvent = nil
+            oldBreeWebView.onScreenshotCopied = nil
+            oldBreeWebView.onContextMenuOpenLinkInNewTab = nil
+            oldBreeWebView.contextMenuLinkURLProvider = nil
+            oldBreeWebView.contextMenuCanMoveTabToNewWorkspace = nil
+            oldBreeWebView.contextMenuMoveTabToNewWorkspace = nil
+            oldBreeWebView.onSubframeDownloadIntent = nil
         }
         oldWebView.removeFromSuperview()
     }

@@ -1,4 +1,4 @@
-use cmux_diff_sidecar::protocol::{DiffEvent, DiffRequest, DiffResponse, DiffTransportConfig};
+use bree_diff_sidecar::protocol::{DiffEvent, DiffRequest, DiffResponse, DiffTransportConfig};
 use ts_rs::{Config, TS};
 
 fn main() {

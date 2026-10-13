@@ -124,7 +124,7 @@ class LocalizationDefaultsTests(unittest.TestCase):
 
     def test_test_targets_and_vendored_trees_are_not_scanned(self):
         self.fixture.catalog({"age": ("%lld minutes", "%lld 分")})
-        for path in ("cmuxTests/AgeTests.swift", "Packages/macOS/Pkg/Tests/PkgTests/T.swift", "vendor/Dep/Sources/D.swift"):
+        for path in ("breeTests/AgeTests.swift", "Packages/macOS/Pkg/Tests/PkgTests/T.swift", "vendor/Dep/Sources/D.swift"):
             self.fixture.swift(swift_call("age", "a few minutes"), path)
         self.assertEqual(self.fixture.check(), ([], 0))
 

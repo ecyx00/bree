@@ -13,7 +13,7 @@ caught in review.
 
 ### What the kick does
 
-Attaching the mirror usually leaves the remote window at the size cmux itself
+Attaching the mirror usually leaves the remote window at the size bree itself
 left behind, so the size push is a no-op — no pane resize, no `SIGWINCH`, and a
 running TUI keeps its stale pre-attach frame. The kick forces the repaint a real
 attach would: push the client one row shorter, then push the true size back. The

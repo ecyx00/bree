@@ -4,9 +4,9 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DEST=${1:?pass an isolated scratch directory}
-mkdir -p "$DEST/Sources/IdentityColdStartFixture" "$DEST/Sources/CMUXMobileCore" \
-  "$DEST/Sources/CmuxSettings" "$DEST/Sources/CmuxFoundation" \
-  "$DEST/Sources/CmuxFoundationAtomicsC/include"
+mkdir -p "$DEST/Sources/IdentityColdStartFixture" "$DEST/Sources/BREEMobileCore" \
+  "$DEST/Sources/BreeSettings" "$DEST/Sources/BreeFoundation" \
+  "$DEST/Sources/BreeFoundationAtomicsC/include"
 cat > "$DEST/Package.swift" <<'SWIFT'
 // swift-tools-version: 6.0
 import PackageDescription
@@ -14,32 +14,32 @@ let package = Package(
     name: "IdentityColdStartFixture",
     platforms: [.macOS(.v14)],
     targets: [
-        .target(name: "CMUXMobileCore"),
-        .target(name: "CmuxSettings"),
-        .target(name: "CmuxFoundationAtomicsC", publicHeadersPath: "include"),
-        .target(name: "CmuxFoundation", dependencies: ["CmuxFoundationAtomicsC"]),
+        .target(name: "BREEMobileCore"),
+        .target(name: "BreeSettings"),
+        .target(name: "BreeFoundationAtomicsC", publicHeadersPath: "include"),
+        .target(name: "BreeFoundation", dependencies: ["BreeFoundationAtomicsC"]),
         .executableTarget(
             name: "IdentityColdStartFixture",
-            dependencies: ["CMUXMobileCore", "CmuxSettings", "CmuxFoundation"]
+            dependencies: ["BREEMobileCore", "BreeSettings", "BreeFoundation"]
         )
     ],
     swiftLanguageModes: [.v5]
 )
 SWIFT
-cp "$ROOT/Packages/macOS/CmuxCloud/Sources/CmuxCloud/Environment/MobileHostIdentity.swift" "$DEST/Sources/IdentityColdStartFixture/"
+cp "$ROOT/Packages/macOS/BreeCloud/Sources/BreeCloud/Environment/MobileHostIdentity.swift" "$DEST/Sources/IdentityColdStartFixture/"
 cp "$ROOT/tests/fixtures/mobile-host-identity-cold-start/IdentityColdStartFixture.swift" \
   "$ROOT/tests/fixtures/mobile-host-identity-cold-start/IdentityNotificationProbe.swift" \
   "$DEST/Sources/IdentityColdStartFixture/"
-cp "$ROOT/Packages/Shared/CMUXMobileCore/Sources/CMUXMobileCore/CmxDeviceIDCanonicalization.swift" \
-  "$DEST/Sources/CMUXMobileCore/"
+cp "$ROOT/Packages/Shared/BREEMobileCore/Sources/BREEMobileCore/CmxDeviceIDCanonicalization.swift" \
+  "$DEST/Sources/BREEMobileCore/"
 cp "$ROOT/tests/fixtures/mobile-host-identity-cold-start/DisplayMetadataDependencies.swift" \
-  "$DEST/Sources/CmuxSettings/"
-cp "$ROOT/Packages/macOS/CmuxFoundation/Sources/CmuxFoundation/Concurrency/AtomicBooleanGate.swift" \
-  "$DEST/Sources/CmuxFoundation/"
-cp "$ROOT/Packages/macOS/CmuxFoundation/Sources/CmuxFoundationAtomicsC/CmuxFoundationAtomicsC.c" \
-  "$DEST/Sources/CmuxFoundationAtomicsC/"
-cp "$ROOT/Packages/macOS/CmuxFoundation/Sources/CmuxFoundationAtomicsC/include/CmuxFoundationAtomicsC.h" \
-  "$DEST/Sources/CmuxFoundationAtomicsC/include/"
+  "$DEST/Sources/BreeSettings/"
+cp "$ROOT/Packages/macOS/BreeFoundation/Sources/BreeFoundation/Concurrency/AtomicBooleanGate.swift" \
+  "$DEST/Sources/BreeFoundation/"
+cp "$ROOT/Packages/macOS/BreeFoundation/Sources/BreeFoundationAtomicsC/BreeFoundationAtomicsC.c" \
+  "$DEST/Sources/BreeFoundationAtomicsC/"
+cp "$ROOT/Packages/macOS/BreeFoundation/Sources/BreeFoundationAtomicsC/include/BreeFoundationAtomicsC.h" \
+  "$DEST/Sources/BreeFoundationAtomicsC/include/"
 swift build --package-path "$DEST" -Xswiftc -warnings-as-errors
 BIN_DIR=$(swift build --package-path "$DEST" --show-bin-path)
 python3 "$ROOT/tests/test_mobile_host_identity_cold_start.py" \

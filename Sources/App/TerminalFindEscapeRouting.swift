@@ -1,9 +1,9 @@
 import AppKit
-import CmuxTerminal
+import BreeTerminal
 
 @MainActor
-func cmuxCloseFocusedTerminalFindForEscape(event: NSEvent, appDelegate: AppDelegate) -> Bool {
-    guard cmuxFindEventIsPlainEscape(event) else { return false }
+func breeCloseFocusedTerminalFindForEscape(event: NSEvent, appDelegate: AppDelegate) -> Bool {
+    guard breeFindEventIsPlainEscape(event) else { return false }
 
     let shortcutWindow = event.window
         ?? (event.windowNumber > 0 ? NSApp.window(withWindowNumber: event.windowNumber) : nil)
@@ -12,7 +12,7 @@ func cmuxCloseFocusedTerminalFindForEscape(event: NSEvent, appDelegate: AppDeleg
     if shortcutWindow?.firstResponder is TextBoxInputTextView {
         return false
     }
-    let terminalFindFieldOwnsResponder = cmuxFindTextFieldOwner(for: shortcutWindow?.firstResponder)?
+    let terminalFindFieldOwnsResponder = breeFindTextFieldOwner(for: shortcutWindow?.firstResponder)?
         .identifier?.rawValue == "TerminalFindSearchTextField"
     let targetTabManager = appDelegate.synchronizeActiveMainWindowContext(preferredWindow: shortcutWindow)
 
@@ -28,7 +28,7 @@ func cmuxCloseFocusedTerminalFindForEscape(event: NSEvent, appDelegate: AppDeleg
     }
 
 #if DEBUG
-    cmuxDebugLog("find.escape.close terminal panel=\(panel.id.uuidString.prefix(5))")
+    breeDebugLog("find.escape.close terminal panel=\(panel.id.uuidString.prefix(5))")
 #endif
     panel.hostedView.beginFindEscapeSuppression()
     panel.surface.closeSearchFromExplicitInput()

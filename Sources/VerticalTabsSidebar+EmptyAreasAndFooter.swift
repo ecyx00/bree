@@ -1,9 +1,9 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxSidebar
-import CmuxSidebarProviderKit
-import CmuxWorkspaces
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeSidebar
+import BreeSidebarProviderKit
+import BreeWorkspaces
 import SwiftUI
 
 /// Footer debug controls and empty-area drop targets for the vertical tabs sidebar, extracted from `ContentView.swift`, which sits at its file-length budget.
@@ -97,7 +97,7 @@ struct SidebarDevFooter: View {
 #endif
 
 struct SidebarEmptyArea: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     @EnvironmentObject var tabManager: TabManager
     let rowSpacing: CGFloat
     @Binding var selection: SidebarSelection
@@ -126,7 +126,7 @@ struct SidebarEmptyArea: View {
             .overlay(alignment: .top) {
                 if topDropIndicatorVisible {
                     Rectangle()
-                        .fill(cmuxAccent.color)
+                        .fill(breeAccent.color)
                         .frame(height: 2)
                         .padding(.horizontal, 8)
                         .offset(y: -(rowSpacing / 2))
@@ -203,14 +203,14 @@ private extension View {
 }
 
 struct ExtensionSidebarBrowserStackEmptyArea: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     let rowSpacing: CGFloat
     let orderedRows: [ExtensionSidebarBrowserStackDropRow]
     let dragAutoScrollController: SidebarDragAutoScrollController
     @Binding var draggedTabId: UUID?
     @Binding var dropIndicator: SidebarDropIndicator?
     let onNewTab: () -> Void
-    let onMove: (CmuxSidebarProviderWorkspaceMove) -> Bool
+    let onMove: (BreeSidebarProviderWorkspaceMove) -> Bool
 
     var body: some View {
         Color.clear
@@ -227,7 +227,7 @@ struct ExtensionSidebarBrowserStackEmptyArea: View {
             .overlay(alignment: .top) {
                 if shouldShowTopDropIndicator {
                     Rectangle()
-                        .fill(cmuxAccent.color)
+                        .fill(breeAccent.color)
                         .frame(height: 2)
                         .padding(.horizontal, 8)
                         .offset(y: -(rowSpacing / 2))
@@ -250,7 +250,7 @@ private struct ExtensionSidebarBrowserStackEndDropDelegate: DropDelegate {
     @Binding var draggedTabId: UUID?
     let dragAutoScrollController: SidebarDragAutoScrollController
     @Binding var dropIndicator: SidebarDropIndicator?
-    let onMove: (CmuxSidebarProviderWorkspaceMove) -> Bool
+    let onMove: (BreeSidebarProviderWorkspaceMove) -> Bool
 
     func validateDrop(info: DropInfo) -> Bool {
         info.hasItemsConforming(to: [SidebarTabDragPayload.typeIdentifier])

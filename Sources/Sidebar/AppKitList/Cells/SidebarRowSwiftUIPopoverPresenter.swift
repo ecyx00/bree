@@ -1,7 +1,7 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeWorkspaces
 import SwiftUI
 
 // MARK: - SwiftUI popover presenter
@@ -47,7 +47,7 @@ final class SidebarRowSwiftUIPopoverPresenter: NSObject, NSPopoverDelegate {
     /// representable update turn); defer + coalesce them like
     /// `SidebarWorkspaceTodoPopoverHost` does instead of forcing synchronous
     /// hosted-view layout per publisher burst.
-    private let visibleUpdateScheduler = CmuxPopoverVisibleUpdateScheduler()
+    private let visibleUpdateScheduler = BreePopoverVisibleUpdateScheduler()
     private var pendingRoot: AnyView?
 
     var isShown: Bool { popover?.isShown == true }
@@ -154,7 +154,7 @@ final class SidebarRowSwiftUIPopoverPresenter: NSObject, NSPopoverDelegate {
     private func updateContentSize() {
         let fitting = hostingController.view.fittingSize
         guard fitting.width > 0, fitting.height > 0, let popover else { return }
-        CmuxPopoverMutation.setContentSize(NSSize(
+        BreePopoverMutation.setContentSize(NSSize(
             width: ceil(max(fitting.width, minWidth)),
             height: ceil(min(fitting.height, maxHeight))
         ), on: popover)

@@ -1,6 +1,6 @@
 import AppKit
-import CmuxFoundation
-import CmuxSidebar
+import BreeFoundation
+import BreeSidebar
 
 /// Leaf AppKit views for the pure-AppKit workspace row: unread badge,
 /// progress bar. Each is configured with values
@@ -134,13 +134,13 @@ extension NSAttributedString.Key {
     /// Row-owned replacement for `.link`. AppKit gives no way to override the
     /// color it paints `.link` runs in, so the sidebar carries the destination
     /// here and styles the run itself.
-    static let sidebarRowLink = NSAttributedString.Key("com.cmux.sidebarRowLink")
+    static let sidebarRowLink = NSAttributedString.Key("com.bree.sidebarRowLink")
 }
 
 extension Notification.Name {
     /// Posted (object: workspace id) when shell activity or a panel title
     /// changes; the sidebar re-derives line 2 for the affected rows only.
-    static let sidebarRowLineInvalidated = Notification.Name("com.cmux.sidebarRowLineInvalidated")
+    static let sidebarRowLineInvalidated = Notification.Name("com.bree.sidebarRowLineInvalidated")
 }
 
 /// Second line of a workspace card: what the workspace is doing right now.

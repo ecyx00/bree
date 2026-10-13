@@ -1,5 +1,5 @@
 import Foundation
-import CmuxTerminal
+import BreeTerminal
 
 /// Lazily discovers terminal identities under a bounded coordinator visit.
 ///

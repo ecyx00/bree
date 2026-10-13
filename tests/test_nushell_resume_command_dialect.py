@@ -2,8 +2,8 @@
 """
 Pin the nushell typed-command envelope against real ``nu``.
 
-cmux resume/relaunch commands are POSIX one-liners executed either by
-``"$_cmux_resume_shell" -c '<cmd>'`` (auto-resume startup script,
+bree resume/relaunch commands are POSIX one-liners executed either by
+``"$_bree_resume_shell" -c '<cmd>'`` (auto-resume startup script,
 ``Sources/SessionPersistence.swift``) or typed into the user's interactive
 shell (sessions panel, session drag-drop, hibernation resume, clipboard):
 
@@ -12,9 +12,9 @@ shell (sessions panel, session drag-drop, hibernation resume, clipboard):
 Every construct in that line is a parse error in nushell: ``&&``, ``||``,
 ``[ … ]``, ``2>/dev/null``, POSIX quote concatenation, and even a POSIX-quoted
 command head (``'claude' 'arg'`` is "expected operator"). Rather than teach
-every builder a second dialect, cmux keeps the body POSIX and delegates it
+every builder a second dialect, bree keeps the body POSIX and delegates it
 through ``/bin/sh`` at the final typed boundary
-(``NushellTypedShellCommand.wrapping(posixCommand:)`` in CMUXAgentLaunch —
+(``NushellTypedShellCommand.wrapping(posixCommand:)`` in BREEAgentLaunch —
 the same portable-envelope precedent as issue #5639's ``/bin/sh -c`` wrap and
 the ``/bin/zsh <launcher-script>`` startup inputs):
 
@@ -31,7 +31,7 @@ implementation as a golden) and drives it through real ``nu`` with a fake
 3. Quoting edges survive both layers: dirs/args with spaces, single quotes,
    double quotes, and backslashes.
 4. Non-ASCII arguments survive via the POSIX ``"$(printf …)"`` substitution
-   that cmux emits for them (needs a real sh — exactly why the wrap exists).
+   that bree emits for them (needs a real sh — exactly why the wrap exists).
 5. An ``env K=V`` prefix reaches the agent's environment.
 6. The UNwrapped POSIX string is (still) a nushell parse error — the reason
    this envelope exists.
@@ -51,8 +51,8 @@ from typing import Optional
 
 
 def _find_nu() -> Optional[str]:
-    """Locate a nu binary: CMUX_TEST_NU_BIN override, PATH, then Homebrew paths."""
-    override = os.environ.get("CMUX_TEST_NU_BIN")
+    """Locate a nu binary: BREE_TEST_NU_BIN override, PATH, then Homebrew paths."""
+    override = os.environ.get("BREE_TEST_NU_BIN")
     candidates = [
         override,
         shutil.which("nu"),
@@ -94,7 +94,7 @@ def posix_quote(value: str) -> str:
 
 
 def posix_printf_substitution(value: str) -> str:
-    """The ASCII printf substitution cmux emits for non-ASCII values."""
+    """The ASCII printf substitution bree emits for non-ASCII values."""
     octal = "".join(f"\\{byte:03o}" for byte in value.encode("utf-8"))
     return '"$(printf \'' + octal + "')\""
 
@@ -114,16 +114,16 @@ def _sandbox(tmp: Path) -> dict:
     fake_claude = bin_dir / "claude"
     fake_claude.write_text(
         "#!/bin/sh\n"
-        'pwd > "$CMUX_TEST_RECORD_DIR/cwd"\n'
-        'printf \'%s\\n\' "$@" > "$CMUX_TEST_RECORD_DIR/args"\n'
-        'printf \'%s\\n\' "${CMUX_TEST_MARKER:-}" > "$CMUX_TEST_RECORD_DIR/marker"\n',
+        'pwd > "$BREE_TEST_RECORD_DIR/cwd"\n'
+        'printf \'%s\\n\' "$@" > "$BREE_TEST_RECORD_DIR/args"\n'
+        'printf \'%s\\n\' "${BREE_TEST_MARKER:-}" > "$BREE_TEST_RECORD_DIR/marker"\n',
         encoding="utf-8",
     )
     fake_claude.chmod(0o755)
 
     home = tmp / "home"
     home.mkdir()
-    env = {key: value for key, value in os.environ.items() if not key.startswith("CMUX")}
+    env = {key: value for key, value in os.environ.items() if not key.startswith("BREE")}
     env.update(
         {
             "LC_ALL": "C",
@@ -132,7 +132,7 @@ def _sandbox(tmp: Path) -> dict:
             "HOME": str(home),
             "XDG_CONFIG_HOME": str(home / ".config"),
             "PATH": os.pathsep.join([str(bin_dir), "/usr/bin", "/bin"]),
-            "CMUX_TEST_RECORD_DIR": str(record_dir),
+            "BREE_TEST_RECORD_DIR": str(record_dir),
         }
     )
     return {"env": env, "record_dir": record_dir}
@@ -175,7 +175,7 @@ def test_wrapped_legacy_resume_runs_agent_in_working_directory() -> None:
     nu = _require_nu()
     if nu is None:
         return
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-envelope-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-envelope-") as td:
         tmp = Path(td)
         sandbox = _sandbox(tmp)
         workdir = tmp / "project"
@@ -199,7 +199,7 @@ def test_wrapped_resume_survives_missing_working_directory() -> None:
     nu = _require_nu()
     if nu is None:
         return
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-envelope-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-envelope-") as td:
         tmp = Path(td)
         sandbox = _sandbox(tmp)
         missing = tmp / "deleted-project"
@@ -226,7 +226,7 @@ def test_wrapped_resume_quoting_edges() -> None:
     nu = _require_nu()
     if nu is None:
         return
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-envelope-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-envelope-") as td:
         tmp = Path(td)
         sandbox = _sandbox(tmp)
         workdir = tmp / 'dir with "quotes", \'apostrophes\' and spaces'
@@ -259,7 +259,7 @@ def test_wrapped_resume_non_ascii_printf_substitution() -> None:
     nu = _require_nu()
     if nu is None:
         return
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-envelope-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-envelope-") as td:
         tmp = Path(td)
         sandbox = _sandbox(tmp)
 
@@ -281,12 +281,12 @@ def test_wrapped_env_prefix_reaches_agent() -> None:
     nu = _require_nu()
     if nu is None:
         return
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-envelope-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-envelope-") as td:
         tmp = Path(td)
         sandbox = _sandbox(tmp)
 
         posix = (
-            f"env {posix_quote('CMUX_TEST_MARKER=hello nu')} "
+            f"env {posix_quote('BREE_TEST_MARKER=hello nu')} "
             f"'claude' '--resume' '{SESSION_ID}'"
         )
         proc = _run_nu_c(nu, sandbox["env"], nu_wrap(posix), cwd=tmp)
@@ -300,7 +300,7 @@ def test_legacy_posix_resume_string_is_a_nushell_parse_error() -> None:
     nu = _require_nu()
     if nu is None:
         return
-    with tempfile.TemporaryDirectory(prefix="cmux-nu-envelope-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-nu-envelope-") as td:
         tmp = Path(td)
         sandbox = _sandbox(tmp)
         workdir = tmp / "project"

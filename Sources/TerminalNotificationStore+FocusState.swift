@@ -1,4 +1,4 @@
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 extension TerminalNotificationStore.NotificationFocusState {
@@ -12,7 +12,7 @@ extension TerminalNotificationStore {
     private static let notificationsSettings = NotificationsCatalogSection()
 
     /// Opt-in `notifications.suppressWhenAppFocused` (issue #3126): when on,
-    /// any notification that arrives while cmux is the active app skips the
+    /// any notification that arrives while bree is the active app skips the
     /// desktop banner, not only one for the focused surface.
     static func isSuppressWhenAppFocusedEnabled(defaults: UserDefaults = .standard) -> Bool {
         notificationsSettings.suppressWhenAppFocused.value(in: defaults)
@@ -43,7 +43,7 @@ extension TerminalNotificationStore {
             isActiveTab: tabManager?.selectedTabId == tabId,
             isFocusedSurface: surfaceId == nil || focusedSurfaceId == surfaceId,
             workspace: tabManager?.workspacesById[tabId],
-            cmuxConfigStore: context?.cmuxConfigStore
+            breeConfigStore: context?.breeConfigStore
         )
     }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: `cmux --json tree` emits a `layout` field per workspace that
+Regression test: `bree --json tree` emits a `layout` field per workspace that
 carries the split geometry (direction + ratio + nesting) the flat `panes`
 array cannot express.
 
@@ -10,8 +10,8 @@ round trip: a workspace is created with a KNOWN `--layout` and the emitted
 `layout` is asserted to match it — the shape `--layout` accepts and the shape
 `tree` emits are one schema.
 
-Requires a running cmux app (socket up), like the other socket tests. Locate
-the CLI via CMUX_CLI_BIN or the newest DerivedData Debug build.
+Requires a running bree app (socket up), like the other socket tests. Locate
+the CLI via BREE_CLI_BIN or the newest DerivedData Debug build.
 
 Usage:
     python3 tests/test_cli_tree_layout.py
@@ -28,8 +28,8 @@ import subprocess
 import time
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit and os.path.exists(explicit) and os.access(explicit, os.X_OK):
         return explicit
 
@@ -37,21 +37,21 @@ def resolve_cmux_cli() -> str:
     candidates.extend(
         glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/*.app/Contents/Resources/bin/bree"))
     )
-    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/cmux")))
+    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/bree")))
     candidates = [p for p in candidates if os.path.exists(p) and os.access(p, os.X_OK)]
     if candidates:
         candidates.sort(key=os.path.getmtime, reverse=True)
         return candidates[0]
 
-    in_path = shutil.which("cmux")
+    in_path = shutil.which("bree")
     if in_path:
         return in_path
 
-    raise RuntimeError("Unable to find cmux CLI binary. Set CMUX_CLI_BIN.")
+    raise RuntimeError("Unable to find bree CLI binary. Set BREE_CLI_BIN.")
 
 
 def run(cli_path: str, *args: str, timeout: float = 10.0) -> tuple[int, str, str]:
-    env = dict(os.environ, CMUX_QUIET="1")
+    env = dict(os.environ, BREE_QUIET="1")
     try:
         proc = subprocess.run(
             [cli_path, *args],
@@ -185,7 +185,7 @@ def _wait_for_dock_panes(
 
 def main() -> int:
     try:
-        cli = resolve_cmux_cli()
+        cli = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1

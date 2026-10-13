@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 
@@ -38,7 +38,7 @@ struct LiveAgentSessionOwnerIndex: Sendable {
         kind: String,
         sessionID: String,
         revalidateProcessEvidence: Bool = true,
-        processArgumentsProvider: ((Int) -> CmuxTopProcessArguments?)? = nil,
+        processArgumentsProvider: ((Int) -> BreeTopProcessArguments?)? = nil,
         processPresenceProvider: ((Int) -> PIDPresence)? = nil,
         processIdentityProvider: (Int) -> AgentPIDProcessIdentity? = {
             guard $0 > 0, $0 <= Int(Int32.max) else { return nil }
@@ -104,7 +104,7 @@ struct LiveAgentSessionOwnerIndex: Sendable {
     }
 
     func revalidated(
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments?,
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments?,
         processIdentityProvider: (Int) -> AgentPIDProcessIdentity?
     ) -> Self {
         let validator = CachedAgentProcessIdentityValidator()
@@ -149,7 +149,7 @@ extension RestorableAgentSessionIndex {
         kind: String,
         sessionID: String,
         revalidateProcessEvidence: Bool = true,
-        processArgumentsProvider: ((Int) -> CmuxTopProcessArguments?)? = nil,
+        processArgumentsProvider: ((Int) -> BreeTopProcessArguments?)? = nil,
         processPresenceProvider: ((Int) -> PIDPresence)? = nil,
         processIdentityProvider: (Int) -> AgentPIDProcessIdentity? = {
             guard $0 > 0, $0 <= Int(Int32.max) else { return nil }

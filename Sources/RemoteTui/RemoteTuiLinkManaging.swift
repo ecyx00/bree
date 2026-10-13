@@ -1,7 +1,7 @@
-import CmuxCloud
+import BreeCloud
 import Foundation
 
-/// Supplies a machine's shared cmux-tui carrier independently of its hosting provider.
+/// Supplies a machine's shared bree-tui carrier independently of its hosting provider.
 protocol RemoteTuiLinkManaging: Sendable {
     var operations: CloudOperationRecorder? { get }
     func connected(machineID: String) async throws -> CloudMachineLink.Connected

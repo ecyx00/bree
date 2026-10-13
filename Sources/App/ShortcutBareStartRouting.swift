@@ -73,7 +73,7 @@ extension AppDelegate {
     /// Process environment is fixed at launch; snapshot this DEBUG-only trace
     /// opt-in instead of rebuilding the environment on every keystroke.
     static let shortcutMonitorTraceEnvironmentEnabled =
-        ProcessInfo.processInfo.environment["CMUX_SHORTCUT_MONITOR_TRACE"] == "1"
+        ProcessInfo.processInfo.environment["BREE_SHORTCUT_MONITOR_TRACE"] == "1"
 #endif
 
     /// Returns the already-resolved tab manager when plain terminal text can
@@ -84,7 +84,7 @@ extension AppDelegate {
     ) -> TabManager? {
         guard normalizedFlags.isEmpty,
               activeConfiguredShortcutChordPrefixForCurrentEvent == nil,
-              event.cmuxIsPrintableTextInput,
+              event.breeIsPrintableTextInput,
               let window = event.window ?? shortcutRoutingKeyWindow,
               window.firstResponder is GhosttyNSView,
               NSApp.modalWindow == nil,
@@ -123,8 +123,8 @@ extension AppDelegate {
             return false
         }
 
-        let configuredCmuxShortcutContext = preferredMainWindowContextForShortcutRouting(event: event)
-        return !configuredCmuxShortcutActions(for: configuredCmuxShortcutContext).contains {
+        let configuredBreeShortcutContext = preferredMainWindowContextForShortcutRouting(event: event)
+        return !configuredBreeShortcutActions(for: configuredBreeShortcutContext).contains {
             $0.shortcut?.bareShortcutStartKey == bareShortcutKey
         }
     }
@@ -159,7 +159,7 @@ extension AppDelegate {
 }
 
 private extension NSEvent {
-    var cmuxIsPrintableTextInput: Bool {
+    var breeIsPrintableTextInput: Bool {
         guard let characters, !characters.isEmpty else { return false }
         return characters.unicodeScalars.allSatisfy { scalar in
             !CharacterSet.controlCharacters.contains(scalar)

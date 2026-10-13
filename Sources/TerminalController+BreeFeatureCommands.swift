@@ -12,7 +12,7 @@ import Foundation
 /// `explicitFocusParamV2Methods`, which is what lets `v2FocusAllowed` say yes.
 ///
 /// Remote relay: none of these methods is allowlisted in `RemoteRelayCommandPolicy`,
-/// so a `cmux ssh` session cannot reach them.
+/// so a `bree ssh` session cannot reach them.
 extension TerminalController {
     enum BreeBottomPanelAction {
         case status, open, close, toggle

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Queued Claude hooks publish to the session spool instead of launching the CLI.
 
-Runs the hook commands from `cmux hooks claude inject-settings` exactly as
+Runs the hook commands from `bree hooks claude inject-settings` exactly as
 Claude Code does (`/bin/sh -c`), against a protocol-faithful local socket and
-the real `cmux hooks claude spool-forwarder`. Each hook's CLI reference is a
+the real `bree hooks claude spool-forwarder`. Each hook's CLI reference is a
 counting shim, so the test observes how many CLI processes the hooks start.
 """
 import fcntl
@@ -19,7 +19,7 @@ import threading
 import time
 import unittest
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 
 WORKSPACE = '11111111-1111-1111-1111-111111111111'
 SURFACE = '22222222-2222-2222-2222-222222222222'
@@ -30,7 +30,7 @@ class ClaudeHookSpoolTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory(prefix='cl spool-', dir='/tmp')
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.cli = str(resolve_cmux_cli())
+        self.cli = str(resolve_bree_cli())
         self.socket_path = self.root / 's'
         self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.server.bind(str(self.socket_path))
@@ -45,13 +45,13 @@ class ClaudeHookSpoolTests(unittest.TestCase):
         threading.Thread(target=self.accept, daemon=True).start()
 
         self.launches = self.root / 'cli-launches'
-        self.shim = self.root / 'cmux-shim'
+        self.shim = self.root / 'bree-shim'
         self.shim.write_text(
             f'#!/bin/sh\necho "$*" >> {shlex.quote(str(self.launches))}\n'
             f'exec {shlex.quote(self.cli)} "$@"\n')
         self.shim.chmod(0o755)
 
-        base = {k: v for k, v in os.environ.items() if not k.startswith('CMUX_')}
+        base = {k: v for k, v in os.environ.items() if not k.startswith('BREE_')}
         settings = subprocess.run([self.cli, 'hooks', 'claude', 'inject-settings'], env=base,
                                   capture_output=True, text=True, timeout=30, check=True)
         hooks = json.loads(settings.stdout)['hooks']
@@ -67,10 +67,10 @@ class ClaudeHookSpoolTests(unittest.TestCase):
 
         self.spool = self.root / 'spool'
         self.spool.mkdir(mode=0o700)
-        self.env = dict(base, CMUX_SOCKET_PATH=str(self.socket_path),
-                        CMUX_WORKSPACE_ID=WORKSPACE, CMUX_SURFACE_ID=SURFACE,
-                        CMUX_CLAUDE_HOOK_SPOOL_DIR=str(self.spool),
-                        CMUX_CLAUDE_HOOK_CMUX_BIN=str(self.shim),
+        self.env = dict(base, BREE_SOCKET_PATH=str(self.socket_path),
+                        BREE_WORKSPACE_ID=WORKSPACE, BREE_SURFACE_ID=SURFACE,
+                        BREE_CLAUDE_HOOK_SPOOL_DIR=str(self.spool),
+                        BREE_CLAUDE_HOOK_BREE_BIN=str(self.shim),
                         CLAUDE_CONFIG_DIR='/tmp/claude config\nwith newline')
         self.owner = None
 
@@ -78,13 +78,13 @@ class ClaudeHookSpoolTests(unittest.TestCase):
         # The forwarder watches its parent, as it watches Claude after the
         # wrapper's exec. Closing the owner's stdin ends the "session".
         owner = '''import os,subprocess,sys
-os.environ['CMUX_CLAUDE_PID']=str(os.getpid())
+os.environ['BREE_CLAUDE_PID']=str(os.getpid())
 subprocess.Popen([sys.argv[1], 'hooks', 'claude', 'spool-forwarder'],
                  stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 print(os.getpid(), flush=True)
 sys.stdin.read()
 '''
-        env = {k: v for k, v in self.env.items() if k != 'CMUX_CLAUDE_HOOK_CMUX_BIN'}
+        env = {k: v for k, v in self.env.items() if k != 'BREE_CLAUDE_HOOK_BREE_BIN'}
         self.owner = subprocess.Popen([sys.executable, '-c', owner, self.cli],
                                       stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                       env=env, text=True)
@@ -161,7 +161,7 @@ sys.stdin.read()
         # This test process owns the child, just like the wrapper after exec.
         result = subprocess.run(
             [self.cli, 'hooks', 'claude', 'spool-forwarder'],
-            env=dict(self.env, CMUX_CLAUDE_PID=str(os.getpid())),
+            env=dict(self.env, BREE_CLAUDE_PID=str(os.getpid())),
             capture_output=True, text=True, timeout=10,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -186,7 +186,7 @@ sys.stdin.read()
 
     def test_failed_key_publication_preserves_previous_key_list(self):
         sentinel = self.block_key_publication()
-        keys = 'CMUX_SURFACE_ID\nCMUX_CLAUDE_PID\n'
+        keys = 'BREE_SURFACE_ID\nBREE_CLAUDE_PID\n'
         (self.spool / 'keys').write_text(keys)
         self.run_forwarder_to_exit()
         self.assertEqual((self.spool / 'keys').read_text(), keys)
@@ -195,7 +195,7 @@ sys.stdin.read()
     def test_failed_key_publication_preserves_queued_records(self):
         sentinel = self.block_key_publication()
         record = self.spool / '1.0-1.rec'
-        payload = (b'cmux-agent-hook-v1\nclaude\nstop\nCMUX_SURFACE_ID='
+        payload = (b'bree-agent-hook-v1\nclaude\nstop\nBREE_SURFACE_ID='
                    + SURFACE.encode() + b'\0\0{"session_id":"retained"}')
         record.write_bytes(payload)
         self.run_forwarder_to_exit()
@@ -217,9 +217,9 @@ sys.stdin.read()
         self.assertEqual(json.loads(enqueued[1]['payload'])['tool_input']['file_path'], '/tmp/日本語')
         for params in enqueued:
             self.assertEqual(params['agent'], 'claude')
-            self.assertEqual(params['environment']['CMUX_SURFACE_ID'], SURFACE)
+            self.assertEqual(params['environment']['BREE_SURFACE_ID'], SURFACE)
             self.assertEqual(params['environment']['CLAUDE_CONFIG_DIR'], self.env['CLAUDE_CONFIG_DIR'])
-            self.assertTrue(params['environment']['CMUX_CLAUDE_PID'].isdigit())
+            self.assertTrue(params['environment']['BREE_CLAUDE_PID'].isdigit())
         self.assertEqual(sorted(p.name for p in self.spool.iterdir() if p.suffix == '.rec'), [])
 
     def test_a_rejected_event_does_not_stop_the_forwarder(self):
@@ -284,7 +284,7 @@ sys.stdin.read()
     def test_fallback_admits_an_earlier_spooled_event_first(self):
         # Hold the forwarder lock the way a live forwarder does, publish, then
         # let the "forwarder" die before it drains.
-        (self.spool / 'keys').write_text('CMUX_SURFACE_ID\nCMUX_CLAUDE_PID\n')
+        (self.spool / 'keys').write_text('BREE_SURFACE_ID\nBREE_CLAUDE_PID\n')
         for name in ('forwarder.lock', 'drain.lock'):
             (self.spool / name).touch()
         lock = os.open(self.spool / 'forwarder.lock', os.O_RDWR)
@@ -304,7 +304,7 @@ sys.stdin.read()
         enqueued = self.admitted(2)
         self.assertEqual([json.loads(p['payload'])['seq'] for p in enqueued], [0, 1])
         self.assertEqual(len(self.cli_launches()), 2)
-        self.assertEqual([p['environment']['CMUX_CLAUDE_PID'] for p in enqueued],
+        self.assertEqual([p['environment']['BREE_CLAUDE_PID'] for p in enqueued],
                          [str(os.getpid()), str(os.getpid())],
                          'fallback must retain the hook parent PID, not the intermediate zsh PID')
 

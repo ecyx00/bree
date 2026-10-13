@@ -1090,7 +1090,7 @@
      "diff": {
       "snapMs": 1512,
       "diffChars": 816,
-      "printed": "Browser tab: 1, Title: \"GitHub - manaflow-ai/cmux: Open source Ghostty-based macOS terminal with vertical tabs and notifications for AI coding agents. Built for multitasking, organization, and programmability. \u00b7 GitHub\", URL: \"http://localhost:65052/corpus/github.html\".\nThe following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.\nRemoved element IDs: 4\n~\t\t3 heading Navigation Menu (changed), Value: 2\n+\t\t\t2096 text Navigation Menu (changed)\nThe focused UI element is 0 AXWebArea URL: localhost:65052/cor\u2026, GitHub - manaflow-ai/cmux: Open source Ghostty-based macOS terminal with vertical tabs and notifications for AI coding agents. Built for multitasking, organization, and programmability. \u00b7 GitHub"
+      "printed": "Browser tab: 1, Title: \"GitHub - ecyx00/bree: Open source Ghostty-based macOS terminal with vertical tabs and notifications for AI coding agents. Built for multitasking, organization, and programmability. \u00b7 GitHub\", URL: \"http://localhost:65052/corpus/github.html\".\nThe following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.\nRemoved element IDs: 4\n~\t\t3 heading Navigation Menu (changed), Value: 2\n+\t\t\t2096 text Navigation Menu (changed)\nThe focused UI element is 0 AXWebArea URL: localhost:65052/cor\u2026, GitHub - ecyx00/bree: Open source Ghostty-based macOS terminal with vertical tabs and notifications for AI coding agents. Built for multitasking, organization, and programmability. \u00b7 GitHub"
      },
      "p50": 1303,
      "p95": 1964,
@@ -1754,7 +1754,7 @@
      "diff": {
       "snapMs": 38444,
       "diffChars": 698,
-      "printed": "Browser tab: 1, Title: \"Add cmux browser repl: one Playwright-based agent browser API by lawrencecchen \u00b7 Pull Request #15570 \u00b7 manaflow-ai/cmux \u00b7 GitHub\", URL: \"https://github.com/manaflow-ai/cmux/pull/15570/files\".\nThe following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.\nRemoved element IDs: 5\n~\t\t\t4 heading Navigation Menu (changed), Value: 2\n+\t\t\t\t34503 text Navigation Menu (changed)\nThe focused UI element is 0 AXWebArea URL: github.com/manaflow\u2026, Add cmux browser repl: one Playwright-based agent browser API by lawrencecchen \u00b7 Pull Request #15570 \u00b7 manaflow-ai/cmux \u00b7 GitHub"
+      "printed": "Browser tab: 1, Title: \"Add bree browser repl: one Playwright-based agent browser API by lawrencecchen \u00b7 Pull Request #15570 \u00b7 ecyx00/bree \u00b7 GitHub\", URL: \"https://github.com/ecyx00/bree/pull/15570/files\".\nThe following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.\nRemoved element IDs: 5\n~\t\t\t4 heading Navigation Menu (changed), Value: 2\n+\t\t\t\t34503 text Navigation Menu (changed)\nThe focused UI element is 0 AXWebArea URL: github.com/manaflow\u2026, Add bree browser repl: one Playwright-based agent browser API by lawrencecchen \u00b7 Pull Request #15570 \u00b7 ecyx00/bree \u00b7 GitHub"
      },
      "p50": 38242,
      "p95": 43319,

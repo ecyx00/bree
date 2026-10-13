@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CMUXAgentLaunch
+import BreeFoundation
+import BREEAgentLaunch
 import Foundation
 
 enum AgentHibernationTranscriptGuard {
@@ -327,7 +327,7 @@ enum AgentHibernationTranscriptGuard {
 
     private static func defaultSnapshotDirectoryURL() -> URL? {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-            .appendingPathComponent(CmuxIdentity.current.applicationSupportDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.applicationSupportDirectoryName, isDirectory: true)
             .appendingPathComponent("agent-transcript-teardown-snapshots", isDirectory: true)
     }
 

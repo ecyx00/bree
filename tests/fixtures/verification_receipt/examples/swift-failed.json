@@ -76,7 +76,7 @@
           "-D",
           "DEBUG",
           "-enable-bare-slash-regex",
-          "./cmuxTests/AgentIntegrationSettingsControllerTests.swift"
+          "./breeTests/AgentIntegrationSettingsControllerTests.swift"
         ],
         "cancelled": false,
         "elapsed_seconds": 0.132,
@@ -93,24 +93,24 @@
     ],
     "kind": "local_static_preflight",
     "reproduction": {
-      "ci_job_url": "https://github.com/manaflow-ai/cmux/actions/runs/35525568719/job/106117704441",
+      "ci_job_url": "https://github.com/ecyx00/bree/actions/runs/35525568719/job/106117704441",
       "head_sha": "92094443b3c33bde26ab2e5bfb6bda5f0366c443",
       "input_sha256": "d4ce3fcd6122b77d2ccc904d089d8a40f52d787e988bb043b102ac707db577f9",
-      "path": "cmuxTests/AgentIntegrationSettingsControllerTests.swift",
+      "path": "breeTests/AgentIntegrationSettingsControllerTests.swift",
       "repair": null,
-      "repository": "https://github.com/manaflow-ai/cmux",
+      "repository": "https://github.com/ecyx00/bree",
       "scope": "PR-head file reproduces the logged syntax error; not an assertion of full CI checkout identity"
     },
     "swift_inputs": {
       "after": [
         {
-          "path": "cmuxTests/AgentIntegrationSettingsControllerTests.swift",
+          "path": "breeTests/AgentIntegrationSettingsControllerTests.swift",
           "sha256": "d4ce3fcd6122b77d2ccc904d089d8a40f52d787e988bb043b102ac707db577f9"
         }
       ],
       "before": [
         {
-          "path": "cmuxTests/AgentIntegrationSettingsControllerTests.swift",
+          "path": "breeTests/AgentIntegrationSettingsControllerTests.swift",
           "sha256": "d4ce3fcd6122b77d2ccc904d089d8a40f52d787e988bb043b102ac707db577f9"
         }
       ]
@@ -133,10 +133,10 @@
       "--only",
       "swift-syntax",
       "--swift",
-      "cmuxTests/AgentIntegrationSettingsControllerTests.swift"
+      "breeTests/AgentIntegrationSettingsControllerTests.swift"
     ],
     "claim_class": "pre_build_static_sanity",
-    "id": "cmux-fast-static-checks/v1",
+    "id": "bree-fast-static-checks/v1",
     "revision": "4f9d0946562793c716dd544005debeb92d296ecab87dfcca0cb38a92288f71c7"
   },
   "review": {
@@ -145,7 +145,7 @@
     "reviewed_head": null,
     "status": "unsupported"
   },
-  "schema_version": "cmux-verification/v1",
+  "schema_version": "bree-verification/v1",
   "source": {
     "after": {
       "clean": true,
@@ -166,7 +166,7 @@
     "exact_snapshot": null,
     "head_sha": "1047798cfda50fdbbb312ee1b2a609960827c257",
     "merge_sha": null,
-    "repository": "isolated parser reproduction fixture (one CMUX source file)",
+    "repository": "isolated parser reproduction fixture (one BREE source file)",
     "semantics": "latest_checkout_at_execution",
     "tree": "cb011f03706b90d8a633c18eb173c16c0b144ba4"
   },

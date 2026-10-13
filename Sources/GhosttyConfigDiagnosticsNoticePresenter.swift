@@ -1,6 +1,6 @@
 import AppKit
-import CmuxTerminalCore
-import CmuxWorkspaces
+import BreeTerminalCore
+import BreeWorkspaces
 import SwiftUI
 
 /// Shows Ghostty config errors in a small card in the corner of the active
@@ -18,7 +18,7 @@ import SwiftUI
 final class GhosttyConfigDiagnosticsNoticePresenter {
     static let autoDismissDelay: Duration = .seconds(20)
 
-    /// Height of the chrome cmux draws above the workspace content, used to
+    /// Height of the chrome bree draws above the workspace content, used to
     /// place the card just under it. Standard mode draws the app titlebar band
     /// and the Bonsplit tab bar; minimal mode draws the tab bar only.
     static func chromeHeight(isMinimalMode: Bool) -> CGFloat {
@@ -102,13 +102,13 @@ final class GhosttyConfigDiagnosticsNoticePresenter {
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.animationBehavior = .utilityWindow
-        panel.identifier = NSUserInterfaceItemIdentifier("cmux.ghosttyConfigDiagnosticsNotice")
+        panel.identifier = NSUserInterfaceItemIdentifier("bree.ghosttyConfigDiagnosticsNotice")
         panel.contentView = hostingView
 
         // Sit below the Bonsplit tab bar so it stays fully visible, with the
         // same gap under the tab bar as from the window's right edge. Measure
-        // from the window top with cmux's chrome heights: the native titlebar
-        // behind contentLayoutRect is taller than the titlebar cmux draws.
+        // from the window top with bree's chrome heights: the native titlebar
+        // behind contentLayoutRect is taller than the titlebar bree draws.
         let inset: CGFloat = 12
         // Minimal mode does not draw the app titlebar band at all
         // (WorkspaceTitlebarModeLayer renders it only when the mode is not

@@ -1,7 +1,7 @@
 import AppKit
-import CmuxFoundation
-import CmuxSidebar
-import CmuxWorkspaces
+import BreeFoundation
+import BreeSidebar
+import BreeWorkspaces
 import SwiftUI
 
 /// Row-owned color helpers that preserve native semantic variants while
@@ -14,10 +14,10 @@ struct SidebarRowPalette {
 
     var colorScheme: ColorScheme { model.colorSchemeIsDark ? .dark : .light }
 
-    /// The resolved cmux accent from the settings snapshot.
-    var accent: CmuxAccentColor { model.settings.accentColor }
+    /// The resolved bree accent from the settings snapshot.
+    var accent: BreeAccentColor { model.settings.accentColor }
 
-    /// The accent in the row's concrete cmux scheme.
+    /// The accent in the row's concrete bree scheme.
     var accentColor: NSColor { accent.nsColor(for: colorScheme) }
 
     /// The theme palette, read live (AppKit path).
@@ -39,7 +39,7 @@ struct SidebarRowPalette {
     /// `selectedQuiet` (an alpha wash) composited over the sidebar surface, so
     /// readable foregrounds can be judged against an opaque colour.
     var quietSelectionBackground: NSColor {
-        cmuxCompositedNSColor(neutralSelectionFill, over: chrome.ns.surfaceSunken)
+        breeCompositedNSColor(neutralSelectionFill, over: chrome.ns.surfaceSunken)
     }
 
     /// The neutral selection wash for the window state.
@@ -94,8 +94,8 @@ struct SidebarRowPalette {
         var alpha = max(0, min(opacity, 1))
         var color = sidebarSelectedWorkspaceForegroundNSColor(on: background, opacity: alpha)
         while alpha < 1,
-              cmuxContrastRatio(
-                foreground: cmuxCompositedNSColor(color, over: background),
+              breeContrastRatio(
+                foreground: breeCompositedNSColor(color, over: background),
                 background: background
               ) < 4.5 {
             alpha = min(1, alpha + 0.05)
@@ -104,7 +104,7 @@ struct SidebarRowPalette {
         return color
     }
 
-    /// Resolves semantic colors against the row's concrete cmux scheme.
+    /// Resolves semantic colors against the row's concrete bree scheme.
     func semantic(_ color: NSColor, opacity: CGFloat? = nil) -> NSColor {
         SidebarAppearanceColorResolver().resolvedColor(
             color,
@@ -132,7 +132,7 @@ struct SidebarRowPalette {
     /// color from the selected foreground so a custom
     /// `sidebarSelectionColorHex` stays legible.
     var linkText: NSColor {
-        model.isActive ? selectedForeground(1.0) : chrome.ns.signalInfo
+        model.isActive ? selectedForeground(1.0) : chrome.ns.accentFill
     }
 
 }
@@ -431,7 +431,7 @@ final class SidebarRowIconTextLine: NSView {
         iconLabel.isHidden = true
         let iconName: String
         switch log.level {
-        case .info: iconName = "circle.fill"
+        case .info: iconName = "info.circle"
         case .progress: iconName = "arrowtriangle.right.fill"
         case .success: iconName = "checkmark.circle.fill"
         case .warning: iconName = "exclamationmark.triangle.fill"
@@ -440,14 +440,14 @@ final class SidebarRowIconTextLine: NSView {
         let color: NSColor
         if model.isActive {
             switch log.level {
-            case .info: color = palette.secondary(0.5)
+            case .info: color = palette.secondary(0.8)
             case .progress: color = palette.secondary(0.8)
             default: color = palette.secondary(0.9)
             }
         } else {
             switch log.level {
-            case .info: color = palette.secondary(0.5)
-            case .progress: color = palette.chrome.ns.activeIndicator
+            case .info: color = palette.chrome.ns.textSecondary
+            case .progress: color = palette.chrome.ns.textSecondary
             case .success: color = palette.chrome.ns.signalSuccess
             case .warning: color = palette.chrome.ns.signalAttention
             case .error: color = palette.chrome.ns.signalError

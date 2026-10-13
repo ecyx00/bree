@@ -17,7 +17,7 @@ extension AppDelegate {
             let ms = (ProcessInfo.processInfo.systemUptime - start) * 1000
             return String(format: "%.2f", ms)
         }
-        cmuxDebugLog(
+        breeDebugLog(
             "surface.moveBonsplit.begin tab=\(tabId.uuidString.prefix(5)) targetWs=\(targetWorkspaceId.uuidString.prefix(5)) " +
             "targetPane=\(targetPane?.id.uuidString.prefix(5) ?? "auto") targetIndex=\(targetIndex.map(String.init) ?? "nil")"
         )
@@ -39,7 +39,7 @@ extension AppDelegate {
                 )
             }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "surface.moveBonsplit.fail tab=\(tabId.uuidString.prefix(5)) reason=tabNotFound " +
                 "targetWs=\(targetWorkspaceId.uuidString.prefix(5)) elapsedMs=\(elapsedMs(since: moveStart))"
             )
@@ -47,7 +47,7 @@ extension AppDelegate {
             return false
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "surface.moveBonsplit.located tab=\(tabId.uuidString.prefix(5)) panel=\(located.panelId.uuidString.prefix(5)) " +
             "sourceWs=\(located.workspaceId.uuidString.prefix(5)) sourceWin=\(located.windowId.uuidString.prefix(5))"
         )
@@ -62,7 +62,7 @@ extension AppDelegate {
             focusWindow: focusWindow
         )
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "surface.moveBonsplit.end tab=\(tabId.uuidString.prefix(5)) panel=\(located.panelId.uuidString.prefix(5)) " +
             "moved=\(moved ? 1 : 0) elapsedMs=\(elapsedMs(since: moveStart))"
         )

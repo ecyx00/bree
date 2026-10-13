@@ -4,7 +4,7 @@ import Foundation
 struct BrowserValueTextFormatter {
     func string(from value: Any) -> String {
         if let dictionary = value as? [String: Any],
-           dictionary["__cmux_t"] as? String == "undefined" {
+           dictionary["__bree_t"] as? String == "undefined" {
             return "undefined"
         }
         if value is NSNull {

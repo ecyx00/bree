@@ -1,8 +1,8 @@
-import CmuxCloud
+import BreeCloud
 import Bonsplit
-import CmuxRemoteSession
-import CmuxSurfaceCatalogModel
-import CmuxTerminal
+import BreeRemoteSession
+import BreeSurfaceCatalogModel
+import BreeTerminal
 import Foundation
 import GhosttyKit
 

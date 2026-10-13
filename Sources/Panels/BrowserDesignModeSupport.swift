@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 
 enum BrowserDesignModeSupport {
@@ -59,7 +59,7 @@ enum BrowserDesignModeSupport {
 
     static func record(_ error: any Error, operation: String) {
 #if DEBUG
-        cmuxDebugLog("browser.designMode.\(operation).failed error=\(String(reflecting: error))")
+        breeDebugLog("browser.designMode.\(operation).failed error=\(String(reflecting: error))")
 #endif
     }
 }

@@ -1,10 +1,10 @@
 import Bonsplit
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
 /// Workspace todo pane factory: creates the `WorkspaceTodoPanel` surface and
 /// the one-per-workspace open-or-focus entry point every caller (checklist
-/// popover footer, command palette, CLI `cmux todo open`, socket
+/// popover footer, command palette, CLI `bree todo open`, socket
 /// `workspace.todo.open`, session restore) funnels through. Mirrors the
 /// markdown surface factory; lives in its own file because `Workspace.swift`
 /// sits at its file-length budget.
@@ -42,7 +42,7 @@ extension Workspace {
         if let targetIndex {
             _ = bonsplitController.reorderTab(newTabId, toIndex: targetIndex)
         }
-        publishCmuxSurfaceCreated(
+        publishBreeSurfaceCreated(
             todoPanel.id,
             paneId: paneId,
             kind: SurfaceKind.todo.rawValue,

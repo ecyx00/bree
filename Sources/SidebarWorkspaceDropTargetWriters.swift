@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 struct SidebarWorkspaceDropTargetWriters: View {

@@ -1,14 +1,14 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 
 /// One finished agent turn: the start/end snapshot pair plus a change summary.
 ///
-/// Written by the `cmux` hook process on the agent's Stop event and read by the
+/// Written by the `bree` hook process on the agent's Stop event and read by the
 /// app's Activity timeline. Shared by the app and CLI targets, so it only
 /// depends on Foundation.
 struct AgentTurnRecord: Codable, Equatable, Identifiable {
-    /// Lowercased UUID; also the suffix of the pinned `refs/cmux/turn-{start,end}/<id>` refs.
+    /// Lowercased UUID; also the suffix of the pinned `refs/bree/turn-{start,end}/<id>` refs.
     var id: String
     /// Lowercased UUID strings so the CLI (which gets them from env/socket) and the app agree.
     var workspaceId: String
@@ -81,10 +81,10 @@ enum AgentTurnRecordStorage {
     static func path(env: [String: String] = ProcessInfo.processInfo.environment) -> String {
         let home = env["HOME"].flatMap { $0.isEmpty ? nil : $0 } ?? NSHomeDirectory()
         let directory: String
-        if let override = env["CMUX_AGENT_HOOK_STATE_DIR"]?.trimmingCharacters(in: .whitespacesAndNewlines), !override.isEmpty {
+        if let override = env["BREE_AGENT_HOOK_STATE_DIR"]?.trimmingCharacters(in: .whitespacesAndNewlines), !override.isEmpty {
             directory = override == "~" ? home : (override.hasPrefix("~/") ? home + "/" + override.dropFirst(2) : override)
         } else {
-            directory = home + "/" + CmuxIdentity.current.dotDirectoryName
+            directory = home + "/" + BreeIdentity.current.dotDirectoryName
         }
         return directory + "/agent-turn-records.json"
     }

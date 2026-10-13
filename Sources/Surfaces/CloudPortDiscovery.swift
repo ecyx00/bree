@@ -1,5 +1,5 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// Owns a machine's scan demand and last successful inventory independently of its workspace event feed.

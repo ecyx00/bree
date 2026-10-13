@@ -32,7 +32,7 @@ struct SidebarWorkspaceTrailingStatusSlot: View {
             }
             if canCloseWorkspace {
                 Button(action: closeAction) {
-                    CmuxSystemSymbolImage(magnified: "xmark", pointSize: closeButtonFontSize, weight: .medium, tint: closeButtonColor)
+                    BreeSystemSymbolImage(magnified: "xmark", pointSize: closeButtonFontSize, weight: .medium, tint: closeButtonColor)
                         .frame(width: width, height: height, alignment: .center)
                         .contentShape(Rectangle())
                 }

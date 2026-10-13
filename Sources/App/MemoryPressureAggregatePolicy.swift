@@ -186,7 +186,7 @@ struct MemoryPressureAggregateSnapshot: Equatable, Sendable {
 /// The defaults are fractions of installed physical memory, never a fixed GB
 /// value. A coalition/tree sample must cross the warning fraction before the
 /// optional available-memory signal can raise its severity. This prevents an
-/// unrelated low-memory application from causing cmux to hibernate agent work.
+/// unrelated low-memory application from causing bree to hibernate agent work.
 struct MemoryPressureAggregatePolicy: Equatable, Sendable {
     let warningCoalitionFraction: Double
     let criticalCoalitionFraction: Double
@@ -242,7 +242,7 @@ struct MemoryPressureAggregatePolicy: Equatable, Sendable {
 
         // Available memory is a corroborating signal, not a standalone reason
         // to hibernate agent work. It is intentionally considered only after the
-        // cmux coalition/tree has crossed its relative warning boundary.
+        // bree coalition/tree has crossed its relative warning boundary.
         if severity >= .warning,
            let availableMemoryBytes = sample.availableMemoryBytes {
             let criticalAvailableBytes = thresholdBytes(

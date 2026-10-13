@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_NAME="cmux STAGING"
-BUNDLE_ID="com.cmuxterm.app.staging"
-BASE_APP_NAME="cmux"
+APP_NAME="bree STAGING"
+BUNDLE_ID="com.bree.app.staging"
+BASE_APP_NAME="bree"
 DERIVED_DATA=""
 NAME_SET=0
 BUNDLE_SET=0
 DERIVED_SET=0
 TAG=""
-# Matches CmuxStateDirectory (non-TCC ~/.local/state/cmux) where the app/CLI now
-# read the last-socket-path markers (https://github.com/manaflow-ai/cmux/issues/5146).
+# Matches BreeStateDirectory (non-TCC ~/.local/state/bree) where the app/CLI now
+# read the last-socket-path markers (https://github.com/ecyx00/bree/issues/5146).
 # Resolve the real account home via getpwuid (the same syscall
 # homeDirectoryForCurrentUser uses) rather than $HOME, which a shell can override.
 # perl ships with macOS and returns the full home path even when it contains spaces;
 # `dscl ... | awk` mis-parses such paths because dscl wraps a value with spaces onto
 # a second line. `|| true` keeps the lookup from aborting the script under
 # `set -euo pipefail`; an empty result falls back to $HOME.
-_cmux_account_home="$(perl -e 'print((getpwuid($<))[7])' 2>/dev/null || true)"
-LAST_SOCKET_PATH_DIR="${_cmux_account_home:-$HOME}/.local/state/cmux"
+_bree_account_home="$(perl -e 'print((getpwuid($<))[7])' 2>/dev/null || true)"
+LAST_SOCKET_PATH_DIR="${_bree_account_home:-$HOME}/.local/state/bree"
 
 write_last_socket_path() {
   local socket_path="$1"
   local marker_name="staging-last-socket-path"
-  local tmp_marker="/tmp/cmux-staging-last-socket-path"
+  local tmp_marker="/tmp/bree-staging-last-socket-path"
   if [[ -n "${STAGING_SLUG:-}" ]]; then
     marker_name="staging-${STAGING_SLUG}-last-socket-path"
-    tmp_marker="/tmp/cmux-staging-${STAGING_SLUG}-last-socket-path"
+    tmp_marker="/tmp/bree-staging-${STAGING_SLUG}-last-socket-path"
   fi
   mkdir -p "$LAST_SOCKET_PATH_DIR"
   echo "$socket_path" > "${LAST_SOCKET_PATH_DIR}/${marker_name}" || true
@@ -36,8 +36,8 @@ write_last_socket_path() {
 staging_slug_from_bundle_id() {
   local bundle_id="$1"
   local suffix=""
-  if [[ "$bundle_id" == "com.cmuxterm.app.staging."* ]]; then
-    suffix="${bundle_id#com.cmuxterm.app.staging.}"
+  if [[ "$bundle_id" == "com.bree.app.staging."* ]]; then
+    suffix="${bundle_id#com.bree.app.staging.}"
   fi
   sanitize_path "$suffix"
 }
@@ -46,8 +46,8 @@ usage() {
   cat <<'EOF'
 Usage: ./scripts/reloads.sh [options]
 
-Release build with isolated "cmux STAGING" identity. Runs side-by-side with
-the production cmux app.
+Release build with isolated "bree STAGING" identity. Runs side-by-side with
+the production bree app.
 
 Options:
   --tag <name>           Short tag for parallel builds (e.g., feature-xyz-lol).
@@ -133,19 +133,19 @@ if [[ -n "$TAG" ]]; then
     exit 1
   fi
   if [[ "$NAME_SET" -eq 0 ]]; then
-    APP_NAME="cmux STAGING ${TAG}"
+    APP_NAME="bree STAGING ${TAG}"
   fi
   if [[ "$BUNDLE_SET" -eq 0 ]]; then
-    BUNDLE_ID="com.cmuxterm.app.staging.${TAG_ID}"
+    BUNDLE_ID="com.bree.app.staging.${TAG_ID}"
   fi
   if [[ "$DERIVED_SET" -eq 0 ]]; then
-    DERIVED_DATA="/tmp/cmux-staging-${TAG_SLUG}"
+    DERIVED_DATA="/tmp/bree-staging-${TAG_SLUG}"
   fi
 fi
 
 XCODEBUILD_ARGS=(
-  -project cmux.xcodeproj
-  -scheme cmux
+  -project bree.xcodeproj
+  -scheme bree
   -configuration Release
   -destination 'platform=macOS'
 )
@@ -205,7 +205,7 @@ fi
 
 # Staging always copies the built app and patches the plist to set an isolated
 # socket path, bundle id, and display name. This prevents conflicts with the
-# production cmux app.
+# production bree app.
 STAGING_APP_PATH="$(dirname "$APP_PATH")/${APP_NAME}.app"
 rm -rf "$STAGING_APP_PATH"
 cp -R "$APP_PATH" "$STAGING_APP_PATH"
@@ -221,30 +221,30 @@ if [[ -f "$INFO_PLIST" ]]; then
   # Inject staging socket paths via LSEnvironment so the Release binary
   # (which defaults to the per-user stable socket) uses isolated sockets instead.
   STAGING_SLUG="$(staging_slug_from_bundle_id "$BUNDLE_ID")"
-  APP_SUPPORT_DIR="$HOME/Library/Application Support/cmux"
+  APP_SUPPORT_DIR="$HOME/Library/Application Support/bree"
   if [[ -n "$STAGING_SLUG" ]]; then
-    CMUXD_SOCKET="${APP_SUPPORT_DIR}/cmuxd-${STAGING_SLUG}.sock"
-    CMUX_SOCKET_PATH_VALUE="/tmp/cmux-staging-${STAGING_SLUG}.sock"
+    BREED_SOCKET="${APP_SUPPORT_DIR}/breed-${STAGING_SLUG}.sock"
+    BREE_SOCKET_PATH_VALUE="/tmp/bree-staging-${STAGING_SLUG}.sock"
   else
-    CMUXD_SOCKET="${APP_SUPPORT_DIR}/cmuxd-staging.sock"
-    CMUX_SOCKET_PATH_VALUE="/tmp/cmux-staging.sock"
+    BREED_SOCKET="${APP_SUPPORT_DIR}/breed-staging.sock"
+    BREE_SOCKET_PATH_VALUE="/tmp/bree-staging.sock"
   fi
-  write_last_socket_path "$CMUX_SOCKET_PATH_VALUE"
+  write_last_socket_path "$BREE_SOCKET_PATH_VALUE"
   /usr/libexec/PlistBuddy -c "Add :LSEnvironment dict" "$INFO_PLIST" 2>/dev/null || true
-  /usr/libexec/PlistBuddy -c "Set :LSEnvironment:CMUX_BUNDLE_ID \"${BUNDLE_ID}\"" "$INFO_PLIST" 2>/dev/null \
-    || /usr/libexec/PlistBuddy -c "Add :LSEnvironment:CMUX_BUNDLE_ID string \"${BUNDLE_ID}\"" "$INFO_PLIST"
-  /usr/libexec/PlistBuddy -c "Set :LSEnvironment:CMUXD_UNIX_PATH \"${CMUXD_SOCKET}\"" "$INFO_PLIST" 2>/dev/null \
-    || /usr/libexec/PlistBuddy -c "Add :LSEnvironment:CMUXD_UNIX_PATH string \"${CMUXD_SOCKET}\"" "$INFO_PLIST"
-  /usr/libexec/PlistBuddy -c "Set :LSEnvironment:CMUX_SOCKET_PATH \"${CMUX_SOCKET_PATH_VALUE}\"" "$INFO_PLIST" 2>/dev/null \
-    || /usr/libexec/PlistBuddy -c "Add :LSEnvironment:CMUX_SOCKET_PATH string \"${CMUX_SOCKET_PATH_VALUE}\"" "$INFO_PLIST"
-  if [[ -S "$CMUXD_SOCKET" ]]; then
-    for PID in $(lsof -t "$CMUXD_SOCKET" 2>/dev/null); do
+  /usr/libexec/PlistBuddy -c "Set :LSEnvironment:BREE_BUNDLE_ID \"${BUNDLE_ID}\"" "$INFO_PLIST" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Add :LSEnvironment:BREE_BUNDLE_ID string \"${BUNDLE_ID}\"" "$INFO_PLIST"
+  /usr/libexec/PlistBuddy -c "Set :LSEnvironment:BREED_UNIX_PATH \"${BREED_SOCKET}\"" "$INFO_PLIST" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Add :LSEnvironment:BREED_UNIX_PATH string \"${BREED_SOCKET}\"" "$INFO_PLIST"
+  /usr/libexec/PlistBuddy -c "Set :LSEnvironment:BREE_SOCKET_PATH \"${BREE_SOCKET_PATH_VALUE}\"" "$INFO_PLIST" 2>/dev/null \
+    || /usr/libexec/PlistBuddy -c "Add :LSEnvironment:BREE_SOCKET_PATH string \"${BREE_SOCKET_PATH_VALUE}\"" "$INFO_PLIST"
+  if [[ -S "$BREED_SOCKET" ]]; then
+    for PID in $(lsof -t "$BREED_SOCKET" 2>/dev/null); do
       kill "$PID" 2>/dev/null || true
     done
-    rm -f "$CMUXD_SOCKET"
+    rm -f "$BREED_SOCKET"
   fi
-  if [[ -S "$CMUX_SOCKET_PATH_VALUE" ]]; then
-    rm -f "$CMUX_SOCKET_PATH_VALUE"
+  if [[ -S "$BREE_SOCKET_PATH_VALUE" ]]; then
+    rm -f "$BREE_SOCKET_PATH_VALUE"
   fi
   /usr/bin/codesign --force --sign - --timestamp=none --generate-entitlement-der "$STAGING_APP_PATH" >/dev/null 2>&1 || true
 fi
@@ -256,33 +256,33 @@ sleep 0.3
 # Kill any running staging instance; allow side-by-side with the main and dev apps.
 pkill -f "${APP_NAME}.app/Contents/MacOS/${BASE_APP_NAME}" || true
 sleep 0.3
-CMUXD_SRC="$PWD/cmuxd/zig-out/bin/cmuxd"
-if [[ -d "$PWD/cmuxd" ]]; then
-  (cd "$PWD/cmuxd" && zig build -Doptimize=ReleaseFast)
+BREED_SRC="$PWD/breed/zig-out/bin/breed"
+if [[ -d "$PWD/breed" ]]; then
+  (cd "$PWD/breed" && zig build -Doptimize=ReleaseFast)
 fi
-if [[ -x "$CMUXD_SRC" ]]; then
+if [[ -x "$BREED_SRC" ]]; then
   BIN_DIR="$APP_PATH/Contents/Resources/bin"
   mkdir -p "$BIN_DIR"
-  cp "$CMUXD_SRC" "$BIN_DIR/cmuxd"
-  chmod +x "$BIN_DIR/cmuxd"
+  cp "$BREED_SRC" "$BIN_DIR/breed"
+  chmod +x "$BIN_DIR/breed"
 fi
-# Avoid inheriting cmux/ghostty environment variables from the terminal that
-# runs this script (often inside another cmux instance), which can cause
+# Avoid inheriting bree/ghostty environment variables from the terminal that
+# runs this script (often inside another bree instance), which can cause
 # socket and resource-path conflicts.
 OPEN_CLEAN_ENV=(
   env
-  -u CMUX_SOCKET_PATH
-  -u CMUX_TAB_ID
-  -u CMUX_PANEL_ID
-  -u CMUXD_UNIX_PATH
-  -u CMUX_TAG
-  -u CMUX_BUNDLE_ID
-  -u CMUX_SHELL_INTEGRATION
+  -u BREE_SOCKET_PATH
+  -u BREE_TAB_ID
+  -u BREE_PANEL_ID
+  -u BREED_UNIX_PATH
+  -u BREE_TAG
+  -u BREE_BUNDLE_ID
+  -u BREE_SHELL_INTEGRATION
   -u GHOSTTY_BIN_DIR
   -u GHOSTTY_RESOURCES_DIR
   -u GHOSTTY_SHELL_FEATURES
   # Dev shells (including CI/Codex) often force-disable paging by exporting these.
-  # Don't leak that into cmux, otherwise `git diff` won't page even with PAGER=less.
+  # Don't leak that into bree, otherwise `git diff` won't page even with PAGER=less.
   -u GIT_PAGER
   -u GH_PAGER
   -u TERMINFO
@@ -291,7 +291,7 @@ OPEN_CLEAN_ENV=(
 
 # Always inject staging socket paths via env to ensure they take effect
 # (LSEnvironment requires app restart to pick up plist changes).
-"${OPEN_CLEAN_ENV[@]}" CMUX_BUNDLE_ID="$BUNDLE_ID" CMUX_SOCKET_PATH="$CMUX_SOCKET_PATH_VALUE" CMUXD_UNIX_PATH="$CMUXD_SOCKET" open -g "$APP_PATH"
+"${OPEN_CLEAN_ENV[@]}" BREE_BUNDLE_ID="$BUNDLE_ID" BREE_SOCKET_PATH="$BREE_SOCKET_PATH_VALUE" BREED_UNIX_PATH="$BREED_SOCKET" open -g "$APP_PATH"
 
 # Safety: ensure only one instance is running.
 sleep 0.2

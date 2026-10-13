@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: `cmux omx` preserves fallback provider dirs in PATH.
+Regression test: `bree omx` preserves fallback provider dirs in PATH.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 
 
 def make_executable(path: Path, content: str) -> None:
@@ -20,12 +20,12 @@ def make_executable(path: Path, content: str) -> None:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-omx-fallback-path-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-omx-fallback-path-") as td:
         root = Path(td)
         fallback_bin = root / ".bun" / "bin"
         fallback_bin.mkdir(parents=True, exist_ok=True)
@@ -52,8 +52,8 @@ omx-node-helper "$@"
         env = os.environ.copy()
         env["HOME"] = str(root)
         env["PATH"] = "/usr/bin:/bin"
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_SOCKET_PATH"] = str(root / "missing.sock")
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_SOCKET_PATH"] = str(root / "missing.sock")
         env["FAKE_PROVIDER_LOG"] = str(provider_log)
 
         proc = subprocess.run(
@@ -66,7 +66,7 @@ omx-node-helper "$@"
         )
 
         if proc.returncode != 0:
-            print("FAIL: `cmux omx --version` failed with omx in a fallback dir")
+            print("FAIL: `bree omx --version` failed with omx in a fallback dir")
             print(f"exit={proc.returncode}")
             print(f"stdout={proc.stdout.strip()}")
             print(f"stderr={proc.stderr.strip()}")
@@ -165,7 +165,7 @@ omx-node-helper "$@"
                 print(f"FAIL: contextless OMX launch was not rejected: {invocation!r}")
                 return 1
 
-    print("PASS: cmux omx preserves management commands and rejects contextless launches")
+    print("PASS: bree omx preserves management commands and rejects contextless launches")
     return 0
 
 

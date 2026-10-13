@@ -1,7 +1,7 @@
 import AppKit
-import CmuxFoundation
-import CmuxSettings
-import CmuxTerminalCore
+import BreeFoundation
+import BreeSettings
+import BreeTerminalCore
 import SwiftUI
 
 /// Hosts the "Jump to Bottom" pill at the bottom center of a terminal pane
@@ -170,7 +170,7 @@ final class TerminalJumpToBottomIndicatorView: NSView {
         }
         observers = [
             center.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main, using: refresh),
-            center.addObserver(forName: CmuxAccentColor.didChangeNotification, object: nil, queue: .main, using: refresh),
+            center.addObserver(forName: BreeAccentColor.didChangeNotification, object: nil, queue: .main, using: refresh),
             center.addObserver(forName: .ghosttyConfigDidReload, object: nil, queue: .main, using: refresh),
         ]
     }

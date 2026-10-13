@@ -7,7 +7,7 @@ import Darwin
 @MainActor
 final class RemoteActionToastPresenter {
     static let shared = RemoteActionToastPresenter()
-    /// Bree-only setting (not cmux.json); on unless explicitly disabled.
+    /// Bree-only setting (not bree.json); on unless explicitly disabled.
     static let enabledDefaultsKey = "bree.remoteActionToast.enabled"
 
     @MainActor

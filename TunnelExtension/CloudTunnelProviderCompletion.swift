@@ -1,4 +1,4 @@
-import CmuxCloudTunnelCore
+import BreeCloudTunnelCore
 
 /// Transfers an immutable NetworkExtension completion into the ordered consumer.
 /// Apple's callback is not annotated Sendable but supports asynchronous delivery.

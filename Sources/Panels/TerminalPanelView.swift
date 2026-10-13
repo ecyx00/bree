@@ -2,11 +2,11 @@ import SwiftUI
 import Foundation
 import AppKit
 import Bonsplit
-import CmuxAppKitSupportUI
-import CmuxTestSupport
-import CmuxTerminal
-import CmuxFoundation
-import CmuxSettings
+import BreeAppKitSupportUI
+import BreeTestSupport
+import BreeTerminal
+import BreeFoundation
+import BreeSettings
 
 /// View for rendering a terminal panel
 struct TerminalPanelView: View {
@@ -20,8 +20,8 @@ struct TerminalPanelView: View {
     @AppStorage(SessionContentWidthSettings.alignmentKey)
     private var storedSessionContentAlignment = SessionContentAlignment.center.rawValue
     @AppStorage("terminal.shellEditor") private var shellEditorEnabled = true
-    @State private var terminalFontSize = GhosttyConfig.loadForCmux(globalFontMagnificationPercent: GlobalFontMagnification.storedPercent).fontSize
-    @State private var terminalFontFamily = GhosttyConfig.loadForCmux(globalFontMagnificationPercent: GlobalFontMagnification.storedPercent).fontFamily
+    @State private var terminalFontSize = GhosttyConfig.loadForBree(globalFontMagnificationPercent: GlobalFontMagnification.storedPercent).fontSize
+    @State private var terminalFontFamily = GhosttyConfig.loadForBree(globalFontMagnificationPercent: GlobalFontMagnification.storedPercent).fontFamily
     let paneId: PaneID
     let isFocused: Bool
     let isVisibleInUI: Bool
@@ -204,10 +204,10 @@ struct TerminalPanelView: View {
         .background(Color(nsColor: appearance.contentBackgroundColor))
         .onChange(of: shellEditorEnabled) { _ in panel.shellEditorRecompute() }
         .onReceive(NotificationCenter.default.publisher(for: .ghosttyTerminalFontSizeDidChange)) { _ in
-            terminalFontSize = GhosttyConfig.loadForCmux(globalFontMagnificationPercent: GlobalFontMagnification.storedPercent).fontSize
+            terminalFontSize = GhosttyConfig.loadForBree(globalFontMagnificationPercent: GlobalFontMagnification.storedPercent).fontSize
         }
         .onReceive(NotificationCenter.default.publisher(for: .ghosttyConfigDidReload)) { _ in
-            let config = GhosttyConfig.loadForCmux(globalFontMagnificationPercent: GlobalFontMagnification.storedPercent)
+            let config = GhosttyConfig.loadForBree(globalFontMagnificationPercent: GlobalFontMagnification.storedPercent)
             terminalFontFamily = config.fontFamily
             terminalFontSize = config.fontSize
         }
@@ -334,9 +334,9 @@ private struct AgentHibernationPlaceholderView: View {
                     .controlSize(.small)
                     .accessibilityIdentifier("AgentHibernationTerminationRecoveryProgress")
             case .hibernated:
-                CmuxSystemSymbolImage(magnified: "pause.circle", pointSize: 34, weight: .regular, tint: .secondary)
+                BreeSystemSymbolImage(magnified: "pause.circle", pointSize: 34, weight: .regular, tint: .secondary)
             case .failed:
-                CmuxSystemSymbolImage(
+                BreeSystemSymbolImage(
                     magnified: "exclamationmark.triangle",
                     pointSize: 34,
                     weight: .regular,
@@ -345,9 +345,9 @@ private struct AgentHibernationPlaceholderView: View {
             }
             VStack(spacing: 4) {
                 Text(title)
-                    .cmuxFont(.headline)
+                    .scaledFont(.headline)
                 Text(state.agentDisplayName)
-                    .cmuxFont(.subheadline)
+                    .scaledFont(.subheadline)
                     .foregroundStyle(.secondary)
                 Text(
                     String.localizedStringWithFormat(
@@ -355,7 +355,7 @@ private struct AgentHibernationPlaceholderView: View {
                         lastActivityText
                     )
                 )
-                .cmuxFont(.caption)
+                .scaledFont(.caption)
                 .foregroundStyle(.tertiary)
             }
             if let actionTitle, let onAction {
@@ -404,7 +404,7 @@ private struct TerminalViewportGeometryReporter: ViewModifier {
 @MainActor
 private func recordTerminalViewportGeometryForUITest(proxy: GeometryProxy, panel: TerminalPanel) {
     let env = ProcessInfo.processInfo.environment
-    guard env["CMUX_UI_TEST_TERMINAL_VIEWPORT_PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+    guard env["BREE_UI_TEST_TERMINAL_VIEWPORT_PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
         return
     }
 
@@ -420,7 +420,7 @@ private func recordTerminalViewportGeometryForUITest(proxy: GeometryProxy, panel
         hostedFrameInContent = .zero
     }
 
-    _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_TERMINAL_VIEWPORT_PATH") { payload in
+    _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_TERMINAL_VIEWPORT_PATH") { payload in
         payload["terminalViewportPanelId"] = panel.id.uuidString
         payload["terminalViewportPanelWidth"] = terminalViewportFormat(proxy.size.width)
         payload["terminalViewportPanelHeight"] = terminalViewportFormat(proxy.size.height)
@@ -495,7 +495,7 @@ struct PanelAppearance {
         )
         return PanelAppearance(
             backgroundColor: backgroundColor,
-            foregroundColor: cmuxReadableForegroundNSColor(
+            foregroundColor: breeReadableForegroundNSColor(
                 preferred: config.foregroundColor,
                 on: backgroundColor
             ),

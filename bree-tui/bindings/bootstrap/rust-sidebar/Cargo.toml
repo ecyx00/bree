@@ -1,0 +1,16 @@
+[package]
+name = "bree-sidebar"
+version = "0.0.0-bootstrap.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+description = "Ownership bootstrap for the bree sidebar SDK"
+repository = "https://github.com/ecyx00/bree"
+homepage = "https://github.com/ecyx00/bree/tree/main/bree-tui/bindings/rust-sidebar"
+publish = true
+include = ["Cargo.toml", "Cargo.lock", "README.md", "src/lib.rs"]
+
+[lib]
+name = "bree_sidebar"
+
+[workspace]

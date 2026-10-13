@@ -1,6 +1,6 @@
 #if DEBUG
 import AppKit
-import CmuxControlSocket
+import BreeControlSocket
 
 /// Owns the opt-in UI-test socket health probe and restart sequence.
 @MainActor
@@ -27,10 +27,10 @@ final class UITestSocketSanityCoordinator {
     }
 
     func diagnostics(environment: [String: String]) -> [String: String] {
-        guard environment["CMUX_UI_TEST_SOCKET_SANITY"] == "1" else { return [:] }
+        guard environment["BREE_UI_TEST_SOCKET_SANITY"] == "1" else { return [:] }
         guard let config = dependencies.configuration() else {
             return [
-                "socketExpectedPath": environment["CMUX_SOCKET_PATH"] ?? "",
+                "socketExpectedPath": environment["BREE_SOCKET_PATH"] ?? "",
                 "socketMode": "off",
                 "socketReady": "0",
                 "socketPingResponse": "",
@@ -68,7 +68,7 @@ final class UITestSocketSanityCoordinator {
 
     func scheduleIfNeeded(environment: [String: String]) {
         guard !scheduled,
-              environment["CMUX_UI_TEST_SOCKET_SANITY"] == "1" else { return }
+              environment["BREE_UI_TEST_SOCKET_SANITY"] == "1" else { return }
         scheduled = true
         schedule(after: .milliseconds(750)) { [weak self] in
             self?.runProbe()

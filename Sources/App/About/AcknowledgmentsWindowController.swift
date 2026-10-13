@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 final class AcknowledgmentsWindowController: ReleasingWindowController {
@@ -15,7 +15,7 @@ final class AcknowledgmentsWindowController: ReleasingWindowController {
             defer: false
         )
         window.title = String(localized: "about.licenses", defaultValue: "Licenses")
-        window.identifier = NSUserInterfaceItemIdentifier("cmux.licenses")
+        window.identifier = NSUserInterfaceItemIdentifier("bree.licenses")
         window.center()
         window.contentView = NSHostingView(rootView: AcknowledgmentsView())
         return window

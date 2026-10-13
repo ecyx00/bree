@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 import WebKit
 
@@ -7,7 +7,7 @@ import WebKit
 struct ArchitectureContentView: View {
     @ObservedObject var model: ArchitectureViewModel
     @Environment(\.breePalette) private var palette
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
 
     var body: some View {
         if model.isActive {
@@ -32,7 +32,7 @@ struct ArchitectureContentView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .fixedSize()
-            .tint(cmuxAccent.selectedFillColor)
+            .tint(breeAccent.selectedFillColor)
             Spacer(minLength: 0)
             iconButton(
                 "arrow.clockwise",
@@ -96,7 +96,7 @@ struct ArchitectureContentView: View {
         case .message(let text):
             Text(text)
                 .breeFont(.body)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
                 .multilineTextAlignment(.center)
                 .padding(16)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -116,7 +116,7 @@ extension ArchitectureChange {
         switch kind {
         case .added: return palette.signalSuccess
         case .removed: return palette.signalError
-        case .changed: return palette.signalAttention
+        case .changed: return palette.textSecondary
         }
     }
 

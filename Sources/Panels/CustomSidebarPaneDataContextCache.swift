@@ -1,6 +1,6 @@
-import CmuxSidebar
-import CmuxNotifications
-import CmuxSwiftRender
+import BreeSidebar
+import BreeNotifications
+import BreeSwiftRender
 import Foundation
 
 @MainActor

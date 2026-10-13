@@ -306,7 +306,7 @@ final class ModAttentionStore: ObservableObject {
     func clear(_ workspaceId: UUID) {
         guard kinds.removeValue(forKey: workspaceId) != nil else { return }
 #if DEBUG
-        cmuxDebugLog("mods.attention cleared ws=\(workspaceId.uuidString.prefix(8))")
+        breeDebugLog("mods.attention cleared ws=\(workspaceId.uuidString.prefix(8))")
 #endif
     }
 
@@ -333,7 +333,7 @@ final class ModAttentionStore: ObservableObject {
             if let existing = kinds[workspaceId], existing >= kind { continue }
             kinds[workspaceId] = kind
 #if DEBUG
-            cmuxDebugLog("mods.attention set ws=\(workspaceId.uuidString.prefix(8)) kind=\(kind == .error ? "error" : "warn")")
+            breeDebugLog("mods.attention set ws=\(workspaceId.uuidString.prefix(8)) kind=\(kind == .error ? "error" : "warn")")
 #endif
         }
     }

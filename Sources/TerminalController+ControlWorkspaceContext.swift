@@ -1,11 +1,11 @@
-import CmuxCloud
-import CmuxControlSocket
-import CmuxCore
-import CmuxFoundation
-import CmuxPanes
-import CmuxRemoteWorkspace
-import CmuxRemoteSession
-import CmuxWorkspaces
+import BreeCloud
+import BreeControlSocket
+import BreeCore
+import BreeFoundation
+import BreePanes
+import BreeRemoteWorkspace
+import BreeRemoteSession
+import BreeWorkspaces
 import Foundation
 
 extension RemotePTYLifecycleCommitLease: @retroactive ControlRemotePTYLifecycleCommitLease {
@@ -596,8 +596,8 @@ extension TerminalController: ControlWorkspaceContext {
                 data: nil
             )
         }
-        // Deprecated: `cmux ssh` no longer sends this shape (TTY SSH moved to
-        // cmux-tui in #13866). A hand-written call still gets a persistent PTY
+        // Deprecated: `bree ssh` no longer sends this shape (TTY SSH moved to
+        // bree-tui in #13866). A hand-written call still gets a persistent PTY
         // slot, but agent resume bindings are not registered or replayed for it.
         if preserveAfterTerminalExit,
            transport == .ssh,
@@ -617,7 +617,7 @@ extension TerminalController: ControlWorkspaceContext {
         }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "workspace.remote.configure.request workspace=\(workspaceId.uuidString.prefix(8)) " +
             "target=\(destination) transport=\(transport.rawValue) terminalTransport=\(terminalTransport.rawValue) " +
             "port=\(sshPort.map(String.init) ?? "nil") " +

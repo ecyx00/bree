@@ -80,7 +80,7 @@
       "Ran 3 tests in 0.000s",
       "OK"
     ],
-    "url": "https://github.com/manaflow-ai/cmux/actions/runs/35523305193/job/106111086646",
+    "url": "https://github.com/ecyx00/bree/actions/runs/35523305193/job/106111086646",
     "workflow_path": ".github/workflows/ci.yml",
     "workflow_revision": null
   },
@@ -105,7 +105,7 @@
     "reviewed_head": null,
     "status": "unsupported"
   },
-  "schema_version": "cmux-verification/v1",
+  "schema_version": "bree-verification/v1",
   "source": {
     "after": null,
     "base_sha": "b334a7deeb0ff65bc9ee4d1c6a2bf7d454795110",
@@ -117,7 +117,7 @@
     "exact_snapshot": null,
     "head_sha": "e0deb0e897e58de722015e714700b2ec6c220bc6",
     "merge_sha": "25930fe8a91012ad178343016774d6850d5fd3db",
-    "repository": "manaflow-ai/cmux",
+    "repository": "ecyx00/bree",
     "semantics": "latest_checkout_at_execution",
     "tree": null
   },

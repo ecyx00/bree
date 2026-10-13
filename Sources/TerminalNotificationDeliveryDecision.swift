@@ -20,7 +20,7 @@ struct TerminalNotificationDeliveryDecision: Equatable, Sendable {
 
         guard isAppFocused, isActiveTab, isFocusedSurface else {
             if isAppFocused, suppressWhenAppFocused {
-                // `notifications.suppressWhenAppFocused`: cmux is the active
+                // `notifications.suppressWhenAppFocused`: bree is the active
                 // app, so skip the banner but keep the sound, pane flash,
                 // and custom command for this arrival.
                 var appFocusedEffects = effects

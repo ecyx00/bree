@@ -30,10 +30,10 @@ def main():
     app = args.app.resolve()
     info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
     bundle_id = info["CFBundleIdentifier"]
-    prefix = "com.cmuxterm.app.debug."
+    prefix = "com.bree.app.debug."
     assert bundle_id.startswith(prefix), "Refusing an untagged app"
     tag = bundle_id.removeprefix(prefix)
-    socket_path = Path(f"/tmp/cmux-debug-{tag}.sock")
+    socket_path = Path(f"/tmp/bree-debug-{tag}.sock")
     assert not socket_path.exists(), "Tag already has a running instance"
     prior = subprocess.run(["defaults", "read", bundle_id], capture_output=True)
     assert prior.returncode != 0, "Use a fresh tag with no saved preferences"
@@ -82,23 +82,23 @@ def main():
     process = None
     log = None
     results = []
-    with tempfile.TemporaryDirectory(prefix=f"cmux-crash-e2e-{tag}-") as directory:
+    with tempfile.TemporaryDirectory(prefix=f"bree-crash-e2e-{tag}-") as directory:
         root = Path(directory)
-        crash_dir = root / "state/cmux/crash"
+        crash_dir = root / "state/bree/crash"
         crash_dir.mkdir(parents=True)
         executable = app / "Contents/MacOS" / info["CFBundleExecutable"]
         private_reason = "Opening /Users/Jane Doe/Private Contract.pdf password=private-e2e-token"
         env = {key: value for key, value in os.environ.items()
-               if not key.startswith(("CMUX_", "XCTest", "XCInject", "TEST_RUNNER_"))}
+               if not key.startswith(("BREE_", "XCTest", "XCInject", "TEST_RUNNER_"))}
         env.update({
-            "CMUX_POSTHOG_ENABLE": "1",
-            "CMUX_POSTHOG_TEST_HOST": f"http://127.0.0.1:{server.server_port}",
-            "CMUX_POSTHOG_DEBUG": "1",
-            "CMUX_SOCKET_PATH": str(socket_path),
-            "CMUX_BUNDLE_ID": bundle_id,
+            "BREE_POSTHOG_ENABLE": "1",
+            "BREE_POSTHOG_TEST_HOST": f"http://127.0.0.1:{server.server_port}",
+            "BREE_POSTHOG_DEBUG": "1",
+            "BREE_SOCKET_PATH": str(socket_path),
+            "BREE_BUNDLE_ID": bundle_id,
             "XDG_STATE_HOME": str(root / "state"),
             "XDG_CONFIG_HOME": str(root / "config"),
-            "CMUXTERM_REPO_ROOT": str(root),
+            "BREE_REPO_ROOT": str(root),
         })
 
         def fixture(name, version, native=False):
@@ -106,7 +106,7 @@ def main():
                 "exception": {"values": [{"type": "EXC_BAD_ACCESS", "value": private_reason,
                                            "mechanism": {"type": "mach", "handled": False}}]},
                 "contexts": {"app": {"app_version": version, "app_build": "6422",
-                                      "app_identifier": "com.cmuxterm.app"}},
+                                      "app_identifier": "com.bree.app"}},
                 "debug_meta": {"images": [{"code_file": str(executable)}]},
             }
             if native:
@@ -178,9 +178,9 @@ def main():
             # direct execution from SSH can land outside that GUI session.
             command = ["open", "-n", "-W", "-g", "-a", str(app),
                        "--stdout", str(log_path), "--stderr", str(log_path)]
-            for key in ["CMUX_POSTHOG_ENABLE", "CMUX_POSTHOG_TEST_HOST", "CMUX_POSTHOG_DEBUG",
-                        "CMUX_SOCKET_PATH", "CMUX_BUNDLE_ID", "XDG_STATE_HOME", "XDG_CONFIG_HOME",
-                        "CMUXTERM_REPO_ROOT"]:
+            for key in ["BREE_POSTHOG_ENABLE", "BREE_POSTHOG_TEST_HOST", "BREE_POSTHOG_DEBUG",
+                        "BREE_SOCKET_PATH", "BREE_BUNDLE_ID", "XDG_STATE_HOME", "XDG_CONFIG_HOME",
+                        "BREE_REPO_ROOT"]:
                 command.extend(["--env", f"{key}={env[key]}"])
             process = subprocess.Popen(command, cwd=root, env=env, stdout=log, stderr=log)
             # Wait for the launched process, not just the asynchronous `open`
@@ -192,13 +192,13 @@ def main():
             properties = event["properties"]
             assert properties["crash_app_version"] == version, properties
             assert properties["crash_app_build"] == (info["CFBundleVersion"] if native else "6422"), properties
-            assert properties["crash_app_namespace"] == (bundle_id if native else "com.cmuxterm.app"), properties
+            assert properties["crash_app_namespace"] == (bundle_id if native else "com.bree.app"), properties
             assert properties["app_version"] == info["CFBundleShortVersionString"], properties
             assert properties["$app_namespace"] == bundle_id, properties
             assert properties["$app_version"] == info["CFBundleShortVersionString"], properties
             assert str(properties["$app_build"]) == str(info["CFBundleVersion"]), properties
             expected_type = "UnknownCrash" if native else "EXC_BAD_ACCESS"
-            assert properties["$exception_fingerprint"] == f"cmux-mac-crash:{expected_type}"
+            assert properties["$exception_fingerprint"] == f"bree-mac-crash:{expected_type}"
             assert properties["$exception_list"][0]["value"] == "Previous launch crashed"
             serialized = json.dumps(event)
             assert "private-e2e-token" not in serialized and "Jane Doe" not in serialized

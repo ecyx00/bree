@@ -1,15 +1,15 @@
 #if DEBUG
 import AppKit
-import CmuxBrowser
-import CmuxTestSupport
+import BreeBrowser
+import BreeTestSupport
 import Foundation
 import SwiftUI
 
 /// Debug-only state and capture support for the downloads-popover appearance UI test.
 @MainActor
 struct BrowserDownloadsPopoverAppearanceUITestSupport {
-    private static let probePathEnvironmentKey = "CMUX_UI_TEST_DOWNLOADS_POPOVER_APPEARANCE_PATH"
-    private static let fixturePathEnvironmentKey = "CMUX_UI_TEST_DOWNLOADS_POPOVER_FIXTURE_PATH"
+    private static let probePathEnvironmentKey = "BREE_UI_TEST_DOWNLOADS_POPOVER_APPEARANCE_PATH"
+    private static let fixturePathEnvironmentKey = "BREE_UI_TEST_DOWNLOADS_POPOVER_FIXTURE_PATH"
 
     private let environment: [String: String]
     private let sink: UITestCaptureSink

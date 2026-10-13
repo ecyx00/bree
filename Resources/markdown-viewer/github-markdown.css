@@ -1226,48 +1226,48 @@
 }
 
 /* Obsidian vault notes: callouts, properties, tags, wikilinks, embeds, backlinks.
-   Callouts reuse the .markdown-alert look; --cmux-callout-color is set per type. */
-.markdown-body .cmux-callout {
-  --cmux-callout-color: var(--fgColor-accent);
+   Callouts reuse the .markdown-alert look; --bree-callout-color is set per type. */
+.markdown-body .bree-callout {
+  --bree-callout-color: var(--fgColor-accent);
   padding: var(--base-size-8) var(--base-size-16);
   margin-bottom: var(--base-size-16);
-  border-left: .25em solid var(--cmux-callout-color);
-  background: color-mix(in srgb, var(--cmux-callout-color) 8%, transparent);
+  border-left: .25em solid var(--bree-callout-color);
+  background: color-mix(in srgb, var(--bree-callout-color) 8%, transparent);
   border-radius: 0 6px 6px 0;
 }
 
-.markdown-body .cmux-callout-title {
+.markdown-body .bree-callout-title {
   display: block;
   font-weight: var(--base-text-weight-medium, 500);
-  color: var(--cmux-callout-color);
+  color: var(--bree-callout-color);
 }
 
-.markdown-body details.cmux-callout > summary {
+.markdown-body details.bree-callout > summary {
   cursor: pointer;
 }
 
-.markdown-body .cmux-callout-body > :first-child {
+.markdown-body .bree-callout-body > :first-child {
   margin-top: var(--base-size-8);
 }
 
-.markdown-body .cmux-callout-body > :last-child {
+.markdown-body .bree-callout-body > :last-child {
   margin-bottom: 0;
 }
 
-.markdown-body .cmux-callout-abstract,
-.markdown-body .cmux-callout-info,
-.markdown-body .cmux-callout-example { --cmux-callout-color: var(--fgColor-accent); }
-.markdown-body .cmux-callout-todo,
-.markdown-body .cmux-callout-question { --cmux-callout-color: var(--fgColor-attention); }
-.markdown-body .cmux-callout-tip,
-.markdown-body .cmux-callout-success { --cmux-callout-color: var(--fgColor-success); }
-.markdown-body .cmux-callout-warning { --cmux-callout-color: var(--fgColor-attention); }
-.markdown-body .cmux-callout-failure,
-.markdown-body .cmux-callout-danger,
-.markdown-body .cmux-callout-bug { --cmux-callout-color: var(--fgColor-danger); }
-.markdown-body .cmux-callout-quote { --cmux-callout-color: var(--fgColor-muted); }
+.markdown-body .bree-callout-abstract,
+.markdown-body .bree-callout-info,
+.markdown-body .bree-callout-example { --bree-callout-color: var(--fgColor-accent); }
+.markdown-body .bree-callout-todo,
+.markdown-body .bree-callout-question { --bree-callout-color: var(--fgColor-attention); }
+.markdown-body .bree-callout-tip,
+.markdown-body .bree-callout-success { --bree-callout-color: var(--fgColor-success); }
+.markdown-body .bree-callout-warning { --bree-callout-color: var(--fgColor-attention); }
+.markdown-body .bree-callout-failure,
+.markdown-body .bree-callout-danger,
+.markdown-body .bree-callout-bug { --bree-callout-color: var(--fgColor-danger); }
+.markdown-body .bree-callout-quote { --bree-callout-color: var(--fgColor-muted); }
 
-.markdown-body table.cmux-props {
+.markdown-body table.bree-props {
   display: table;
   width: auto;
   max-width: 100%;
@@ -1275,20 +1275,20 @@
   border-left: .25em solid var(--borderColor-default);
 }
 
-.markdown-body table.cmux-props th,
-.markdown-body table.cmux-props td {
+.markdown-body table.bree-props th,
+.markdown-body table.bree-props td {
   padding: 2px .75rem;
   border: 0;
   background: transparent;
 }
 
-.markdown-body table.cmux-props th {
+.markdown-body table.bree-props th {
   color: var(--fgColor-muted);
   font-weight: var(--base-text-weight-normal, 400);
   text-align: left;
 }
 
-.markdown-body .cmux-tag {
+.markdown-body .bree-tag {
   display: inline-block;
   padding: 0 .5em;
   border-radius: 2em;
@@ -1297,41 +1297,41 @@
   background: color-mix(in srgb, var(--fgColor-accent) 12%, transparent);
 }
 
-.markdown-body a.cmux-wikilink {
+.markdown-body a.bree-wikilink {
   color: var(--fgColor-accent);
   text-decoration: none;
   cursor: pointer;
 }
 
-.markdown-body a.cmux-wikilink:hover {
+.markdown-body a.bree-wikilink:hover {
   text-decoration: underline;
 }
 
-.markdown-body .cmux-wikilink-missing {
+.markdown-body .bree-wikilink-missing {
   opacity: .5;
   cursor: default;
 }
 
-.markdown-body a.cmux-wikilink.cmux-wikilink-missing:hover {
+.markdown-body a.bree-wikilink.bree-wikilink-missing:hover {
   text-decoration: none;
 }
 
-.markdown-body blockquote.cmux-embed {
+.markdown-body blockquote.bree-embed {
   padding: 0 var(--base-size-16);
 }
 
-.markdown-body .cmux-embed-title {
+.markdown-body .bree-embed-title {
   font-weight: var(--base-text-weight-medium, 500);
   color: var(--fgColor-muted);
 }
 
-.markdown-body .cmux-backlinks {
+.markdown-body .bree-backlinks {
   margin-top: 1.5rem;
   padding-top: var(--base-size-8);
   border-top: 1px solid var(--borderColor-muted);
 }
 
-.markdown-body .cmux-backlinks h2 {
+.markdown-body .bree-backlinks h2 {
   font-size: 1em;
   padding-bottom: 0;
   border-bottom: 0;

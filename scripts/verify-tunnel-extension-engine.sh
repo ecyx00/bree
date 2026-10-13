@@ -14,14 +14,14 @@
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
-  echo "usage: $0 <cmuxTunnel binary or libwg-go.a>" >&2
+  echo "usage: $0 <breeTunnel binary or libwg-go.a>" >&2
   exit 2
 fi
 BINARY="$1"
 [[ -f "$BINARY" ]] || { echo "error: missing tunnel engine binary at $BINARY" >&2; exit 1; }
 
-OTOOL="${CMUX_OTOOL:-otool}"
-NM="${CMUX_NM:-nm}"
+OTOOL="${BREE_OTOOL:-otool}"
+NM="${BREE_NM:-nm}"
 
 # Do not use grep -q in these pipelines. With pipefail enabled, grep can close
 # the pipe after the first match and make otool/nm exit with SIGPIPE. That made

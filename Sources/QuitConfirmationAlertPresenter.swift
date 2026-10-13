@@ -17,7 +17,7 @@ final class QuitConfirmationAlertPresenter: NSObject, NSWindowDelegate {
     ) {
         self.alert = alert ?? Self.makeAlert()
         self.presentingWindowProvider = presentingWindowProvider ?? {
-            NSApp.cmuxMainWindowForModalPresentation()
+            NSApp.breeMainWindowForModalPresentation()
         }
         self.completion = completion
         super.init()
@@ -33,9 +33,9 @@ final class QuitConfirmationAlertPresenter: NSObject, NSWindowDelegate {
     private static func makeAlert() -> NSAlert {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = String(localized: "dialog.quitCmux.title", defaultValue: "Quit Bree?")
-        alert.informativeText = String(localized: "dialog.quitCmux.message", defaultValue: "This will close all windows and workspaces.")
-        alert.addButton(withTitle: String(localized: "dialog.quitCmux.quit", defaultValue: "Quit"))
+        alert.messageText = String(localized: "dialog.quitBree.title", defaultValue: "Quit Bree?")
+        alert.informativeText = String(localized: "dialog.quitBree.message", defaultValue: "This will close all windows and workspaces.")
+        alert.addButton(withTitle: String(localized: "dialog.quitBree.quit", defaultValue: "Quit"))
         alert.addButton(withTitle: String(localized: "common.cancel", defaultValue: "Cancel"))
         alert.showsSuppressionButton = true
         alert.suppressionButton?.title = String(localized: "dialog.dontWarnCmdQ", defaultValue: "Don't warn again for Cmd+Q")

@@ -11,13 +11,13 @@ production checks in CI's `static-preflight` job and parses changed Swift files.
 CI keeps the full static recipe; local `--all` runs that same recipe without
 Swift parsing. No downloads, dependency installation, app launch or provider
 credentials are needed. Swift parsing needs `swiftc` on PATH. Python 3, Bash, Git, and standard
-Unix tools must be available. Run only in a trusted CMUX checkout: the command
+Unix tools must be available. Run only in a trusted BREE checkout: the command
 executes that checkout's existing scripts.
 
 It catches malformed localization catalogs, stale generated policy, project
 configuration errors, Swift tests omitted from their Xcode target, package
 layout mistakes and feature-flag policy violations. For example, adding
-`cmuxTests/NewTests.swift` without target membership fails immediately with the
+`breeTests/NewTests.swift` without target membership fails immediately with the
 filename, before an expensive build or a misleading zero-test run.
 
 ## Automatic selection
@@ -67,7 +67,7 @@ untracked files; matching observations still do not establish an exact snapshot.
 python3 scripts/verify-local.py --all --list
 python3 scripts/verify-local.py --only project --only test-wiring
 python3 scripts/verify-local.py --only localization
-python3 scripts/verify-local.py --receipt /tmp/cmux-preflight.json
+python3 scripts/verify-local.py --receipt /tmp/bree-preflight.json
 ```
 
 For a Swift edit, let Git select the files to parse before a native build:
@@ -122,7 +122,7 @@ untracked files whose Git status stays unchanged. These observations still do no
 establish an isolated snapshot of the entire checkout.
 
 The `swift-failed.json` and `swift-repaired.json` examples replay the PR-head file
-behind [a real CI syntax failure](https://github.com/manaflow-ai/cmux/actions/runs/35525568719/job/106117704441).
+behind [a real CI syntax failure](https://github.com/ecyx00/bree/actions/runs/35525568719/job/106117704441).
 That CI compile step lasted 12m14s. The local parser rejected the original file in
 0.132s and accepted the missing-backslash repair in 0.075s on the recorded compiler.
 Those are single observations, not a build-speed benchmark or proof that the
@@ -136,7 +136,7 @@ it does not assert that the entire CI checkout equals the PR head.
 | `localization-defaults` | Swift `defaultValue` literals consume the same format arguments as their catalog `en` value |
 | `project-tests` | Five project normalizer unit tests at the demonstrated revision; counts are read from each execution |
 | `project` | Xcode project version pin and normalization |
-| `config-schema` | Embedded cmux.json schema matches its source |
+| `config-schema` | Embedded bree.json schema matches its source |
 | `test-wiring-sync` | Test-wiring synchronization tool regression suite |
 | `wire-app-sources` | App-source wiring tool regression suite |
 | `ui-lab` | ui-lab harness directive regression suite |
@@ -168,7 +168,7 @@ readiness. Existing CI policy and native execution owners remain authoritative.
 
 ## Evidence for handoff
 
-`--receipt` writes `cmux-verification/v1` JSON. Keep the file outside the checkout.
+`--receipt` writes `bree-verification/v1` JSON. Keep the file outside the checkout.
 It records each command's status, exit code, script/output hashes, duration,
 source observations and available test counts. Raw logs, environment variables
 and checkout paths are not copied into it. Human diagnostics remain local to

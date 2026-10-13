@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression tests for `cmux __tmux-compat split-window`.
+Regression tests for `bree __tmux-compat split-window`.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 from fake_socket_env import cli_environment, unwrap_capability
 
 WORKSPACE_ID = "11111111-1111-4111-8111-111111111111"
@@ -22,7 +22,7 @@ NEW_PANE_ID = "66666666-6666-4666-8666-666666666666"
 NEW_SURFACE_ID = "77777777-7777-4777-8777-777777777777"
 
 
-class FakeCmuxState:
+class FakeBreeState:
     def __init__(self) -> None:
         self.split_created = False
 
@@ -111,10 +111,10 @@ class FakeCmuxState:
             }
         if method == "workspace.equalize_splits":
             return {"ok": True}
-        raise RuntimeError(f"Unsupported fake cmux method: {method}")
+        raise RuntimeError(f"Unsupported fake bree method: {method}")
 
 
-class FakeCmuxHandler(socketserver.StreamRequestHandler):
+class FakeBreeHandler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         while True:
             line = self.rfile.readline()
@@ -139,12 +139,12 @@ class FakeCmuxHandler(socketserver.StreamRequestHandler):
             self.wfile.flush()
 
 
-class FakeCmuxUnixServer(socketserver.ThreadingUnixStreamServer):
+class FakeBreeUnixServer(socketserver.ThreadingUnixStreamServer):
     allow_reuse_address = True
 
-    def __init__(self, socket_path: str, state: FakeCmuxState) -> None:
+    def __init__(self, socket_path: str, state: FakeBreeState) -> None:
         self.state = state
-        super().__init__(socket_path, FakeCmuxHandler)
+        super().__init__(socket_path, FakeBreeHandler)
 
 
 def run_cli(
@@ -154,8 +154,8 @@ def run_cli(
     args: list[str],
 ) -> subprocess.CompletedProcess[str]:
     env = cli_environment(socket_path, home=fake_home)
-    env["CMUX_WORKSPACE_ID"] = "workspace:1"
-    env["CMUX_SURFACE_ID"] = "surface:1"
+    env["BREE_WORKSPACE_ID"] = "workspace:1"
+    env["BREE_SURFACE_ID"] = "surface:1"
     env["TMUX_PANE"] = "%pane:1"
     return subprocess.run(
         [cli_path, "--socket", str(socket_path), *args],
@@ -216,17 +216,17 @@ def assert_resplit_after_close(
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
     try:
-        with tempfile.TemporaryDirectory(prefix="cmux-tmux-surface-ref-") as td:
+        with tempfile.TemporaryDirectory(prefix="bree-tmux-surface-ref-") as td:
             tmp = Path(td)
-            socket_path = tmp / "fake-cmux.sock"
-            state = FakeCmuxState()
-            server = FakeCmuxUnixServer(str(socket_path), state)
+            socket_path = tmp / "fake-bree.sock"
+            state = FakeBreeState()
+            server = FakeBreeUnixServer(str(socket_path), state)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             fake_home = tmp / "home"

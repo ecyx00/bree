@@ -1,34 +1,34 @@
 @MainActor
 enum GhosttySurfaceConfigurationRefresh {
     nonisolated static let forceRefreshReason = "appDelegate.refreshAfterGhosttyConfigReload"
-    nonisolated static let cmuxThemeReloadLegacySource = "distributed.cmux.themes"
-    nonisolated static let cmuxThemeReloadPreviewSource = "distributed.cmux.themes.preview"
-    nonisolated static let cmuxThemeReloadFinalSource = "distributed.cmux.themes.final"
-    nonisolated static let cmuxThemePreviewReloadDebounceMilliseconds = 180
+    nonisolated static let breeThemeReloadLegacySource = "distributed.bree.themes"
+    nonisolated static let breeThemeReloadPreviewSource = "distributed.bree.themes.preview"
+    nonisolated static let breeThemeReloadFinalSource = "distributed.bree.themes.final"
+    nonisolated static let breeThemePreviewReloadDebounceMilliseconds = 180
 
-    nonisolated static func cmuxThemeReloadSource(phase: String?) -> String {
+    nonisolated static func breeThemeReloadSource(phase: String?) -> String {
         switch phase {
         case "final", "apply":
-            return cmuxThemeReloadFinalSource
+            return breeThemeReloadFinalSource
         case "preview":
-            return cmuxThemeReloadPreviewSource
+            return breeThemeReloadPreviewSource
         default:
-            return cmuxThemeReloadLegacySource
+            return breeThemeReloadLegacySource
         }
     }
 
-    nonisolated static func shouldDebounceCmuxThemeReload(source: String) -> Bool {
+    nonisolated static func shouldDebounceBreeThemeReload(source: String) -> Bool {
         switch source {
-        case cmuxThemeReloadLegacySource, cmuxThemeReloadPreviewSource:
+        case breeThemeReloadLegacySource, breeThemeReloadPreviewSource:
             return true
         default:
             return false
         }
     }
 
-    nonisolated static func isCmuxThemeReloadSource(_ source: String) -> Bool {
+    nonisolated static func isBreeThemeReloadSource(_ source: String) -> Bool {
         switch source {
-        case cmuxThemeReloadLegacySource, cmuxThemeReloadPreviewSource, cmuxThemeReloadFinalSource:
+        case breeThemeReloadLegacySource, breeThemeReloadPreviewSource, breeThemeReloadFinalSource:
             return true
         default:
             return false

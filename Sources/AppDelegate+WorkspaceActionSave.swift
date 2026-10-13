@@ -28,7 +28,7 @@ final class WorkspaceDefaultLayoutBox: NSObject {
     }
 }
 
-/// Read-only projection of the live cmux.json action registry for native
+/// Read-only projection of the live bree.json action registry for native
 /// discovery UI. It deliberately carries only resolved action metadata and
 /// effective placements; execution stays on the existing action paths.
 struct ActionsAndLaunchersDiscoveryModel: Equatable {
@@ -73,13 +73,13 @@ struct ActionsAndLaunchersDiscoveryModel: Equatable {
     let entries: [Entry]
 
     static func build(
-        actions: [CmuxResolvedConfigAction],
+        actions: [BreeResolvedConfigAction],
         resolvedNewWorkspaceActionID: String?,
         newWorkspaceMenuActionIDs: Set<String>,
         surfaceTabBarActionIDs: Set<String>
     ) -> ActionsAndLaunchersDiscoveryModel {
         let entries = actions.compactMap { action -> Entry? in
-            // Built-ins that only come from cmux itself add noise here. An
+            // Built-ins that only come from bree itself add noise here. An
             // overridden built-in has a source path and remains discoverable.
             guard let sourcePath = action.actionSourcePath else { return nil }
             let shortcutDisplay = action.shortcut.flatMap { shortcut in
@@ -122,7 +122,7 @@ struct ActionsAndLaunchersDiscoveryModel: Equatable {
         .joined(separator: "\n\n")
     }
 
-    private static func actionType(_ action: CmuxSurfaceTabBarButtonAction) -> String {
+    private static func actionType(_ action: BreeSurfaceTabBarButtonAction) -> String {
         switch action {
         case .builtIn:
             return "builtin"
@@ -168,31 +168,31 @@ extension AppDelegate {
         .compactMap { contextForMainWindow($0) }
         .first
 
-        let cmuxConfigStore: CmuxConfigStore
-        if let activeStore = context?.cmuxConfigStore {
-            cmuxConfigStore = activeStore
+        let breeConfigStore: BreeConfigStore
+        if let activeStore = context?.breeConfigStore {
+            breeConfigStore = activeStore
         } else {
-            let globalStore = CmuxConfigStore()
+            let globalStore = BreeConfigStore()
             globalStore.loadAll()
-            cmuxConfigStore = globalStore
+            breeConfigStore = globalStore
         }
 
         let newWorkspaceMenuActionIDs = Set(
-            cmuxConfigStore.newWorkspaceContextMenuItems.compactMap { item -> String? in
+            breeConfigStore.newWorkspaceContextMenuItems.compactMap { item -> String? in
                 guard case .action(let menuAction) = item else { return nil }
                 return menuAction.action.id
             }
         )
         let model = ActionsAndLaunchersDiscoveryModel.build(
-            actions: cmuxConfigStore.loadedActions,
-            resolvedNewWorkspaceActionID: cmuxConfigStore.resolvedNewWorkspaceAction()?.id,
+            actions: breeConfigStore.loadedActions,
+            resolvedNewWorkspaceActionID: breeConfigStore.resolvedNewWorkspaceAction()?.id,
             newWorkspaceMenuActionIDs: newWorkspaceMenuActionIDs,
-            surfaceTabBarActionIDs: Set(cmuxConfigStore.surfaceTabBarActionReferenceIDs.values)
+            surfaceTabBarActionIDs: Set(breeConfigStore.surfaceTabBarActionReferenceIDs.values)
         )
 
         let alert = NSAlert()
         alert.messageText = Self.actionsAndLaunchersDialogTitle
-        alert.informativeText = (cmuxConfigStore.globalConfigPath as NSString).abbreviatingWithTildeInPath
+        alert.informativeText = (breeConfigStore.globalConfigPath as NSString).abbreviatingWithTildeInPath
         alert.accessoryView = actionsAndLaunchersAccessoryView(
             text: model.summaryText,
             entryCount: model.entries.count
@@ -200,7 +200,7 @@ extension AppDelegate {
         // The path is already shown in informativeText; keep the button label
         // short and fully localized.
         alert.addButton(withTitle: String(
-            localized: "menu.app.openCmuxSettingsFile",
+            localized: "menu.app.openBreeSettingsFile",
             defaultValue: "Open bree.json"
         ))
         alert.addButton(withTitle: String(
@@ -268,11 +268,11 @@ extension AppDelegate {
     private func handleActionsAndLaunchersResponse(_ response: NSApplication.ModalResponse) {
         switch response {
         case .alertFirstButtonReturn:
-            // Reuse the existing in-cmux config editor path used by Settings'
+            // Reuse the existing in-bree config editor path used by Settings'
             // workspace-layout customization.
             openWorkspaceLayoutsCustomization()
         case .alertSecondButtonReturn:
-            guard let url = URL(string: "https://cmux.com/docs/custom-commands") else { return }
+            guard let url = URL(string: "https://github.com/ecyx00/bree/blob/main/docs/configuration.md") else { return }
             NSWorkspace.shared.open(url)
         default:
             break
@@ -283,21 +283,21 @@ extension AppDelegate {
     /// write) are deletable from the UI; project-local and built-in actions
     /// are not.
     func isDeletableGlobalAction(
-        _ action: CmuxResolvedConfigAction,
-        cmuxConfigStore: CmuxConfigStore
+        _ action: BreeResolvedConfigAction,
+        breeConfigStore: BreeConfigStore
     ) -> Bool {
         guard let sourcePath = action.actionSourcePath else { return false }
         func canonical(_ path: String) -> String {
             URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
         }
-        return canonical(sourcePath) == canonical(cmuxConfigStore.globalConfigPath)
+        return canonical(sourcePath) == canonical(breeConfigStore.globalConfigPath)
     }
 
     func openWorkspaceLayoutsCustomization() {
-        // Open inside cmux's own file editor rather than an external app — the
+        // Open inside bree's own file editor rather than an external app — the
         // OS-default handler for .json can be Xcode, which is never what
         // "customize my workspace layouts" means.
-        let configURL = SidebarWorkspaceGroupConfigOpener.materializedCmuxConfigURL()
+        let configURL = SidebarWorkspaceGroupConfigOpener.materializedBreeConfigURL()
         let targetContext = [
             NSApp.keyWindow,
             NSApp.mainWindow,
@@ -319,7 +319,7 @@ extension AppDelegate {
                   focus: true,
                   reuseExisting: true
               ).isEmpty else {
-            SidebarWorkspaceGroupConfigOpener.openCmuxConfigInEditor()
+            SidebarWorkspaceGroupConfigOpener.openBreeConfigInEditor()
             return
         }
     }
@@ -327,7 +327,7 @@ extension AppDelegate {
     @objc func deleteWorkspaceConfigActionMenuItem(_ sender: NSMenuItem) {
         guard let box = sender.representedObject as? WorkspaceActionDeleteBox,
               let context = mainWindowContexts.values.first(where: { $0.windowId == box.windowId }),
-              let cmuxConfigStore = context.cmuxConfigStore,
+              let breeConfigStore = context.breeConfigStore,
               let window = resolvedWindow(for: context) else {
             NSSound.beep()
             return
@@ -345,7 +345,7 @@ extension AppDelegate {
         alert.informativeText = String(
             format: messageFormat,
             box.actionTitle,
-            (cmuxConfigStore.globalConfigPath as NSString).abbreviatingWithTildeInPath
+            (breeConfigStore.globalConfigPath as NSString).abbreviatingWithTildeInPath
         )
         let deleteButton = alert.addButton(withTitle: String(
             localized: "dialog.deleteWorkspaceLayout.delete",
@@ -357,16 +357,16 @@ extension AppDelegate {
             defaultValue: "Cancel"
         ))
         let windowIdentifier = ObjectIdentifier(window)
-        alert.beginSheetModal(for: window) { [weak cmuxConfigStore] response in
-            guard response == .alertFirstButtonReturn, let cmuxConfigStore else { return }
+        alert.beginSheetModal(for: window) { [weak breeConfigStore] response in
+            guard response == .alertFirstButtonReturn, let breeConfigStore else { return }
             do {
-                try CmuxConfigActionSaver.deleteAction(
+                try BreeConfigActionSaver.deleteAction(
                     id: box.actionID,
-                    globalConfigPath: cmuxConfigStore.globalConfigPath
+                    globalConfigPath: breeConfigStore.globalConfigPath
                 )
-                cmuxConfigStore.loadAll()
+                breeConfigStore.loadAll()
 #if DEBUG
-                cmuxDebugLog("deleteWorkspaceAction.deleted id=\(box.actionID)")
+                breeDebugLog("deleteWorkspaceAction.deleted id=\(box.actionID)")
 #endif
             } catch {
                 guard let window = NSApp.windows.first(where: { ObjectIdentifier($0) == windowIdentifier }) else { return }
@@ -398,19 +398,19 @@ extension AppDelegate {
     @objc func setNewWorkspaceDefaultLayoutMenuItem(_ sender: NSMenuItem) {
         guard let box = sender.representedObject as? WorkspaceDefaultLayoutBox,
               let context = mainWindowContexts.values.first(where: { $0.windowId == box.windowId }),
-              let cmuxConfigStore = context.cmuxConfigStore,
+              let breeConfigStore = context.breeConfigStore,
               let window = resolvedWindow(for: context) else {
             NSSound.beep()
             return
         }
         do {
-            try CmuxConfigActionSaver.setNewWorkspaceDefaultAction(
+            try BreeConfigActionSaver.setNewWorkspaceDefaultAction(
                 id: box.actionID,
-                globalConfigPath: cmuxConfigStore.globalConfigPath
+                globalConfigPath: breeConfigStore.globalConfigPath
             )
-            cmuxConfigStore.loadAll()
+            breeConfigStore.loadAll()
 #if DEBUG
-            cmuxDebugLog("newWorkspaceDefaultLayout.updated id=\(box.actionID ?? "<none>")")
+            breeDebugLog("newWorkspaceDefaultLayout.updated id=\(box.actionID ?? "<none>")")
 #endif
         } catch {
             presentNewWorkspaceDefaultLayoutError(error, for: window)
@@ -418,7 +418,7 @@ extension AppDelegate {
     }
 
     private func presentSaveWorkspaceActionDialog(context: MainWindowContext) {
-        guard let cmuxConfigStore = context.cmuxConfigStore,
+        guard let breeConfigStore = context.breeConfigStore,
               let workspace = context.tabManager.selectedWorkspace,
               let window = resolvedWindow(for: context) else {
             NSSound.beep()
@@ -430,7 +430,7 @@ extension AppDelegate {
             defer { self.saveWorkspaceActionTasks[context.windowId] = nil }
             await self.presentSaveWorkspaceActionDialog(
                 workspace: workspace,
-                cmuxConfigStore: cmuxConfigStore,
+                breeConfigStore: breeConfigStore,
                 window: window
             )
         }
@@ -439,7 +439,7 @@ extension AppDelegate {
 
     private func presentSaveWorkspaceActionDialog(
         workspace: Workspace,
-        cmuxConfigStore: CmuxConfigStore,
+        breeConfigStore: BreeConfigStore,
         window: NSWindow
     ) async {
         let snapshot: WorkspaceConfigActionSnapshot
@@ -451,7 +451,7 @@ extension AppDelegate {
             return
         }
         guard window.isVisible, !Task.isCancelled else { return }
-        let globalConfigPath = cmuxConfigStore.globalConfigPath
+        let globalConfigPath = breeConfigStore.globalConfigPath
         if !snapshot.oversizedCommands.isEmpty {
             presentWorkspaceCommandTooLongAlert(for: window)
             return
@@ -497,7 +497,7 @@ extension AppDelegate {
         ))
 
         let windowIdentifier = ObjectIdentifier(window)
-        alert.beginSheetModal(for: window) { [weak cmuxConfigStore] response in
+        alert.beginSheetModal(for: window) { [weak breeConfigStore] response in
             guard response == .alertFirstButtonReturn else { return }
             let typedTitle = accessory.nameField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
             let title = typedTitle.isEmpty
@@ -509,19 +509,19 @@ extension AppDelegate {
             var definition = snapshot.definition
             definition.name = title
             do {
-                let result = try CmuxConfigActionSaver.saveWorkspaceAction(
+                let result = try BreeConfigActionSaver.saveWorkspaceAction(
                     title: title,
                     definition: definition,
                     globalConfigPath: globalConfigPath,
                     // Reserve every id the active store resolved (including
                     // project-local actions) so the saved global action can't
                     // be shadowed into a no-op.
-                    reservedActionIDs: cmuxConfigStore.map { Set($0.actionLookup.keys) } ?? []
+                    reservedActionIDs: breeConfigStore.map { Set($0.actionLookup.keys) } ?? []
                 )
                 var defaultUpdateError: Error?
                 if accessory.makeDefaultCheckbox.state == .on {
                     do {
-                        try CmuxConfigActionSaver.setNewWorkspaceDefaultAction(
+                        try BreeConfigActionSaver.setNewWorkspaceDefaultAction(
                             id: result.actionID,
                             globalConfigPath: globalConfigPath
                         )
@@ -531,13 +531,13 @@ extension AppDelegate {
                 }
                 // The app's store runs without file watchers; reload explicitly
                 // so the saved layout shows up in the menus right away.
-                cmuxConfigStore?.loadAll()
+                breeConfigStore?.loadAll()
                 if let defaultUpdateError,
                    let window = NSApp.windows.first(where: { ObjectIdentifier($0) == windowIdentifier }) {
                     self.presentNewWorkspaceDefaultLayoutError(defaultUpdateError, for: window)
                 }
 #if DEBUG
-                cmuxDebugLog("saveWorkspaceAction.saved id=\(result.actionID)")
+                breeDebugLog("saveWorkspaceAction.saved id=\(result.actionID)")
 #endif
             } catch {
                 guard let window = NSApp.windows.first(where: { ObjectIdentifier($0) == windowIdentifier }) else { return }

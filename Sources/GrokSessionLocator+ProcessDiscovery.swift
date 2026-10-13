@@ -4,7 +4,7 @@ extension GrokSessionLocator {
     /// Finds the latest Grok session persisted for the observed process working directory.
     func latestSessionID(
         for process: VaultObservedAgentProcess,
-        registration: CmuxVaultAgentRegistration
+        registration: BreeVaultAgentRegistration
     ) -> String? {
         guard let workingDirectory = processWorkingDirectory(for: process) else {
             return nil
@@ -40,7 +40,7 @@ extension GrokSessionLocator {
 
     private func processWorkingDirectory(for process: VaultObservedAgentProcess) -> String? {
         for rawValue in [
-            process.environment["CMUX_AGENT_LAUNCH_CWD"],
+            process.environment["BREE_AGENT_LAUNCH_CWD"],
             process.environment["PWD"],
         ] {
             guard let workingDirectory = Self.normalizedWorkingDirectory(rawValue),

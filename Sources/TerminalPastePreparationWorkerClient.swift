@@ -1,15 +1,15 @@
-import CmuxTerminal
+import BreeTerminal
 import Foundation
 
 /// Launches one killable paste worker and adopts its validated output files.
 struct TerminalPastePreparationWorkerClient: Sendable {
-    static let workerModeArgument = "--cmux-paste-preparation-worker"
+    static let workerModeArgument = "--bree-paste-preparation-worker"
     static let workingDirectoryArgument =
-        "--cmux-paste-preparation-working-directory"
+        "--bree-paste-preparation-working-directory"
     static let requestFilename = "request.json"
     static let responseFilename = "response.json"
     static let maximumResponseSize = 12 * 1024 * 1024
-    static let workingDirectoryPrefix = "cmux-paste-preparation-"
+    static let workingDirectoryPrefix = "bree-paste-preparation-"
 
     private let executableURL: URL
     private let pasteboardService: TerminalPasteboardService?
@@ -20,7 +20,7 @@ struct TerminalPastePreparationWorkerClient: Sendable {
         executableURL: URL,
         pasteboardService: TerminalPasteboardService,
         plainTextExecutableURL: URL? = Bundle.main.url(
-            forResource: "cmux-paste-text-worker",
+            forResource: "bree-paste-text-worker",
             withExtension: nil,
             subdirectory: "bin"
         ),
@@ -50,7 +50,7 @@ struct TerminalPastePreparationWorkerClient: Sendable {
             executableURL: binary,
             pasteboardService: pasteboardService,
             plainTextExecutableURL: Bundle.main.url(
-                forResource: "cmux-paste-text-worker",
+                forResource: "bree-paste-text-worker",
                 withExtension: nil,
                 subdirectory: "bin"
             ),
@@ -130,7 +130,7 @@ struct TerminalPastePreparationWorkerClient: Sendable {
            let plainTextExecutableURL {
             status = try await runWorker(
                 executable: plainTextExecutableURL,
-                modeArgument: "--cmux-plain-text-paste-worker",
+                modeArgument: "--bree-plain-text-paste-worker",
                 workingDirectory: workingDirectory
             )
         }

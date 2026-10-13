@@ -16,30 +16,30 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VALIDATOR = ROOT / "cmux-tui/dist/scripts/validate_package_contract.py"
-PYPI_BUILDER = ROOT / "cmux-tui/dist/scripts/package_pypi.py"
+VALIDATOR = ROOT / "bree-tui/dist/scripts/validate_package_contract.py"
+PYPI_BUILDER = ROOT / "bree-tui/dist/scripts/package_pypi.py"
 
 VERSION = "1.2.3"
 NPM_TARGETS = {
-    "cmux-tui-darwin-arm64": ("darwin", "arm64"),
-    "cmux-tui-darwin-x64": ("darwin", "x64"),
-    "cmux-tui-linux-x64": ("linux", "x64"),
-    "cmux-tui-linux-arm64": ("linux", "arm64"),
+    "bree-tui-darwin-arm64": ("darwin", "arm64"),
+    "bree-tui-darwin-x64": ("darwin", "x64"),
+    "bree-tui-linux-x64": ("linux", "x64"),
+    "bree-tui-linux-arm64": ("linux", "arm64"),
 }
 RELAY_TARGETS = {
-    name.replace("cmux-tui", "cmux-relay"): value
+    name.replace("bree-tui", "bree-relay"): value
     for name, value in NPM_TARGETS.items()
 }
 
-RELAY_LAUNCHER = ROOT / "cmux-tui/dist/npm/cmux-relay/bin/cmux-relay.js"
-NPM_BUILDER = ROOT / "cmux-tui/dist/scripts/package_npm.py"
-SSH_MANIFEST = "bin/cmux-tui-ssh/manifest.json"
+RELAY_LAUNCHER = ROOT / "bree-tui/dist/npm/bree-relay/bin/bree-relay.js"
+NPM_BUILDER = ROOT / "bree-tui/dist/scripts/package_npm.py"
+SSH_MANIFEST = "bin/bree-tui-ssh/manifest.json"
 BUILD_COMMIT = "0123456789abcdef0123456789abcdef01234567"
 SSH_ARTIFACTS = {
-    "cmux-tui-aarch64-unknown-linux-musl": "cmux-tui-linux-arm64",
-    "cmux-tui-x86_64-unknown-linux-musl": "cmux-tui-linux-x64",
-    "cmux-tui-aarch64-apple-darwin": "cmux-tui-darwin-arm64",
-    "cmux-tui-x86_64-apple-darwin": "cmux-tui-darwin-x64",
+    "bree-tui-aarch64-unknown-linux-musl": "bree-tui-linux-arm64",
+    "bree-tui-x86_64-unknown-linux-musl": "bree-tui-linux-x64",
+    "bree-tui-aarch64-apple-darwin": "bree-tui-darwin-arm64",
+    "bree-tui-x86_64-apple-darwin": "bree-tui-darwin-x64",
 }
 
 
@@ -48,20 +48,20 @@ def host_npm_target() -> str:
     machine = platform.machine().lower()
     if system == "linux":
         if machine in {"aarch64", "arm64"}:
-            return "cmux-tui-linux-arm64"
+            return "bree-tui-linux-arm64"
         if machine in {"x86_64", "amd64"}:
-            return "cmux-tui-linux-x64"
+            return "bree-tui-linux-x64"
         raise RuntimeError(f"unsupported test host: {system}-{machine}")
     if system == "darwin":
         if machine in {"x86_64", "amd64"}:
-            return "cmux-tui-darwin-x64"
+            return "bree-tui-darwin-x64"
         if machine in {"aarch64", "arm64"}:
-            return "cmux-tui-darwin-arm64"
+            return "bree-tui-darwin-arm64"
         raise RuntimeError(f"unsupported test host: {system}-{machine}")
     raise RuntimeError(f"unsupported test host: {system}-{machine}")
 
 
-def write_executable(path: Path, output: str = "cmux-tui 1.2.3") -> None:
+def write_executable(path: Path, output: str = "bree-tui 1.2.3") -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(f"#!/bin/sh\nprintf '%s\\n' '{output}'\n")
     path.chmod(0o755)
@@ -84,29 +84,29 @@ function isEphemeralNpxPath(value) {
 }
 
 const packages = {
-  "darwin-arm64": "cmux-relay-darwin-arm64",
-  "darwin-x64": "cmux-relay-darwin-x64",
-  "linux-x64": "cmux-relay-linux-x64",
-  "linux-arm64": "cmux-relay-linux-arm64",
+  "darwin-arm64": "bree-relay-darwin-arm64",
+  "darwin-x64": "bree-relay-darwin-x64",
+  "linux-x64": "bree-relay-linux-x64",
+  "linux-arm64": "bree-relay-linux-arm64",
 };
 const key = `${process.platform}-${process.arch}`;
 if (process.platform === "win32") {
-  console.error("cmux-relay: unsupported_platform (the Rust machine relay requires a Unix PTY backend).");
+  console.error("bree-relay: unsupported_platform (the Rust machine relay requires a Unix PTY backend).");
   process.exit(1);
 }
 const pkg = packages[key];
-const executable = process.env.CMUX_RELAY_FIXTURE_EXECUTABLE || __filename;
+const executable = process.env.BREE_RELAY_FIXTURE_EXECUTABLE || __filename;
 if (process.argv.slice(2).includes("--autostart") && isEphemeralNpxPath(executable)) {
   console.error(
-    "Install cmux-relay globally (npm install --global cmux-relay) before --autostart.",
+    "Install bree-relay globally (npm install --global bree-relay) before --autostart.",
   );
   process.exit(2);
 }
 const binary = require.resolve(`${pkg}/bin/chatmux-relay`);
-const runtime = require.resolve(`${pkg}/bin/cmux-tui`);
+const runtime = require.resolve(`${pkg}/bin/bree-tui`);
 const result = spawnSync(binary, process.argv.slice(2), {
   stdio: "inherit",
-  env: { ...process.env, CHATMUX_RELAY_CMUX_TUI: runtime },
+  env: { ...process.env, CHATMUX_RELAY_BREE_TUI: runtime },
 });
 if (result.signal) process.kill(process.pid, result.signal);
 process.exit(result.status === null ? 1 : result.status);
@@ -159,12 +159,12 @@ process.exit(0);
 
 
 def write_ssh_manifests(root: Path) -> None:
-    """Pin every platform's packaged cmux-tui in every platform package."""
+    """Pin every platform's packaged bree-tui in every platform package."""
 
     manifest = {
         "commit": BUILD_COMMIT,
         "binaries": {
-            artifact: hashlib.sha256((root / package / "bin/cmux-tui").read_bytes()).hexdigest()
+            artifact: hashlib.sha256((root / package / "bin/bree-tui").read_bytes()).hexdigest()
             for artifact, package in SSH_ARTIFACTS.items()
         },
     }
@@ -186,13 +186,13 @@ def make_npm_packages(root: Path) -> None:
                     "version": VERSION,
                     "os": [os_name],
                     "cpu": [cpu],
-                    "files": ["bin/cmux-tui", "bin/cmux-tui-hook", SSH_MANIFEST],
+                    "files": ["bin/bree-tui", "bin/bree-tui-hook", SSH_MANIFEST],
                 }
             )
             + "\n"
         )
-        write_executable(package / "bin/cmux-tui", f"cmux-tui 1.2.3 {name}")
-        write_executable(package / "bin/cmux-tui-hook", "cmux-tui-hook 1.2.3")
+        write_executable(package / "bin/bree-tui", f"bree-tui 1.2.3 {name}")
+        write_executable(package / "bin/bree-tui-hook", "bree-tui-hook 1.2.3")
     write_ssh_manifests(root)
 
     for name, (os_name, cpu) in RELAY_TARGETS.items():
@@ -205,23 +205,23 @@ def make_npm_packages(root: Path) -> None:
                     "version": VERSION,
                     "os": [os_name],
                     "cpu": [cpu],
-                    "files": ["bin/chatmux-relay", "bin/cmux-tui"],
+                    "files": ["bin/chatmux-relay", "bin/bree-tui"],
                 }
             )
             + "\n"
         )
         write_relay_binary_fixture(package / "bin/chatmux-relay")
-        write_executable(package / "bin/cmux-tui")
+        write_executable(package / "bin/bree-tui")
 
-    launcher = root / "cmux"
+    launcher = root / "bree"
     launcher.mkdir()
     (launcher / "package.json").write_text(
         json.dumps(
             {
-                "name": "cmux",
+                "name": "bree",
                 "version": VERSION,
-                "bin": {"cmux": "bin/cmux.js"},
-                "files": ["bin/cmux.js"],
+                "bin": {"bree": "bin/bree.js"},
+                "files": ["bin/bree.js"],
                 "optionalDependencies": {
                     name: VERSION for name in NPM_TARGETS
                 },
@@ -230,19 +230,19 @@ def make_npm_packages(root: Path) -> None:
         + "\n"
     )
     write_executable(
-        launcher / "bin/cmux.js",
-        "cmux launcher 1.2.3",
+        launcher / "bin/bree.js",
+        "bree launcher 1.2.3",
     )
 
-    relay_launcher = root / "cmux-relay"
+    relay_launcher = root / "bree-relay"
     relay_launcher.mkdir()
     (relay_launcher / "package.json").write_text(
         json.dumps(
             {
-                "name": "cmux-relay",
+                "name": "bree-relay",
                 "version": VERSION,
-                "bin": {"cmux-relay": "bin/cmux-relay.js"},
-                "files": ["bin/cmux-relay.js"],
+                "bin": {"bree-relay": "bin/bree-relay.js"},
+                "files": ["bin/bree-relay.js"],
                 "optionalDependencies": {
                     name: VERSION for name in RELAY_TARGETS
                 },
@@ -250,7 +250,7 @@ def make_npm_packages(root: Path) -> None:
         )
         + "\n"
     )
-    write_relay_launcher_fixture(relay_launcher / "bin/cmux-relay.js")
+    write_relay_launcher_fixture(relay_launcher / "bin/bree-relay.js")
 
 
 def make_pypi_wheels(tmp_path: Path) -> Path:
@@ -262,8 +262,8 @@ def make_pypi_wheels(tmp_path: Path) -> Path:
         "x86_64-unknown-linux-musl",
         "aarch64-unknown-linux-musl",
     ):
-        write_executable(binaries / f"cmux-tui-{target}")
-        write_executable(binaries / f"cmux-tui-hook-{target}", "hook")
+        write_executable(binaries / f"bree-tui-{target}")
+        write_executable(binaries / f"bree-tui-hook-{target}", "hook")
 
     wheels = tmp_path / "wheels"
     result = subprocess.run(
@@ -322,7 +322,7 @@ def test_npm_relay_contract_installs_and_runs_isolated_smoke(tmp_path: Path) -> 
         "--version",
         VERSION,
         "--install-npm-relay-package",
-        host_npm_target().replace("cmux-tui", "cmux-relay"),
+        host_npm_target().replace("bree-tui", "bree-relay"),
     )
 
     assert result.returncode == 0, result.stderr
@@ -344,7 +344,7 @@ def test_host_npm_target_rejects_unknown_architecture() -> None:
 def test_npm_contract_rejects_missing_hook(tmp_path: Path) -> None:
     packages = tmp_path / "npm-packages"
     make_npm_packages(packages)
-    (packages / "cmux-tui-linux-x64/bin/cmux-tui-hook").unlink()
+    (packages / "bree-tui-linux-x64/bin/bree-tui-hook").unlink()
 
     result = run_validator(
         "--npm-packages",
@@ -354,13 +354,13 @@ def test_npm_contract_rejects_missing_hook(tmp_path: Path) -> None:
     )
 
     assert result.returncode != 0
-    assert "cmux-tui-hook" in result.stderr
+    assert "bree-tui-hook" in result.stderr
 
 
 def test_npm_contract_rejects_extra_file(tmp_path: Path) -> None:
     packages = tmp_path / "npm-packages"
     make_npm_packages(packages)
-    extra = packages / "cmux-tui-linux-x64/bin/extra"
+    extra = packages / "bree-tui-linux-x64/bin/extra"
     write_executable(extra)
 
     result = run_validator(
@@ -379,12 +379,12 @@ def test_npm_contract_rejects_ssh_digest_that_differs_from_the_packaged_binary(
 ) -> None:
     packages = tmp_path / "npm-packages"
     make_npm_packages(packages)
-    write_executable(packages / "cmux-tui-linux-arm64/bin/cmux-tui", "rebuilt after pinning")
+    write_executable(packages / "bree-tui-linux-arm64/bin/bree-tui", "rebuilt after pinning")
 
     result = run_validator("--npm-packages", str(packages), "--version", VERSION)
 
     assert result.returncode != 0
-    assert "cmux-tui-aarch64-unknown-linux-musl" in result.stderr, result.stderr
+    assert "bree-tui-aarch64-unknown-linux-musl" in result.stderr, result.stderr
 
 
 def test_npm_builder_pins_every_remote_binary_for_ssh_bootstrap(tmp_path: Path) -> None:
@@ -395,8 +395,8 @@ def test_npm_builder_pins_every_remote_binary_for_ssh_bootstrap(tmp_path: Path) 
         "x86_64-unknown-linux-musl",
         "aarch64-unknown-linux-musl",
     ):
-        write_executable(binaries / f"cmux-tui-{target}", f"cmux-tui {target}")
-        write_executable(binaries / f"cmux-tui-hook-{target}", "hook")
+        write_executable(binaries / f"bree-tui-{target}", f"bree-tui {target}")
+        write_executable(binaries / f"bree-tui-hook-{target}", "hook")
         write_relay_binary_fixture(binaries / f"chatmux-relay-{target}")
     packages = tmp_path / "npm-packages"
     built = subprocess.run(
@@ -419,12 +419,12 @@ def test_npm_builder_pins_every_remote_binary_for_ssh_bootstrap(tmp_path: Path) 
     )
     assert built.returncode == 0, built.stderr
 
-    manifest = json.loads((packages / "cmux-tui-darwin-arm64" / SSH_MANIFEST).read_text())
+    manifest = json.loads((packages / "bree-tui-darwin-arm64" / SSH_MANIFEST).read_text())
     assert manifest == {
         "commit": BUILD_COMMIT,
         "binaries": {
-            f"cmux-tui-{target}": hashlib.sha256(
-                (binaries / f"cmux-tui-{target}").read_bytes()
+            f"bree-tui-{target}": hashlib.sha256(
+                (binaries / f"bree-tui-{target}").read_bytes()
             ).hexdigest()
             for target in (
                 "aarch64-unknown-linux-musl",
@@ -445,13 +445,13 @@ def test_relay_launcher_preserves_native_signal_exit_status(tmp_path: Path) -> N
         return
 
     launcher_root = tmp_path / "launcher"
-    launcher = launcher_root / "cmux-relay.js"
+    launcher = launcher_root / "bree-relay.js"
     launcher_root.mkdir()
     shutil.copy2(RELAY_LAUNCHER, launcher)
     launcher.chmod(0o755)
 
     relay_package = launcher_root / "node_modules" / host_npm_target().replace(
-        "cmux-tui", "cmux-relay"
+        "bree-tui", "bree-relay"
     )
     relay_binary = relay_package / "bin" / "chatmux-relay"
     relay_binary.parent.mkdir(parents=True)
@@ -460,8 +460,8 @@ def test_relay_launcher_preserves_native_signal_exit_status(tmp_path: Path) -> N
         encoding="utf-8",
     )
     relay_binary.chmod(0o755)
-    runtime_binary = relay_package / "bin" / "cmux-tui"
-    write_executable(runtime_binary, "cmux-tui 1.2.3")
+    runtime_binary = relay_package / "bin" / "bree-tui"
+    write_executable(runtime_binary, "bree-tui 1.2.3")
 
     result = subprocess.run(
         ["node", str(launcher)],
@@ -488,13 +488,13 @@ def test_pypi_contract_requires_all_six_wheels_and_metadata(tmp_path: Path) -> N
     import zipfile
 
     wheel = next(wheels.glob("*.whl"))
-    dist_info = f"cmux-{VERSION}.dist-info"
+    dist_info = f"bree-{VERSION}.dist-info"
     with zipfile.ZipFile(wheel) as archive:
         metadata = archive.read(f"{dist_info}/METADATA").decode("utf-8")
     assert "Description-Content-Type: text/markdown\n" in metadata
     description = metadata.split("\n\n", 1)[1].strip()
-    assert description.startswith("# cmux\n")
-    assert "python -m pip install cmux" in description
+    assert description.startswith("# bree\n")
+    assert "python -m pip install bree" in description
 
     wheel = next(wheels.glob("*macosx_11_0_arm64.whl"))
     wheel.unlink()
@@ -518,7 +518,7 @@ def test_pypi_contract_rejects_non_executable_hook(tmp_path: Path) -> None:
     with zipfile.ZipFile(wheel) as source, zipfile.ZipFile(rewritten, "w") as target:
         for info in source.infolist():
             data = source.read(info.filename)
-            if info.filename == "cmux_tui/bin/cmux-tui-hook":
+            if info.filename == "bree_tui/bin/bree-tui-hook":
                 info.external_attr = (stat.S_IFREG | 0o644) << 16
             target.writestr(info, data)
     wheel.unlink()
@@ -548,7 +548,7 @@ def main() -> None:
         test_pypi_contract_rejects_non_executable_hook,
     )
     for test in tests:
-        with tempfile.TemporaryDirectory(prefix="cmux-tui-contract-test-") as directory:
+        with tempfile.TemporaryDirectory(prefix="bree-tui-contract-test-") as directory:
             test(Path(directory))
 
 

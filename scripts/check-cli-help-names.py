@@ -3,10 +3,10 @@
 
 Usage: scripts/check-cli-help-names.py [path-to-cli-binary] [--show]
 
-Runs the binary sandboxed (empty HOME, no CMUX_* env, dead socket path, per-command timeout) so a
+Runs the binary sandboxed (empty HOME, no BREE_* env, dead socket path, per-command timeout) so a
 subcommand that does not intercept --help cannot touch real configs or a running app.
-Exit 1 when any help text still prints the word "cmux" outside the kept path categories
-(cmux.json, ~/.config/cmux, /tmp/cmux*, cmux.com URLs, github.com/.../cmux).
+Exit 1 when any help text still prints the word "bree" outside the kept path categories
+(bree.json, ~/.config/bree, /tmp/bree*, github.com/ecyx00/bree URLs, github.com/.../bree).
 """
 import os
 import re
@@ -17,25 +17,25 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LEGACY = re.compile(r"cmux")
-# Path names that stay on purpose (shared with the real cmux.app config dir). Socket and agent plugin file names are NOT kept.
+LEGACY = re.compile(r"bree")
+# Path names that stay on purpose (shared with the real bree.app config dir). Socket and agent plugin file names are NOT kept.
 KEPT = re.compile(
-    r"(~?/?\.config/cmux\S*|cmux\.json|/tmp/cmux\S*|"
-    r"https?://\S*cmux\S*|\.cmux/\S*|\.cmuxterm\S*|cmux\.xcodeproj|"
-    r"\.cache/cmux\S*|cmuxd-remote|cmuxterm-hq|cmux-json|cmux-tui)"
+    r"(~?/?\.config/bree\S*|bree\.json|/tmp/bree\S*|"
+    r"https?://\S*bree\S*|\.bree/\S*|\.bree\S*|bree\.xcodeproj|"
+    r"\.cache/bree\S*|breed-remote|bree-hq|bree-json|bree-tui)"
 )
 
 
 def default_binary() -> str:
-    env = os.environ.get("CMUX_CLI_BIN")
+    env = os.environ.get("BREE_CLI_BIN")
     if env:
         return env
-    for base in sorted((Path.home() / "Library/Developer/Xcode/DerivedData").glob("cmux-bree/Build/Products/Debug/*bree.app")):
-        for name in ("bree", "cmux"):
+    for base in sorted((Path.home() / "Library/Developer/Xcode/DerivedData").glob("bree-bree/Build/Products/Debug/*bree.app")):
+        for name in ("bree", "bree"):
             p = base / "Contents/Resources/bin" / name
             if p.exists():
                 return str(p)
-    sys.exit("pass the CLI binary path or set CMUX_CLI_BIN")
+    sys.exit("pass the CLI binary path or set BREE_CLI_BIN")
 
 
 def run(binary: str, args: list[str], home: str, lang: str) -> str:
@@ -43,7 +43,7 @@ def run(binary: str, args: list[str], home: str, lang: str) -> str:
         "PATH": "/usr/bin:/bin",
         "HOME": home,
         "CODEX_HOME": home,
-        "CMUX_SOCKET_PATH": "/nonexistent/none.sock",
+        "BREE_SOCKET_PATH": "/nonexistent/none.sock",
         "LANG": lang,
         "AppleLanguages": f"({lang})",
         "TERM": "dumb",
@@ -58,7 +58,7 @@ def run(binary: str, args: list[str], home: str, lang: str) -> str:
 def subcommands(text: str, parent: list[str]) -> set[tuple[str, ...]]:
     found = set()
     for line in text.splitlines():
-        m = re.match(r"^\s{2,6}(?:(?:cmux|bree)\s+)?([a-z][a-z0-9-]+)(?:\s+([a-z][a-z0-9-]+))?(?=\s|$|\|)", line)
+        m = re.match(r"^\s{2,6}(?:(?:bree|bree)\s+)?([a-z][a-z0-9-]+)(?:\s+([a-z][a-z0-9-]+))?(?=\s|$|\|)", line)
         if not m:
             continue
         first = tuple(parent + [m.group(1)])
@@ -116,7 +116,7 @@ def _main(home: str) -> int:
             if rest and line.strip() not in seen_lines:
                 seen_lines.add(line.strip())
                 bad.append(f"{name}: {line.strip()[:160]}")
-    print(f"texts walked: {len(texts)}  raw cmux: {raw}  kept path names: {kept}  distinct offending lines: {len(bad)}")
+    print(f"texts walked: {len(texts)}  raw bree: {raw}  kept path names: {kept}  distinct offending lines: {len(bad)}")
     if show or bad:
         for b in bad[:200]:
             print("  " + b)

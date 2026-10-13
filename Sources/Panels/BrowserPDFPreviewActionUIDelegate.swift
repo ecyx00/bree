@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 import WebKit
 
@@ -19,18 +19,18 @@ class BrowserPDFPreviewActionUIDelegate: NSObject, WKUIDelegate {
     ) {
         guard !data.isEmpty else {
             #if DEBUG
-            cmuxDebugLog("browser.pdfPreview.save stage=rejectEmptyData")
+            breeDebugLog("browser.pdfPreview.save stage=rejectEmptyData")
             #endif
             return
         }
-        guard let downloadDelegate = (webView as? CmuxWebView)?.cmuxDownloadDelegate as? BrowserDownloadDelegate else {
+        guard let downloadDelegate = (webView as? BreeWebView)?.breeDownloadDelegate as? BrowserDownloadDelegate else {
             #if DEBUG
-            cmuxDebugLog("browser.pdfPreview.save stage=rejectMissingDelegate")
+            breeDebugLog("browser.pdfPreview.save stage=rejectMissingDelegate")
             #endif
             return
         }
         #if DEBUG
-        cmuxDebugLog("browser.pdfPreview.save stage=accepted")
+        breeDebugLog("browser.pdfPreview.save stage=accepted")
         #endif
         downloadDelegate.savePDFPreviewData(
             data,
@@ -51,7 +51,7 @@ class BrowserPDFPreviewActionUIDelegate: NSObject, WKUIDelegate {
         completionHandler: @escaping () -> Void
     ) {
         #if DEBUG
-        cmuxDebugLog("browser.pdfPreview.print stage=accepted")
+        breeDebugLog("browser.pdfPreview.print stage=accepted")
         #endif
         printOperationRunner.runPrintOperation(
             for: webView,

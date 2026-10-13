@@ -1,14 +1,14 @@
 import Foundation
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import SQLite3
 
 private struct VaultAgentProcessCandidate {
-    let process: CmuxTopProcessInfo
+    let process: BreeTopProcessInfo
     let workspaceID: UUID
     let panelID: UUID
     let observed: VaultObservedAgentProcess
     let cwd: String?
-    let registration: CmuxVaultAgentRegistration
+    let registration: BreeVaultAgentRegistration
 }
 
 extension AgentLaunchCommandSnapshot {
@@ -39,26 +39,26 @@ extension AgentLaunchCommandSnapshot {
 
 extension RestorableAgentSessionIndex {
     static func processDetectedSnapshots(
-        registry: CmuxVaultAgentRegistry,
+        registry: BreeVaultAgentRegistry,
         fileManager: FileManager,
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         capturedAt: TimeInterval,
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments? = {
-            CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments? = {
+            BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
         }
     ) -> [PanelKey: ProcessDetectedSnapshotEntry] {
         // KERN_PROCARGS2 argv/env decoding is the expensive unit of this scan; memoize so
         // the OpenCode, fork-parent-fallback, and registry passes read each pid once.
         // updateValue (not subscript) so a nil miss is unambiguously stored, not removed.
-        var processArgumentsByPID: [Int: CmuxTopProcessArguments?] = [:]
-        func cachedProcessArguments(_ processID: Int) -> CmuxTopProcessArguments? {
+        var processArgumentsByPID: [Int: BreeTopProcessArguments?] = [:]
+        func cachedProcessArguments(_ processID: Int) -> BreeTopProcessArguments? {
             if let cached = processArgumentsByPID[processID] { return cached }
             let resolved = processArgumentsProvider(processID)
             processArgumentsByPID.updateValue(resolved, forKey: processID)
             return resolved
         }
 
-        let scopedProcessIDsByPanelKey = processSnapshot.cmuxScopedProcessIDsByPanelKey()
+        let scopedProcessIDsByPanelKey = processSnapshot.breeScopedProcessIDsByPanelKey()
         var resolved = processDetectedOpenCodeSnapshots(
             processSnapshot: processSnapshot,
             capturedAt: capturedAt,
@@ -74,10 +74,10 @@ extension RestorableAgentSessionIndex {
         )) { existing, _ in existing }
         resolved.merge(processDetectedForkParentFallbackSnapshots(processSnapshot: processSnapshot, capturedAt: capturedAt, scopedProcessIDsByPanelKey: scopedProcessIDsByPanelKey, processArgumentsProvider: cachedProcessArguments)) { existing, _ in existing }
         guard !registry.registrations.isEmpty else { return resolved }
-        var registriesByWorkingDirectory: [String: CmuxVaultAgentRegistry] = [:]
-        let scopedProcesses = processSnapshot.cmuxScopedProcesses()
+        var registriesByWorkingDirectory: [String: BreeVaultAgentRegistry] = [:]
+        let scopedProcesses = processSnapshot.breeScopedProcesses()
 
-        func registryForWorkingDirectory(_ workingDirectory: String?) -> CmuxVaultAgentRegistry {
+        func registryForWorkingDirectory(_ workingDirectory: String?) -> BreeVaultAgentRegistry {
             guard let workingDirectory else { return registry }
             let key = (workingDirectory as NSString).standardizingPath
             if let cached = registriesByWorkingDirectory[key] {
@@ -93,8 +93,8 @@ extension RestorableAgentSessionIndex {
 
         var candidates: [VaultAgentProcessCandidate] = []
         for process in scopedProcesses {
-            guard let workspaceID = process.cmuxWorkspaceID,
-                  let panelID = process.cmuxSurfaceID,
+            guard let workspaceID = process.breeWorkspaceID,
+                  let panelID = process.breeSurfaceID,
                   let processArguments = cachedProcessArguments(process.pid) else {
                 continue
             }
@@ -104,7 +104,7 @@ extension RestorableAgentSessionIndex {
                 arguments: processArguments.arguments,
                 environment: processArguments.environment
             )
-            let cwd = normalized(observed.environment["CMUX_AGENT_LAUNCH_CWD"] ?? observed.environment["PWD"])
+            let cwd = normalized(observed.environment["BREE_AGENT_LAUNCH_CWD"] ?? observed.environment["PWD"])
             let processRegistry = registryForWorkingDirectory(cwd)
             guard let registration = processRegistry.matchingRegistration(for: observed) else {
                 continue
@@ -143,7 +143,7 @@ extension RestorableAgentSessionIndex {
             var arguments = useDefaultExecutable
                 ? registration.detect.alternateLaunchArguments(for: observed, defaultExecutable: executablePath)
                 : (observed.arguments.isEmpty ? [executablePath] : observed.arguments)
-            if registration.id == CmuxVaultAgentRegistration.builtInCampfire.id {
+            if registration.id == BreeVaultAgentRegistration.builtInCampfire.id {
                 arguments = CampfireLaunchArgumentNormalizer(
                     defaultExecutable: registration.defaultExecutable
                 ).normalized(arguments: observed.arguments)
@@ -258,11 +258,11 @@ extension RestorableAgentSessionIndex {
     }
 
     private static func processDetectedOpenCodeSnapshots(
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         capturedAt: TimeInterval,
         fileManager: FileManager,
         scopedProcessIDsByPanelKey: [PanelKey: Set<Int>],
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments?
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments?
     ) -> [PanelKey: ProcessDetectedSnapshotEntry] {
         var resolved: [PanelKey: ProcessDetectedSnapshotEntry] = [:]
         var sessionByWorkingDirectoryAndParent: [String: String] = [:]
@@ -279,9 +279,9 @@ extension RestorableAgentSessionIndex {
         ] = []
         var panelKeysByWorkingDirectory: [String: Set<PanelKey>] = [:]
 
-        for process in processSnapshot.cmuxScopedProcesses() {
-            guard let workspaceId = process.cmuxWorkspaceID,
-                  let panelId = process.cmuxSurfaceID,
+        for process in processSnapshot.breeScopedProcesses() {
+            guard let workspaceId = process.breeWorkspaceID,
+                  let panelId = process.breeSurfaceID,
                   let processArguments = processArgumentsProvider(process.pid) else {
                 continue
             }
@@ -423,7 +423,7 @@ extension RestorableAgentSessionIndex {
 
     private static func openCodeWorkingDirectory(observed: VaultObservedAgentProcess) -> String? {
         let fallbackWorkingDirectory = normalized(
-            observed.environment["CMUX_AGENT_LAUNCH_CWD"] ?? observed.environment["PWD"]
+            observed.environment["BREE_AGENT_LAUNCH_CWD"] ?? observed.environment["PWD"]
         )
         return openCodeProjectWorkingDirectory(
             observed: observed,
@@ -558,7 +558,7 @@ extension RestorableAgentSessionIndex {
     ) -> String? {
         let snapshot: OpenCodeDatabaseSnapshot.Snapshot
         do {
-            guard let madeSnapshot = try OpenCodeDatabaseSnapshot.make(prefix: "cmux-opencode-process") else {
+            guard let madeSnapshot = try OpenCodeDatabaseSnapshot.make(prefix: "bree-opencode-process") else {
                 return nil
             }
             snapshot = madeSnapshot
@@ -621,11 +621,11 @@ extension RestorableAgentSessionIndex {
 extension SurfaceResumeBindingIndex {
     static func processDetectedTmuxBindings(
         fileManager: FileManager,
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         capturedAt: TimeInterval,
         ttyDeviceBindings: [PanelKey: Int64] = [:],
-        processArgumentsProvider: @Sendable (Int) -> CmuxTopProcessArguments? = {
-            CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
+        processArgumentsProvider: @Sendable (Int) -> BreeTopProcessArguments? = {
+            BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
         }
     ) -> [PanelKey: (binding: SurfaceResumeBindingSnapshot, updatedAt: TimeInterval)] {
         _ = fileManager
@@ -633,7 +633,7 @@ extension SurfaceResumeBindingIndex {
         var selectedPIDByPanel: [PanelKey: Int] = [:]
 
         // A child such as `/usr/bin/ssh` is not guaranteed to retain the
-        // CMUX_* environment after the user's shell/launch tooling runs it.
+        // BREE_* environment after the user's shell/launch tooling runs it.
         // The terminal's controlling TTY is the authoritative pane identity,
         // so use it as a fail-closed fallback when exactly one live panel owns
         // the device. This keeps process detection scoped without guessing
@@ -683,11 +683,11 @@ extension SurfaceResumeBindingIndex {
     }
 
     private static func processDetectedPanelKey(
-        for process: CmuxTopProcessInfo,
+        for process: BreeTopProcessInfo,
         panelKeysByTTYDevice: [Int64: [PanelKey]]
     ) -> PanelKey? {
-        if let workspaceId = process.cmuxWorkspaceID,
-           let panelId = process.cmuxSurfaceID {
+        if let workspaceId = process.breeWorkspaceID,
+           let panelId = process.breeSurfaceID {
             return PanelKey(workspaceId: workspaceId, panelId: panelId)
         }
         guard let ttyDevice = process.ttyDevice,
@@ -721,10 +721,10 @@ private struct VaultAgentSessionIDResolution {
     let source: RestorableAgentSessionIndex.ProcessDetectedSessionIDSource
 }
 
-private extension CmuxVaultAgentSessionIDSource {
+private extension BreeVaultAgentSessionIDSource {
     func sessionIDResolution(
         from process: VaultObservedAgentProcess,
-        registration: CmuxVaultAgentRegistration,
+        registration: BreeVaultAgentRegistration,
         cwd: String?,
         fileManager: FileManager
     ) -> VaultAgentSessionIDResolution? {
@@ -781,7 +781,7 @@ private extension CmuxVaultAgentSessionIDSource {
                 sessionId: explicitSessionID,
                 source: .explicit
             )
-        case .cmuxHookStore:
+        case .breeHookStore:
             // The hook store owns the thread identity. Process argv is only
             // liveness evidence and must never invent a replacement id.
             return nil
@@ -789,11 +789,11 @@ private extension CmuxVaultAgentSessionIDSource {
     }
 }
 
-private extension CmuxTopProcessSnapshot {
-    func cmuxScopedProcessIDsByPanelKey() -> [RestorableAgentSessionIndex.PanelKey: Set<Int>] {
+private extension BreeTopProcessSnapshot {
+    func breeScopedProcessIDsByPanelKey() -> [RestorableAgentSessionIndex.PanelKey: Set<Int>] {
         var result: [RestorableAgentSessionIndex.PanelKey: Set<Int>] = [:]
-        for process in cmuxScopedProcesses() {
-            if let workspaceId = process.cmuxWorkspaceID, let panelId = process.cmuxSurfaceID {
+        for process in breeScopedProcesses() {
+            if let workspaceId = process.breeWorkspaceID, let panelId = process.breeSurfaceID {
                 result[.init(workspaceId: workspaceId, panelId: panelId), default: []].insert(process.pid)
             }
         }
@@ -890,7 +890,7 @@ enum PiSessionLocator {
 
     fileprivate static func latestSessionPath(
         for process: VaultObservedAgentProcess,
-        registration: CmuxVaultAgentRegistration,
+        registration: BreeVaultAgentRegistration,
         fileManager: FileManager
     ) -> String? {
         newestJSONLFile(in: candidateSessionDirectory(for: process, registration: registration), fileManager: fileManager)?.path
@@ -899,7 +899,7 @@ enum PiSessionLocator {
     fileprivate static func resolvedSessionPath(
         _ session: String,
         for process: VaultObservedAgentProcess,
-        registration: CmuxVaultAgentRegistration,
+        registration: BreeVaultAgentRegistration,
         fileManager: FileManager
     ) -> String? {
         let trimmed = session.trimmingCharacters(in: .whitespacesAndNewlines)

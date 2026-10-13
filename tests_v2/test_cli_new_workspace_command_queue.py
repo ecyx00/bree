@@ -12,15 +12,15 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
 def _must(cond: bool, msg: str) -> None:
     if not cond:
-        raise cmuxError(msg)
+        raise breeError(msg)
 
 
 def _float_env(name: str, default: float) -> float:
@@ -35,31 +35,31 @@ def _float_env(name: str, default: float) -> float:
 
 
 def _find_cli_binary() -> str:
-    env_cli = os.environ.get("CMUXTERM_CLI")
+    env_cli = os.environ.get("BREE_CLI")
     if env_cli and os.path.isfile(env_cli) and os.access(env_cli, os.X_OK):
         return env_cli
 
-    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/cmux-tests-v2/Build/Products/Debug/cmux")
+    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/bree-tests-v2/Build/Products/Debug/bree")
     if os.path.isfile(fixed) and os.access(fixed, os.X_OK):
         return fixed
 
-    candidates = glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/cmux"), recursive=True)
-    candidates += glob.glob("/tmp/cmux-*/Build/Products/Debug/cmux")
+    candidates = glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/bree"), recursive=True)
+    candidates += glob.glob("/tmp/bree-*/Build/Products/Debug/bree")
     candidates = [p for p in candidates if os.path.isfile(p) and os.access(p, os.X_OK)]
     if not candidates:
-        raise cmuxError("Could not locate cmux CLI binary; set CMUXTERM_CLI")
+        raise breeError("Could not locate bree CLI binary; set BREE_CLI")
     candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
     return candidates[0]
 
 
 def _run_cli(cli: str, args: list[str]) -> tuple[subprocess.CompletedProcess[str], float]:
     env = dict(os.environ)
-    env.pop("CMUX_WORKSPACE_ID", None)
-    env.pop("CMUX_SURFACE_ID", None)
-    env.pop("CMUX_TAB_ID", None)
+    env.pop("BREE_WORKSPACE_ID", None)
+    env.pop("BREE_SURFACE_ID", None)
+    env.pop("BREE_TAB_ID", None)
 
     command = [cli, "--socket", SOCKET_PATH, *args]
-    timeout = _float_env("CMUX_TEST_CLI_RUN_TIMEOUT", 30.0)
+    timeout = _float_env("BREE_TEST_CLI_RUN_TIMEOUT", 30.0)
     started = time.monotonic()
     try:
         proc = subprocess.run(
@@ -72,14 +72,14 @@ def _run_cli(cli: str, args: list[str]) -> tuple[subprocess.CompletedProcess[str
         )
     except subprocess.TimeoutExpired as exc:
         details = f"stdout={exc.output!r} stderr={exc.stderr!r}"
-        raise cmuxError(f"CLI timed out after {timeout:.1f}s: {command!r}; {details}") from exc
+        raise breeError(f"CLI timed out after {timeout:.1f}s: {command!r}; {details}") from exc
     elapsed = time.monotonic() - started
     return proc, elapsed
 
 
 def main() -> int:
     cli = _find_cli_binary()
-    marker = Path(tempfile.gettempdir()) / f"cmux_new_workspace_command_{os.getpid()}.txt"
+    marker = Path(tempfile.gettempdir()) / f"bree_new_workspace_command_{os.getpid()}.txt"
     created_ws_id: str | None = None
 
     try:
@@ -87,7 +87,7 @@ def main() -> int:
     except OSError:
         pass
 
-    with cmux(SOCKET_PATH) as c:
+    with bree(SOCKET_PATH) as c:
         try:
             baseline_ws_id = c.current_workspace()
             token = f"queued-{os.getpid()}-{int(time.time() * 1000)}"

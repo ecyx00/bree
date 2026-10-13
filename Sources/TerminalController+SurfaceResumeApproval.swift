@@ -137,7 +137,7 @@ extension TerminalController {
                 renderedPrefix
             )
         }
-        let content = CmuxAlertContent(
+        let content = BreeAlertContent(
             flattenedText: informativeText,
             separatingScrollableDetails: binding.command
         )

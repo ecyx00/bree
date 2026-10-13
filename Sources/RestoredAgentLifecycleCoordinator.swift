@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import Foundation
 import Observation
 
@@ -234,7 +234,7 @@ final class RestoredAgentLifecycleCoordinator {
         pendingStartupInputsByPanelId.removeAll(keepingCapacity: false)
     }
 
-    /// Shell integration has advanced a cmux-authored restore into its command
+    /// Shell integration has advanced a bree-authored restore into its command
     /// phase without returning to the prompt. An observed command can instead
     /// be unrelated shell activity, so it still requires matching process evidence.
     func confirmsRunningRestoredCommand(panelId: UUID) -> Bool {

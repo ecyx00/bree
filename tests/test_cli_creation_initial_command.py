@@ -13,7 +13,7 @@ from pathlib import Path
 from claude_teams_test_utils import (
     FIXTURE_SOCKET_PASSWORD,
     accept_fixture_socket_authentication,
-    resolve_cmux_cli,
+    resolve_bree_cli,
 )
 from fake_socket_env import cli_environment, unwrap_capability
 
@@ -24,7 +24,7 @@ PANE_ID = "22222222-2222-4222-8222-222222222222"
 PANE_REF = "pane:2"
 SURFACE_ID = "33333333-3333-4333-8333-333333333333"
 SURFACE_REF = "surface:3"
-COMMAND_TEXT = r"""printf '%s\n' "spaces 'single' \"double\" $CMUX_VALUE $(printf nested) \\tail 日本語"""
+COMMAND_TEXT = r"""printf '%s\n' "spaces 'single' \"double\" $BREE_VALUE $(printf nested) \\tail 日本語"""
 
 
 def creation_initial_input(command: str) -> str:
@@ -32,7 +32,7 @@ def creation_initial_input(command: str) -> str:
     return command + "\r"
 
 
-class FakeCmuxState:
+class FakeBreeState:
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.requests: list[tuple[str, dict[str, object]]] = []
@@ -57,7 +57,7 @@ class FakeCmuxState:
             }
         if method == "surface.send_text":
             return {"ok": True}
-        raise RuntimeError(f"Unsupported fake cmux method: {method}")
+        raise RuntimeError(f"Unsupported fake bree method: {method}")
 
     def request_count(self) -> int:
         with self.lock:
@@ -68,15 +68,15 @@ class FakeCmuxState:
             return [(method, dict(params)) for method, params in self.requests[index:]]
 
 
-class FakeCmuxUnixServer(socketserver.ThreadingUnixStreamServer):
+class FakeBreeUnixServer(socketserver.ThreadingUnixStreamServer):
     allow_reuse_address = True
 
-    def __init__(self, socket_path: str, state: FakeCmuxState) -> None:
+    def __init__(self, socket_path: str, state: FakeBreeState) -> None:
         self.state = state
-        super().__init__(socket_path, FakeCmuxHandler)
+        super().__init__(socket_path, FakeBreeHandler)
 
 
-class FakeCmuxHandler(socketserver.StreamRequestHandler):
+class FakeBreeHandler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         while True:
             line = self.rfile.readline()
@@ -165,14 +165,14 @@ def creation_cases(command: str | None) -> list[tuple[str, list[str], str]]:
 def invoke_cli(
     cli_path: str,
     socket_path: str,
-    state: FakeCmuxState,
+    state: FakeBreeState,
     args: list[str],
 ) -> tuple[
     subprocess.CompletedProcess[str],
     list[tuple[str, dict[str, object]]],
 ]:
     env = cli_environment()
-    env["CMUX_CLI_SENTRY_DISABLED"] = "1"
+    env["BREE_CLI_SENTRY_DISABLED"] = "1"
 
     request_start = state.request_count()
     proc = subprocess.run(
@@ -189,7 +189,7 @@ def invoke_cli(
 def invoke_creation(
     cli_path: str,
     socket_path: str,
-    state: FakeCmuxState,
+    state: FakeBreeState,
     label: str,
     args: list[str],
 ) -> list[tuple[str, dict[str, object]]]:
@@ -205,7 +205,7 @@ def invoke_creation(
 def assert_non_terminal_command_rejected(
     cli_path: str,
     socket_path: str,
-    state: FakeCmuxState,
+    state: FakeBreeState,
     label: str,
     args: list[str],
 ) -> None:
@@ -225,7 +225,7 @@ def assert_non_terminal_command_rejected(
 def assert_missing_command_value_rejected(
     cli_path: str,
     socket_path: str,
-    state: FakeCmuxState,
+    state: FakeBreeState,
     label: str,
     args: list[str],
 ) -> None:
@@ -276,15 +276,15 @@ def assert_creation_request(
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:  # noqa: BLE001
         print(f"FAIL: {exc}")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-creation-command-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="bree-creation-command-") as tmp:
         socket_path = str(Path(tmp) / "fake.sock")
-        state = FakeCmuxState()
-        server = FakeCmuxUnixServer(socket_path, state)
+        state = FakeBreeState()
+        server = FakeBreeUnixServer(socket_path, state)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
 

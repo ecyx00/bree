@@ -1,0 +1,31 @@
+{
+  "actions": {
+    "bree.newTerminal": {
+      "type": "command",
+      "title": "Dot BREE Wins",
+      "subtitle": "Same-directory .bree/bree.json should beat bree.json",
+      "command": "echo 'DOT BREE WINS'; echo 'SOURCE=legacy/prefer-dot-bree/.bree/bree.json'; pwd",
+      "target": "newTabInCurrentPane",
+      "shortcut": "cmd+shift+4",
+      "icon": { "type": "image", "path": "./icons/winner-terminal.svg" }
+    },
+    "winner.echo": {
+      "type": "command",
+      "title": "Winner Echo",
+      "subtitle": "If you see this, .bree precedence is working",
+      "command": "echo 'WINNER ECHO'; echo 'SOURCE=legacy/prefer-dot-bree/.bree/bree.json'; pwd",
+      "target": "newTabInCurrentPane",
+      "shortcut": "cmd+shift+p",
+      "icon": { "type": "emoji", "value": "🏆" }
+    }
+  },
+  "ui": {
+    "surfaceTabBar": {
+      "buttons": [
+        "bree.newTerminal",
+        "winner.echo",
+        "bree.newBrowser"
+      ]
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import CoreGraphics
 import Foundation
 
@@ -108,10 +108,10 @@ extension TerminalController {
     }
 
     /// Resolves the window to capture: the one named by `window`, else the
-    /// frontmost cmux window.
+    /// frontmost bree window.
     ///
-    /// Shared with `window.screenshot`, so `cmux record --window` and
-    /// `cmux shot --window` cannot pick different windows for the same handle.
+    /// Shared with `window.screenshot`, so `bree record --window` and
+    /// `bree shot --window` cannot pick different windows for the same handle.
     nonisolated func captureWindowID(handle: String?) -> CGWindowID? {
         v2MainSync {
             let eligibleWindows = WindowRecordingWindowSelection.eligibleWindows(in: NSApp)

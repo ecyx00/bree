@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 /// and the in-process custom UTI (declared in `Resources/Info.plist` under
 /// `UTExportedTypeDeclarations`) carries the mode's raw value.
 enum RightSidebarModeDragPayload {
-    static let typeIdentifier = "com.cmux.right-sidebar-mode-reorder"
+    static let typeIdentifier = "com.bree.right-sidebar-mode-reorder"
     static let dropContentType = UTType(exportedAs: typeIdentifier)
 
     /// Starts the native drag from `sourceView`, whose coordinates `frame` is

@@ -1,4 +1,4 @@
-import CmuxTerminal
+import BreeTerminal
 import Foundation
 
 extension Workspace {
@@ -166,7 +166,7 @@ extension Workspace {
         temporaryDirectory: URL = FileManager.default.temporaryDirectory
     ) -> String? {
         let scriptURL = temporaryDirectory.appendingPathComponent(
-            "cmux-remote-disconnect-\(UUID().uuidString.lowercased()).sh"
+            "bree-remote-disconnect-\(UUID().uuidString.lowercased()).sh"
         )
         // Base64 keeps targets and localized text out of shell syntax, even if they contain
         // substitutions, backticks, quotes, or escape sequences.
@@ -189,57 +189,57 @@ extension Workspace {
         let encodedReconnectCommand = Data((reconnectCommand ?? "").utf8).base64EncodedString()
         let body = """
         #!/bin/sh
-        cmux_disconnect_decode() {
+        bree_disconnect_decode() {
           printf '%s' "$1" | base64 --decode 2>/dev/null || printf '%s' "$1" | base64 -D 2>/dev/null
         }
-        cmux_disconnect_target="$(cmux_disconnect_decode '\(encodedTarget)')"
-        cmux_disconnect_ended_format="$(cmux_disconnect_decode '\(encodedEndedFormat)')"
-        cmux_disconnect_reconnect_line="$(cmux_disconnect_decode '\(encodedReconnectLine)')"
-        cmux_disconnect_reconnect_unavailable_line="$(cmux_disconnect_decode '\(encodedReconnectUnavailableLine)')"
-        cmux_disconnect_reconnect_command="$(cmux_disconnect_decode '\(encodedReconnectCommand)')"
-        cmux_disconnect_scrollback_file="${CMUX_RESTORE_SCROLLBACK_FILE:-}"
-        if [ -n "$cmux_disconnect_scrollback_file" ]; then
-          cmux_disconnect_scrollback_token="${cmux_disconnect_scrollback_file##*/}"
-          cmux_disconnect_host="$(/bin/hostname)"
-          unset CMUX_RESTORE_SCROLLBACK_FILE
-          printf '\\033]1337;CurrentDir=kitty-shell-cwd://%s/.cmux/session-scrollback-replay/%s/start\\007' "$cmux_disconnect_host" "$cmux_disconnect_scrollback_token"
-          if [ -f "$cmux_disconnect_scrollback_file" ]; then
-            /bin/cat -- "$cmux_disconnect_scrollback_file" 2>/dev/null || true
+        bree_disconnect_target="$(bree_disconnect_decode '\(encodedTarget)')"
+        bree_disconnect_ended_format="$(bree_disconnect_decode '\(encodedEndedFormat)')"
+        bree_disconnect_reconnect_line="$(bree_disconnect_decode '\(encodedReconnectLine)')"
+        bree_disconnect_reconnect_unavailable_line="$(bree_disconnect_decode '\(encodedReconnectUnavailableLine)')"
+        bree_disconnect_reconnect_command="$(bree_disconnect_decode '\(encodedReconnectCommand)')"
+        bree_disconnect_scrollback_file="${BREE_RESTORE_SCROLLBACK_FILE:-}"
+        if [ -n "$bree_disconnect_scrollback_file" ]; then
+          bree_disconnect_scrollback_token="${bree_disconnect_scrollback_file##*/}"
+          bree_disconnect_host="$(/bin/hostname)"
+          unset BREE_RESTORE_SCROLLBACK_FILE
+          printf '\\033]1337;CurrentDir=kitty-shell-cwd://%s/.bree/session-scrollback-replay/%s/start\\007' "$bree_disconnect_host" "$bree_disconnect_scrollback_token"
+          if [ -f "$bree_disconnect_scrollback_file" ]; then
+            /bin/cat -- "$bree_disconnect_scrollback_file" 2>/dev/null || true
           fi
-          /bin/rm -f -- "$cmux_disconnect_scrollback_file" 2>/dev/null || true
-          printf '\\033]1337;CurrentDir=kitty-shell-cwd://%s/.cmux/session-scrollback-replay/%s/end\\007' "$cmux_disconnect_host" "$cmux_disconnect_scrollback_token"
-          printf '\\033]1337;CurrentDir=kitty-shell-cwd://%s%s\\007' "$cmux_disconnect_host" "$PWD"
+          /bin/rm -f -- "$bree_disconnect_scrollback_file" 2>/dev/null || true
+          printf '\\033]1337;CurrentDir=kitty-shell-cwd://%s/.bree/session-scrollback-replay/%s/end\\007' "$bree_disconnect_host" "$bree_disconnect_scrollback_token"
+          printf '\\033]1337;CurrentDir=kitty-shell-cwd://%s%s\\007' "$bree_disconnect_host" "$PWD"
         fi
         # Append newline + color codes ourselves rather than trusting the translator to
         # preserve them in every locale.
         printf '\\033[1;33m' >&2
-        printf "$cmux_disconnect_ended_format" "$cmux_disconnect_target" >&2
+        printf "$bree_disconnect_ended_format" "$bree_disconnect_target" >&2
         printf '\\033[0m\\n' >&2
         # Remove ourselves so /tmp doesn't accumulate these wrappers across sessions.
         /bin/rm -f -- "$0" 2>/dev/null || true
-        if [ -n "$cmux_disconnect_reconnect_command" ]; then
-          printf '\\033[2m%s\\033[0m\\n\\n' "$cmux_disconnect_reconnect_line" >&2
+        if [ -n "$bree_disconnect_reconnect_command" ]; then
+          printf '\\033[2m%s\\033[0m\\n\\n' "$bree_disconnect_reconnect_line" >&2
           IFS= read -r _ || exit 0
-          cmux_reconnect_cli="${CMUX_BUNDLED_CLI_PATH:-}"
-          if [ -z "$cmux_reconnect_cli" ] || [ ! -x "$cmux_reconnect_cli" ]; then
-            cmux_reconnect_cli="$(command -v cmux 2>/dev/null || true)"
+          bree_reconnect_cli="${BREE_BUNDLED_CLI_PATH:-}"
+          if [ -z "$bree_reconnect_cli" ] || [ ! -x "$bree_reconnect_cli" ]; then
+            bree_reconnect_cli="$(command -v bree 2>/dev/null || true)"
           fi
-          cmux_reconnect_socket="${CMUX_SOCKET_PATH:-${CMUX_SOCKET:-}}"
-          if [ -n "$cmux_reconnect_cli" ] && [ -n "$cmux_reconnect_socket" ] && [ -n "${CMUX_WORKSPACE_ID:-}" ]; then
-            cmux_reconnect_payload="{\\"workspace_id\\":\\"$CMUX_WORKSPACE_ID\\""
-            if [ -n "${CMUX_SURFACE_ID:-}" ]; then
-              cmux_reconnect_payload="$cmux_reconnect_payload,\\"surface_id\\":\\"$CMUX_SURFACE_ID\\""
+          bree_reconnect_socket="${BREE_SOCKET_PATH:-${BREE_SOCKET:-}}"
+          if [ -n "$bree_reconnect_cli" ] && [ -n "$bree_reconnect_socket" ] && [ -n "${BREE_WORKSPACE_ID:-}" ]; then
+            bree_reconnect_payload="{\\"workspace_id\\":\\"$BREE_WORKSPACE_ID\\""
+            if [ -n "${BREE_SURFACE_ID:-}" ]; then
+              bree_reconnect_payload="$bree_reconnect_payload,\\"surface_id\\":\\"$BREE_SURFACE_ID\\""
             fi
-            cmux_reconnect_payload="$cmux_reconnect_payload}"
-            if "$cmux_reconnect_cli" --socket "$cmux_reconnect_socket" rpc workspace.remote.reconnect "$cmux_reconnect_payload" >/dev/null 2>&1; then
-              exec /bin/sh -lc "$cmux_disconnect_reconnect_command"
+            bree_reconnect_payload="$bree_reconnect_payload}"
+            if "$bree_reconnect_cli" --socket "$bree_reconnect_socket" rpc workspace.remote.reconnect "$bree_reconnect_payload" >/dev/null 2>&1; then
+              exec /bin/sh -lc "$bree_disconnect_reconnect_command"
             fi
           fi
-          printf '\\033[2m%s\\033[0m\\n' "$cmux_disconnect_reconnect_unavailable_line" >&2
+          printf '\\033[2m%s\\033[0m\\n' "$bree_disconnect_reconnect_unavailable_line" >&2
           while IFS= read -r _; do :; done
           exit 0
         fi
-        printf '\\033[2m%s\\033[0m\\n' "$cmux_disconnect_reconnect_unavailable_line" >&2
+        printf '\\033[2m%s\\033[0m\\n' "$bree_disconnect_reconnect_unavailable_line" >&2
         while IFS= read -r _; do :; done
         exit 0
 

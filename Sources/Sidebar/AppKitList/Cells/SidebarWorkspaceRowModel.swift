@@ -1,7 +1,7 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeWorkspaces
 import CoreGraphics
 import Foundation
 import SwiftUI

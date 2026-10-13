@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 /// Bree's live palette as CSS variables for the Architecture board. `--accent` is left to the page.

@@ -1,5 +1,5 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// Materializes the accepted Cloud graph into bound native workspaces. The graph
@@ -75,7 +75,7 @@ final class CloudWorkspaceProjectionCoordinator {
     /// this loop that keeps restarting it cannot flood crash reporting.
     private func reportNonConvergence(machine: SurfaceMachineID, state: CloudVMState, budget: CloudWorkspaceReconcileBudget) {
 #if DEBUG
-        cmuxDebugLog("cloudWorkspace.projection.nonConvergent machine=\(machine.rawValue) passes=\(budget.passes) idle=\(budget.idlePasses)")
+        breeDebugLog("cloudWorkspace.projection.nonConvergent machine=\(machine.rawValue) passes=\(budget.passes) idle=\(budget.idlePasses)")
 #endif
         let generation = state.cursor?.generation ?? ""
         guard reportedNonConvergence[machine] != generation else { return }
@@ -182,7 +182,7 @@ final class CloudWorkspaceProjectionCoordinator {
                 }
                 for projection in plan.obsolete {
 #if DEBUG
-                    cmuxDebugLog("cloudWorkspace.projection.obsolete workspace=\(workspaceID) panel=\(projection.panelID) resource=\(projection.resource.rawValue) remoteWorkspace=\(projection.remoteWorkspaceID ?? "nil") tab=\(projection.remoteTabID ?? "nil") desired=\(desired.count)")
+                    breeDebugLog("cloudWorkspace.projection.obsolete workspace=\(workspaceID) panel=\(projection.panelID) resource=\(projection.resource.rawValue) remoteWorkspace=\(projection.remoteWorkspaceID ?? "nil") tab=\(projection.remoteTabID ?? "nil") desired=\(desired.count)")
 #endif
                     environment.close(projection)
                     catalog.endProjections(panelID: projection.panelID, reason: .replaced)

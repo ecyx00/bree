@@ -1,7 +1,7 @@
 import AppKit
-import CmuxBrowser
-import CmuxCore
-import CmuxPanes
+import BreeBrowser
+import BreeCore
+import BreePanes
 import WebKit
 
 extension Workspace {
@@ -203,7 +203,7 @@ extension DockSplitStore {
             guard let self, let panel else { return }
             guard self.browserPanel(for: panel.id) === panel else { return }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "dock.browser.close.requestedByPage ws=\(self.workspaceId.uuidString.prefix(5)) " +
                 "panel=\(panel.id.uuidString.prefix(5))"
             )

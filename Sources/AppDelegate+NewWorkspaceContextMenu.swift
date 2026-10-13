@@ -1,4 +1,4 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
 import Foundation
 
@@ -7,9 +7,9 @@ import Foundation
 @MainActor
 final class NewWorkspaceContextMenuActionBox: NSObject {
     let windowId: UUID
-    let action: CmuxResolvedConfigAction
+    let action: BreeResolvedConfigAction
 
-    init(windowId: UUID, action: CmuxResolvedConfigAction) {
+    init(windowId: UUID, action: BreeResolvedConfigAction) {
         self.windowId = windowId
         self.action = action
     }
@@ -27,13 +27,13 @@ extension AppDelegate {
             ?? mainWindowContext(forShortcutEvent: event, debugSource: debugSource)
             ?? preferredMainWindowContextForWorkspaceCreation(event: event, debugSource: debugSource)
         guard let context,
-              let cmuxConfigStore = context.cmuxConfigStore else {
+              let breeConfigStore = context.breeConfigStore else {
             return false
         }
 
         guard let menu = makeNewWorkspaceContextMenu(
             context: context,
-            cmuxConfigStore: cmuxConfigStore
+            breeConfigStore: breeConfigStore
         ) else {
             return false
         }
@@ -53,13 +53,13 @@ extension AppDelegate {
         let context = contextForMainWindow(anchorView.window)
             ?? preferredMainWindowContextForWorkspaceCreation(event: nil, debugSource: debugSource)
         guard let context,
-              let cmuxConfigStore = context.cmuxConfigStore else {
+              let breeConfigStore = context.breeConfigStore else {
             return false
         }
 
         guard let menu = makeNewWorkspaceContextMenu(
             context: context,
-            cmuxConfigStore: cmuxConfigStore
+            breeConfigStore: breeConfigStore
         ) else {
             return false
         }
@@ -74,28 +74,28 @@ extension AppDelegate {
 
     func makeNewWorkspaceContextMenu(
         context: MainWindowContext,
-        cmuxConfigStore: CmuxConfigStore,
+        breeConfigStore: BreeConfigStore,
         isAuthenticated: Bool? = nil
     ) -> NSMenu? {
         let isAuthenticated = isAuthenticated ?? (AppDelegate.shared?.auth?.accountFlow.isAuthenticated == true)
         let model = NewWorkspaceMenuModel.build(
-            newWorkspaceContextMenuItems: cmuxConfigStore.newWorkspaceContextMenuItems.filter { item in
+            newWorkspaceContextMenuItems: breeConfigStore.newWorkspaceContextMenuItems.filter { item in
                 guard case .action(let menuAction) = item,
                       case .builtIn(let builtIn) = menuAction.action.action else { return true }
                 return Self.isBuiltInActionAvailableInNewWorkspaceMenu(builtIn, isAuthenticated: isAuthenticated)
             },
             templateNames: savedLayoutNames(),
-            loadedActions: cmuxConfigStore.loadedActions,
-            newWorkspaceActionID: cmuxConfigStore.newWorkspaceActionID,
-            deletable: { [weak self, weak cmuxConfigStore] action in
-                guard let self, let cmuxConfigStore else { return false }
-                return isDeletableGlobalAction(action, cmuxConfigStore: cmuxConfigStore)
+            loadedActions: breeConfigStore.loadedActions,
+            newWorkspaceActionID: breeConfigStore.newWorkspaceActionID,
+            deletable: { [weak self, weak breeConfigStore] action in
+                guard let self, let breeConfigStore else { return false }
+                return isDeletableGlobalAction(action, breeConfigStore: breeConfigStore)
             }
         )
         return renderNewWorkspaceContextMenu(
             model: model,
             context: context,
-            cmuxConfigStore: cmuxConfigStore
+            breeConfigStore: breeConfigStore
         )
     }
 
@@ -103,13 +103,13 @@ extension AppDelegate {
     /// opens (not at config load) so flag and setting flips apply at once.
     /// Mirrors the command palette's gates for the same actions.
     static func isBuiltInActionAvailableInNewWorkspaceMenu(
-        _ action: CmuxSurfaceTabBarBuiltInAction,
+        _ action: BreeSurfaceTabBarBuiltInAction,
         isAuthenticated: Bool? = nil
     ) -> Bool {
         switch action {
         case .newBrowser:
             return BrowserAvailabilitySettings.isEnabled()
-        case .toggleFiles, .toggleArchitecture, .toggleWiki:
+        case .toggleFiles, .toggleArchitecture, .toggleWiki, .showBoard:
             return false
         case .newWorkspace, .newTerminal, .splitRight, .splitDown,
              .copyWorkingDirectory, .copyProjectRoot, .copyScreen, .newWindow:
@@ -137,7 +137,7 @@ extension AppDelegate {
                     && context.tabManager.selectedWorkspace?.cloudVMBinding == nil
             ) != nil
         } else {
-            didExecute = executeConfiguredCmuxAction(box.action, context: context, preferredWindow: window)
+            didExecute = executeConfiguredBreeAction(box.action, context: context, preferredWindow: window)
         }
         guard didExecute else {
             NSSound.beep()

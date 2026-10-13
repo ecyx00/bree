@@ -66,7 +66,7 @@ extension BrowserPanel {
             return true
         } catch {
 #if DEBUG
-            cmuxDebugLog("browser.picker.deactivateReactGrab.failed error=\(String(reflecting: error))")
+            breeDebugLog("browser.picker.deactivateReactGrab.failed error=\(String(reflecting: error))")
 #endif
             designModeController.presentError(
                 String(

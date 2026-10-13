@@ -68,8 +68,8 @@ does not establish trust: never run candidate code with privileged
 For example, when changing the control socket package on macOS:
 
 ```bash
-swift test --package-path Packages/macOS/CmuxControlSocket --filter ControlClientLineReaderTests
-swift test --package-path Packages/macOS/CmuxControlSocket
+swift test --package-path Packages/macOS/BreeControlSocket --filter ControlClientLineReaderTests
+swift test --package-path Packages/macOS/BreeControlSocket
 ```
 
 Replace the package and filter with the actual owner. Check the reported test names
@@ -94,7 +94,7 @@ For an ordinary local contributor, build the tagged app without shared backend
 credentials:
 
 ```bash
-CMUX_DEV_BACKEND_MODE=local ./scripts/reload.sh --tag contributor-check --build-only
+BREE_DEV_BACKEND_MODE=local ./scripts/reload.sh --tag contributor-check --build-only
 ```
 
 This selects the local backend origin; it does not start a backend or make Cloud
@@ -111,7 +111,7 @@ compile the app-host unit test product:
 
 The wrapper uses the same test-module settings as CI. This is compilation only;
 do not open its untagged product. For UI or dedicated test schemes, follow the
-[test guide](../skills/cmux-testing/references/local-vs-ci-validation.md).
+[test guide](../skills/bree-testing/references/local-vs-ci-validation.md).
 Confirm the command succeeded and preserve the build log. `build-for-testing`
 proves that the selected app and test product compile, **not** that any test ran. It does not replace the tagged runtime
 step below or required CI checks.
@@ -122,9 +122,9 @@ A tagged `--launch` needs no account or credentials file. Build and launch your 
 then explicitly route local socket checks to that tag's socket:
 
 ```bash
-CMUX_DEV_BACKEND_MODE=local ./scripts/reload.sh --tag contributor-check \
+BREE_DEV_BACKEND_MODE=local ./scripts/reload.sh --tag contributor-check \
   --no-global-cli-links --launch
-CMUX_SOCKET_PATH=/tmp/cmux-debug-contributor-check.sock python3 tests_v2/test_ctrl_socket.py
+BREE_SOCKET_PATH=/tmp/bree-debug-contributor-check.sock python3 tests_v2/test_ctrl_socket.py
 ```
 
 The socket script is an example, not a mandatory full suite. Pick the reproduction
@@ -150,13 +150,13 @@ Contributors do not need GitHub Actions dispatch permission or a private Mac fle
 A maintainer with access can use the existing exact-revision dispatcher:
 
 ```bash
-python3 scripts/ci/dispatch-focused-test.py cmuxTests/SessionPersistenceTests --ref <pushed-commit-sha> --wait
+python3 scripts/ci/dispatch-focused-test.py breeTests/SessionPersistenceTests --ref <pushed-commit-sha> --wait
 ```
 
 Replace the selector with the regression; UI selectors use
-`cmuxUITests/ClassName[/methodName]`. The dispatcher validates the revision/selector
+`breeUITests/ClassName[/methodName]`. The dispatcher validates the revision/selector
 and prints the run URL. For UI tests, `scripts/ui-test ClassName` does the same and then shows
-one frame per test action ([guide](../skills/cmux-testing/references/ui-test-frames.md)).
+one frame per test action ([guide](../skills/bree-testing/references/ui-test-frames.md)).
 This path needs authenticated `gh` access to the upstream
 workflow and its runner capacity. It does not grant access to contributors or
 replace the PR's required checks. Preserve the selected-test count, run URL,
@@ -172,7 +172,7 @@ across restart, or real display behavior. State exactly what you exercised.
 
 For iPhone changes, a simulator pass does not establish physical input, networking,
 or reconnection behavior. Use `ios/scripts/reload.sh --help` and the project's
-[development workflow](../skills/cmux-dev-workflow/SKILL.md) to build the same-tag
+[development workflow](../skills/bree-dev-workflow/SKILL.md) to build the same-tag
 Mac companion and install on an authorized physical device. Do not claim phone dogfood for an unreachable device. Record the missing check and the owner who will run it.
 
 ## Report evidence and stop at the right boundary

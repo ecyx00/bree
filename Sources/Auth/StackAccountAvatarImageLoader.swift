@@ -8,7 +8,7 @@ import Foundation
 /// nothing on Intel Macs running macOS 15, and a SwiftUI `clipShape` over the
 /// hosted image view goes blank after a while on the same machines. Decoding
 /// here, clipping to the circle inside the bitmap, and drawing through
-/// `CmuxResolvedIconImage` keeps the real profile picture visible everywhere
+/// `BreeResolvedIconImage` keeps the real profile picture visible everywhere
 /// without SwiftUI owning any pixel of it.
 @MainActor
 enum StackAccountAvatarImageLoader {

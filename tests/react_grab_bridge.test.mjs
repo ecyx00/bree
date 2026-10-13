@@ -1,10 +1,10 @@
 // Behavioral harness for the React Grab bridge scripts.
 //
 // Extracts the real JavaScript templates from
-// Packages/macOS/CmuxBrowser/Sources/CmuxBrowser/Scripting/ReactGrabBridgeScripts.swift
+// Packages/macOS/BreeBrowser/Sources/BreeBrowser/Scripting/ReactGrabBridgeScripts.swift
 // (between the begin/end markers) and runs them in a simulated two-world
 // WebKit environment: the page world (site scripts, react-grab library) and
-// the cmux isolated content world (relay + native message handler). The two
+// the bree isolated content world (relay + native message handler). The two
 // worlds share a window message bus, mirroring how window.postMessage data is
 // structured-cloned across content worlds, while JS globals stay per-world.
 //
@@ -20,7 +20,7 @@ import vm from 'node:vm';
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const bridgeScriptsSwiftPath = join(
   repoRoot,
-  'Packages/macOS/CmuxBrowser/Sources/CmuxBrowser/Scripting/ReactGrabBridgeScripts.swift',
+  'Packages/macOS/BreeBrowser/Sources/BreeBrowser/Scripting/ReactGrabBridgeScripts.swift',
 );
 const reactGrabSwiftPath = join(repoRoot, 'Sources/Panels/ReactGrab.swift');
 
@@ -49,24 +49,24 @@ function loadSources() {
   };
 
   const relayTemplate = extract(
-    '// cmux-react-grab-relay-begin',
-    '// cmux-react-grab-relay-end',
+    '// bree-react-grab-relay-begin',
+    '// bree-react-grab-relay-end',
   );
   const tokenSyncTemplate = extract(
-    '// cmux-react-grab-token-sync-begin',
-    '// cmux-react-grab-token-sync-end',
+    '// bree-react-grab-token-sync-begin',
+    '// bree-react-grab-token-sync-end',
   );
   const pageBridgeTemplate = extract(
-    '// cmux-react-grab-page-bridge-begin',
-    '// cmux-react-grab-page-bridge-end',
+    '// bree-react-grab-page-bridge-begin',
+    '// bree-react-grab-page-bridge-end',
   );
 
   const relaySource = relayTemplate
-    .replaceAll('__CMUX_RG_HANDLER__', handlerName)
-    .replaceAll('__CMUX_RG_MAX_CONTENT_LENGTH__', String(maxContentLength));
+    .replaceAll('__BREE_RG_HANDLER__', handlerName)
+    .replaceAll('__BREE_RG_MAX_CONTENT_LENGTH__', String(maxContentLength));
   const tokenSyncSource = (token) =>
     tokenSyncTemplate.replaceAll(
-      '__CMUX_RG_TOKEN_LITERAL__',
+      '__BREE_RG_TOKEN_LITERAL__',
       token === null ? 'null' : `'${token}'`,
     );
 
@@ -191,7 +191,7 @@ function makeFakeGrabAPI() {
 
 function postCopyFromPage(harness, content) {
   harness.pageWindow.postMessage({
-    __cmuxReactGrab: true,
+    __breeReactGrab: true,
     type: 'copySuccess',
     content,
   });
@@ -207,7 +207,7 @@ test('relay installs once per document and hides its surface from enumeration', 
 
   const descriptor = Object.getOwnPropertyDescriptor(
     harness.isolatedWindow,
-    '__cmuxReactGrabRelay',
+    '__breeReactGrabRelay',
   );
   assert.ok(descriptor, 'relay anchor missing');
   assert.equal(descriptor.enumerable, false);
@@ -341,7 +341,7 @@ test('messages from another frame are rejected and do not burn the arm', () => {
   runInWorld(sources.relaySource, harness.isolatedWindow);
   runInWorld(sources.tokenSyncSource('tok-A'), harness.isolatedWindow);
   harness.dispatchForeignSource({
-    __cmuxReactGrab: true,
+    __breeReactGrab: true,
     type: 'copySuccess',
     content: 'iframe payload',
   });
@@ -382,7 +382,7 @@ test('state changes relay without any token attached', () => {
   const harness = makeHarness(sources.handlerName);
   runInWorld(sources.relaySource, harness.isolatedWindow);
   harness.pageWindow.postMessage({
-    __cmuxReactGrab: true,
+    __breeReactGrab: true,
     type: 'stateChange',
     isActive: 1,
   });

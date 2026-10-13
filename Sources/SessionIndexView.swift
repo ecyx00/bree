@@ -1,8 +1,8 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import Bonsplit
-import CmuxAppKitSupportUI
-import CMUXAgentLaunch
+import BreeAppKitSupportUI
+import BREEAgentLaunch
 import SQLite3
 import SwiftUI
 import UniformTypeIdentifiers
@@ -420,7 +420,7 @@ struct SessionIndexView: View {
             ProgressView().controlSize(.small)
             Text(String(localized: "sessionIndex.loading", defaultValue: "Loading Sessions…"))
                 .breeFont(.caption)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -429,11 +429,11 @@ struct SessionIndexView: View {
         VStack(spacing: 4) {
             Text(String(localized: "sessionIndex.empty.title", defaultValue: "No sessions yet"))
                 .breeFont(.body)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
             Text(String(localized: "sessionIndex.empty.subtitle",
                                    defaultValue: "Claude Code, Codex, and OpenCode history will appear here."))
                 .breeFont(.caption)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 16)
         }
@@ -587,7 +587,7 @@ struct SessionIndexView: View {
     private var searchStatusView: some View {
         Text(String(localized: "sessionIndex.search.searching", defaultValue: "Searching…"))
             .breeFont(.caption)
-            .foregroundStyle(.cmuxSecondaryText)
+            .foregroundStyle(.breeSecondaryText)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -596,7 +596,7 @@ struct SessionIndexView: View {
     private var searchEmptyView: some View {
         Text(String(localized: "sessionIndex.search.noResults", defaultValue: "No matching sessions"))
             .breeFont(.caption)
-            .foregroundStyle(.cmuxSecondaryText)
+            .foregroundStyle(.breeSecondaryText)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -689,7 +689,7 @@ private struct GroupingButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: RightSidebarChromeMetrics.contentIconTextSpacing) {
-                CmuxSystemSymbolImage(
+                BreeSystemSymbolImage(
                     magnified: mode.symbolName,
                     pointSize: RightSidebarChromeControlStyle.secondaryIconSize,
                     weight: RightSidebarChromeControlStyle.iconWeight,
@@ -867,7 +867,7 @@ struct IndexSectionView: View, Equatable {
         } label: {
             Text(String(localized: "sessionIndex.section.showMore", defaultValue: "Show more"))
                 .breeFont(.secondary)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
                 .padding(.leading, 32)
                 .padding(.trailing, 12)
                 .padding(.vertical, 4)
@@ -919,14 +919,14 @@ struct IndexSectionView: View, Equatable {
                 sectionIconView
                 Text(section.title)
                     .breeFont(.title)
-                    .foregroundStyle(.cmuxSecondaryText)
+                    .foregroundStyle(.breeSecondaryText)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(section.entries.count.description)
                     .breeFont(.count, countRow: .caption)
-                    .foregroundStyle(.cmuxSecondaryText)
+                    .foregroundStyle(.breeSecondaryText)
                     .fixedSize()
-                CmuxSystemSymbolImage(magnified: "chevron.down", pointSize: 10, weight: .regular, tint: palette.glyphTertiary)
+                BreeSystemSymbolImage(magnified: "chevron.down", pointSize: 10, weight: .regular, tint: palette.glyphTertiary)
                     .rotationEffect(.degrees(isCollapsed ? -90 : 0))
                 Spacer(minLength: 0)
             }
@@ -1087,13 +1087,13 @@ private struct SessionRow: View, Equatable {
                 )
                 Text(relativeTime(entry.modified))
                     .breeFont(.count, countRow: .secondary)
-                    .foregroundStyle(.cmuxSecondaryText)
+                    .foregroundStyle(.breeSecondaryText)
                     .fixedSize()
             }
             if let accessory, let detail = accessory.detail {
                 Text(detail)
                     .breeFont(.caption)
-                    .foregroundStyle(.cmuxSecondaryText)
+                    .foregroundStyle(.breeSecondaryText)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 // Start on the title's column: glyph width plus the
@@ -1287,13 +1287,13 @@ struct SessionTranscriptPreviewView: View {
                 if let cwd = entry.cwdLabel {
                     Text(cwd)
                         .breeFont(.caption)
-                        .foregroundStyle(.cmuxSecondaryText)
+                        .foregroundStyle(.breeSecondaryText)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
             }
             Spacer(minLength: 8)
-            CmuxSystemSymbolImage(magnified: "xmark", pointSize: 11, weight: .regular, tint: closeIsHovered ? palette.textPrimary : palette.textSecondary)
+            BreeSystemSymbolImage(magnified: "xmark", pointSize: 11, weight: .regular, tint: closeIsHovered ? palette.textPrimary : palette.textSecondary)
                 .frame(width: 20, height: 20)
                 .background(
                     RoundedRectangle(cornerRadius: BreeMetrics.radiusControl, style: .continuous)
@@ -1346,7 +1346,7 @@ struct SessionTranscriptPreviewView: View {
                 .controlSize(.small)
             Text(String(localized: "sessionIndex.popover.loading", defaultValue: "Loading…"))
                 .breeFont(.body)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
             Spacer(minLength: 0)
         }
         .padding(12)
@@ -1355,10 +1355,10 @@ struct SessionTranscriptPreviewView: View {
 
     private func statusRow(systemImage: String, text: String) -> some View {
         HStack(spacing: 8) {
-            CmuxSystemSymbolImage(magnified: systemImage, pointSize: 12, weight: .regular, tint: palette.textSecondary)
+            BreeSystemSymbolImage(magnified: systemImage, pointSize: 12, weight: .regular, tint: palette.textSecondary)
             Text(text)
                 .breeFont(.body)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
             Spacer(minLength: 0)
         }
         .padding(12)
@@ -1862,7 +1862,7 @@ enum SessionTranscriptLoader {
     private static func loadOpenCodeSynchronously(sessionId: String) throws -> [SessionTranscriptTurn] {
         let snapshot: OpenCodeDatabaseSnapshot.Snapshot
         do {
-            guard let madeSnapshot = try OpenCodeDatabaseSnapshot.make(prefix: "cmux-opencode-preview") else {
+            guard let madeSnapshot = try OpenCodeDatabaseSnapshot.make(prefix: "bree-opencode-preview") else {
                 throw SessionTranscriptLoadError.missingFile
             }
             snapshot = madeSnapshot
@@ -2539,7 +2539,7 @@ struct SectionPopoverView: View {
             .padding(.bottom, 6)
 
             HStack(spacing: 6) {
-                CmuxSystemSymbolImage(magnified: "magnifyingglass", pointSize: 11, weight: .regular, tint: palette.textSecondary)
+                BreeSystemSymbolImage(magnified: "magnifyingglass", pointSize: 11, weight: .regular, tint: palette.textSecondary)
                 TextField(
                     String(localized: "sessionIndex.popover.searchPlaceholder",
                            defaultValue: "Search Sessions"),
@@ -2552,7 +2552,7 @@ struct SectionPopoverView: View {
                     Button {
                         query = ""
                     } label: {
-                        CmuxSystemSymbolImage(magnified: "xmark.circle.fill", pointSize: 11, tint: palette.textSecondary)
+                        BreeSystemSymbolImage(magnified: "xmark.circle.fill", pointSize: 11, tint: palette.textSecondary)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(String(localized: "historyPane.search.clear", defaultValue: "Clear search"))
@@ -2573,7 +2573,7 @@ struct SectionPopoverView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(errorMessages, id: \.self) { msg in
                         HStack(alignment: .top, spacing: 6) {
-                            CmuxSystemSymbolImage(magnified: "exclamationmark.triangle.fill", pointSize: 10, tint: palette.signalAttention)
+                            BreeSystemSymbolImage(magnified: "exclamationmark.triangle.fill", pointSize: 10, tint: palette.signalAttention)
                             Text(msg)
                                 .breeFont(.caption)
                                 .foregroundStyle(palette.textPrimary)
@@ -2593,7 +2593,7 @@ struct SectionPopoverView: View {
                         Text(String(localized: "sessionIndex.popover.noMatches",
                                     defaultValue: "No matches"))
                             .breeFont(.body)
-                            .foregroundStyle(.cmuxSecondaryText)
+                            .foregroundStyle(.breeSecondaryText)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -2629,7 +2629,7 @@ struct SectionPopoverView: View {
                             Text(String(localized: "sessionIndex.popover.endOfList",
                                         defaultValue: "You've reached the end"))
                                 .breeFont(.caption)
-                                .foregroundStyle(.cmuxSecondaryText)
+                                .foregroundStyle(.breeSecondaryText)
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .padding(.vertical, 8)
                         }
@@ -2745,7 +2745,7 @@ struct SectionPopoverView: View {
             ProgressView().controlSize(.small)
             Text(String(localized: "sessionIndex.popover.loading", defaultValue: "Loading…"))
                 .breeFont(.caption)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 12)
@@ -2869,7 +2869,7 @@ private struct PopoverRow: View, Equatable {
             Text(SessionIndexView.relativeFormatter.localizedString(for: entry.modified, relativeTo: context.date))
         }
         .breeFont(.count, countRow: .caption)
-        .foregroundStyle(.cmuxSecondaryText)
+        .foregroundStyle(.breeSecondaryText)
         .fixedSize()
     }
 
@@ -2896,7 +2896,7 @@ private struct PopoverRow: View, Equatable {
             if let detail = accessory?.detail {
                 Text(Self.flatten(detail))
                     .breeFont(.caption)
-                    .foregroundStyle(.cmuxSecondaryText)
+                    .foregroundStyle(.breeSecondaryText)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     // Start on the title's column: glyph width plus the

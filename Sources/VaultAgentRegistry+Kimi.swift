@@ -1,16 +1,16 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 
-extension CmuxVaultAgentRegistration {
-    /// True only for cmux's exact built-in registration, not user registrations reusing its id.
+extension BreeVaultAgentRegistration {
+    /// True only for bree's exact built-in registration, not user registrations reusing its id.
     var isBuiltInKimi: Bool {
         self == Self.builtInKimi
     }
 
-    static var builtInKimi: CmuxVaultAgentRegistration {
-        CmuxVaultAgentRegistration(
+    static var builtInKimi: BreeVaultAgentRegistration {
+        BreeVaultAgentRegistration(
             id: "kimi",
             name: RestorableAgentKind.kimi.displayName,
-            detect: CmuxVaultAgentDetectRule(processNames: ["kimi", "kimi-cli", "kimi-code"]),
+            detect: BreeVaultAgentDetectRule(processNames: ["kimi", "kimi-cli", "kimi-code"]),
             sessionIdSource: .argvOption("--resume"),
             resumeCommand: RegisteredAgentResumeKind.kimi.commandTemplate,
             cwd: .preserve

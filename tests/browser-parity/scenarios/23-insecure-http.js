@@ -1,5 +1,5 @@
 // Plain-http pages outside localhost load without a prompt: goto, a new tab,
-// and a link click. cmux gates such URLs behind a prompt for people; a REPL
+// and a link click. bree gates such URLs behind a prompt for people; a REPL
 // tab has nobody to answer it, so the prompt would hang the call.
 if (!INSECURE) throw new Error("lvh.me does not resolve to 127.0.0.1; the insecure-http fixture needs it");
 await page.goto(`${INSECURE}/aria.html`);

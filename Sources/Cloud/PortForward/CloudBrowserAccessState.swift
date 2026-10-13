@@ -1,12 +1,12 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
-import CmuxCore
-import CmuxFoundation
+import BreeCore
+import BreeFoundation
 import Observation
 import OSLog
 
-private let cloudDisplayLogger = Logger(subsystem: "com.cmuxterm.app", category: "CloudDisplayConnection")
+private let cloudDisplayLogger = Logger(subsystem: "com.bree.app", category: "CloudDisplayConnection")
 
 /// Browser-owned navigation state, separate from the shared VM-port choice.
 /// Failed loads keep the native connection controls visible in the same pane.
@@ -174,7 +174,7 @@ final class CloudBrowserAccessState {
     var isDesktop: Bool {
         if resourceID?.kind == .display { return true }
         guard resourceID == nil else { return false }
-        return model?.target.port == CmuxTuiSnapshotParser.desktopPort && remoteURL?.path == "/vnc.html"
+        return model?.target.port == BreeTuiSnapshotParser.desktopPort && remoteURL?.path == "/vnc.html"
     }
 
     var failureMessage: String? {

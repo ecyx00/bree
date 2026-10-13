@@ -5,7 +5,7 @@ set -euo pipefail
 DEST="${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}"
 GHOSTTY_DEST="${DEST}/ghostty"
 TERMINFO_DEST="${DEST}/terminfo"
-CMUX_SHELL_DEST="${DEST}/shell-integration"
+BREE_SHELL_DEST="${DEST}/shell-integration"
 BIN_DEST="${DEST}/bin"
 LIBEXEC_DEST="${DEST}/libexec"
 SRC_SHARE="${SRCROOT}/ghostty/zig-out/share"
@@ -14,9 +14,9 @@ TERMINFO_SRC="${SRC_SHARE}/terminfo"
 FALLBACK_GHOSTTY="${SRCROOT}/Resources/ghostty"
 FALLBACK_TERMINFO="${SRCROOT}/Resources/ghostty/terminfo"
 TERMINFO_OVERLAY="${SRCROOT}/Resources/terminfo-overlay"
-CMUX_SHELL_SRC="${SRCROOT}/Resources/shell-integration"
+BREE_SHELL_SRC="${SRCROOT}/Resources/shell-integration"
 GHOSTTY_SHELL_SRC="${SRCROOT}/ghostty/src/shell-integration"
-CMUX_GHOSTTY_ZSH_SRC="${SRCROOT}/ghostty/src/shell-integration/zsh/ghostty-integration"
+BREE_GHOSTTY_ZSH_SRC="${SRCROOT}/ghostty/src/shell-integration/zsh/ghostty-integration"
 BUILD_GHOSTTY_HELPER="${SRCROOT}/scripts/build-ghostty-cli-helper.sh"
 GHOSTTY_HELPER_DEST="${BIN_DEST}/ghostty"
 INFO_PLIST="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
@@ -31,7 +31,7 @@ update_commit() {
   local commit
   commit="$(run_git -C "${SRCROOT}" rev-parse --short=9 HEAD 2>/dev/null || true)"
   if [ -n "$commit" ] && [ -f "$INFO_PLIST" ]; then
-    /usr/libexec/PlistBuddy -c "Set :CMUXCommit $commit" "$INFO_PLIST" >/dev/null 2>&1 || /usr/libexec/PlistBuddy -c "Add :CMUXCommit string $commit" "$INFO_PLIST" >/dev/null 2>&1 || true
+    /usr/libexec/PlistBuddy -c "Set :BREECommit $commit" "$INFO_PLIST" >/dev/null 2>&1 || /usr/libexec/PlistBuddy -c "Add :BREECommit string $commit" "$INFO_PLIST" >/dev/null 2>&1 || true
   fi
 }
 
@@ -45,8 +45,8 @@ fingerprint_tool() {
 
 fingerprint_toolchain() {
   local zig_path
-  if [ -n "${CMUX_ZIG:-}" ]; then
-    zig_path="$CMUX_ZIG"
+  if [ -n "${BREE_ZIG:-}" ]; then
+    zig_path="$BREE_ZIG"
     printf 'zig-path=%s\n' "$zig_path"
     if [ -x "$zig_path" ]; then
       fingerprint_tool zig-version "$zig_path" version
@@ -75,8 +75,8 @@ fingerprint_toolchain() {
   done
 }
 
-STAMP="${DERIVED_FILE_DIR}/cmux-bundled-resources.stamp"
-OUTPUT_MANIFEST="${DERIVED_FILE_DIR}/cmux-bundled-resources.outputs"
+STAMP="${DERIVED_FILE_DIR}/bree-bundled-resources.stamp"
+OUTPUT_MANIFEST="${DERIVED_FILE_DIR}/bree-bundled-resources.outputs"
 
 # This phase also runs when Xcode's dependency graph is conservative. Keep the
 # expensive helper builds incremental inside the phase by keying the output to
@@ -125,7 +125,7 @@ output_fingerprint() {
     hash_swiftpm_resource_bundles "$BIN_DEST"
     hash_tree "$GHOSTTY_DEST"
     hash_tree "$TERMINFO_DEST"
-    hash_tree "$CMUX_SHELL_DEST"
+    hash_tree "$BREE_SHELL_DEST"
     hash_tree "$GHOSTTY_HELPER_DEST"
   } | shasum | awk '{print $1}'
 }
@@ -170,8 +170,8 @@ fingerprint="$({
   printf 'configuration=%s\n' "${CONFIGURATION:-}"
   printf 'sdk=%s\n' "${SDKROOT:-}"
   printf 'deployment=%s\n' "${MACOSX_DEPLOYMENT_TARGET:-}"
-  printf 'skip-zig=%s\n' "${CMUX_SKIP_ZIG_BUILD:-}"
-  printf 'cmux-zig=%s\n' "${CMUX_ZIG:-}"
+  printf 'skip-zig=%s\n' "${BREE_SKIP_ZIG_BUILD:-}"
+  printf 'bree-zig=%s\n' "${BREE_ZIG:-}"
   printf 'zig-required=%s\n' "${ZIG_REQUIRED:-}"
   fingerprint_toolchain
   printf 'bundle-id=%s\n' "${PRODUCT_BUNDLE_IDENTIFIER:-}"
@@ -184,9 +184,9 @@ fingerprint="$({
   hash_tree "$TERMINFO_SRC"
   hash_tree "$FALLBACK_TERMINFO"
   hash_tree "$TERMINFO_OVERLAY"
-  hash_tree "$CMUX_SHELL_SRC"
+  hash_tree "$BREE_SHELL_SRC"
   hash_tree "$GHOSTTY_SHELL_SRC"
-  hash_tree "$CMUX_GHOSTTY_ZSH_SRC"
+  hash_tree "$BREE_GHOSTTY_ZSH_SRC"
   hash_tree "${SRCROOT}/Resources/AppIcon.icns"
   hash_tree "${SRCROOT}/Resources/AppIcon-Debug.icns"
 } | shasum | awk '{print $1}')"
@@ -194,7 +194,7 @@ output_fingerprint_value="$(output_fingerprint)"
 
 if [ -f "$STAMP" ] && [ -x "$GHOSTTY_HELPER_DEST" ] \
   && [ -d "$GHOSTTY_DEST" ] && [ -d "$TERMINFO_DEST" ] \
-  && [ -d "$CMUX_SHELL_DEST" ] && [ -f "$INFO_PLIST" ] \
+  && [ -d "$BREE_SHELL_DEST" ] && [ -f "$INFO_PLIST" ] \
   && [ -f "$OUTPUT_MANIFEST" ] \
   && [ "$(cat "$STAMP")" = "$fingerprint" ] \
   && [ "$(cat "$OUTPUT_MANIFEST")" = "$output_fingerprint_value" ]; then
@@ -228,22 +228,22 @@ elif [ -d "$FALLBACK_TERMINFO" ]; then
 else
   rm -rf "$TERMINFO_DEST"
 fi
-# Overlay any cmux-specific terminfo adjustments.
+# Overlay any bree-specific terminfo adjustments.
 # This intentionally does not use --delete so we only patch specific entries.
 if [ -d "$TERMINFO_OVERLAY" ]; then
   mkdir -p "$TERMINFO_DEST"
   rsync -a "$TERMINFO_OVERLAY/" "$TERMINFO_DEST/"
 fi
-if [ -d "$CMUX_SHELL_SRC" ]; then
-  mkdir -p "$CMUX_SHELL_DEST"
+if [ -d "$BREE_SHELL_SRC" ]; then
+  mkdir -p "$BREE_SHELL_DEST"
   # Use '/.' so dotfiles like .zshenv/.zprofile are copied too.
-  rsync -a --delete "$CMUX_SHELL_SRC/." "$CMUX_SHELL_DEST/"
+  rsync -a --delete "$BREE_SHELL_SRC/." "$BREE_SHELL_DEST/"
 else
-  rm -rf "$CMUX_SHELL_DEST"
+  rm -rf "$BREE_SHELL_DEST"
 fi
-if [ -f "$CMUX_GHOSTTY_ZSH_SRC" ]; then
-  mkdir -p "$CMUX_SHELL_DEST"
-  rsync -a "$CMUX_GHOSTTY_ZSH_SRC" "$CMUX_SHELL_DEST/ghostty-integration.zsh"
+if [ -f "$BREE_GHOSTTY_ZSH_SRC" ]; then
+  mkdir -p "$BREE_SHELL_DEST"
+  rsync -a "$BREE_GHOSTTY_ZSH_SRC" "$BREE_SHELL_DEST/ghostty-integration.zsh"
 fi
 if [ ! -x "$BUILD_GHOSTTY_HELPER" ]; then
   echo "error: missing Ghostty CLI helper build script at $BUILD_GHOSTTY_HELPER" >&2

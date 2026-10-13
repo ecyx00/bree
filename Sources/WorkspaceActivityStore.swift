@@ -1,5 +1,5 @@
 import Combine
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 /// One line of the Activity timeline. `detail` is the agent name, port or file name.
@@ -153,7 +153,7 @@ final class WorkspaceActivityStore: ObservableObject {
 
     @Published private(set) var byWorkspace: [UUID: WorkspaceActivity]
     /// Review station turn records keyed by lowercased workspace id, newest first.
-    /// Written by the hook process (`cmux` CLI); the app only reads it and flips `reviewed`.
+    /// Written by the hook process (`bree` CLI); the app only reads it and flips `reviewed`.
     @Published private(set) var turnRecords: [String: [AgentTurnRecord]] = [:]
     private let fileURL: URL?
     private let saveScheduler = MainActorDeferredActionScheduler()

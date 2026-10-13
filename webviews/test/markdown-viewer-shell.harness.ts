@@ -40,7 +40,7 @@ export function loadShell(): { dom: JSDOM; posted: PostedMessage[]; render(markd
   const posted: PostedMessage[] = [];
   // Bun cannot host jsdom's script runner, so evaluate the shell's inline
   // scripts in order with the jsdom window as their global scope.
-  const dom = new JSDOM(shellHTML(), { url: "file:///tmp/cmux-markdown-fixture/README.md" });
+  const dom = new JSDOM(shellHTML(), { url: "file:///tmp/bree-markdown-fixture/README.md" });
   const win = dom.window as unknown as Record<string, unknown>;
   const media = { matches: false, addEventListener() {}, removeEventListener() {} };
   win.matchMedia = () => media;
@@ -52,7 +52,7 @@ export function loadShell(): { dom: JSDOM; posted: PostedMessage[]; render(markd
   (dom.window.document as unknown as { elementFromPoint: () => null }).elementFromPoint = () => null;
   win.webkit = {
     messageHandlers: {
-      cmuxLib: {
+      breeLib: {
         postMessage(message: PostedMessage) {
           posted.push(message);
         },
@@ -67,12 +67,12 @@ export function loadShell(): { dom: JSDOM; posted: PostedMessage[]; render(markd
     .join("\n");
   // eslint-disable-next-line no-new-func
   new Function("win", `with (win) {\n${body}\n}`)(win);
-  const window = win as unknown as { __cmuxRenderMarkdown(md: string): void };
+  const window = win as unknown as { __breeRenderMarkdown(md: string): void };
   return {
     dom,
     posted,
     render(markdown: string) {
-      window.__cmuxRenderMarkdown(markdown);
+      window.__breeRenderMarkdown(markdown);
       return dom.window.document.getElementById("content") as HTMLElement;
     },
   };
@@ -97,7 +97,7 @@ export function unsafeNodes(root: Node): string[] {
         "script", "noscript", "noembed", "noframes", "xmp", "plaintext", "iframe", "object", "embed",
         "template", "style", "textarea", "title", "animate", "set", "animatetransform", "animatemotion",
         "foreignobject", "form", "base", "link", "meta",
-      ].includes(name) && !element.closest(".cmux-mermaid")
+      ].includes(name) && !element.closest(".bree-mermaid")
     ) {
       findings.push(`element:${name}`);
     }

@@ -1,5 +1,5 @@
-import CmuxSidebar
-import CmuxWorkspaces
+import BreeSidebar
+import BreeWorkspaces
 import Foundation
 
 /// Builds the immutable value passed across the workspace sidebar's

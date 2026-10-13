@@ -1,11 +1,11 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxCommandPalette
-import CmuxFoundation
-import CmuxNotifications
+import BreeAppKitSupportUI
+import BreeCommandPalette
+import BreeFoundation
+import BreeNotifications
 import SwiftUI
-import CmuxSettings
-import CmuxWorkspaces
+import BreeSettings
+import BreeWorkspaces
 
 extension VerticalTabsSidebar {
     func sidebarWorkspaceGroupTableConfiguration(
@@ -25,7 +25,7 @@ extension VerticalTabsSidebar {
         let isMultiSelected = liveAnchorId.map { selectedTabIds.contains($0) } ?? false
             && selectedTabIds.count > 1
         let anchorCwd = liveAnchorId.flatMap { renderContext.workspaceById[$0]?.currentDirectory }
-        let resolvedConfig = cmuxConfigStore.resolveWorkspaceGroupConfig(forCwd: anchorCwd)
+        let resolvedConfig = breeConfigStore.resolveWorkspaceGroupConfig(forCwd: anchorCwd)
         let effectiveColor = group.customColor ?? resolvedConfig?.color
         let effectiveIcon = RenderableSystemSymbol.resolvedWorkspaceGroupIcon(
             explicit: group.iconSymbol,
@@ -210,7 +210,7 @@ extension VerticalTabsSidebar {
         let isMultiSelected = liveAnchorId.map { selectedTabIds.contains($0) } ?? false
             && selectedTabIds.count > 1
         let anchorCwd = liveAnchorId.flatMap { renderContext.workspaceById[$0]?.currentDirectory }
-        let resolvedConfig = cmuxConfigStore.resolveWorkspaceGroupConfig(forCwd: anchorCwd)
+        let resolvedConfig = breeConfigStore.resolveWorkspaceGroupConfig(forCwd: anchorCwd)
         let effectiveColor = group.customColor ?? resolvedConfig?.color
         let effectiveIcon = RenderableSystemSymbol.resolvedWorkspaceGroupIcon(
             explicit: group.iconSymbol,
@@ -568,7 +568,7 @@ extension VerticalTabsSidebar {
                 tabManager.workspaceGrouping.deleteWorkspaceGroup(confirmed: confirmation)
             },
             onEditConfig: {
-                SidebarWorkspaceGroupConfigOpener.openCmuxConfigInEditor()
+                SidebarWorkspaceGroupConfigOpener.openBreeConfigInEditor()
             }
         )
         actions.notificationState = resolveNotificationState

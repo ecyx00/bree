@@ -1,5 +1,5 @@
 import AppKit
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
 /// Closure capabilities for a workspace row.

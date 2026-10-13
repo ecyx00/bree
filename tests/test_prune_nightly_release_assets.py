@@ -24,9 +24,9 @@ def args(*, best_effort: bool) -> argparse.Namespace:
     return argparse.Namespace(
         keep_builds=100,
         max_assets=950,
-        repo="manaflow-ai/cmux",
+        repo="ecyx00/bree",
         release_tag="nightly",
-        name_prefix="cmux-nightly-macos-",
+        name_prefix="bree-nightly-macos-",
         execute=True,
         best_effort=best_effort,
     )
@@ -58,8 +58,8 @@ class NightlyPruneRateLimitTests(unittest.TestCase):
         # Pin the retry knobs so an inherited override cannot change the path.
         env = {
             "GH_TOKEN": "test-token",
-            "CMUX_NIGHTLY_GITHUB_API_MAX_ATTEMPTS": "4",
-            "CMUX_NIGHTLY_GITHUB_API_RETRY_DELAY_SECONDS": "2",
+            "BREE_NIGHTLY_GITHUB_API_MAX_ATTEMPTS": "4",
+            "BREE_NIGHTLY_GITHUB_API_RETRY_DELAY_SECONDS": "2",
         }
         with mock.patch.object(MODULE.urllib.request, "urlopen", side_effect=fake_urlopen), \
                 mock.patch.object(MODULE.time, "sleep") as sleep, \
@@ -105,8 +105,8 @@ class NightlyPruneRateLimitTests(unittest.TestCase):
         parsed.max_assets = 1
         release = {
             "assets": [
-                {"id": 1, "name": "cmux-nightly-macos-1.dmg"},
-                {"id": 2, "name": "cmux-nightly-macos-2.dmg"},
+                {"id": 1, "name": "bree-nightly-macos-1.dmg"},
+                {"id": 2, "name": "bree-nightly-macos-2.dmg"},
             ]
         }
         with mock.patch.object(MODULE, "parse_args", return_value=parsed), \

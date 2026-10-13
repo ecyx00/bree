@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Bonsplit
 import SwiftUI
 
@@ -103,7 +103,7 @@ struct NotificationsPage: View {
     private var header: some View {
         HStack {
             Text(String(localized: "notifications.title", defaultValue: "Notifications"))
-                .cmuxFont(.title2)
+                .scaledFont(.title2)
                 .fontWeight(.semibold)
 
             Spacer()
@@ -123,11 +123,11 @@ struct NotificationsPage: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            CmuxSystemSymbolImage(magnified: "bell.slash", pointSize: 32, tint: .secondary)
+            BreeSystemSymbolImage(magnified: "bell.slash", pointSize: 32, tint: .secondary)
             Text(String(localized: "notifications.empty.title", defaultValue: "No notifications yet"))
-                .cmuxFont(.headline)
+                .scaledFont(.headline)
             Text(String(localized: "notifications.empty.description", defaultValue: "Desktop notifications will appear here for quick review."))
-                .cmuxFont(.subheadline)
+                .scaledFont(.subheadline)
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -135,9 +135,9 @@ struct NotificationsPage: View {
 
     private var workspaceUnreadIndicatorState: some View {
         VStack(spacing: 8) {
-            CmuxSystemSymbolImage(magnified: "bell.badge", pointSize: 32, tint: .secondary)
+            BreeSystemSymbolImage(magnified: "bell.badge", pointSize: 32, tint: .secondary)
             Text(notificationStore.notificationMenuSnapshot.stateHintTitle)
-                .cmuxFont(.headline)
+                .scaledFont(.headline)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -201,7 +201,7 @@ struct ShortcutAnnotation: View {
 
     private var badge: some View {
         Text(text)
-            .cmuxFont(size: 10, weight: .semibold, design: .rounded)
+            .scaledFont(size: 10, weight: .semibold, design: .rounded)
             .foregroundStyle(.primary)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -213,7 +213,7 @@ struct ShortcutAnnotation: View {
 }
 
 struct NotificationRow: View, Equatable {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     // Closures and the focus binding are recreated by the parent on every render
     // and excluded from ==. Equality compares only the value snapshot the row
     // actually renders, so `.equatable()` can suppress body re-evaluation for
@@ -239,35 +239,35 @@ struct NotificationRow: View, Equatable {
             Button(action: onOpen) {
                 HStack(alignment: .top, spacing: 12) {
                     Circle()
-                        .fill(notification.isRead ? Color.clear : cmuxAccent.color)
+                        .fill(notification.isRead ? Color.clear : breeAccent.color)
                         .frame(width: 8, height: 8)
                         .overlay(
                             Circle()
-                                .stroke(cmuxAccent.color.opacity(notification.isRead ? 0.2 : 1), lineWidth: 1)
+                                .stroke(breeAccent.color.opacity(notification.isRead ? 0.2 : 1), lineWidth: 1)
                         )
                         .padding(.top, 6)
 
                     VStack(alignment: .leading, spacing: 6) {
                         HStack {
                             Text(notification.title)
-                                .cmuxFont(.headline)
+                                .scaledFont(.headline)
                                 .foregroundColor(.primary)
                             Spacer()
                             Text(notification.createdAt.formatted(date: .omitted, time: .shortened))
-                                .cmuxFont(.caption)
+                                .scaledFont(.caption)
                                 .foregroundColor(.secondary)
                         }
 
                         if !notification.body.isEmpty {
                             Text(notification.body)
-                                .cmuxFont(.subheadline)
+                                .scaledFont(.subheadline)
                                 .foregroundColor(.secondary)
                                 .lineLimit(3)
                         }
 
                         if let tabTitle {
                             Text(tabTitle)
-                                .cmuxFont(.caption)
+                                .scaledFont(.caption)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -285,10 +285,10 @@ struct NotificationRow: View, Equatable {
             .modifier(DefaultActionModifier(isActive: isFocused))
 
             Button(action: onClear) {
-                CmuxSystemSymbolImage(systemName: "xmark.circle.fill", pointSize: 14, tint: .secondary)
+                BreeSystemSymbolImage(systemName: "xmark.circle.fill", pointSize: 14, tint: .secondary)
             }
             .buttonStyle(.plain)
-            // CmuxSystemSymbolImage renders an AppKit NSImage with no accessibility
+            // BreeSystemSymbolImage renders an AppKit NSImage with no accessibility
             // description, so the icon-only button needs an explicit label (the prior
             // SwiftUI system-symbol path used to supply one implicitly).
             .accessibilityLabel(String(localized: "notifications.row.clear", defaultValue: "Clear notification"))

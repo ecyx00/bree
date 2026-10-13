@@ -1,5 +1,5 @@
 import AppKit
-import CmuxWorkspaces
+import BreeWorkspaces
 import SwiftUI
 
 // MARK: - Item line

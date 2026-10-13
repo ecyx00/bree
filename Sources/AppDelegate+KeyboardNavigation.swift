@@ -1,5 +1,5 @@
 import AppKit
-import CmuxSettingsUI
+import BreeSettingsUI
 
 /// Keyboard-first navigation: focus regions, Quick View toggle, Architecture
 /// toggle and the shortcut cheat sheet. Kept out of AppDelegate.swift on purpose.
@@ -44,6 +44,10 @@ extension AppDelegate {
         }
         if matchConfiguredShortcut(event: event, action: .showKeyboardShortcuts) {
             KeyboardShortcutsCheatSheetController.shared.toggle()
+            return true
+        }
+        if matchConfiguredShortcut(event: event, action: .showBoard) {
+            if !toggleBoardFromShortcut(preferredWindow: preferredWindow) { NSSound.beep() }
             return true
         }
         return false
@@ -119,8 +123,19 @@ extension AppDelegate {
     @discardableResult
     func toggleArchitectureFromShortcut(preferredWindow: NSWindow? = nil) -> Bool {
         guard let context = preferredRegisteredMainWindowContext(preferredWindow: preferredWindow) else { return false }
-        return executeConfiguredCmuxAction(
+        return executeConfiguredBreeAction(
             .builtIn(.toggleArchitecture),
+            context: context,
+            preferredWindow: resolvedWindow(for: context)
+        )
+    }
+
+    /// Routes through the built-in action handler, the same path as the surface tab bar button.
+    @discardableResult
+    func toggleBoardFromShortcut(preferredWindow: NSWindow? = nil) -> Bool {
+        guard let context = preferredRegisteredMainWindowContext(preferredWindow: preferredWindow) else { return false }
+        return executeConfiguredBreeAction(
+            .builtIn(.showBoard),
             context: context,
             preferredWindow: resolvedWindow(for: context)
         )
@@ -130,7 +145,7 @@ extension AppDelegate {
     @discardableResult
     func toggleWikiFromShortcut(preferredWindow: NSWindow? = nil) -> Bool {
         guard let context = preferredRegisteredMainWindowContext(preferredWindow: preferredWindow) else { return false }
-        return executeConfiguredCmuxAction(
+        return executeConfiguredBreeAction(
             .builtIn(.toggleWiki),
             context: context,
             preferredWindow: resolvedWindow(for: context)

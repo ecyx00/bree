@@ -1,7 +1,7 @@
-import CMUXAgentLaunch
-import CmuxAgentJournal
-import CmuxFoundation
-import CmuxSettings
+import BREEAgentLaunch
+import BreeAgentJournal
+import BreeFoundation
+import BreeSettings
 import Foundation
 
 extension FeedCoordinator {

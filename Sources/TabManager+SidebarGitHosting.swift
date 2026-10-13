@@ -1,11 +1,11 @@
 import Foundation
-import CmuxGit
-import CmuxSidebarGit
-import CmuxSidebar
+import BreeGit
+import BreeSidebarGit
+import BreeSidebar
 
 // MARK: - SidebarGitHosting conformance
 //
-// TabManager is the window-side host of the extracted CmuxSidebarGit
+// TabManager is the window-side host of the extracted BreeSidebarGit
 // services: snapshot reads of workspace/panel state, synchronous projection
 // writes of branch and PR badge state onto Workspace, and the environment
 // toggles (settings) the schedulers honor. Every
@@ -159,7 +159,7 @@ extension TabManager: SidebarGitHosting {
     }
 
     func mobileHostHasRecentActivity(within interval: TimeInterval) -> Bool {
-        false  // no mobile host any more; seam kept for the CmuxSidebarGit protocol
+        false  // no mobile host any more; seam kept for the BreeSidebarGit protocol
     }
 
     func mobileHostQuietDelay(for interval: TimeInterval) -> TimeInterval {

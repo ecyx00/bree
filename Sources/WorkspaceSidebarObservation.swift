@@ -1,8 +1,8 @@
 import Combine
-import CmuxCore
-import CmuxWorkspaces
+import BreeCore
+import BreeWorkspaces
 import Foundation
-import CmuxSidebar
+import BreeSidebar
 import SwiftUI
 
 private struct SidebarPanelObservationState: Equatable {
@@ -222,7 +222,7 @@ extension Workspace {
     // prevents those frames from continuously invalidating LazyVStack rows,
     // and the settle model's deferral deadline still republishes during
     // sustained churn so a row's title cannot stay stale until the agent
-    // goes quiet. See https://github.com/manaflow-ai/cmux/issues/5570.
+    // goes quiet. See https://github.com/ecyx00/bree/issues/5570.
     static let sidebarImmediateObservationCoalesceInterval: DispatchQueue.SchedulerTimeType.Stride = .milliseconds(50)
     /// Publishes synchronous row-affecting workspace changes for the shared sidebar refresh path.
     func makeSidebarImmediateObservationPublisher() -> AnyPublisher<Void, Never> {

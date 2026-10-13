@@ -1,5 +1,5 @@
 import AppKit
-import CmuxTerminalCore
+import BreeTerminalCore
 import GhosttyKit
 
 /// Carries both spellings of the link from the menu item to its action: the
@@ -20,7 +20,7 @@ extension GhosttyNSView {
     /// Adds the link items when the pointer is over a link.
     ///
     /// Cmd-click opens a link one way, decided by
-    /// `openTerminalLinksInCmuxBrowser`. These items are how the user asks for
+    /// `openTerminalLinksInBreeBrowser`. These items are how the user asks for
     /// the other way without changing the setting, or asks for the URL itself
     /// rather than a page.
     ///
@@ -37,7 +37,7 @@ extension GhosttyNSView {
     /// Cmd-right-click and not on a bare right-click. It is the same gesture
     /// that makes the link clickable in the first place, but it is a gesture,
     /// and a menu that reads the link under the pointer without one needs a
-    /// hit-test cmux cannot ask ghostty for yet.
+    /// hit-test bree cannot ask ghostty for yet.
     ///
     /// - Parameters:
     ///   - menu: The context menu being built.
@@ -92,9 +92,9 @@ extension GhosttyNSView {
         menu.addItem(.separator())
     }
 
-    /// Opens the menu item's link in cmux's embedded browser.
-    @objc func openContextMenuLinkInCmuxBrowser(_ sender: NSMenuItem) {
-        openContextMenuLink(sender, destination: .cmuxBrowser)
+    /// Opens the menu item's link in bree's embedded browser.
+    @objc func openContextMenuLinkInBreeBrowser(_ sender: NSMenuItem) {
+        openContextMenuLink(sender, destination: .breeBrowser)
     }
 
     /// Opens the menu item's link in the system default browser.
@@ -139,9 +139,9 @@ extension GhosttyNSView {
 
     private func title(for item: TerminalLinkContextMenuPolicy.Item) -> String {
         switch item {
-        case .openInCmuxBrowser:
+        case .openInBreeBrowser:
             return String(
-                localized: "terminalContextMenu.openLinkInCmuxBrowser",
+                localized: "terminalContextMenu.openLinkInBreeBrowser",
                 defaultValue: "Open Link in Bree Browser"
             )
         case .openInDefaultBrowser:
@@ -159,8 +159,8 @@ extension GhosttyNSView {
 
     private func selector(for item: TerminalLinkContextMenuPolicy.Item) -> Selector {
         switch item {
-        case .openInCmuxBrowser:
-            return #selector(openContextMenuLinkInCmuxBrowser(_:))
+        case .openInBreeBrowser:
+            return #selector(openContextMenuLinkInBreeBrowser(_:))
         case .openInDefaultBrowser:
             return #selector(openContextMenuLinkInDefaultBrowser(_:))
         case .copyLink:
@@ -170,7 +170,7 @@ extension GhosttyNSView {
 
     private func symbolName(for item: TerminalLinkContextMenuPolicy.Item) -> String {
         switch item {
-        case .openInCmuxBrowser:
+        case .openInBreeBrowser:
             return "macwindow"
         case .openInDefaultBrowser:
             return "safari"

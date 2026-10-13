@@ -1,7 +1,7 @@
-import CmuxCloud
-import CmuxControlSocket
-import CmuxSettings
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeControlSocket
+import BreeSettings
+import BreeSurfaceCatalogModel
 import Foundation
 
 // The socket face of the surface catalog: `surface.catalog`, `surface.project`,
@@ -331,12 +331,12 @@ extension TerminalController {
             return v2Error(id: id, code: "invalid_params", message: "vm.link_socket requires `id`. Run `bree vm ls` to find one.")
         }
         return v2VmCall(id: id, timeoutSeconds: 120) {
-            let link = try await CmuxTuiSurfaceProviderRegistry.shared.linkSocketPath(machineID: vmId)
+            let link = try await BreeTuiSurfaceProviderRegistry.shared.linkSocketPath(machineID: vmId)
             return ["socket_path": link.socketPath, "session": link.session]
         }
     }
 
-    /// `vm.workspace_new {id, name?, focus?, open?}` → creates a cmux-tui workspace on the
+    /// `vm.workspace_new {id, name?, focus?, open?}` → creates a bree-tui workspace on the
     /// machine and, when opened, gives it a starter terminal and projects it locally. A
     /// headless request stages that same workspace without projecting it locally.
     nonisolated func socketWorkerVMWorkspaceNewResponse(id: Any?, params: [String: Any]) -> String {
@@ -345,7 +345,7 @@ extension TerminalController {
         }
         let name = Self.surfaceString(params["name"])
         // `reuse`: get-or-create by exact name, so a script that runs twice does not leave
-        // two `tests` workspaces on the machine (`cmux vm workspace new --reuse`).
+        // two `tests` workspaces on the machine (`bree vm workspace new --reuse`).
         let reuse = Self.surfaceBool(params["reuse"]) ?? false
         if reuse, name == nil {
             return v2Error(id: id, code: "invalid_params", message: "vm.workspace_new: `reuse` needs a `name` to look for.")
@@ -362,7 +362,7 @@ extension TerminalController {
             var precreatedWorkspace: SurfaceRemoteWorkspace?
             if reuse, let name {
                 let lookup: RemoteWorkspaceLookup
-                if let cloudProvider = provider as? CmuxTuiSurfaceProvider {
+                if let cloudProvider = provider as? BreeTuiSurfaceProvider {
                     let resolved = try await cloudProvider.getOrCreateRemoteWorkspace(name: name)
                     if resolved.existing {
                         lookup = .found(resolved.workspace, isEmpty: true)
@@ -484,7 +484,7 @@ extension TerminalController {
             return v2Error(id: id, code: "invalid_params", message: "vm.workspace_open requires `id`.")
         }
         guard let remoteWorkspaceID = Self.surfaceString(params["workspace_id"]), !remoteWorkspaceID.isEmpty else {
-            return v2Error(id: id, code: "invalid_params", message: "vm.workspace_open requires `workspace_id` (a cmux-tui workspace id from `bree vm tree`).")
+            return v2Error(id: id, code: "invalid_params", message: "vm.workspace_open requires `workspace_id` (a bree-tui workspace id from `bree vm tree`).")
         }
         let here = Self.surfaceBool(params["here"]) ?? false
         // `workspace_id` is the REMOTE workspace here; the local target rides as `target_workspace_id`.
@@ -555,7 +555,7 @@ extension TerminalController {
         }
     }
 
-    /// `vm.workspace_close {id, workspace_id}` → closes the cmux-tui workspace; its
+    /// `vm.workspace_close {id, workspace_id}` → closes the bree-tui workspace; its
     /// terminals KEEP RUNNING and detach into the Terminals pool (the sidebar's "Close
     /// Workspace (Keep Terminals)"). Use `vm.workspace_delete` to also kill them.
     nonisolated func socketWorkerVMWorkspaceCloseResponse(id: Any?, params: [String: Any]) -> String {
@@ -595,7 +595,7 @@ extension TerminalController {
         }
     }
 
-    /// `vm.workspace_rename {id, workspace_id, name}` → renames the cmux-tui workspace
+    /// `vm.workspace_rename {id, workspace_id, name}` → renames the bree-tui workspace
     /// (the sidebar's "Rename…", through the catalog's shared mutation lane).
     nonisolated func socketWorkerVMWorkspaceRenameResponse(id: Any?, params: [String: Any]) -> String {
         guard let vmId = Self.surfaceString(params["id"]), !vmId.isEmpty,
@@ -726,7 +726,7 @@ extension TerminalController {
     /// those details in the local debug log only.
     private nonisolated func cloudRenameSocketError(id: Any?, operation: String, error: Error) -> String {
         #if DEBUG
-        cmuxDebugLog("cloud.socket.rename.failed operation=\(operation) error=\(String(reflecting: error))")
+        breeDebugLog("cloud.socket.rename.failed operation=\(operation) error=\(String(reflecting: error))")
         #endif
         return v2Error(
             id: id,
@@ -757,23 +757,23 @@ extension TerminalController {
 
     // MARK: - Headless terminal I/O (agent primitives)
 
-    /// The cmux-tui provider for a cloud machine; the local machine and any provider
+    /// The bree-tui provider for a cloud machine; the local machine and any provider
     /// without a remote session have no headless terminal I/O.
-    nonisolated static func cloudTuiProvider(machineID: String, catalog: SurfaceCatalog) async throws -> CmuxTuiSurfaceProvider {
+    nonisolated static func cloudTuiProvider(machineID: String, catalog: SurfaceCatalog) async throws -> BreeTuiSurfaceProvider {
         let machine = SurfaceMachineID.cloud(machineID)
-        guard let provider = try await Self.surfaceProvider(for: machine, catalog: catalog) as? CmuxTuiSurfaceProvider else {
+        guard let provider = try await Self.surfaceProvider(for: machine, catalog: catalog) as? BreeTuiSurfaceProvider else {
             throw SurfaceCatalogError.noProvider(machine)
         }
         return provider
     }
 
-    /// `vm.env_set {id, entries: [{key, value}]}` → the machine's `~/.config/cmux/env`
+    /// `vm.env_set {id, entries: [{key, value}]}` → the machine's `~/.config/bree/env`
     /// gains (or overwrites) those variables. Values travel over the machine's link into
-    /// the in-VM `cmux env receive` (see `CloudEnvDelivery`): never through `vm.exec`, a
+    /// the in-VM `bree env receive` (see `CloudEnvDelivery`): never through `vm.exec`, a
     /// command line, or a terminal's visible screen. The result names keys only.
     nonisolated func socketWorkerVMEnvSetResponse(id: Any?, params: [String: Any]) -> String {
         guard let vmId = Self.surfaceString(params["id"]), !vmId.isEmpty else {
-            return v2Error(id: id, code: "invalid_params", message: String(localized: "cli.vm.env.setRequiresIdRunCmuxVmLsTo", defaultValue: "vm.env_set requires `id`. Run `bree vm ls` to find one."))
+            return v2Error(id: id, code: "invalid_params", message: String(localized: "cli.vm.env.setRequiresIdRunBreeVmLsTo", defaultValue: "vm.env_set requires `id`. Run `bree vm ls` to find one."))
         }
         guard let rawEntries = params["entries"] as? [[String: Any]], !rawEntries.isEmpty else {
             return v2Error(id: id, code: "invalid_params", message: String(localized: "cli.vm.env.setRequiresEntriesANonEmptyArrayOf", defaultValue: "vm.env_set requires `entries`: a non-empty array of {key, value}."))
@@ -857,7 +857,7 @@ extension TerminalController {
         guard let pattern = params["pattern"] as? String, !pattern.isEmpty else {
             return v2Error(id: id, code: "invalid_params", message: "vm.terminal_wait requires a non-empty `pattern` (a regex matched against the screen text).")
         }
-        let timeoutMs = CmuxTuiSurfaceProvider.clampedWaitTimeoutMs(
+        let timeoutMs = BreeTuiSurfaceProvider.clampedWaitTimeoutMs(
             (params["timeout_ms"] as? Int) ?? Int(Self.surfaceString(params["timeout_ms"]) ?? "")
         )
         let socketTimeout = TimeInterval(max(60, timeoutMs / 1000 + 15))
@@ -880,7 +880,7 @@ extension TerminalController {
               let terminalID = Self.surfaceString(params["terminal_id"]), !terminalID.isEmpty else {
             return v2Error(id: id, code: "invalid_params", message: "vm.terminal_wait_exit requires `id` and `terminal_id`.")
         }
-        let timeoutMs = CmuxTuiSurfaceProvider.clampedWaitTimeoutMs(
+        let timeoutMs = BreeTuiSurfaceProvider.clampedWaitTimeoutMs(
             (params["timeout_ms"] as? Int) ?? Int(Self.surfaceString(params["timeout_ms"]) ?? "")
         )
         let socketTimeout = TimeInterval(max(60, timeoutMs / 1000 + 15))
@@ -940,7 +940,7 @@ extension TerminalController {
                 workspacesByID: owners
             )
         }) { machineID in
-            _ = await CmuxTuiSurfaceProviderRegistry.shared.providerRefreshingIfMissing(machineID: machineID)
+            _ = await BreeTuiSurfaceProviderRegistry.shared.providerRefreshingIfMissing(machineID: machineID)
         }
     }
 

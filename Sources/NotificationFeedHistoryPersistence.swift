@@ -2,12 +2,12 @@ import Foundation
 import os
 
 nonisolated private let notificationFeedPersistenceLogger = Logger(
-    subsystem: "com.cmuxterm.app",
+    subsystem: "com.bree.app",
     category: "notification-feed-persistence"
 )
 
 /// The durable feed's startup state. Unsupported snapshots remain intact and
-/// put persistence into a read-only mode until this version of cmux exits.
+/// put persistence into a read-only mode until this version of bree exits.
 enum NotificationFeedHistoryLoadOutcome: Equatable, Sendable {
     case missing
     case loaded(NotificationFeedHistorySnapshot)

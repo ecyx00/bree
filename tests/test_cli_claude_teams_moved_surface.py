@@ -9,8 +9,8 @@ import tempfile
 from pathlib import Path
 
 from claude_teams_test_utils import (
-    focused_cmux_server,
-    resolve_cmux_cli,
+    focused_bree_server,
+    resolve_bree_cli,
     stable_tmux_numeric_id,
 )
 
@@ -21,7 +21,7 @@ def parsed_environment(stdout: str) -> dict[str, str]:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
@@ -34,9 +34,9 @@ def main() -> int:
     stale_panel_id = "66666666-6666-4666-8666-666666666666"
     stale_pane_id = "77777777-7777-4777-8777-777777777777"
 
-    with tempfile.TemporaryDirectory(prefix="cmux-moved-teams-surface-") as td:
-        socket_path = Path(td) / "cmux.sock"
-        with focused_cmux_server(
+    with tempfile.TemporaryDirectory(prefix="bree-moved-teams-surface-") as td:
+        socket_path = Path(td) / "bree.sock"
+        with focused_bree_server(
             socket_path,
             workspace_id=current_workspace_id,
             window_id=current_window_id,
@@ -49,17 +49,17 @@ def main() -> int:
             identified_surface_id="dddddddd-dddd-4ddd-8ddd-dddddddddddd",
         ) as (resolved_socket_path, requests):
             environment = os.environ.copy()
-            environment.pop("CMUX_SOCKET", None)
-            environment.pop("CMUX_SOCKET_CAPABILITY", None)
-            environment.pop("CMUX_SOCKET_PASSWORD", None)
+            environment.pop("BREE_SOCKET", None)
+            environment.pop("BREE_SOCKET_CAPABILITY", None)
+            environment.pop("BREE_SOCKET_PASSWORD", None)
             environment.update(
                 {
-                    "CMUX_SOCKET_PATH": resolved_socket_path,
-                    "CMUX_WORKSPACE_ID": old_workspace_id,
-                    "CMUX_SURFACE_ID": surface_id,
-                    "CMUX_PANEL_ID": stale_panel_id,
-                    "CMUX_TAB_ID": old_workspace_id,
-                    "CMUX_PANE_ID": stale_pane_id,
+                    "BREE_SOCKET_PATH": resolved_socket_path,
+                    "BREE_WORKSPACE_ID": old_workspace_id,
+                    "BREE_SURFACE_ID": surface_id,
+                    "BREE_PANEL_ID": stale_panel_id,
+                    "BREE_TAB_ID": old_workspace_id,
+                    "BREE_PANE_ID": stale_pane_id,
                     "TMUX": "__STALE_TMUX__",
                     "TMUX_PANE": "%999",
                 }
@@ -82,12 +82,12 @@ def main() -> int:
 
     pane_token = stable_tmux_numeric_id(current_pane_id)
     expected = {
-        "CMUX_WORKSPACE_ID": current_workspace_id,
-        "CMUX_TAB_ID": current_workspace_id,
-        "CMUX_SURFACE_ID": surface_id,
-        "CMUX_PANEL_ID": surface_id,
-        "CMUX_PANE_ID": current_pane_id,
-        "TMUX": f"/tmp/cmux-debug/{current_workspace_id},{current_window_id},{pane_token}",
+        "BREE_WORKSPACE_ID": current_workspace_id,
+        "BREE_TAB_ID": current_workspace_id,
+        "BREE_SURFACE_ID": surface_id,
+        "BREE_PANEL_ID": surface_id,
+        "BREE_PANE_ID": current_pane_id,
+        "TMUX": f"/tmp/bree-debug/{current_workspace_id},{current_window_id},{pane_token}",
         "TMUX_PANE": f"%{pane_token}",
     }
     observed = parsed_environment(result.stdout)

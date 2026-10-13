@@ -1,12 +1,12 @@
-import CmuxFoundation
-import CmuxDiffComments
+import BreeFoundation
+import BreeDiffComments
 import CryptoKit
 import Foundation
 
 /// Persists diff viewer review comments per git repository, one JSON file per
 /// repo (keyed by a hash of the canonical repo root path) under
-/// `Application Support/cmux/diff-comments/`. Comments outlive individual
-/// `cmux diff` invocations, so a regenerated diff for the same repo shows the
+/// `Application Support/bree/diff-comments/`. Comments outlive individual
+/// `bree diff` invocations, so a regenerated diff for the same repo shows the
 /// same comments.
 @MainActor
 final class DiffCommentStore {
@@ -97,7 +97,7 @@ final class DiffCommentStore {
             try data.write(to: fileURL, options: .atomic)
         } catch {
 #if DEBUG
-            cmuxDebugLog("diffComments.store.saveFailed error=\(error.localizedDescription)")
+            breeDebugLog("diffComments.store.saveFailed error=\(error.localizedDescription)")
 #endif
         }
     }
@@ -125,7 +125,7 @@ final class DiffCommentStore {
     ) -> URL? {
         guard !isRunningUnderAutomatedTests, let appSupportDirectory else { return nil }
         return appSupportDirectory
-            .appendingPathComponent(CmuxIdentity.current.applicationSupportDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.applicationSupportDirectoryName, isDirectory: true)
             .appendingPathComponent("diff-comments", isDirectory: true)
     }
 

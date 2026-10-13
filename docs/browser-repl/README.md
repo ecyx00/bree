@@ -1,6 +1,6 @@
-# cmux browser REPL
+# bree browser REPL
 
-`cmux browser repl` is a persistent JavaScript REPL that drives cmux browser
+`bree browser repl` is a persistent JavaScript REPL that drives bree browser
 panes for agents. It has one API. It covers every browser-operation capability
 of two reference browser REPLs (reference A and reference B), and improves
 on both where they differ. It does not copy either
@@ -10,8 +10,8 @@ Parity is enforced by
 [capabilities.json](../../tests/browser-parity/capabilities.json) and the
 differential cases in
 [tests/browser-parity/diff](../../tests/browser-parity/diff): every reference
-member maps to a cmux equivalent and to cases that run the same task in cmux,
-reference A and reference B, and no case may leave cmux worse than a
+member maps to a bree equivalent and to cases that run the same task in bree,
+reference A and reference B, and no case may leave bree worse than a
 reference ([parity-report.md](parity-report.md)).
 
 ## Principles
@@ -40,7 +40,7 @@ reference ([parity-report.md](parity-report.md)).
 | Global | Purpose |
 | --- | --- |
 | `page` | The current tab, a Playwright `Page`. |
-| `tabs` | `list()`, `open(url, { background })`, `current()`, `use(tabOrId)`, `get(id)`. `list()` returns `{ id, title, url, active, current, state }` without attaching or waking a tab (`state`: see [Hibernated and crashed tabs](#hibernated-and-crashed-tabs)); `list({ all: true })` adds tabs in the user's other workspaces and windows, which `use(id)` attaches (reference B's `claimTab`). `open`, `current`, `use` and `get` return a `Page` with a stable `page.id`. `content({ urls, format })` loads URLs in background tabs and extracts text, Markdown, HTML or a snapshot. `history({ query, from, to, limit })` searches cmux browser history. |
+| `tabs` | `list()`, `open(url, { background })`, `current()`, `use(tabOrId)`, `get(id)`. `list()` returns `{ id, title, url, active, current, state }` without attaching or waking a tab (`state`: see [Hibernated and crashed tabs](#hibernated-and-crashed-tabs)); `list({ all: true })` adds tabs in the user's other workspaces and windows, which `use(id)` attaches (reference B's `claimTab`). `open`, `current`, `use` and `get` return a `Page` with a stable `page.id`. `content({ urls, format })` loads URLs in background tabs and extracts text, Markdown, HTML or a snapshot. `history({ query, from, to, limit })` searches bree browser history. |
 | `snapshot(target?, options?)` | Accessibility snapshot of `page`, a locator, or a ref string. See [Snapshot](#snapshot). |
 | `screenshot(target?, options?)` | PNG of the viewport, full page, locator or ref. `{ annotate: true }` draws each ref's box and label. Returns an `Image` that displays when printed. |
 | `fetch` | Standard `fetch` that sends the current tab's cookies (`credentials`: `"include"` by default, `"same-origin"`, `"omit"`). The domain policy is checked on every redirect hop; a body over 64 MiB fails (download it in a tab instead). |
@@ -219,7 +219,7 @@ Rules, and how they improve on the references:
   agent sees why the page is blocked. A file chooser line carries its input's
   ref. A JavaScript dialog line has none, because no element owns the dialog
   and a ref must work as a selector; it names `page.dialog()` instead, and the
-  tree is replaced by a note while the dialog blocks the page. A dialog cmux
+  tree is replaced by a note while the dialog blocks the page. A dialog bree
   dismissed during Meta+C, Meta+X or Meta+V prints once, as
   `dialog dismissed: alert "…" (it opened during a copy)`.
 - **Options**: `interactive` (interactive nodes, their named ancestors, and
@@ -260,7 +260,7 @@ prints: Claude Code keeps about 30,000 characters inline (then a
 2,000-character preview and a file), Codex keeps 10,000 tokens (head and
 tail, the middle dropped), reference B stops its DOM view at 20,000
 characters and a node's children at 500 without saying where. Reference A prints
-everything (a 5,000-item page is a 400 KB answer). cmux decides what is
+everything (a 5,000-item page is a 400 KB answer). bree decides what is
 kept, keeps what an agent needs to act, and says at each cut how to get the
 rest. Measurements: [performance.md](performance.md).
 
@@ -289,12 +289,12 @@ rest. Measurements: [performance.md](performance.md).
 - **A diff too large for the budget** prints the condensed tree with a note
   that `.diff` has the changes.
 - **Per call**, the REPL prints at most 25,000 characters
-  (`cmux browser repl --max-output <chars>`, `0` for no limit up to
+  (`bree browser repl --max-output <chars>`, `0` for no limit up to
   4,000,000 characters, past which the call spills as below), under both
   harness limits above so the REPL, not the harness, picks what is cut.
   Past the cap, the call's whole output goes to
   `output-N.txt` in the session's own `os.tmpdir()`
-  (`<tmp>/cmux-browser-repl/<session>-<random>-tmp`, mode 0700, where its
+  (`<tmp>/bree-browser-repl/<session>-<random>-tmp`, mode 0700, where its
   images, exports and recordings go too; kept after the session ends,
   removed only when empty): the first 80% prints,
   then `# output continues in <path>`, and at the end of the call its last
@@ -309,16 +309,16 @@ rest. Measurements: [performance.md](performance.md).
 ## Sessions and tabs
 
 - Named sessions (`--session NAME`) keep variables and tabs until
-  `cmux browser repl reset NAME` or 30 minutes idle. A run without `--session`
+  `bree browser repl reset NAME` or 30 minutes idle. A run without `--session`
   is one-shot: its tabs close at the end unless `page.keep()` was called.
-- `cmux browser repl mcp [--session NAME]` serves a session as an MCP
+- `bree browser repl mcp [--session NAME]` serves a session as an MCP
   server on stdio, with the tools `eval`, `snapshot`, `screenshot`, `tabs`
   and `reset`, for agents that load tools over MCP. Without `--session` each
   server process gets its own session (`mcp-<pid>-<random>`), reset when
   the server exits, so two MCP clients never share variables or tabs; give
   them the same `--session` to share one.
-- A session binds to the caller's cmux workspace (from `CMUX_WORKSPACE_ID`), or
-  to the focused workspace when the caller is outside cmux or the id is unknown
+- A session binds to the caller's bree workspace (from `BREE_WORKSPACE_ID`), or
+  to the focused workspace when the caller is outside bree or the id is unknown
   to this instance.
 - A session never moves the user's focus, so agents can work in the
   background: `tabs.open()`, navigation, input, dialogs, file choosers,
@@ -337,7 +337,7 @@ rest. Measurements: [performance.md](performance.md).
   first responder to the next view, which belongs to the user. A key no
   page handles stops at the page: WebKit hands such a key back to the
   app's key window, where it would type into the user's terminal or run a
-  menu shortcut, so cmux drops that resend for automated keys.
+  menu shortcut, so bree drops that resend for automated keys.
 - Session behaviors apply only to tabs the session created: tabs from
   `tabs.open()` (and `tabs.content`), and popups of those tabs, while the
   session lasts. In them dialogs and file choosers wait for the agent,
@@ -347,11 +347,11 @@ rest. Measurements: [performance.md](performance.md).
   from `session.configure` apply, the page's scripts copy to the tab's
   clipboard instead of the system's (for the tab's whole life, also after
   the session ends), the domain policy's content rules block
-  subresources, and plain-http pages load without cmux's prompt. Another
+  subresources, and plain-http pages load without bree's prompt. Another
   session that drives such a tab does not change these; they follow the
   creating session. Any other tab is the user's, also one a session drives
   with `tabs.use()` or one a finished run kept with `page.keep()`: it keeps
-  its own user agent, headers and content, and cmux's own dialogs, file
+  its own user agent, headers and content, and bree's own dialogs, file
   panel, download location, permission prompts and insecure-HTTP prompt,
   except while the page handles one of the session's own clicks, keys or
   drags, the first second of one of its page scripts (`page.evaluate`), or
@@ -360,7 +360,7 @@ rest. Measurements: [performance.md](performance.md).
   a tab it created, and a window it opens becomes a background tab that
   the session gets as a `popup` (under the session's domain policy) and
   that stays the user's (never closed with the session). The agent caused
-  them, so cmux's UI must not come up in front of the user (an Open panel
+  them, so bree's UI must not come up in front of the user (an Open panel
   or a key popup window over their work from a hidden workspace) or leave
   the agent waiting for an answer only the user could give. Windows the
   user's page opens otherwise stay the user's, with no `popup` event; while
@@ -389,7 +389,7 @@ rest. Measurements: [performance.md](performance.md).
 
 ## Hibernated and crashed tabs
 
-cmux unloads the pages of hidden browser tabs to save memory (Settings,
+bree unloads the pages of hidden browser tabs to save memory (Settings,
 Browser, memory saver); the tab keeps its URL, history and title. A tab a
 session drives is never unloaded while the session is attached, but a
 user's tab, or a tab a finished run kept, can be unloaded before a session
@@ -398,7 +398,7 @@ reaches it. `tabs.list()` and `tab.info` report each tab's `state`:
 | `state` | Meaning |
 | --- | --- |
 | `live` | The page is loaded. |
-| `hibernated` | cmux unloaded the hidden page, or a relaunch restored the tab without loading it yet. Listing it does not load it. |
+| `hibernated` | bree unloaded the hidden page, or a relaunch restored the tab without loading it yet. Listing it does not load it. |
 | `waking` | The page is loading again. |
 | `crashed` | The tab's web content process ended (a WebKit crash, or macOS reclaimed its memory) while the tab was shown; the pane offers Reload. |
 
@@ -427,7 +427,7 @@ navigation, `tab.info`, `page.bringToFront()` and `page.close()` work until
   default too (`browser.capabilities` in the parity cases records that). A
   Chromium engine would add them as `page.cdp`.
 
-Everything else reference B documents has a cmux equivalent, including
+Everything else reference B documents has a bree equivalent, including
 `browser.history` (`tabs.history`), `user.claimTab` (`tabs.list({ all: true })`
 and `tabs.use`), `tabs.content` and the content exports
 (`page.exportContent`). [parity-report.md](parity-report.md) lists every
@@ -437,7 +437,7 @@ the edge cases.
 ## Architecture
 
 ```
-agent -> cmux browser repl -> control socket -> REPL session (JavaScriptCore)
+agent -> bree browser repl -> control socket -> REPL session (JavaScriptCore)
                                                   runtime-core.js, api.js
                                                   | driver protocol
                                                   v
@@ -448,12 +448,12 @@ agent -> cmux browser repl -> control socket -> REPL session (JavaScriptCore)
   runtime and can replace any runtime object, so nothing in that context
   is a guard. The domain policy (and its lock), secret values, redaction
   and capture masking live in the native session (`BrowserReplBoundary`
-  in `Packages/macOS/CmuxBrowser`) and the driver, which every driver call,
+  in `Packages/macOS/BreeBrowser`) and the driver, which every driver call,
   fetch, event, file write and output line passes through. The runtime
-  deletes the `__cmuxNative` global, and the app the runtime's entry
+  deletes the `__breeNative` global, and the app the runtime's entry
   points, before any cell runs. Every script on the session's thread is
   bounded, also a timer or event callback outside a cell (10 s), and
-  `cmux browser repl reset` always ends a stuck one.
+  `bree browser repl reset` always ends a stuck one.
 - Runtime: `Resources/browser-repl/` (`runtime-core.js` Playwright model,
   `api.js` globals, `snapshot.js` host-side stitching and diff, `page-agent.js`
   per-frame script in an isolated content world, `repl-host.js`). Locators use
@@ -466,10 +466,10 @@ agent -> cmux browser repl -> control socket -> REPL session (JavaScriptCore)
   updates and nothing is vendored. Where CFNetwork does not export it, every
   host is its own site (a narrower scope). The dev backend uses a small
   stand-in (`tests/browser-parity/lib/public-suffix.mjs`).
-- The format studies and the representation comparison live in the private repository `manaflow-ai/cmux-browser-parity-private`.
+- The format studies and the representation comparison live in the private repository `ecyx00/bree-browser-parity-private`.
 
 ## Tests
 
 [tests/browser-parity](../../tests/browser-parity/README.md): one scenario set in
-this API, run against the cmux app, a Playwright WebKit development driver, and
+this API, run against the bree app, a Playwright WebKit development driver, and
 a real-Playwright oracle (headless Chrome) for behavior values.

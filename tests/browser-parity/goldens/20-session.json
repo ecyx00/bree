@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "open-during-run": [
       "PRIMARY/aria.html?oneshot",
       "PRIMARY/dynamic.html?closed",

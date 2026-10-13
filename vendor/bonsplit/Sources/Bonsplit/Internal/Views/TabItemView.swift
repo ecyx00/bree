@@ -877,7 +877,11 @@ struct TabItemView: View {
     /// Lower width bound: a compact icon-only width for pinned browser tabs,
     /// otherwise the standard minimum visual width.
     private var frameMinWidth: CGFloat {
-        isIconOnlyPinned ? pinnedIconOnlyWidth : tabWidthRange.lowerBound
+        // A short settled floor keeps a new tab ("Terminal") the same width once its real
+        // title ("tmp") arrives, so the new-tab buttons beside the tabs do not slide.
+        isIconOnlyPinned
+            ? pinnedIconOnlyWidth
+            : max(tabWidthRange.lowerBound, min(TabBarMetrics.tabSettledMinWidth, tabWidthRange.upperBound))
     }
 
     /// Upper width bound: pinned browser tabs are pinned to the compact width;

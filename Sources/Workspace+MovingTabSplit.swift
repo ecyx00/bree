@@ -94,7 +94,7 @@ extension Workspace {
 
     private func terminalHostedViewOwningFirstResponder() -> GhosttySurfaceScrollView? {
         guard let responder = (NSApp.keyWindow ?? NSApp.mainWindow)?.firstResponder,
-              let panelId = responder.cmuxTerminalFocusOwningGhosttyView()?.terminalSurface?.id else {
+              let panelId = responder.breeTerminalFocusOwningGhosttyView()?.terminalSurface?.id else {
             return nil
         }
         return terminalPanel(for: panelId)?.hostedView

@@ -16,10 +16,10 @@
 # Usage: scripts/remote-tmux-fuzz-host.sh [name] [port]
 # Then add the printed Host block to ~/.ssh/config (the app resolves the
 # alias from there), and run e.g.:
-#   CMUX_TAG=<tag> scripts/remote-tmux-live-fuzz.sh <name> 1 25
+#   BREE_TAG=<tag> scripts/remote-tmux-live-fuzz.sh <name> 1 25
 set -eu
 
-NAME="${1:-cmux-fuzzhost}"
+NAME="${1:-bree-fuzzhost}"
 PORT="${2:-2296}"
 case "$NAME" in
   ''|*[!A-Za-z0-9._-]*) echo "invalid host name: $NAME" >&2; exit 2 ;;
@@ -33,7 +33,7 @@ if [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
 fi
 
 umask 077
-STATE_ROOT="$HOME/Library/Caches/cmux/remote-tmux-fuzz"
+STATE_ROOT="$HOME/Library/Caches/bree/remote-tmux-fuzz"
 DIR="$STATE_ROOT/${NAME}-sshd"
 TMUX_DIR="$STATE_ROOT/${NAME}-tmux"
 if [ -L "$STATE_ROOT" ] || [ -L "$DIR" ] || [ -L "$TMUX_DIR" ]; then

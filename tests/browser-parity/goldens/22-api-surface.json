@@ -61,7 +61,7 @@
     "export-content": true,
     "untrusted": []
   },
-  "cmux": {
+  "bree": {
     "tap": "Count 3"
   }
 }

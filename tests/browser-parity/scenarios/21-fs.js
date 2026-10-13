@@ -41,14 +41,14 @@ try {
 }
 try {
   fs.readFileSync("/etc/hosts", "utf8");
-  emitCmux("outside", "read");
+  emitBree("outside", "read");
 } catch (e) {
-  emitCmux("outside", e.code);
+  emitBree("outside", e.code);
 }
 try {
-  fs.writeFileSync("/cmux-parity-denied.txt", "x");
-  emitCmux("outside-write", "written");
+  fs.writeFileSync("/bree-parity-denied.txt", "x");
+  emitBree("outside-write", "written");
 } catch (e) {
-  emitCmux("outside-write", e.code);
+  emitBree("outside-write", e.code);
 }
 cleanUp();

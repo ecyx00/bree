@@ -1,4 +1,4 @@
-import CmuxAgentJournal
+import BreeAgentJournal
 import Foundation
 
 extension AgentJournalLifecycleCenter {
@@ -73,14 +73,14 @@ extension AgentJournalLifecycleCenter {
                 // An incomplete fold must not paint partial replay state:
                 // record the failure and paint nothing (live events still
                 // reduce and self-correct per session).
-                CmuxEventBus.shared.publish(
+                BreeEventBus.shared.publish(
                     name: "agent.journal.replay_failed",
                     category: "agent",
                     source: "journal",
                     payload: ["cursor": cursor, "folded": folded]
                 )
 #if DEBUG
-                cmuxDebugLog("agentJournal.replay.error cursor=\(cursor) \(String(describing: error))")
+                breeDebugLog("agentJournal.replay.error cursor=\(cursor) \(String(describing: error))")
 #endif
                 return []
             }
@@ -108,7 +108,7 @@ extension AgentJournalLifecycleCenter {
             }
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "agentJournal.replay folded=\(folded) skipped=\(skipped) " +
                 "painted=\(assignments.count) unattributed=\(state.unattributedEvents.count)"
         )
@@ -155,7 +155,7 @@ extension AgentJournalLifecycleCenter {
     }
 
     static func publishUnattributedDiagnostic(_ event: AgentJournalEvent) {
-        CmuxEventBus.shared.publish(
+        BreeEventBus.shared.publish(
             name: "agent.journal.unattributed",
             category: "agent",
             source: "journal",
@@ -169,7 +169,7 @@ extension AgentJournalLifecycleCenter {
             ]
         )
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "agentJournal.unattributed seq=\(event.sequence) kind=\(event.kind.rawValue) " +
                 "agent=\(event.draft.source) reason=\(event.draft.unattributedReason ?? "missing-surface")"
         )
@@ -198,7 +198,7 @@ extension AgentJournalLifecycleCenter {
         guard let owner else {
             // Fail closed and record it in release builds too: the panel no
             // longer exists, so the assignment is dropped, never re-homed.
-            CmuxEventBus.shared.publish(
+            BreeEventBus.shared.publish(
                 name: "agent.journal.apply_skipped",
                 category: "agent",
                 source: "journal",
@@ -206,7 +206,7 @@ extension AgentJournalLifecycleCenter {
                 payload: ["agent_key": assignment.agentKey, "reason": "panelGone"]
             )
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "agentJournal.apply.skip surface=\(assignment.surfaceId.prefix(8)) " +
                     "key=\(assignment.agentKey) reason=panelGone"
             )
@@ -237,7 +237,7 @@ extension AgentJournalLifecycleCenter {
             WorkspaceActivityReorderController.shared.agentActivity(activity, workspaceId: workspace.id)
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "agentJournal.apply surface=\(assignment.surfaceId.prefix(8)) " +
                 "key=\(assignment.agentKey) phase=\(assignment.phase?.rawValue ?? "clear")"
         )

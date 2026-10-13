@@ -3,9 +3,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CRATE_DIR="${ROOT}/Native/DiffSidecar"
-BINARY_NAME="cmux-diff-sidecar"
-BUILD_OUTPUT_DIR="${TARGET_BUILD_DIR:-${CRATE_DIR}/target/cmux-diff-sidecar}"
-BUILD_WORK_DIR="${TARGET_TEMP_DIR:-${CRATE_DIR}/target/cmux-diff-sidecar-build}"
+BINARY_NAME="bree-diff-sidecar"
+BUILD_OUTPUT_DIR="${TARGET_BUILD_DIR:-${CRATE_DIR}/target/bree-diff-sidecar}"
+BUILD_WORK_DIR="${TARGET_TEMP_DIR:-${CRATE_DIR}/target/bree-diff-sidecar-build}"
 CARGO_RUNNER="${ROOT}/scripts/run-diff-sidecar-cargo.sh"
 TOOLCHAIN="$(awk -F '"' '/^[[:space:]]*channel[[:space:]]*=/{print $2; exit}' "${CRATE_DIR}/rust-toolchain.toml")"
 
@@ -38,7 +38,7 @@ ensure_rust_target() {
   fi
 }
 
-requested_archs="${CMUX_DIFF_SIDECAR_ARCHS:-${ARCHS:-}}"
+requested_archs="${BREE_DIFF_SIDECAR_ARCHS:-${ARCHS:-}}"
 if [[ -z "$requested_archs" ]]; then
   case "$(uname -m)" in
     arm64|aarch64) requested_archs="arm64" ;;
@@ -63,7 +63,7 @@ for arch in $requested_archs; do
   ensure_rust_target "$target"
   target_dir="${BUILD_WORK_DIR}/${target}"
   CARGO_TARGET_DIR="$target_dir" \
-    MACOSX_DEPLOYMENT_TARGET="${CMUX_DIFF_SIDECAR_MIN_MACOS:-14.0}" \
+    MACOSX_DEPLOYMENT_TARGET="${BREE_DIFF_SIDECAR_MIN_MACOS:-14.0}" \
     "$CARGO_RUNNER" build \
       --manifest-path "${CRATE_DIR}/Cargo.toml" \
       --bin "$BINARY_NAME" \
@@ -103,17 +103,17 @@ fi
 # deployment-target settings. The Xcode phase pins the script overrides to
 # those same build settings before invoking this script. The stamp is
 # intentionally optional so direct script callers retain override support.
-if [[ -n "${CMUX_DIFF_SIDECAR_STAMP:-}" ]]; then
-  stamp_tmp="$(mktemp "${CMUX_DIFF_SIDECAR_STAMP}.tmp.XXXXXX")"
+if [[ -n "${BREE_DIFF_SIDECAR_STAMP:-}" ]]; then
+  stamp_tmp="$(mktemp "${BREE_DIFF_SIDECAR_STAMP}.tmp.XXXXXX")"
   cleanup_stamp_tmp() {
     [[ -e "$stamp_tmp" ]] && rm -f "$stamp_tmp"
   }
   trap cleanup_stamp_tmp EXIT
   {
     printf 'requested_archs=%s\n' "$requested_archs"
-    printf 'min_macos=%s\n' "${CMUX_DIFF_SIDECAR_MIN_MACOS:-14.0}"
+    printf 'min_macos=%s\n' "${BREE_DIFF_SIDECAR_MIN_MACOS:-14.0}"
     shasum -a 256 "$destination"
   } > "$stamp_tmp"
-  mv -f "$stamp_tmp" "$CMUX_DIFF_SIDECAR_STAMP"
+  mv -f "$stamp_tmp" "$BREE_DIFF_SIDECAR_STAMP"
   trap - EXIT
 fi

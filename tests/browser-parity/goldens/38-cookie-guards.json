@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "get-blocked-url": "blocked",
     "get-hides-blocked-site": 0,
     "set-blocked-site": "blocked",

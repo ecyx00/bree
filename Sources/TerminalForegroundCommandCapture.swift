@@ -1,5 +1,5 @@
-import CMUXAgentLaunch
-import CmuxFoundation
+import BREEAgentLaunch
+import BreeFoundation
 import Foundation
 
 /// Resolves the shell command to save for each live terminal when capturing a
@@ -16,7 +16,7 @@ enum TerminalForegroundCommandCapture {
 
     /// Foreground, non-shell command lines keyed by tty device id. Identity
     /// comes from the workspace-owned panel→tty mapping — never from the
-    /// child process's ambient CMUX_* environment, which any foreground
+    /// child process's ambient BREE_* environment, which any foreground
     /// process can override or carry stale.
     #if compiler(>=6.2)
     @concurrent
@@ -26,12 +26,12 @@ enum TerminalForegroundCommandCapture {
     static func liveCommands(forTTYDevices ttyDevices: Set<Int64>) async throws -> [Int64: String] {
         guard !ttyDevices.isEmpty else { return [:] }
         try Task.checkCancellation()
-        let snapshot = await CmuxTopProcessSnapshot.capture(
-            includeProcessDetails: true, includeCMUXScope: false, includeResources: false
+        let snapshot = await BreeTopProcessSnapshot.capture(
+            includeProcessDetails: true, includeBREEScope: false, includeResources: false
         )
         guard snapshot.captureIsAvailable, snapshot.enumerationIsComplete else { throw ProcessSnapshotError.unavailable }
         let processes = Array(snapshot.processesByPID.values)
-        var bestByTTY: [Int64: CmuxTopProcessInfo] = [:]
+        var bestByTTY: [Int64: BreeTopProcessInfo] = [:]
         for process in processes {
             guard let ttyDevice = process.ttyDevice,
                   ttyDevices.contains(ttyDevice),
@@ -51,7 +51,7 @@ enum TerminalForegroundCommandCapture {
         var commands: [Int64: String] = [:]
         for (ttyDevice, process) in bestByTTY {
             guard process.processIdentity != nil,
-                  let arguments = CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: process),
+                  let arguments = BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: process),
                   let command = commandLine(fromArgv: arguments.arguments),
                   !command.isEmpty else { continue }
             commands[ttyDevice] = command
@@ -61,7 +61,7 @@ enum TerminalForegroundCommandCapture {
 
     /// Prefer the process-group leader (the command the shell launched); break
     /// ties toward the older (lower) pid.
-    private static func isPreferred(_ candidate: CmuxTopProcessInfo, over existing: CmuxTopProcessInfo) -> Bool {
+    private static func isPreferred(_ candidate: BreeTopProcessInfo, over existing: BreeTopProcessInfo) -> Bool {
         let candidateIsLeader = candidate.processGroupID == candidate.pid
         let existingIsLeader = existing.processGroupID == existing.pid
         if candidateIsLeader != existingIsLeader {
@@ -91,7 +91,7 @@ enum TerminalForegroundCommandCapture {
     static func commandLine(fromArgv argv: [String]) -> String? {
         let runtimeUnwrapper = JavaScriptRuntimeAgentLaunchUnwrapper(
             isKnownAgentExecutableName: { knownAgentKind(forExecutableName: $0) != nil },
-            stripsCmuxHookArguments: true
+            stripsBreeHookArguments: true
         )
         let argv = runtimeUnwrapper.unwrappedArgv(argv) ?? argv
         guard let executable = argv.first, !executable.isEmpty else { return nil }
@@ -103,7 +103,7 @@ enum TerminalForegroundCommandCapture {
                 argv,
                 launcher: "",
                 fallbackKind: agentKind,
-                stripCmuxHookArguments: true
+                stripBreeHookArguments: true
             ) {
                 sanitizedArgv = sanitized
             } else {
@@ -116,7 +116,7 @@ enum TerminalForegroundCommandCapture {
             // config argv is user-controllable, so marker-less argv keeps its
             // executable verbatim.
             if !sanitizedArgv.isEmpty,
-               runtimeUnwrapper.containsCmuxWrapperInjectedHookArguments(argv) {
+               runtimeUnwrapper.containsBreeWrapperInjectedHookArguments(argv) {
                 sanitizedArgv[0] = executableName
             }
         }

@@ -1,5 +1,5 @@
 enum SidebarProfilingSignposts {
-    private static let signposts = DynamicTracingSignposts(subsystem: "com.cmux.sidebar")
+    private static let signposts = DynamicTracingSignposts(subsystem: "com.bree.sidebar")
 
     @inline(__always)
     static func begin(_ name: StaticString, _ message: @autoclosure () -> String) -> DynamicTracingSignpostInterval? {

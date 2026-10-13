@@ -1,7 +1,7 @@
 // Markdown tables from perf/results/*.json (bench.mjs), for
 // docs/browser-repl/performance.md.
 //
-//   node tests/browser-parity/perf/report.mjs before-cmux-dev after-cmux-dev after-cmux ref-chrome ref-reference-a
+//   node tests/browser-parity/perf/report.mjs before-bree-dev after-bree-dev after-bree ref-chrome ref-reference-a
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,7 +22,7 @@ for (const { name, data } of runs) {
       tools.get(tool)[page] = v;
     }
   }
-  const names = { cmux: "cmux app", "cmux-dev": "cmux dev", "pw-ai": "Playwright AI snapshot", "reference-b-ax": "Reference B AX", "reference-a": "Reference A" };
+  const names = { bree: "bree app", "bree-dev": "bree dev", "pw-ai": "Playwright AI snapshot", "reference-b-ax": "Reference B AX", "reference-a": "Reference A" };
   const when = name.split("-")[0];
   for (const [tool, pages] of tools) columns.push({ label: `${names[tool] || tool}${when === "ref" ? "" : ` ${when}`}`, pages });
 }

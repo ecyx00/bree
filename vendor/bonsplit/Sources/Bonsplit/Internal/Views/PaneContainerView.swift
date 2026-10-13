@@ -52,8 +52,8 @@ private struct PaneDropPlaceholderOverlay: View {
     let zone: DropZone?
     let size: CGSize
 
-    private let placeholderColor = Color.accentColor.opacity(0.25)
-    private let borderColor = Color.accentColor
+    private let placeholderColor = Color.primary.opacity(0.25)
+    private let borderColor = Color.primary
     private let padding: CGFloat = 4
 
     var body: some View {

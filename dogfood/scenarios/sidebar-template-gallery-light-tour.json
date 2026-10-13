@@ -2,7 +2,7 @@
   "paths": [
     "Sources/ContentView.swift",
     "Sources/HostSettingsActions.swift",
-    "Packages/macOS/CmuxSettingsUI/**",
+    "Packages/macOS/BreeSettingsUI/**",
     "CLI/**",
     "docs/custom-sidebars.md"
   ],

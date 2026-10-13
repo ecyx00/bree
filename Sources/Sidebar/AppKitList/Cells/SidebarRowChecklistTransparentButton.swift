@@ -1,5 +1,5 @@
 import AppKit
-import CmuxWorkspaces
+import BreeWorkspaces
 import SwiftUI
 
 /// Transparent full-frame click target (the tap-to-edit overlay on item

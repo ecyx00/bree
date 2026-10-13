@@ -1,4 +1,4 @@
-import CmuxRemoteSession
+import BreeRemoteSession
 import Foundation
 
 extension RemoteTmuxControlConnection {
@@ -105,7 +105,7 @@ extension RemoteTmuxControlConnection {
         // quarantined either way.
         pendingLayouts[windowId] = pending
         #if DEBUG
-        cmuxDebugLog("remote.rects.stage @\(windowId) gen=\(pending.generation) sent=\(pending.inFlight ? 1 : 0)")
+        breeDebugLog("remote.rects.stage @\(windowId) gen=\(pending.generation) sent=\(pending.inFlight ? 1 : 0)")
         #endif
     }
 
@@ -137,7 +137,7 @@ extension RemoteTmuxControlConnection {
         prunePaneState(keeping: paneIDsForStatePruning())
         record("initial-batch-published")
         #if DEBUG
-        cmuxDebugLog("remote.rects.batchFlush windows=\(windowsByID.keys.sorted())")
+        breeDebugLog("remote.rects.batchFlush windows=\(windowsByID.keys.sorted())")
         #endif
         observers.notifyTopologyChanged()
         scheduleAttachRedrawKickIfNeeded()
@@ -150,7 +150,7 @@ extension RemoteTmuxControlConnection {
     /// are published here, generation-guarded, or not at all.
     func handlePaneRectsReply(windowId: Int, generation: Int, lines: [String]) {
         #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "remote.rects.reply @\(windowId) gen=\(generation) pendingGen=\(pendingLayouts[windowId]?.generation ?? -1) "
                 + "lines=\(lines.count) awaiting=\(initialBatchAwaiting.map(String.init(describing:)) ?? "nil")"
         )
@@ -358,7 +358,7 @@ extension RemoteTmuxControlConnection {
     /// never be published raw, and must not dangle in-flight forever.
     func handlePaneRectsFailure(windowId: Int, generation: Int) {
         #if DEBUG
-        cmuxDebugLog("remote.rects.error @\(windowId) gen=\(generation)")
+        breeDebugLog("remote.rects.error @\(windowId) gen=\(generation)")
         #endif
         let snapshotKey = RemoteTmuxPaneTitleSnapshotKey(windowId: windowId, generation: generation)
         paneTitleMetadataSnapshotRevisions[snapshotKey] = nil

@@ -1,6 +1,6 @@
 import AppKit
 import Foundation
-import CmuxTerminal
+import BreeTerminal
 
 // `RendererRealizationPlannerInput` and the pure `RendererRealizationPlanner`
 // policy live in RendererRealizationPlanner.swift.
@@ -40,7 +40,7 @@ final class RendererRealizationController {
     private let visibilityCoalescingWindow: TimeInterval
     private let onEvaluationCompleted: () -> Void
     private let safetyTimerEnabled: Bool
-    private let timerQueue = DispatchQueue(label: "com.cmux.renderer-realization", qos: .utility)
+    private let timerQueue = DispatchQueue(label: "com.bree.renderer-realization", qos: .utility)
     private let systemMemoryPressureRetryPasses = 2
     private var timer: DispatchSourceTimer?
     private var reclaimDeadlineTask: Task<Void, Never>?
@@ -101,7 +101,7 @@ final class RendererRealizationController {
     func start() {
         if settingsObserver == nil {
             // An immediate pass when the setting changes (command palette /
-            // cmux.json post this). The always-on timer below is the safety net
+            // bree.json post this). The always-on timer below is the safety net
             // for write paths that do NOT post it (the Settings-window toggle
             // writes the default directly), so re-enabling always takes effect.
             settingsObserver = notificationCenter.addObserver(

@@ -1,5 +1,5 @@
-import CmuxPanes
-import CmuxSettings
+import BreePanes
+import BreeSettings
 import Foundation
 
 extension DockSplitStore {

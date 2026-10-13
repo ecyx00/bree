@@ -25,7 +25,7 @@ enum WorkspaceCustomColorPrompt {
         alert.addButton(withTitle: String(localized: "alert.customColor.cancel", defaultValue: "Cancel"))
         let alertWindow = alert.window
         alertWindow.initialFirstResponder = input
-        let response = alert.runCmuxModal(presentingWindow: presentingWindow) { _ in
+        let response = alert.runBreeModal(presentingWindow: presentingWindow) { _ in
             alertWindow.makeFirstResponder(input)
             input.selectText(nil)
         }
@@ -51,6 +51,6 @@ enum WorkspaceCustomColorPrompt {
             )
         }
         alert.addButton(withTitle: String(localized: "alert.invalidColor.ok", defaultValue: "OK"))
-        _ = alert.runCmuxModal(presentingWindow: presentingWindow)
+        _ = alert.runBreeModal(presentingWindow: presentingWindow)
     }
 }

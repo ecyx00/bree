@@ -1,7 +1,7 @@
 import { errorsBetter as errBetter } from "../lib.mjs";
 // Locator members: reference A Locator.* and reference B PlaywrightLocator.*, with
 // the option and error variants reference B was verified on
-// (cmux-browser-cli scripts/cua-reference-variant-cases.ts), ported to the
+// (bree-browser-cli scripts/cua-reference-variant-cases.ts), ported to the
 // lab page.
 const LAB = "/diff/lab.html";
 const FILES = "/diff/files.html";
@@ -13,7 +13,7 @@ const clickOptions = (method) => ({
   members: [`reference-a:Locator.${method}`, `reference-b:PlaywrightLocator.${method}`],
   path: LAB,
   // Control+click on macOS: Chrome drops the click after contextmenu; WebKit
-  // (Safari, Playwright WebKit, cmux) delivers it. An engine difference, so
+  // (Safari, Playwright WebKit, bree) delivers it. An engine difference, so
   // the Control variant is recorded but not compared.
   compare: { "reference-b": ["left", "right", "middle", "force", "timeout", "alt", "controlOrMeta", "meta", "shift"] },
   better: {

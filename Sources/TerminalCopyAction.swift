@@ -1,10 +1,10 @@
 import AppKit
-import CmuxGit
-import CmuxTerminal
+import BreeGit
+import BreeTerminal
 
-/// What a cmux copy action puts on the clipboard. Shared by the configurable
-/// built-in actions (`cmux.copyWorkingDirectory`, `cmux.copyProjectRoot`,
-/// `cmux.copyScreen`), their command palette entries, and surface tab bar
+/// What a bree copy action puts on the clipboard. Shared by the configurable
+/// built-in actions (`bree.copyWorkingDirectory`, `bree.copyProjectRoot`,
+/// `bree.copyScreen`), their command palette entries, and surface tab bar
 /// buttons, so every entrypoint copies the same text.
 enum TerminalCopyAction: Sendable, Equatable {
     /// The terminal's current working directory, as its shell last reported it.
@@ -16,7 +16,7 @@ enum TerminalCopyAction: Sendable, Equatable {
     case visibleScreen
 }
 
-extension CmuxSurfaceTabBarBuiltInAction {
+extension BreeSurfaceTabBarBuiltInAction {
     /// The copy behavior this built-in runs, or `nil` for non-copy built-ins.
     var terminalCopyAction: TerminalCopyAction? {
         switch self {
@@ -25,7 +25,7 @@ extension CmuxSurfaceTabBarBuiltInAction {
         case .copyScreen: return .visibleScreen
         case .newWorkspace,
              .newTerminal, .newBrowser, .splitRight, .splitDown,
-             .toggleFiles, .newWindow, .toggleArchitecture, .toggleWiki:
+             .toggleFiles, .newWindow, .toggleArchitecture, .toggleWiki, .showBoard:
             return nil
         }
     }

@@ -2,7 +2,7 @@
 """The built CLI's inject-settings output must take the wrapper's fast path.
 
 The Claude wrapper skips its Node validation only for the exact document
-`cmux hooks claude inject-settings` prints. If the CLI's document changes
+`bree hooks claude inject-settings` prints. If the CLI's document changes
 without the wrapper's copy, launches stay correct (Node validates the new
 document) but silently lose the fast path. This test runs the built CLI and
 fails on that drift.
@@ -23,25 +23,25 @@ from node_runtime import ensure_node_on_path  # noqa: E402
 from test_claude_wrapper_hooks import run_generated_settings_case  # noqa: E402
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit and os.path.exists(explicit) and os.access(explicit, os.X_OK):
         return explicit
 
     candidates = glob.glob(
-        os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/cmux")
+        os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/bree")
     )
-    candidates.extend(glob.glob("/tmp/cmux-*/Build/Products/Debug/cmux"))
+    candidates.extend(glob.glob("/tmp/bree-*/Build/Products/Debug/bree"))
     candidates = [path for path in candidates if os.access(path, os.X_OK)]
     if candidates:
         candidates.sort(key=os.path.getmtime, reverse=True)
         return candidates[0]
 
-    in_path = shutil.which("cmux")
+    in_path = shutil.which("bree")
     if in_path:
         return in_path
 
-    raise RuntimeError("Unable to find cmux CLI binary. Set CMUX_CLI_BIN.")
+    raise RuntimeError("Unable to find bree CLI binary. Set BREE_CLI_BIN.")
 
 
 def main() -> int:
@@ -49,11 +49,11 @@ def main() -> int:
         print("SKIP: node runtime not found; wrapper fakes exec node")
         return 0
 
-    cli = resolve_cmux_cli()
+    cli = resolve_bree_cli()
     env = {
         "HOME": os.environ.get("HOME", "/tmp"),
         "PATH": "/usr/bin:/bin",
-        "CMUX_CLI_SENTRY_DISABLED": "1",
+        "BREE_CLI_SENTRY_DISABLED": "1",
     }
     generated = subprocess.run(
         [cli, "hooks", "claude", "inject-settings"],
@@ -76,9 +76,9 @@ def main() -> int:
     if validations != 0:
         failures.append(
             "the CLI's inject-settings document took the Node validation path; update "
-            "cmux_claude_build_standard_hook_settings in Resources/bin/cmux-claude-wrapper "
+            "bree_claude_build_standard_hook_settings in Resources/bin/bree-claude-wrapper "
             "and generated_claude_hook_settings in tests/test_claude_wrapper_hooks.py "
-            "to match CLI/CMUXCLI+ClaudeHookSettings.swift"
+            "to match CLI/BREECLI+ClaudeHookSettings.swift"
         )
 
     if failures:

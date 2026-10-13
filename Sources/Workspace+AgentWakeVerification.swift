@@ -1,4 +1,5 @@
-import CmuxSidebar
+import BreeFoundation
+import BreeSidebar
 import Foundation
 
 /// Checks that an agent woken from hibernation actually came back.
@@ -252,7 +253,7 @@ extension Workspace {
             key: key,
             value: value,
             icon: "exclamationmark.triangle",
-            color: "#FF9500",
+            color: BreeAccentColor.attentionStatusToken,
             timestamp: Date()
         )
     }

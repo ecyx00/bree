@@ -1,4 +1,5 @@
 #if DEBUG
+import BreeFoundation
 import AppKit
 import SwiftUI
 
@@ -25,7 +26,7 @@ struct OverlayComparison: View {
                 overlayWell(label: "superimposed (≈\(Int(nativeBox))pt)") {
                     ZStack {
                         NativeSpinner(threaded: false, controlSize: .regular)
-                        GPUSpinner(style: .macOSSpokes, color: NSColor.systemRed.withAlphaComponent(0.7))
+                        GPUSpinner(style: .macOSSpokes, color: BreeChromePalette.currentSnapshot.ns.signalError.withAlphaComponent(0.7))
                             .frame(width: nativeBox, height: nativeBox)
                     }
                     .frame(width: nativeBox, height: nativeBox)

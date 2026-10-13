@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""`cmux hooks setup` and `uninstall` reject options they don't understand.
+"""`bree hooks setup` and `uninstall` reject options they don't understand.
 
 An unknown or valueless option used to be skipped, so the command fell back
 to every agent and rewrote their configs. Each case runs the real CLI against
@@ -13,16 +13,16 @@ import subprocess
 import tempfile
 import unittest
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 
 
 class HooksSetupArgumentTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='cmux-hooks-args-')
+        self.temp = tempfile.TemporaryDirectory(prefix='bree-hooks-args-')
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name) / 'home'
         self.home.mkdir()
-        self.cli = str(resolve_cmux_cli())
+        self.cli = str(resolve_bree_cli())
 
     def run_cli(self, *args):
         # A minimal environment so no agent config override points outside
@@ -32,8 +32,8 @@ class HooksSetupArgumentTests(unittest.TestCase):
             'CFFIXED_USER_HOME': str(self.home),
             'PATH': '/usr/bin:/bin:/usr/sbin:/sbin',
             'TMPDIR': os.environ.get('TMPDIR', '/tmp'),
-            'CMUX_CLI_SENTRY_DISABLED': '1',
-            'CMUX_SOCKET_PATH': str(Path(self.temp.name) / 'no-socket.sock'),
+            'BREE_CLI_SENTRY_DISABLED': '1',
+            'BREE_SOCKET_PATH': str(Path(self.temp.name) / 'no-socket.sock'),
         }
         # No stdin, so a confirmation prompt can't wait on the test runner.
         return subprocess.run([self.cli, *args], env=env, stdin=subprocess.DEVNULL,

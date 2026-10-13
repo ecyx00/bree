@@ -1,5 +1,5 @@
 import AppKit
-import CmuxAppKitSupportUI
+import BreeAppKitSupportUI
 import SwiftUI
 
 /// Invisible popover content view that promotes the popover window to key as
@@ -100,7 +100,7 @@ struct PopoverKeyWindowElevator: NSViewRepresentable {
 
 #if DEBUG
     static func logPromotion(_ prefix: String, _ promotion: PromotionResult) {
-        cmuxDebugLog(
+        breeDebugLog(
             "\(prefix) windowPresent=\(promotion.hasWindow) "
                 + "canBecomeKey=\(promotion.canBecomeKey) "
                 + "keyBefore=\(promotion.wasKeyWindow) keyAfter=\(promotion.isKeyWindow) "
@@ -116,7 +116,7 @@ struct PopoverKeyWindowElevator: NSViewRepresentable {
 /// Hosts workspace-todo popovers that need the generic NSPopover lifecycle:
 /// the sidebar checklist popover and the todo pane header's status popover.
 /// SwiftUI's native `.popover()` doesn't reliably let an embedded TextField
-/// become first responder in cmux's focus-managed environment because the
+/// become first responder in bree's focus-managed environment because the
 /// terminal keeps grabbing focus back; the checklist popover's add-item field
 /// needs one.
 ///
@@ -230,7 +230,7 @@ struct SidebarWorkspaceTodoPopoverHost<Model: Equatable, PopoverContent: View>: 
             NSHostingController(rootView: AnyView(EmptyView()))
             // DO NOT set sizingOptions here — see the type comment.
         }()
-        private let visibleUpdateScheduler = CmuxPopoverVisibleUpdateScheduler()
+        private let visibleUpdateScheduler = BreePopoverVisibleUpdateScheduler()
         private var popover: NSPopover?
         private var currentModel: Model?
         private var currentBuilder: ((Model, @escaping @MainActor () -> Void) -> AnyView)?
@@ -379,7 +379,7 @@ struct SidebarWorkspaceTodoPopoverHost<Model: Equatable, PopoverContent: View>: 
                 isPresented = false
             }
 #if DEBUG
-            cmuxDebugLog("focus.todoPopover.didClose awaitingAck=\(awaitingDismissAck)")
+            breeDebugLog("focus.todoPopover.didClose awaitingAck=\(awaitingDismissAck)")
 #endif
         }
 
@@ -406,7 +406,7 @@ struct SidebarWorkspaceTodoPopoverHost<Model: Equatable, PopoverContent: View>: 
             let fitting = hostingController.view.fittingSize
             guard fitting.width > 0, fitting.height > 0 else { return }
             guard let popover else { return }
-            CmuxPopoverMutation.setContentSize(NSSize(
+            BreePopoverMutation.setContentSize(NSSize(
                 width: ceil(max(fitting.width, minWidth)),
                 height: ceil(min(fitting.height, maxHeight))
             ), on: popover)

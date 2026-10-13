@@ -15,7 +15,7 @@ spec.loader.exec_module(wire_app_sources)
 
 # A Sources group holding `Sidebar/Wired.swift` directly and a nested Cloud
 # group with its own `path`, whose file (`AAA.swift`) sorts before every
-# other ref, plus a repo-relative (SOURCE_ROOT) ref, and a cmuxTests target.
+# other ref, plus a repo-relative (SOURCE_ROOT) ref, and a breeTests target.
 PROJECT = """// !$*UTF8*$!
 {
 	objects = {
@@ -85,19 +85,19 @@ PROJECT = """// !$*UTF8*$!
 /* End PBXProject section */
 
 /* Begin PBXNativeTarget section */
-		N0000000000000000000000A /* cmux */ = {
+		N0000000000000000000000A /* bree */ = {
 			isa = PBXNativeTarget;
 			buildPhases = (
 				S0000000000000000000000A /* Sources */,
 			);
-			name = cmux;
+			name = bree;
 		};
-		N0000000000000000000000T /* cmuxTests */ = {
+		N0000000000000000000000T /* breeTests */ = {
 			isa = PBXNativeTarget;
 			buildPhases = (
 				S0000000000000000000000T /* Sources */,
 			);
-			name = cmuxTests;
+			name = breeTests;
 		};
 /* End PBXNativeTarget section */
 
@@ -129,7 +129,7 @@ def group_of(text, rel):
 
 
 def group_of_in(text, rel, directory):
-    project = wire_app_sources.parse(text, directory=directory, target="cmuxTests")
+    project = wire_app_sources.parse(text, directory=directory, target="breeTests")
     ref = next(ref for ref, path in project.ref_paths.items() if path == rel)
     return next(group.directory for group in project.groups.values() if ref in group.children)
 
@@ -189,16 +189,16 @@ class WireAppSourcesTests(unittest.TestCase):
         self.assertEqual(text.count(taken + " /* "), busy.count(taken + " /* "))
 
     def test_another_target_gets_the_file_in_its_own_phase(self):
-        text = wire_app_sources.wire(PROJECT, "Sources/Top.swift", target="cmuxTests")
+        text = wire_app_sources.wire(PROJECT, "Sources/Top.swift", target="breeTests")
         app_phase = text[text.index("S0000000000000000000000A /* Sources */ = {"):text.index("S0000000000000000000000T /* Sources */ = {")]
         tests_phase = text[text.index("S0000000000000000000000T /* Sources */ = {"):]
         self.assertNotIn("Top.swift", app_phase)
         self.assertIn("Top.swift in Sources */,", tests_phase)
-        self.assertIn("Sources/Top.swift", wire_app_sources.parse(text, target="cmuxTests").wired_paths)
+        self.assertIn("Sources/Top.swift", wire_app_sources.parse(text, target="breeTests").wired_paths)
         self.assertNotIn("Sources/Top.swift", wire_app_sources.parse(text).wired_paths)
 
     def test_another_top_level_directory_uses_its_own_group(self):
-        text = wire_app_sources.wire(PROJECT, "UITests/NewUITests.swift", directory="UITests", target="cmuxTests")
+        text = wire_app_sources.wire(PROJECT, "UITests/NewUITests.swift", directory="UITests", target="breeTests")
         self.assertEqual(group_of_in(text, "UITests/NewUITests.swift", "UITests"), "UITests")
         self.assertIn("path = NewUITests.swift;", text)
 

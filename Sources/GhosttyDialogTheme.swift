@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// Colors for in-app dialogs and cards drawn over terminal content. They use
@@ -22,8 +22,8 @@ struct GhosttyDialogTheme: Equatable {
         let opaqueForeground = (foreground.usingColorSpace(.sRGB) ?? foreground).withAlphaComponent(1)
         return GhosttyDialogTheme(
             background: opaqueBackground,
-            foreground: cmuxReadableForegroundNSColor(preferred: opaqueForeground, on: opaqueBackground),
-            colorScheme: cmuxReadableColorScheme(for: opaqueBackground)
+            foreground: breeReadableForegroundNSColor(preferred: opaqueForeground, on: opaqueBackground),
+            colorScheme: breeReadableColorScheme(for: opaqueBackground)
         )
     }
 

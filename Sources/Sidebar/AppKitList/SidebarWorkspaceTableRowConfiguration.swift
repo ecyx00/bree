@@ -1,4 +1,4 @@
-import CmuxNotifications
+import BreeNotifications
 import SwiftUI
 
 struct SidebarWorkspaceTableContextMenuActions {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests: `cmux hooks enqueue` answers inside the agent's hook budget.
+"""Regression tests: `bree hooks enqueue` answers inside the agent's hook budget.
 
 Claude Code kills a hook after its declared 5 s timeout and discards the
 output. The queued-hook CLI must therefore return its neutral `{}` response in
@@ -35,24 +35,24 @@ class RunResult:
     elapsed: float
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit and os.path.exists(explicit) and os.access(explicit, os.X_OK):
         return explicit
 
     candidates: list[str] = []
-    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/cmux")))
-    candidates.extend(glob.glob("/tmp/cmux-*/Build/Products/Debug/cmux"))
+    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/bree")))
+    candidates.extend(glob.glob("/tmp/bree-*/Build/Products/Debug/bree"))
     candidates = [path for path in candidates if os.path.exists(path) and os.access(path, os.X_OK)]
     if candidates:
         candidates.sort(key=os.path.getmtime, reverse=True)
         return candidates[0]
 
-    in_path = shutil.which("cmux")
+    in_path = shutil.which("bree")
     if in_path:
         return in_path
 
-    raise RuntimeError("Unable to find cmux CLI binary. Set CMUX_CLI_BIN.")
+    raise RuntimeError("Unable to find bree CLI binary. Set BREE_CLI_BIN.")
 
 
 class FakeAppSocket:
@@ -65,7 +65,7 @@ class FakeAppSocket:
         self.ready_event = threading.Event()
         self.lock = threading.Lock()
         self.requests: list[dict] = []
-        self.root = tempfile.TemporaryDirectory(prefix="cmuxhook-", dir="/tmp")
+        self.root = tempfile.TemporaryDirectory(prefix="breehook-", dir="/tmp")
         self.path = os.path.join(self.root.name, f"s-{uuid.uuid4().hex[:8]}.sock")
         self.thread = threading.Thread(target=self._serve, daemon=True)
         self.server: socket.socket | None = None
@@ -170,19 +170,19 @@ class FakeAppSocket:
 
 def hook_environment(socket_path: str, extra: dict[str, str] | None = None) -> dict[str, str]:
     env = dict(os.environ)
-    env["CMUX_SOCKET_PATH"] = socket_path
-    env.pop("CMUX_SOCKET", None)
+    env["BREE_SOCKET_PATH"] = socket_path
+    env.pop("BREE_SOCKET", None)
     # Never drain the developer's own Claude spool into the fake app.
-    env.pop("CMUX_CLAUDE_HOOK_SPOOL_DIR", None)
-    env.pop("CMUX_AGENT_HOOK_DELIVERY_PROCESS_GROUP", None)
+    env.pop("BREE_CLAUDE_HOOK_SPOOL_DIR", None)
+    env.pop("BREE_AGENT_HOOK_DELIVERY_PROCESS_GROUP", None)
     # An explicit password keeps the harness away from the user's keychain.
-    env["CMUX_SOCKET_PASSWORD"] = SOCKET_PASSWORD
-    env["CMUX_SURFACE_ID"] = "22222222-2222-2222-2222-222222222222"
-    env["CMUX_WORKSPACE_ID"] = "11111111-1111-1111-1111-111111111111"
-    env["CMUX_CLAUDE_PID"] = str(os.getpid())
-    env["CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC"] = "0.5"
-    env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-    env["CMUX_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
+    env["BREE_SOCKET_PASSWORD"] = SOCKET_PASSWORD
+    env["BREE_SURFACE_ID"] = "22222222-2222-2222-2222-222222222222"
+    env["BREE_WORKSPACE_ID"] = "11111111-1111-1111-1111-111111111111"
+    env["BREE_CLAUDE_PID"] = str(os.getpid())
+    env["BREE_CLI_RESPONSE_TIMEOUT_SEC"] = "0.5"
+    env["BREE_CLI_SENTRY_DISABLED"] = "1"
+    env["BREE_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
     if extra:
         env.update(extra)
     return env
@@ -259,7 +259,7 @@ def make_spool_with_one_record(root: str) -> tuple[str, str]:
     """Creates a private Claude hook spool holding one published record.
 
     Returns the spool path and the record path. The format is
-    `AgentHookSpoolRecord` (CMUXAgentLaunch): marker, agent, subcommand,
+    `AgentHookSpoolRecord` (BREEAgentLaunch): marker, agent, subcommand,
     NUL-terminated environment entries, an empty entry, then the payload.
     """
     spool = os.path.join(root, "spool")
@@ -268,11 +268,11 @@ def make_spool_with_one_record(root: str) -> tuple[str, str]:
         with open(os.path.join(spool, name), "wb"):
             pass
     payload = json.dumps({"session_id": SPOOLED_SESSION_ID, "hook_event_name": "UserPromptSubmit"}).encode()
-    record = b"cmux-agent-hook-v1\nclaude\nprompt-submit\n"
+    record = b"bree-agent-hook-v1\nclaude\nprompt-submit\n"
     for key, value in (
-        ("CMUX_CLAUDE_PID", str(os.getpid())),
-        ("CMUX_SURFACE_ID", "22222222-2222-2222-2222-222222222222"),
-        ("CMUX_WORKSPACE_ID", "11111111-1111-1111-1111-111111111111"),
+        ("BREE_CLAUDE_PID", str(os.getpid())),
+        ("BREE_SURFACE_ID", "22222222-2222-2222-2222-222222222222"),
+        ("BREE_WORKSPACE_ID", "11111111-1111-1111-1111-111111111111"),
     ):
         record += f"{key}={value}".encode() + b"\0"
     record += b"\0" + payload
@@ -303,7 +303,7 @@ def check(
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
@@ -347,7 +347,7 @@ def main() -> int:
                     app.path,
                     close_stdin=True,
                     harness_timeout=6.0,
-                    extra_env={"CMUX_AGENT_HOOK_ENQUEUE_BUDGET_SEC": "0.3"},
+                    extra_env={"BREE_AGENT_HOOK_ENQUEUE_BUDGET_SEC": "0.3"},
                 ),
                 max_elapsed=2.5,
             )
@@ -368,8 +368,8 @@ def main() -> int:
                     close_stdin=True,
                     harness_timeout=6.0,
                     extra_env={
-                        "CMUX_AGENT_HOOK_ENQUEUE_BUDGET_SEC": "0.05",
-                        "CMUX_CLAUDE_HOOK_SPOOL_DIR": spool,
+                        "BREE_AGENT_HOOK_ENQUEUE_BUDGET_SEC": "0.05",
+                        "BREE_CLAUDE_HOOK_SPOOL_DIR": spool,
                     },
                 ),
                 max_elapsed=2.5,
@@ -384,12 +384,12 @@ def main() -> int:
         failures.append(f"test harness raised {type(exc).__name__}: {exc}")
 
     if failures:
-        print("FAIL: cmux hooks enqueue exceeded its wall-clock bound")
+        print("FAIL: bree hooks enqueue exceeded its wall-clock bound")
         for failure in failures:
             print(f"- {failure}")
         return 1
 
-    print("PASS: cmux hooks enqueue answers inside the agent hook budget")
+    print("PASS: bree hooks enqueue answers inside the agent hook budget")
     return 0
 
 

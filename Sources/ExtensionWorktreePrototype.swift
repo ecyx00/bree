@@ -1,8 +1,8 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 import OSLog
 
-struct CmuxExtensionWorktreeCreationResult: Sendable {
+struct BreeExtensionWorktreeCreationResult: Sendable {
     let projectRootPath: String
     let worktreePath: String
     let branchName: String
@@ -54,7 +54,7 @@ struct CmuxExtensionWorktreeCreationResult: Sendable {
 /// deliberately has **no** primary-command field: the workspace's main process
 /// is structurally always the login shell, so the "setup command became the
 /// main process and the tab died when it exited" bug cannot be expressed here.
-struct CmuxExtensionWorktreeWorkspaceSpawnArgs: Sendable, Equatable {
+struct BreeExtensionWorktreeWorkspaceSpawnArgs: Sendable, Equatable {
     let title: String
     let workingDirectory: String
     /// Setup command typed into the interactive shell after spawn (with a
@@ -63,16 +63,16 @@ struct CmuxExtensionWorktreeWorkspaceSpawnArgs: Sendable, Equatable {
     let inheritWorkingDirectory: Bool
 }
 
-extension CmuxExtensionWorktreeCreationResult {
+extension BreeExtensionWorktreeCreationResult {
     /// Builds the workspace spawn arguments for this worktree.
     ///
     /// The returned arguments always leave the workspace's main process as the
     /// login shell and deliver ``setupCommand`` as terminal input.
-    func workspaceSpawnArgs() -> CmuxExtensionWorktreeWorkspaceSpawnArgs {
+    func workspaceSpawnArgs() -> BreeExtensionWorktreeWorkspaceSpawnArgs {
         // Worktree creation already ran as a pre-spawn step, so the setup
         // command is delivered as interactive shell input (with a trailing
         // newline so it executes) rather than as the surface's primary process.
-        CmuxExtensionWorktreeWorkspaceSpawnArgs(
+        BreeExtensionWorktreeWorkspaceSpawnArgs(
             title: workspaceTitle,
             workingDirectory: worktreePath,
             initialTerminalInput: setupCommand.isEmpty ? nil : setupCommand + "\n",
@@ -112,7 +112,7 @@ extension CmuxExtensionWorktreeCreationResult {
                     throw rollbackRefused("Generated artifact path escaped the worktree.")
                 }
 
-                let topLevelData = try await CmuxExtensionWorktreePrototype.runCapturingOutput(
+                let topLevelData = try await BreeExtensionWorktreePrototype.runCapturingOutput(
                     "git",
                     ["-C", worktreeURL.path, "rev-parse", "--show-toplevel"],
                     failureDescription: "Could not remove the unclaimed worktree."
@@ -127,7 +127,7 @@ extension CmuxExtensionWorktreeCreationResult {
                 }
 
                 let branchRef = "refs/heads/\(branchName)"
-                let checkedOutBranchData = try await CmuxExtensionWorktreePrototype.runCapturingOutput(
+                let checkedOutBranchData = try await BreeExtensionWorktreePrototype.runCapturingOutput(
                     "git",
                     ["-C", worktreeURL.path, "symbolic-ref", "--quiet", "HEAD"],
                     failureDescription: "Could not remove the unclaimed worktree."
@@ -140,7 +140,7 @@ extension CmuxExtensionWorktreeCreationResult {
                     throw rollbackRefused("Worktree branch changed after creation.")
                 }
 
-                let worktreeHeadData = try await CmuxExtensionWorktreePrototype.runCapturingOutput(
+                let worktreeHeadData = try await BreeExtensionWorktreePrototype.runCapturingOutput(
                     "git",
                     ["-C", worktreeURL.path, "rev-parse", "--verify", "HEAD"],
                     failureDescription: "Could not remove the unclaimed worktree."
@@ -149,7 +149,7 @@ extension CmuxExtensionWorktreeCreationResult {
                     worktreeHeadData,
                     operation: "resolve worktree HEAD"
                 )
-                let branchHeadData = try await CmuxExtensionWorktreePrototype.runCapturingOutput(
+                let branchHeadData = try await BreeExtensionWorktreePrototype.runCapturingOutput(
                     "git",
                     ["-C", projectRootURL.path, "rev-parse", "--verify", branchRef],
                     failureDescription: "Could not remove the unclaimed worktree."
@@ -162,7 +162,7 @@ extension CmuxExtensionWorktreeCreationResult {
                     throw rollbackRefused("Worktree or branch HEAD changed after creation.")
                 }
 
-                let trackedStatus = try await CmuxExtensionWorktreePrototype.runCapturingOutput(
+                let trackedStatus = try await BreeExtensionWorktreePrototype.runCapturingOutput(
                     "git",
                     ["-C", worktreeURL.path, "status", "--porcelain=v1", "-z", "--untracked-files=no", "--ignored=no"],
                     failureDescription: "Could not remove the unclaimed worktree."
@@ -171,12 +171,12 @@ extension CmuxExtensionWorktreeCreationResult {
                     throw rollbackRefused("Tracked or staged worktree content changed after creation.")
                 }
 
-                let untrackedData = try await CmuxExtensionWorktreePrototype.runCapturingOutput(
+                let untrackedData = try await BreeExtensionWorktreePrototype.runCapturingOutput(
                     "git",
                     ["-C", worktreeURL.path, "ls-files", "--others", "--exclude-standard", "-z"],
                     failureDescription: "Could not remove the unclaimed worktree."
                 )
-                let ignoredData = try await CmuxExtensionWorktreePrototype.runCapturingOutput(
+                let ignoredData = try await BreeExtensionWorktreePrototype.runCapturingOutput(
                     "git",
                     ["-C", worktreeURL.path, "ls-files", "--others", "--ignored", "--exclude-standard", "-z"],
                     failureDescription: "Could not remove the unclaimed worktree."
@@ -200,7 +200,7 @@ extension CmuxExtensionWorktreeCreationResult {
                     throw rollbackRefused("Generated artifact directory contains other content.")
                 }
 
-                let worktreeLockPathData = try await CmuxExtensionWorktreePrototype.runCapturingOutput(
+                let worktreeLockPathData = try await BreeExtensionWorktreePrototype.runCapturingOutput(
                     "git",
                     ["-C", worktreeURL.path, "rev-parse", "--git-path", "locked"],
                     failureDescription: "Could not remove the unclaimed worktree."
@@ -231,7 +231,7 @@ extension CmuxExtensionWorktreeCreationResult {
 
                 let artifactBackupURL = worktreeURL
                     .deletingLastPathComponent()
-                    .appendingPathComponent(".cmux-rollback-\(UUID().uuidString)", isDirectory: false)
+                    .appendingPathComponent(".bree-rollback-\(UUID().uuidString)", isDirectory: false)
                 try FileManager.default.moveItem(at: artifactURL, to: artifactBackupURL)
                 do {
                     // Revalidate the exact object moved out of the worktree before
@@ -263,7 +263,7 @@ extension CmuxExtensionWorktreeCreationResult {
                             "Worktree path changed before destructive cleanup."
                         )
                     }
-                    try await CmuxExtensionWorktreePrototype.run(
+                    try await BreeExtensionWorktreePrototype.run(
                         "rmdir",
                         [artifactDirectory.path],
                         failureDescription: "Could not remove the unclaimed worktree."
@@ -277,12 +277,12 @@ extension CmuxExtensionWorktreeCreationResult {
                             "Worktree path changed before branch cleanup."
                         )
                     }
-                    try await CmuxExtensionWorktreePrototype.run(
+                    try await BreeExtensionWorktreePrototype.run(
                         "git",
                         ["-C", projectRootURL.path, "worktree", "remove", worktreeURL.path],
                         failureDescription: "Could not remove the unclaimed worktree."
                     )
-                    try await CmuxExtensionWorktreePrototype.run(
+                    try await BreeExtensionWorktreePrototype.run(
                         "git",
                         ["-C", projectRootURL.path, "update-ref", "-d", branchRef, createdHead],
                         failureDescription: "Could not delete the unclaimed worktree branch."
@@ -323,7 +323,7 @@ extension CmuxExtensionWorktreeCreationResult {
                     )
                 }
             }.value
-        } catch let error as NSError where error.domain == "CmuxExtensionWorktreePrototype" {
+        } catch let error as NSError where error.domain == "BreeExtensionWorktreePrototype" {
             throw error
         } catch {
             throw rollbackRefused(
@@ -409,16 +409,16 @@ extension CmuxExtensionWorktreeCreationResult {
     }
 
     private func rollbackRefused(_ details: String) -> NSError {
-        CmuxExtensionWorktreePrototype.logPrivateFailure(details)
+        BreeExtensionWorktreePrototype.logPrivateFailure(details)
         return NSError(
-            domain: "CmuxExtensionWorktreePrototype",
+            domain: "BreeExtensionWorktreePrototype",
             code: 3,
             userInfo: [NSLocalizedDescriptionKey: "Could not remove the unclaimed worktree."]
         )
     }
 }
 
-final class CmuxExtensionProcessTermination: @unchecked Sendable {
+final class BreeExtensionProcessTermination: @unchecked Sendable {
     private let lock = NSLock()
     private var status: Int32?
     private var continuation: CheckedContinuation<Int32, Never>?
@@ -456,9 +456,9 @@ final class CmuxExtensionProcessTermination: @unchecked Sendable {
     }
 }
 
-enum CmuxExtensionWorktreePrototype {
+enum BreeExtensionWorktreePrototype {
     private static let logger = Logger(
-        subsystem: "com.cmuxterm.app",
+        subsystem: "com.bree.app",
         category: "ExtensionWorktree"
     )
 
@@ -470,17 +470,17 @@ enum CmuxExtensionWorktreePrototype {
         logger.debug("Extension worktree command diagnostic: \(details, privacy: .private)")
     }
 
-    static func createWorktree(projectRootPath: String) async throws -> CmuxExtensionWorktreeCreationResult {
+    static func createWorktree(projectRootPath: String) async throws -> BreeExtensionWorktreeCreationResult {
         do {
             return try await Task.detached(priority: .userInitiated) {
                 let projectRoot = URL(fileURLWithPath: projectRootPath, isDirectory: true).standardizedFileURL
                 try FileManager.default.createDirectory(at: projectRoot, withIntermediateDirectories: true)
                 try await ensureGitRepository(at: projectRoot)
-                try await ensureCmuxWorktreeDirectoryIsLocallyIgnored(projectRoot: projectRoot)
+                try await ensureBreeWorktreeDirectoryIsLocallyIgnored(projectRoot: projectRoot)
 
-                let branchName = "cmux-sidebar-\(Int(Date().timeIntervalSince1970))-\(UUID().uuidString.prefix(8).lowercased())"
+                let branchName = "bree-sidebar-\(Int(Date().timeIntervalSince1970))-\(UUID().uuidString.prefix(8).lowercased())"
                 let worktreeRoot = projectRoot
-                    .appendingPathComponent(CmuxIdentity.current.projectDirectoryName, isDirectory: true)
+                    .appendingPathComponent(BreeIdentity.current.projectDirectoryName, isDirectory: true)
                     .appendingPathComponent("worktrees", isDirectory: true)
                 try FileManager.default.createDirectory(at: worktreeRoot, withIntermediateDirectories: true)
                 let worktree = worktreeRoot.appendingPathComponent(branchName, isDirectory: true)
@@ -497,7 +497,7 @@ enum CmuxExtensionWorktreePrototype {
                           !decodedHead.isEmpty else {
                         logPrivateFailure("Git returned an empty or non-UTF-8 worktree HEAD.")
                         throw NSError(
-                            domain: "CmuxExtensionWorktreePrototype",
+                            domain: "BreeExtensionWorktreePrototype",
                             code: 4,
                             userInfo: [NSLocalizedDescriptionKey: "Could not create worktree."]
                         )
@@ -509,15 +509,15 @@ enum CmuxExtensionWorktreePrototype {
                     )
                     guard let (worktreeDeviceID, worktreeFileID) = worktreeIdentity else {
                         throw NSError(
-                            domain: "CmuxExtensionWorktreePrototype",
+                            domain: "BreeExtensionWorktreePrototype",
                             code: 4,
                             userInfo: [NSLocalizedDescriptionKey: "Could not create worktree."]
                         )
                     }
 
                     let port = 4_100 + abs(branchName.hashValue % 800)
-                    let samplePath = shellEscaped(worktree.appendingPathComponent("cmux-sample-dev", isDirectory: true).path)
-                    return CmuxExtensionWorktreeCreationResult(
+                    let samplePath = shellEscaped(worktree.appendingPathComponent("bree-sample-dev", isDirectory: true).path)
+                    return BreeExtensionWorktreeCreationResult(
                         projectRootPath: projectRoot.path,
                         worktreePath: worktree.path,
                         branchName: branchName,
@@ -540,12 +540,12 @@ enum CmuxExtensionWorktreePrototype {
                     throw error
                 }
             }.value
-        } catch let error as NSError where error.domain == "CmuxExtensionWorktreePrototype" {
+        } catch let error as NSError where error.domain == "BreeExtensionWorktreePrototype" {
             throw error
         } catch {
             logPrivateFailure("Worktree creation failed: \(String(describing: error))")
             throw NSError(
-                domain: "CmuxExtensionWorktreePrototype",
+                domain: "BreeExtensionWorktreePrototype",
                 code: 4,
                 userInfo: [NSLocalizedDescriptionKey: "Could not create worktree."]
             )
@@ -622,19 +622,19 @@ enum CmuxExtensionWorktreePrototype {
             return
         }
         throw NSError(
-            domain: "CmuxExtensionWorktreePrototype",
+            domain: "BreeExtensionWorktreePrototype",
             code: 1,
             userInfo: [NSLocalizedDescriptionKey: "Project root is not a git repository."]
         )
     }
 
-    private static func ensureCmuxWorktreeDirectoryIsLocallyIgnored(projectRoot: URL) async throws {
+    private static func ensureBreeWorktreeDirectoryIsLocallyIgnored(projectRoot: URL) async throws {
         let output = try await runCapturingOutput("git", ["-C", projectRoot.path, "rev-parse", "--git-path", "info/exclude"])
         guard let rawPath = String(data: output, encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines),
               !rawPath.isEmpty else {
             throw NSError(
-                domain: "CmuxExtensionWorktreePrototype",
+                domain: "BreeExtensionWorktreePrototype",
                 code: 2,
                 userInfo: [NSLocalizedDescriptionKey: "Could not resolve git exclude file."]
             )
@@ -648,11 +648,11 @@ enum CmuxExtensionWorktreePrototype {
         let alreadyIgnored = existing
             .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .contains { $0 == CmuxIdentity.current.projectDirectoryName || $0 == CmuxIdentity.current.projectDirectoryName + "/" }
+            .contains { $0 == BreeIdentity.current.projectDirectoryName || $0 == BreeIdentity.current.projectDirectoryName + "/" }
         guard !alreadyIgnored else { return }
 
         let separator = existing.isEmpty || existing.hasSuffix("\n") ? "" : "\n"
-        let next = existing + separator + "# Bree extension worktrees\n\(CmuxIdentity.current.projectDirectoryName)/\n"
+        let next = existing + separator + "# Bree extension worktrees\n\(BreeIdentity.current.projectDirectoryName)/\n"
         try next.write(to: excludeURL, atomically: true, encoding: .utf8)
     }
 
@@ -660,7 +660,7 @@ enum CmuxExtensionWorktreePrototype {
         in worktree: URL,
         projectName: String
     ) throws -> (relativePath: String, contents: Data) {
-        let sample = worktree.appendingPathComponent("cmux-sample-dev", isDirectory: true)
+        let sample = worktree.appendingPathComponent("bree-sample-dev", isDirectory: true)
         try FileManager.default.createDirectory(at: sample, withIntermediateDirectories: true)
         let escapedProject = projectName
             .replacingOccurrences(of: "&", with: "&amp;")
@@ -669,15 +669,15 @@ enum CmuxExtensionWorktreePrototype {
         let html = """
         <!doctype html>
         <html>
-          <head><meta charset="utf-8"><title>cmux worktree</title></head>
+          <head><meta charset="utf-8"><title>bree worktree</title></head>
           <body style="font: 15px -apple-system; padding: 32px;">
             <h1>\(escapedProject) worktree</h1>
-            <p>This page is served from a git worktree created by CmuxExtensionKit.</p>
+            <p>This page is served from a git worktree created by BreeExtensionKit.</p>
           </body>
         </html>
         """
         let contents = Data(html.utf8)
-        let relativePath = "cmux-sample-dev/index.html"
+        let relativePath = "bree-sample-dev/index.html"
         try contents.write(
             to: worktree.appendingPathComponent(relativePath, isDirectory: false),
             options: .atomic
@@ -709,7 +709,7 @@ enum CmuxExtensionWorktreePrototype {
         let standardErrorPipe = Pipe()
         process.standardOutput = standardOutputPipe
         process.standardError = standardErrorPipe
-        let termination = CmuxExtensionProcessTermination()
+        let termination = BreeExtensionProcessTermination()
         process.terminationHandler = { process in
             termination.complete(process.terminationStatus)
         }
@@ -720,15 +720,15 @@ enum CmuxExtensionWorktreePrototype {
                 "Could not launch \(executable): \(String(describing: error))"
             )
             throw NSError(
-                domain: "CmuxExtensionWorktreePrototype",
+                domain: "BreeExtensionWorktreePrototype",
                 code: 5,
                 userInfo: [NSLocalizedDescriptionKey: failureDescription]
             )
         }
-        let outputCollector = CmuxExtensionPipeOutputCollector(
+        let outputCollector = BreeExtensionPipeOutputCollector(
             fileHandle: standardOutputPipe.fileHandleForReading
         )
-        let errorCollector = CmuxExtensionPipeOutputCollector(
+        let errorCollector = BreeExtensionPipeOutputCollector(
             fileHandle: standardErrorPipe.fileHandleForReading
         )
         let terminationStatus = await termination.wait()
@@ -744,7 +744,7 @@ enum CmuxExtensionWorktreePrototype {
                     + "stdout=\(outputDetails); stderr=\(errorDetails)"
             )
             throw NSError(
-                domain: "CmuxExtensionWorktreePrototype",
+                domain: "BreeExtensionWorktreePrototype",
                 code: Int(terminationStatus),
                 userInfo: [NSLocalizedDescriptionKey: failureDescription]
             )
@@ -764,7 +764,7 @@ enum CmuxExtensionWorktreePrototype {
     }
 }
 
-final class CmuxExtensionPipeOutputCollector: @unchecked Sendable {
+final class BreeExtensionPipeOutputCollector: @unchecked Sendable {
     private struct ReadHandle: @unchecked Sendable {
         let fileHandle: FileHandle
     }

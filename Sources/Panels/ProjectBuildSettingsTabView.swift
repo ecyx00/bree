@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CMUXProjectModel
+import BreeFoundation
+import BREEProjectModel
 import SwiftUI
 
 /// Build Settings tab inside ``ProjectPanelView``.
@@ -10,7 +10,7 @@ import SwiftUI
 /// Resolved column is computed locally as the first non-empty value in the
 /// stack (target → project → empty). The cell whose value won is marked.
 struct ProjectBuildSettingsTabView: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     @ObservedObject var panel: ProjectPanel
     let model: ProjectModel
 
@@ -30,7 +30,7 @@ struct ProjectBuildSettingsTabView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text("Target")
-                    .cmuxFont(size: 11)
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                 targetPicker
                 Spacer(minLength: 4)
@@ -38,12 +38,12 @@ struct ProjectBuildSettingsTabView: View {
                     .foregroundStyle(.secondary)
                 TextField("Filter settings", text: $panel.settingsSearchText)
                     .textFieldStyle(.plain)
-                    .cmuxFont(size: 12)
+                    .scaledFont(size: 12)
                 Toggle("Customized only", isOn: $panel.settingsCustomizedOnly)
                     .toggleStyle(.checkbox)
-                    .cmuxFont(size: 11)
+                    .scaledFont(size: 11)
                 Text("\(rowCount) settings")
-                    .cmuxFont(size: 11)
+                    .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
             }
         }
@@ -106,7 +106,7 @@ struct ProjectBuildSettingsTabView: View {
                     .overlay(alignment: .leading) {
                         if row.winner == .target {
                             Rectangle()
-                                .fill(cmuxAccent.color)
+                                .fill(breeAccent.color)
                                 .frame(width: 3)
                         }
                     }
@@ -118,7 +118,7 @@ struct ProjectBuildSettingsTabView: View {
     @ViewBuilder
     private func columnHeader(_ title: String, weight: CGFloat, alignment: Alignment) -> some View {
         Text(title)
-            .cmuxFont(size: 11, weight: .semibold)
+            .scaledFont(size: 11, weight: .semibold)
             .foregroundStyle(.secondary)
             .frame(width: weight, alignment: alignment)
     }
@@ -191,7 +191,7 @@ private struct BuildSettingRow {
 }
 
 private struct SettingsRow: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     let row: BuildSettingRow
     let settingColumnWidth: CGFloat
     let valueColumnWidth: CGFloat
@@ -200,7 +200,7 @@ private struct SettingsRow: View {
         HStack(spacing: 0) {
             Spacer().frame(width: 3)
             Text(row.key)
-                .cmuxFont(size: 11, weight: .medium, design: .monospaced)
+                .scaledFont(size: 11, weight: .medium, design: .monospaced)
                 .frame(width: settingColumnWidth, alignment: .leading)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -221,13 +221,13 @@ private struct SettingsRow: View {
     private func valueCell(_ value: String, emphasis: CellEmphasis) -> some View {
         let style: Color = {
             switch emphasis {
-            case .accent: return cmuxAccent.color
+            case .accent: return breeAccent.color
             case .normal: return Color.primary
             case .dim: return Color.secondary
             }
         }()
         Text(value)
-            .cmuxFont(size: 11, design: .monospaced)
+            .scaledFont(size: 11, design: .monospaced)
             .lineLimit(1)
             .truncationMode(.tail)
             .foregroundStyle(value == "—" ? Color.secondary.opacity(0.6) : style)

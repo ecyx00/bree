@@ -1,6 +1,6 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
-import CmuxBrowser
+import BreeBrowser
 
 struct SessionBrowserPanelSnapshot: Codable, Sendable {
     var urlString: String?
@@ -13,11 +13,11 @@ struct SessionBrowserPanelSnapshot: Codable, Sendable {
     var omnibarVisible: Bool? = nil
     var backHistoryURLStrings: [String]?
     var forwardHistoryURLStrings: [String]?
-    /// True when the surface is a transparent internal cmux UI (e.g. the diff
+    /// True when the surface is a transparent internal bree UI (e.g. the diff
     /// viewer). Restored so the surface comes back transparent, not opaque.
     var transparentBackground: Bool? = nil
     /// Diff viewer token + request path, when this browser surface hosts a diff viewer.
-    /// Restored by re-registering the token with the app-owned `CmuxDiffViewerURLSchemeHandler`
+    /// Restored by re-registering the token with the app-owned `BreeDiffViewerURLSchemeHandler`
     /// and navigating via the custom scheme, independent of the (possibly-dead) local HTTP server.
     var diffViewerToken: String? = nil
     var diffViewerRequestPath: String? = nil

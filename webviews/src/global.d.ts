@@ -4,32 +4,32 @@ export {};
 
 declare global {
   /// Opaque sanitizer policy built by `Resources/markdown-viewer/markdown-sanitizer.js`.
-  type CmuxMarkdownSanitizerProfile = { readonly __cmuxMarkdownSanitizerProfile?: never };
+  type BreeMarkdownSanitizerProfile = { readonly __breeMarkdownSanitizerProfile?: never };
 
-  type CmuxMarkdownSanitizerURLContext = {
+  type BreeMarkdownSanitizerURLContext = {
     namespace: string;
     tag: string;
     name: string;
     value: string;
   };
 
-  var CmuxMarkdownSanitizer: {
+  var BreeMarkdownSanitizer: {
     markdownProfile(options?: {
       removeElements?: string[];
       extraAttributes?: Record<string, string[]>;
-      url?: (context: CmuxMarkdownSanitizerURLContext) => string | null;
+      url?: (context: BreeMarkdownSanitizerURLContext) => string | null;
       element?: (source: Element, clean: Element) => boolean;
-    }): CmuxMarkdownSanitizerProfile;
-    diagramProfile(): CmuxMarkdownSanitizerProfile;
+    }): BreeMarkdownSanitizerProfile;
+    diagramProfile(): BreeMarkdownSanitizerProfile;
     sanitizeToFragment(
       html: string,
-      options: { document: Document; profile: CmuxMarkdownSanitizerProfile },
+      options: { document: Document; profile: BreeMarkdownSanitizerProfile },
     ): DocumentFragment;
     serializeFragment(fragment: DocumentFragment, targetDocument: Document): string;
     sanitizeCSS(text: string): string | null;
   };
 
-  var CmuxViewerNavigation: {
+  var BreeViewerNavigation: {
     install(options: {
       target: Document | HTMLElement;
       getScroller: () => HTMLElement;
@@ -44,8 +44,8 @@ declare global {
   };
 
   interface Window {
-    __cmuxPerformDiffViewerNavigationAction?: (action: string) => boolean;
-    __cmuxDiffViewer?: {
+    __breePerformDiffViewerNavigationAction?: (action: string) => boolean;
+    __breeDiffViewer?: {
       codeView?: unknown;
       codeViewItems?: unknown[];
       items?: unknown[];
@@ -55,7 +55,7 @@ declare global {
     };
     webkit?: {
       messageHandlers?: {
-        cmuxDiff?: {
+        breeDiff?: {
           postMessage(message: unknown): Promise<DiffResponse>;
         };
       };

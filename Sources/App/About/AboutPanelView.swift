@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 struct AboutPanelView: View {
@@ -7,16 +7,16 @@ struct AboutPanelView: View {
 
     @Environment(\.openURL) private var openURL
 
-    private let githubURL = URL(string: "https://github.com/manaflow-ai/cmux")
-    private let docsURL = URL(string: "https://cmux.com/docs")
+    private let githubURL = URL(string: "https://github.com/ecyx00/bree")
+    private let docsURL = URL(string: "https://github.com/ecyx00/bree/tree/main/docs")
 
     private var version: String? { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String }
     private var build: String? { Bundle.main.infoDictionary?["CFBundleVersion"] as? String }
     private var commit: String? {
-        if let value = Bundle.main.infoDictionary?["CMUXCommit"] as? String, !value.isEmpty {
+        if let value = Bundle.main.infoDictionary?["BREECommit"] as? String, !value.isEmpty {
             return value
         }
-        let env = ProcessInfo.processInfo.environment["CMUX_COMMIT"] ?? ""
+        let env = ProcessInfo.processInfo.environment["BREE_COMMIT"] ?? ""
         return env.isEmpty ? nil : env
     }
     private var copyright: String? { Bundle.main.infoDictionary?["NSHumanReadableCopyright"] as? String }
@@ -31,13 +31,13 @@ struct AboutPanelView: View {
 
             VStack(alignment: .center, spacing: 32) {
                 VStack(alignment: .center, spacing: 8) {
-                    Text(CmuxIdentity.current.appDisplayName)
-                        .cmuxFont(.title)
+                    Text(BreeIdentity.current.appDisplayName)
+                        .scaledFont(.title)
                         .bold()
                     Text(String(localized: "about.description", defaultValue: "A Ghostty-based terminal with vertical tabs\nand a notification panel for macOS."))
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                        .cmuxFont(.caption)
+                        .scaledFont(.caption)
                         .tint(.secondary)
                         .opacity(0.8)
                 }
@@ -52,7 +52,7 @@ struct AboutPanelView: View {
                     }
                     let commitText = commit ?? "—"
                     let commitURL = commit.flatMap { hash in
-                        URL(string: "https://github.com/manaflow-ai/cmux/commit/\(hash)")
+                        URL(string: "https://github.com/ecyx00/bree/commit/\(hash)")
                     }
                     AboutPropertyRow(label: String(localized: "about.commit", defaultValue: "Commit"), text: commitText, url: commitURL)
                 }
@@ -76,7 +76,7 @@ struct AboutPanelView: View {
 
                 if let copy = copyright, !copy.isEmpty {
                     Text(copy)
-                        .cmuxFont(.caption)
+                        .scaledFont(.caption)
                         .textSelection(.enabled)
                         .tint(.secondary)
                         .opacity(0.8)

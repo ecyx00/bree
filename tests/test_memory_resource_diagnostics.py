@@ -65,9 +65,9 @@ if __name__ == "__main__":
     parser.add_argument("--expected-bundle", required=True)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
-    if not args.socket.startswith("/tmp/cmux-debug-"):
+    if not args.socket.startswith("/tmp/bree-debug-"):
         parser.error("Only an explicitly tagged DEV socket may be tested")
-    if not args.expected_bundle.startswith("com.cmuxterm.app.debug."):
+    if not args.expected_bundle.startswith("com.bree.app.debug."):
         parser.error("Only an explicitly tagged DEV bundle may be tested")
     MemoryResourceDiagnosticsTests.socket_path = args.socket
     MemoryResourceDiagnosticsTests.expected_bundle = args.expected_bundle

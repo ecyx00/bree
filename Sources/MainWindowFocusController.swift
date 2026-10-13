@@ -1,6 +1,6 @@
 import AppKit
-import CmuxFoundation
-import CmuxTerminal
+import BreeFoundation
+import BreeTerminal
 import WebKit
 
 @MainActor
@@ -875,7 +875,7 @@ final class MainWindowFocusController {
     }
 
     private func terminalFocusRequest(for responder: NSResponder?) -> TerminalFocusRequest? {
-        guard let ghosttyView = responder.cmuxTerminalFocusOwningGhosttyView(),
+        guard let ghosttyView = responder.breeTerminalFocusOwningGhosttyView(),
               let workspaceId = ghosttyView.tabId,
               let panelId = ghosttyView.terminalSurface?.id else {
             return nil

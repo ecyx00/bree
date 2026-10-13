@@ -32,7 +32,7 @@ test("fetch and WebKit transports use the same generated request envelope", asyn
     fetchRequest = JSON.parse(String(init?.body)) as DiffRequest;
     return Response.json({ ...response, id: fetchRequest.id });
   }) as typeof fetch;
-  const fetchTransport = new FetchDiffTransport("/__cmux_diff_rpc", 1);
+  const fetchTransport = new FetchDiffTransport("/__bree_diff_rpc", 1);
   await fetchTransport.request({ method: "protocolHandshake" });
 
   const webKitTransport = new WebKitDiffTransport({
@@ -54,5 +54,5 @@ test("fetch and WebKit transports use the same generated request envelope", asyn
 test("fetch transport is disabled when a persisted viewer is restored through the custom scheme", () => {
   expect(supportsFetchTransport("http:")).toBe(true);
   expect(supportsFetchTransport("https:")).toBe(true);
-  expect(supportsFetchTransport("cmux-diff-viewer:")).toBe(false);
+  expect(supportsFetchTransport("bree-diff-viewer:")).toBe(false);
 });

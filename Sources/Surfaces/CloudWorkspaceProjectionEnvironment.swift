@@ -1,4 +1,4 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// Native projection operations supplied by the app, or an isolated test host.

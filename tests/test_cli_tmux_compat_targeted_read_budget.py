@@ -13,9 +13,9 @@ import tempfile
 import threading
 import time
 
-from claude_teams_test_utils import resolve_cmux_cli, stable_tmux_numeric_id
+from claude_teams_test_utils import resolve_bree_cli, stable_tmux_numeric_id
 from tmux_compat_polling_fixture import (
-    FakeCmuxState, WORKSPACE_ID, PANE_ID, SURFACE_ID, NEW_PANE_ID,
+    FakeBreeState, WORKSPACE_ID, PANE_ID, SURFACE_ID, NEW_PANE_ID,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -29,7 +29,7 @@ class ProductionLimiter:
 
     def __init__(self, directory: Path):
         executable = directory / "limiter"
-        sources = ROOT / "Packages/macOS/CmuxControlSocket/Sources/CmuxControlSocket"
+        sources = ROOT / "Packages/macOS/BreeControlSocket/Sources/BreeControlSocket"
         subprocess.run([
             "xcrun", "swiftc", "-parse-as-library", "-warnings-as-errors",
             str(sources / "Server/ControlClientRateLimiter.swift"),
@@ -68,7 +68,7 @@ class Server(socketserver.ThreadingUnixStreamServer):
 
     def __init__(self, path, limiter, fault=None, wire_reply=None):
         self.limiter = limiter
-        self.state = FakeCmuxState()
+        self.state = FakeBreeState()
         self.fault = fault
         self.wire_reply = wire_reply
         self.requests = []
@@ -86,7 +86,7 @@ class Handler(socketserver.StreamRequestHandler):
         previous_request = None
         for raw in self.rfile:
             line = raw.decode().strip()
-            if line.startswith("_cmux_capability_v1 "):
+            if line.startswith("_bree_capability_v1 "):
                 line = line.split(" ", 2)[2]
             if line.startswith("auth "):
                 self.wfile.write(b"OK\n")
@@ -149,11 +149,11 @@ def serve(directory, limiter, fault=None, wire_reply=None):
 
 
 def run(cli, path, directory, arguments, timeout=15, extra_env=None):
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("CMUX", "TMUX"))}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("BREE", "TMUX"))}
     env.update({
-        "CMUX_SOCKET_PATH": str(path), "CMUX_WORKSPACE_ID": WORKSPACE_ID,
-        "CMUX_SURFACE_ID": SURFACE_ID, "CMUX_PANE_ID": PANE_ID, "TMUX_PANE": PANE,
-        "CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC": str(timeout), "HOME": str(directory),
+        "BREE_SOCKET_PATH": str(path), "BREE_WORKSPACE_ID": WORKSPACE_ID,
+        "BREE_SURFACE_ID": SURFACE_ID, "BREE_PANE_ID": PANE_ID, "TMUX_PANE": PANE,
+        "BREE_CLI_RESPONSE_TIMEOUT_SEC": str(timeout), "HOME": str(directory),
     })
     env.update(extra_env or {})
     return subprocess.run(
@@ -203,15 +203,15 @@ def managed_teammate_flow(cli, directory, limiter):
     counts that window's panes, then splits the leader with -d -h -l 70%.
     The stand-in runs that sequence through the launcher's managed tmux shim.
     """
-    managed = directory / "cmux-cli-shims" / SURFACE_ID
+    managed = directory / "bree-cli-shims" / SURFACE_ID
     managed.mkdir(parents=True, mode=0o700)
     real_bin = directory / "real-bin"
     real_bin.mkdir()
     wrapper = managed / "claude"
     wrapper.write_text(
         '#!/bin/sh\nset -eu\n'
-        '[ "${CMUX_CLAUDE_TEAMS_WRAPPER_LAUNCH:-}" = 1 ]\n'
-        'exec "$CMUX_TEST_REAL_CLAUDE" "$@"\n'
+        '[ "${BREE_CLAUDE_TEAMS_WRAPPER_LAUNCH:-}" = 1 ]\n'
+        'exec "$BREE_TEST_REAL_CLAUDE" "$@"\n'
     )
     wrapper.chmod(0o700)
     agent = real_bin / "claude"
@@ -219,31 +219,31 @@ def managed_teammate_flow(cli, directory, limiter):
 set -eu
 [ "$1" = --teammate-mode ] && [ "$2" = auto ]
 [ "$CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" = 1 ]
-[ "$TMUX_PANE" = "$CMUX_TEST_PANE" ]
+[ "$TMUX_PANE" = "$BREE_TEST_PANE" ]
 # Restore a shell snapshot containing only the app's managed wrapper root.
-# This must still reach cmux's tmux shim, without a launcher-only PATH entry.
-export PATH="$CMUX_TEST_SNAPSHOT_PATH"
-[ "$(command -v tmux)" = "$CMUX_CLAUDE_WRAPPER_SHIM_ROOT/tmux" ]
+# This must still reach bree's tmux shim, without a launcher-only PATH entry.
+export PATH="$BREE_TEST_SNAPSHOT_PATH"
+[ "$(command -v tmux)" = "$BREE_CLAUDE_WRAPPER_SHIM_ROOT/tmux" ]
 window="$(tmux display-message -t "$TMUX_PANE" -p '#{window_id}')"
-[ "$window" = "$CMUX_TEST_WINDOW" ]
+[ "$window" = "$BREE_TEST_WINDOW" ]
 [ "$(tmux list-panes -t "$window" -F '#{pane_id}')" = "$TMUX_PANE" ]
 teammate="$(tmux split-window -d -t "$TMUX_PANE" -h -l 70% -P -F '#{pane_id}' -- sleep 20)"
-[ "$teammate" = "$CMUX_TEST_NEW_PANE" ]
-[ "$(tmux display-message -t "$TMUX_PANE" -p '#S:#I.#P')" = cmux:0.0 ]
+[ "$teammate" = "$BREE_TEST_NEW_PANE" ]
+[ "$(tmux display-message -t "$TMUX_PANE" -p '#S:#I.#P')" = bree:0.0 ]
 [ "$(tmux display-message -t "$teammate" -p '#P')" = 1 ]
 tmux list-panes -t "$window" -F '#{pane_id}'
 ''')
     agent.chmod(0o700)
     extra_env = {
         "PATH": f"{managed}:{real_bin}:/usr/bin:/bin",
-        "CMUX_CLAUDE_WRAPPER_SHIM_ROOT": str(managed),
-        "CMUX_CLAUDE_WRAPPER_SHIM": str(wrapper),
-        "CMUX_CUSTOM_CLAUDE_PATH": str(agent),
-        "CMUX_TEST_REAL_CLAUDE": str(agent),
-        "CMUX_TEST_SNAPSHOT_PATH": f"{managed}:/usr/bin:/bin",
-        "CMUX_TEST_PANE": PANE,
-        "CMUX_TEST_WINDOW": WINDOW,
-        "CMUX_TEST_NEW_PANE": NEW_PANE,
+        "BREE_CLAUDE_WRAPPER_SHIM_ROOT": str(managed),
+        "BREE_CLAUDE_WRAPPER_SHIM": str(wrapper),
+        "BREE_CUSTOM_CLAUDE_PATH": str(agent),
+        "BREE_TEST_REAL_CLAUDE": str(agent),
+        "BREE_TEST_SNAPSHOT_PATH": f"{managed}:/usr/bin:/bin",
+        "BREE_TEST_PANE": PANE,
+        "BREE_TEST_WINDOW": WINDOW,
+        "BREE_TEST_NEW_PANE": NEW_PANE,
     }
     # Each fresh launch gets fresh socket state and a fresh polling budget.
     for _ in range(2):
@@ -351,8 +351,8 @@ def limiter_isolation(directory, limiter):
 
 
 def main():
-    cli = resolve_cmux_cli()
-    with tempfile.TemporaryDirectory(prefix="cmux-polling-", dir="/tmp") as root:
+    cli = resolve_bree_cli()
+    with tempfile.TemporaryDirectory(prefix="bree-polling-", dir="/tmp") as root:
         directory = Path(root)
         limiter = ProductionLimiter(directory)
         try:

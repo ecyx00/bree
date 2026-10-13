@@ -29,5 +29,5 @@ enum CloudDiagnosticReport {
 }
 
 extension Notification.Name {
-    static let cmuxCloudVMAccessDidEnd = Notification.Name("test.cloud.accessDidEnd")
+    static let breeCloudVMAccessDidEnd = Notification.Name("test.cloud.accessDidEnd")
 }

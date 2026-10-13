@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 // Read-only support for the Wiki popover: the `bree-wiki/1` contract (docs/state/2026-10-10-generic-wiki-architecture-design.md).

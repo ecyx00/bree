@@ -17,8 +17,8 @@
 # not the terminal is fixed, so duplicates appear either way. Measured over 8
 # cycles: 400 lines becomes 437 on a terminal without the fix and 402 with it.
 #
-# The window is driven through cmux's own resize-window verb. AppleScript
-# cannot do it: from an automation host every app, cmux included, reports zero
+# The window is driven through bree's own resize-window verb. AppleScript
+# cannot do it: from an automation host every app, bree included, reports zero
 # windows through System Events for lack of Accessibility permission.
 #
 # Sequencing waits on observable edges, not fixed delays. The debug CLI is a
@@ -26,10 +26,10 @@
 # each edge is a marker or state the screen must reach, re-read until it
 # appears, bounded by a deadline that fails the run instead of passing it.
 #
-# Usage: CMUX_TAG=<tag> bash scripts/scrollback-resize-guard.sh [cycles] [lines]
+# Usage: BREE_TAG=<tag> bash scripts/scrollback-resize-guard.sh [cycles] [lines]
 
 set -uo pipefail
-TAG="${CMUX_TAG:?set CMUX_TAG}"
+TAG="${BREE_TAG:?set BREE_TAG}"
 CYCLES="${1:-8}"
 NLINES="${2:-400}"
 # A zero or junk count makes the seq loop empty, and the guard then reports PASS without
@@ -41,7 +41,7 @@ case "$NLINES" in ''|*[!0-9]*) echo "FAIL: lines must be a positive integer, got
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 SOCKDIR=/tmp/cm-dragguard-$TAG
 LOG=/tmp/dragtmux-$TAG.log
-cli() { CMUX_QUIET=1 CMUX_TAG="$TAG" "$REPO/scripts/cmux-debug-cli.sh" "$@"; }
+cli() { BREE_QUIET=1 BREE_TAG="$TAG" "$REPO/scripts/bree-debug-cli.sh" "$@"; }
 
 fail() { echo "FAIL: $1"; exit 2; }
 command -v tmux >/dev/null 2>&1 || fail "tmux is not installed"

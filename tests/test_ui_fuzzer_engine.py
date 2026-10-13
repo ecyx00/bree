@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The UI fuzzer's pure parts (dogfood/fuzz/cmuxfuzz): generation, oracles, minimization, signatures and the
+"""The UI fuzzer's pure parts (dogfood/fuzz/breefuzz): generation, oracles, minimization, signatures and the
 public issue text. Driving an app needs a Mac with a console session; these need nothing."""
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "dogfood" / "fuzz"))
 
-from cmuxfuzz import actions, oracles, runner, triage  # noqa: E402
-from cmuxfuzz.app import LaunchError  # noqa: E402
-from cmuxfuzz.minimize import ddmin  # noqa: E402
-from cmuxfuzz.signature import Signature, hang_signature, normalize  # noqa: E402
+from breefuzz import actions, oracles, runner, triage  # noqa: E402
+from breefuzz.app import LaunchError  # noqa: E402
+from breefuzz.minimize import ddmin  # noqa: E402
+from breefuzz.signature import Signature, hang_signature, normalize  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 PANE_A = "999149DB-B3D6-48F7-817D-06CF744052C2"
@@ -165,8 +165,8 @@ class SignatureTest(unittest.TestCase):
             "Call graph:",
             "    2500 Thread_1   DispatchQueue_1: com.apple.main-thread  (serial)",
             "    + 2500 start  (in dyld) + 6992  [0x1]",
-            "    +   2500 main  (in cmux DEV.debug.dylib) + 12  [0x2]",
-            "    +     2500 Workspace.layoutPanes()  (in cmux DEV.debug.dylib) + 40  [0x3]",
+            "    +   2500 main  (in Bree Dev.debug.dylib) + 12  [0x2]",
+            "    +     2500 Workspace.layoutPanes()  (in Bree Dev.debug.dylib) + 40  [0x3]",
             "    +       2500 __psynch_mutexwait  (in libsystem_kernel.dylib) + 8  [0x4]",
         ])
         sig = hang_signature(sample)
@@ -199,7 +199,7 @@ class LaunchFailureTest(unittest.TestCase):
 
     def test_a_session_that_starts_resets_the_count(self) -> None:
         import tempfile
-        from cmuxfuzz.oracles import Failure
+        from breefuzz.oracles import Failure
         launch = Failure(Signature("launch", "launch-failed", "The app did not start"), "timeout")
         plan = [launch, None, launch, launch, launch]
         with tempfile.TemporaryDirectory() as tmp:
@@ -226,7 +226,7 @@ class RegressionsCommandTest(unittest.TestCase):
         import io
         import tempfile
         from unittest import mock
-        from cmuxfuzz import cli
+        from breefuzz import cli
 
         result = runner.SessionResult()
         result.steps = [runner.StepRecord(index, {"do": "split"}, outcome, "why")
@@ -263,19 +263,19 @@ class IssueTextTest(unittest.TestCase):
     def finding(self) -> dict:
         return {"signature": Signature("invariant", "container-degenerate",
                                        "Layout invariant broken: container-degenerate").to_json(),
-                "detail": "container {'width': 0} on cmux12s-mac-mini.local in /Users/cmux/x and "
-                          "/Users/Shared/cmux-build-fleet/fuzz/runs/r/session-000",
+                "detail": "container {'width': 0} on bree12s-mac-mini.local in /Users/bree/x and "
+                          "/Users/Shared/bree-build-fleet/fuzz/runs/r/session-000",
                 "repro_steps": [{"do": "window_resize", "w": 480, "h": 800}], "seed": 5, "session_seed": 6,
                 "sha": "a" * 40, "repro_replayed": True, "minimize_exhausted": False}
 
     def test_issue_text_carries_no_machine_detail(self) -> None:
         finding = self.finding()
-        finding["signature"]["key"] += " at /Users/Shared/cmux-build-fleet/ci/src/x.swift on mini-9"
+        finding["signature"]["key"] += " at /Users/Shared/bree-build-fleet/ci/src/x.swift on mini-9"
         body = triage.issue_body(finding, ["https://example.test/step-00000.png"], [], redact=["mini-9"])
-        for leak in ("cmux12s", "mac-mini", "/Users/cmux", "cmux-build-fleet", ".local", "mini-9"):
+        for leak in ("bree12s", "mac-mini", "/Users/bree", "bree-build-fleet", ".local", "mini-9"):
             self.assertNotIn(leak, body)
         self.assertIn("Resize the window to 480x800 points", body)
-        self.assertIn("cmux-fuzz-signature: " + self.finding()["signature"]["digest"], body)
+        self.assertIn("bree-fuzz-signature: " + self.finding()["signature"]["digest"], body)
         repro = json.loads(body.split("```json\n", 1)[1].split("\n```", 1)[0])
         self.assertEqual(repro["steps"], self.finding()["repro_steps"])
 

@@ -3,7 +3,7 @@ import QuartzCore
 import SwiftUI
 
 final class GPUSpinnerNSView: NSView {
-    static let animationKey = "cmux.gpuSpinner.rotation"
+    static let animationKey = "bree.gpuSpinner.rotation"
     private static let spokeCount = 8
     private static let cycleDuration: CFTimeInterval = 0.8
     private static let arcDuration: CFTimeInterval = 0.9
@@ -30,7 +30,7 @@ final class GPUSpinnerNSView: NSView {
         didSet { applyColor() }
     }
 
-    /// Concrete cmux scheme used to resolve semantic spinner colors.
+    /// Concrete bree scheme used to resolve semantic spinner colors.
     var colorScheme: ColorScheme = .light {
         didSet {
             guard colorScheme != oldValue else { return }

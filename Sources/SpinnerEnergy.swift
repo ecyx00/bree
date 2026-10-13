@@ -1,4 +1,5 @@
 #if DEBUG
+import BreeFoundation
 import SwiftUI
 
 enum SpinnerEnergy: String {
@@ -8,9 +9,9 @@ enum SpinnerEnergy: String {
 
     var color: Color {
         switch self {
-        case .low: return .green
-        case .mediumHigh: return .orange
-        case .high: return .red
+        case .low: return BreeChromePalette.currentSnapshot.signalSuccess
+        case .mediumHigh: return BreeChromePalette.currentSnapshot.signalAttention
+        case .high: return BreeChromePalette.currentSnapshot.signalError
         }
     }
 }

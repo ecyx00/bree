@@ -1,8 +1,8 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
 import Bonsplit
-import CmuxSurfaceCatalogModel
-import CmuxTerminal
+import BreeSurfaceCatalogModel
+import BreeTerminal
 import Foundation
 
 /// Captures the initiating window before creation suspends; completion never reselects it.

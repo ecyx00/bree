@@ -122,7 +122,7 @@ final class NativeTextSurfaceSelectionReader {
             object: textStorage,
             queue: nil
         ) { [weak self] _ in
-            // Text views in cmux are MainActor-owned; invalidating from the
+            // Text views in bree are MainActor-owned; invalidating from the
             // synchronous will-process notification closes the same-length
             // edit window before the storage contents change.
             MainActor.assumeIsolated {

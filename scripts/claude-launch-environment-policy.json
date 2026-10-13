@@ -12,6 +12,6 @@
   ],
   "inheritedTrustBypassKeys": [
     "CLAUDE_CODE_SANDBOXED",
-    "CMUX_CLAUDE_TEAMS_SANDBOXED"
+    "BREE_CLAUDE_TEAMS_SANDBOXED"
   ]
 }

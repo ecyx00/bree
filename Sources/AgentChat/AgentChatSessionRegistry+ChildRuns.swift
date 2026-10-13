@@ -1,5 +1,5 @@
-import CMUXAgentLaunch
-import CmuxMobileHost
+import BREEAgentLaunch
+import BreeMobileHost
 import Foundation
 
 /// Child-run (subagent) bookkeeping from the parent session's hook events.
@@ -11,7 +11,7 @@ import Foundation
 /// detach while the child keeps running. Codex, pi and OMP use their
 /// dedicated `SubagentStart`/`SubagentStop` pair, with the FIFO fallback when
 /// a request id is absent. Neither child ever runs hooks of its own, so this
-/// bookkeeping is the ONLY view cmux has of nested agents; the state machine
+/// bookkeeping is the ONLY view bree has of nested agents; the state machine
 /// in `nextState(previous:event:)` deliberately keeps ignoring these events
 /// (a child's lifecycle says nothing about whether the PARENT is working).
 ///

@@ -3,9 +3,9 @@
     "Sources/*AgentMessage*",
     "Sources/TerminalController+AgentMessages.swift",
     "CLI/*AgentMessage*",
-    "CLI/CMUXCLI+AgentMessages.swift",
-    "cmuxCLITests/CLIAgentMessage*",
-    "Packages/macOS/CmuxAgentJournal/*"
+    "CLI/BREECLI+AgentMessages.swift",
+    "breeCLITests/CLIAgentMessage*",
+    "Packages/macOS/BreeAgentJournal/*"
   ],
   "steps": [
     {
@@ -43,7 +43,7 @@
         "workspace_id": "${workspace.workspace_id}",
         "surface_id": "${surface.surface_id}",
         "direction": "right",
-        "initial_input": "\"$CMUX_BUNDLED_CLI_PATH\" agent inbox --state queued --limit 1\n",
+        "initial_input": "\"$BREE_BUNDLED_CLI_PATH\" agent inbox --state queued --limit 1\n",
         "focus": false
       },
       "save": "inbox"

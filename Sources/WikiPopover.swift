@@ -1,6 +1,6 @@
 import AppKit
 import Combine
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 // The Wiki popover: topic list ("This project" / "General"), and pages shown in place with a back stack.
@@ -536,7 +536,7 @@ final class WikiPopoverController: NSObject {
         guard let session = TabBarPopoverSession(
             workspace: workspace,
             parent: parent,
-            slot: 1,
+            slot: 2,
             sizeName: "wiki",
             preferredSize: { maxWidth, maxHeight in
                 NSSize(width: min(560, max(maxWidth, 280)), height: min(520, max(maxHeight, 120)))
@@ -579,7 +579,7 @@ final class WikiPopoverController: NSObject {
 struct WikiPopoverView: View {
     @ObservedObject var model: WikiPopoverModel
     @Environment(\.breePalette) private var palette
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
 
     var body: some View {
         VStack(spacing: 0) {
@@ -620,7 +620,7 @@ struct WikiPopoverView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .frame(maxWidth: 220)
-                    .tint(cmuxAccent.selectedFillColor)
+                    .tint(breeAccent.selectedFillColor)
                 }
                 searchButton
             } else {
@@ -875,7 +875,7 @@ private struct WikiCard: View {
                     } else if page.isStale {
                         Text(String(localized: "architecture.wiki.stale", defaultValue: "stale"))
                             .breeFont(.caption)
-                            .foregroundStyle(palette.signalAttention)
+                            .foregroundStyle(palette.textSecondary)
                     }
                 }
             }

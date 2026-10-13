@@ -1,5 +1,5 @@
 {
-  "paths": ["Sources/*Browser*", "Sources/*Omnibar*", "Sources/*Notification*", "Packages/macOS/CmuxBrowser/*", "Packages/macOS/CmuxNotifications/*"],
+  "paths": ["Sources/*Browser*", "Sources/*Omnibar*", "Sources/*Notification*", "Packages/macOS/BreeBrowser/*", "Packages/macOS/BreeNotifications/*"],
   "steps": [
     {"socket": "workspace.current", "save": "ws"},
     {"socket": "browser.open_split", "params": {"url": "https://example.com"}, "save": "browser"},
@@ -14,7 +14,7 @@
     {"wait": 1},
     {"shot": "omnibar-suggestions"},
     {"key": "escape"},
-    {"socket": "notification.create", "params": {"title": "Build finished", "body": "cmux dogfood tour notification"}},
+    {"socket": "notification.create", "params": {"title": "Build finished", "body": "bree dogfood tour notification"}},
     {"socket": "notification.create", "params": {"title": "Agent needs input", "body": "Second notification to fill the list"}},
     {"wait": 1},
     {"shot": "after-notifications"},

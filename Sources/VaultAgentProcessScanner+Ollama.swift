@@ -1,27 +1,27 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Foundation
 
 extension RestorableAgentSessionIndex {
     static func processDetectedOllamaSnapshots(
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         capturedAt: TimeInterval,
         scopedProcessIDsByPanelKey: [PanelKey: Set<Int>],
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments?,
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments?,
         interactiveStdioProbe: (Int) -> Bool = processHasInteractiveTerminalStdio
     ) -> [PanelKey: ProcessDetectedSnapshotEntry] {
         var results: [PanelKey: ProcessDetectedSnapshotEntry] = [:]
-        for process in processSnapshot.cmuxScopedProcesses() {
+        for process in processSnapshot.breeScopedProcesses() {
             // This snapshot is persisted and auto-executed on restore, so the
             // identity gate uses only the kernel-reported executable path:
-            // CMUX_AGENT_LAUNCH_KIND and argv are user-controlled and must
+            // BREE_AGENT_LAUNCH_KIND and argv are user-controlled and must
             // not decide what gets relaunched. Fail closed without a path.
             guard process.isTerminalForegroundProcessGroup,
-                  let workspaceID = process.cmuxWorkspaceID,
-                  let surfaceID = process.cmuxSurfaceID,
+                  let workspaceID = process.breeWorkspaceID,
+                  let surfaceID = process.breeSurfaceID,
                   let executablePath = process.path?.trimmingCharacters(in: .whitespacesAndNewlines),
                   (executablePath as NSString).lastPathComponent == "ollama",
                   let details = processArgumentsProvider(process.pid),
-                  CmuxTaskManagerCodingAgentDefinition.matchingDefinition(
+                  BreeTaskManagerCodingAgentDefinition.matchingDefinition(
                       processName: process.name,
                       processPath: executablePath,
                       arguments: details.arguments,
@@ -37,7 +37,7 @@ extension RestorableAgentSessionIndex {
             }
 
             let workingDirectory = normalizedOllamaValue(
-                details.environment["CMUX_AGENT_LAUNCH_CWD"] ?? details.environment["PWD"]
+                details.environment["BREE_AGENT_LAUNCH_CWD"] ?? details.environment["PWD"]
             )
             let key = PanelKey(workspaceId: workspaceID, panelId: surfaceID)
             // Relaunch through the trusted kernel path, never argv[0].

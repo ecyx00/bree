@@ -22,7 +22,7 @@ struct ContentView: View {
             .foregroundStyle(.secondary)
             Text(String(
                 localized: "sampleSidebarApp.identifier",
-                defaultValue: "Extension ID: co.manaflow.CMUXExtKitSampleSidebarApp.Extension"
+                defaultValue: "Extension ID: co.manaflow.BREEExtKitSampleSidebarApp.Extension"
             ))
             .font(.system(.caption, design: .monospaced))
             .foregroundStyle(.secondary)

@@ -1,10 +1,10 @@
-import CmuxAuthRuntime
+import BreeAuthRuntime
 import Foundation
 
 extension Notification.Name {
-    static let cmuxCloudTeamScopeDidChange = Notification.Name("cmux.cloudTeamScopeDidChange")
+    static let breeCloudTeamScopeDidChange = Notification.Name("bree.cloudTeamScopeDidChange")
     /// Posted once the new scope is discovered, without waiting for machine details.
-    static let cmuxCloudTeamScopeReady = Notification.Name("cmux.cloudTeamScopeReady")
+    static let breeCloudTeamScopeReady = Notification.Name("bree.cloudTeamScopeReady")
 }
 
 /// Reconciles local Cloud transports whenever the authenticated team changes.
@@ -18,7 +18,7 @@ extension Notification.Name {
 @MainActor
 final class CloudTeamScopeObserver {
     private let auth: AuthCoordinator
-    private let registry: CmuxTuiSurfaceProviderRegistry
+    private let registry: BreeTuiSurfaceProviderRegistry
     private let onTeamWillChange: @MainActor (_ isSameAccount: Bool) -> Void
     private var observationTask: Task<Void, Never>?
     /// Registry teardown can wait for remote transports. Keep it out of the
@@ -34,7 +34,7 @@ final class CloudTeamScopeObserver {
 
     init(
         auth: AuthCoordinator,
-        registry: CmuxTuiSurfaceProviderRegistry? = nil,
+        registry: BreeTuiSurfaceProviderRegistry? = nil,
         onTeamWillChange: @escaping @MainActor (_ isSameAccount: Bool) -> Void
     ) {
         self.auth = auth
@@ -60,7 +60,7 @@ final class CloudTeamScopeObserver {
 
                 if changedTeams {
                     self.onTeamWillChange(isSameAccount)
-                    NotificationCenter.default.post(name: .cmuxCloudTeamScopeDidChange, object: self)
+                    NotificationCenter.default.post(name: .breeCloudTeamScopeDidChange, object: self)
                 }
                 self.requestReconciliation(
                     scope: scope,
@@ -127,7 +127,7 @@ final class CloudTeamScopeObserver {
             }
             guard generation == desiredGeneration else { continue }
             guard auth.isAuthenticatedTeamScopeCurrent(scope) else { return }
-            NotificationCenter.default.post(name: .cmuxCloudTeamScopeReady, object: self)
+            NotificationCenter.default.post(name: .breeCloudTeamScopeReady, object: self)
             return
         }
     }

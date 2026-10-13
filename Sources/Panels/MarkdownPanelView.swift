@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 import WebKit
 
@@ -18,7 +18,7 @@ import WebKit
 ///   - We can copy the rendered HTML straight from the same source the user
 ///     is reading.
 struct MarkdownPanelView: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     @ObservedObject var panel: MarkdownPanel
     let isFocused: Bool
     let isVisibleInUI: Bool
@@ -261,26 +261,26 @@ struct MarkdownPanelView: View {
         .pickerStyle(.segmented)
         .labelsHidden()
         .fixedSize()
-        .tint(cmuxAccent.selectedFillColor)
+        .tint(breeAccent.selectedFillColor)
     }
 
     private var fileUnavailableView: some View {
         VStack(spacing: 12) {
             Image(systemName: "doc.questionmark")
-                .cmuxFont(size: 40)
+                .scaledFont(size: 40)
                 .foregroundColor(.secondary)
             Text(String(localized: "markdown.fileUnavailable.title", defaultValue: "File unavailable"))
-                .cmuxFont(.headline)
+                .scaledFont(.headline)
                 .foregroundColor(.primary)
             Text(panel.filePath)
-                .cmuxFont(size: 12, design: .monospaced)
+                .scaledFont(size: 12, design: .monospaced)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .copyOnlyTextSelection(for: panel.filePath)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 24)
             Text(String(localized: "markdown.fileUnavailable.message", defaultValue: "The file may have been moved or deleted."))
-                .cmuxFont(.caption)
+                .scaledFont(.caption)
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -382,7 +382,7 @@ private struct MarkdownPanelToolbar: View {
         HStack(spacing: 8) {
             if let confirmation {
                 Text(confirmation)
-                    .cmuxFont(size: 11, weight: .medium)
+                    .scaledFont(size: 11, weight: .medium)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .transition(.opacity)

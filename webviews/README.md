@@ -1,6 +1,6 @@
-# cmux Webviews
+# bree Webviews
 
-This is the source-owned React bundle for embedded cmux webviews. It currently ships the `cmux diff` viewer and is structured to host more React-backed webviews.
+This is the source-owned React bundle for embedded bree webviews. It currently ships the `bree diff` viewer and is structured to host more React-backed webviews.
 
 Build it with:
 
@@ -23,4 +23,4 @@ Large public stress samples are available through:
 ./scripts/open-diff-viewer-stress-samples.sh all
 ```
 
-The sample opener caches local clones under `/tmp/cmux-diff-viewer-stress`, checks out the sample refs, then runs `cmux diff --base <ref>` from inside the repository so the stress path matches normal local git diffs.
+The sample opener caches local clones under `/tmp/bree-diff-viewer-stress`, checks out the sample refs, then runs `bree diff --base <ref>` from inside the repository so the stress path matches normal local git diffs.

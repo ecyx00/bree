@@ -12,6 +12,8 @@ enum TabBarMetrics {
     static let tabHeight: CGFloat = 30
     static let tabMinWidth: CGFloat = 48
     static let tabMaxWidth: CGFloat = 220
+    /// Floor for titled tabs in fixed mode; wide enough for typical shell and page titles.
+    static let tabSettledMinWidth: CGFloat = 112
     static let tabCornerRadius: CGFloat = 0
     static let tabHorizontalPadding: CGFloat = 6
     static let tabSpacing: CGFloat = 0
@@ -23,7 +25,7 @@ enum TabBarMetrics {
 
     static let iconSize: CGFloat = 14
     static let titleFontSize: CGFloat = 11
-    /// 20 mirrors BreeMetrics.compactIconButtonSize (bonsplit cannot import CmuxFoundation).
+    /// 20 mirrors BreeMetrics.compactIconButtonSize (bonsplit cannot import BreeFoundation).
     static let closeButtonSize: CGFloat = 20
     static let closeIconSize: CGFloat = 9
     static let dirtyIndicatorSize: CGFloat = 8

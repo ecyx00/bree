@@ -1,0 +1,261 @@
+import AppKit
+import BreeFoundation
+import Foundation
+import Testing
+import struct BreeSettings.NotificationsCatalogSection
+
+#if canImport(Bree_Dev)
+@testable import Bree_Dev
+#elseif canImport(bree)
+@testable import bree
+#endif
+
+@Suite("Keyboard shortcut modifier-hold settings file", .serialized)
+struct KeyboardShortcutModifierHoldHintsSettingsFileTests {
+    private let settingsFileBackupsDefaultsKey = "bree.settingsFile.backups.v1"
+    private let importedManagedDefaultsKey = "bree.settingsFile.importedManagedDefaults.v1"
+
+    @Test
+    func settingsFileStoreAppliesShowModifierHoldHintsSetting() throws {
+        let defaults = UserDefaults.standard
+        let key = ShortcutHintDebugSettings.showModifierHoldHintsKey
+        try preservingDefaults(keys: [key, settingsFileBackupsDefaultsKey, importedManagedDefaultsKey]) {
+            let directoryURL = try makeTemporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+            let settingsFileURL = directoryURL.appendingPathComponent("bree.json", isDirectory: false)
+            try """
+            {
+              "shortcuts": {
+                "showModifierHoldHints": false,
+                "openBrowser": "cmd+3"
+              }
+            }
+            """.write(to: settingsFileURL, atomically: true, encoding: .utf8)
+
+            let store = KeyboardShortcutSettingsFileStore(
+                primaryPath: settingsFileURL.path,
+                fallbackPath: nil,
+                additionalFallbackPaths: [],
+                startWatching: false
+            )
+
+            #expect(defaults.object(forKey: key) as? Bool == false)
+            #expect(!ShortcutHintDebugSettings(defaults: defaults).modifierHoldHintsEnabled)
+            #expect(store.override(for: .openBrowser) == StoredShortcut(key: "3", command: true, shift: false, option: false, control: false))
+        }
+    }
+
+    @Test
+    func settingsFileStoreAppliesPaneChromeColorSettings() throws {
+        let defaults = UserDefaults.standard
+        let paneBorderKey = PaneChromeSettings.paneBorderColorKey
+        let activePaneBorderKey = PaneChromeSettings.activePaneBorderColorKey
+        #expect(paneBorderKey == "paneBorderColor")
+        #expect(activePaneBorderKey == "activePaneBorderColor")
+        try preservingDefaults(keys: [
+            paneBorderKey,
+            activePaneBorderKey,
+            settingsFileBackupsDefaultsKey,
+            importedManagedDefaultsKey,
+        ]) {
+            defaults.set("#112233", forKey: activePaneBorderKey)
+
+            let directoryURL = try makeTemporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+            let settingsFileURL = directoryURL.appendingPathComponent("bree.json", isDirectory: false)
+            try """
+            {
+              "paneBorderColor": "33aaff",
+              "activePaneBorderColor": null
+            }
+            """.write(to: settingsFileURL, atomically: true, encoding: .utf8)
+
+            _ = KeyboardShortcutSettingsFileStore(
+                primaryPath: settingsFileURL.path,
+                fallbackPath: nil,
+                additionalFallbackPaths: [],
+                startWatching: false
+            )
+
+            #expect(defaults.string(forKey: paneBorderKey) == "#33AAFF")
+            #expect(defaults.object(forKey: activePaneBorderKey) == nil)
+        }
+    }
+
+    @Test
+    func malformedPaneFlashColorDoesNotSkipLaterNotificationSettings() throws {
+        let defaults = UserDefaults.standard
+        let notifications = NotificationsCatalogSection()
+        let paneFlashColorKey = notifications.paneFlashColorHex.userDefaultsKey
+        let agentTurnCompleteKey = notifications.agentTurnComplete.userDefaultsKey
+        try preservingDefaults(keys: [
+            paneFlashColorKey,
+            agentTurnCompleteKey,
+            settingsFileBackupsDefaultsKey,
+            importedManagedDefaultsKey,
+        ]) {
+            defaults.set("never", forKey: agentTurnCompleteKey)
+
+            let directoryURL = try makeTemporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+            let settingsFileURL = directoryURL.appendingPathComponent("bree.json", isDirectory: false)
+            try """
+            {
+              "notifications": {
+                "paneFlashColor": "not-a-color",
+                "agentTurnComplete": "always"
+              }
+            }
+            """.write(to: settingsFileURL, atomically: true, encoding: .utf8)
+
+            _ = KeyboardShortcutSettingsFileStore(
+                primaryPath: settingsFileURL.path,
+                fallbackPath: nil,
+                additionalFallbackPaths: [],
+                startWatching: false
+            )
+
+            #expect(defaults.string(forKey: agentTurnCompleteKey) == "always")
+        }
+    }
+
+    @Test
+    func malformedNotificationSoundDoesNotSkipPaneFlashColor() throws {
+        let defaults = UserDefaults.standard
+        let paneFlashColorKey = NotificationsCatalogSection().paneFlashColorHex.userDefaultsKey
+        try preservingDefaults(keys: [
+            NotificationSoundSettings.key,
+            paneFlashColorKey,
+            settingsFileBackupsDefaultsKey,
+            importedManagedDefaultsKey,
+        ]) {
+            defaults.set("#112233", forKey: paneFlashColorKey)
+
+            let directoryURL = try makeTemporaryDirectory()
+            defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+            let settingsFileURL = directoryURL.appendingPathComponent("bree.json", isDirectory: false)
+            try """
+            {
+              "notifications": {
+                "sound": "not-a-system-sound",
+                "paneFlashColor": "#ff69b4"
+              }
+            }
+            """.write(to: settingsFileURL, atomically: true, encoding: .utf8)
+
+            _ = KeyboardShortcutSettingsFileStore(
+                primaryPath: settingsFileURL.path,
+                fallbackPath: nil,
+                additionalFallbackPaths: [],
+                startWatching: false
+            )
+
+            #expect(defaults.string(forKey: paneFlashColorKey) == "#FF69B4")
+        }
+    }
+
+    @Test @MainActor
+    func focusControllerSeedsBonsplitHintEligibilityFromDisabledSetting() throws {
+        let defaults = UserDefaults.standard
+        let key = ShortcutHintDebugSettings.showModifierHoldHintsKey
+        try preservingDefaults(keys: [key]) {
+            defaults.set(false, forKey: key)
+
+            let manager = TabManager(autoWelcomeIfNeeded: false)
+            let workspace = manager.addWorkspace(select: true)
+            workspace.bonsplitController.tabShortcutHintsEnabled = true
+
+            _ = MainWindowFocusController(
+                windowId: UUID(),
+                window: nil,
+                tabManager: manager,
+                fileExplorerState: FileExplorerState()
+            )
+
+            #expect(!workspace.bonsplitController.tabShortcutHintsEnabled)
+        }
+    }
+
+    private func preservingDefaults(keys: [String], _ body: () throws -> Void) throws {
+        let defaults = UserDefaults.standard
+        let saved = keys.map { ($0, defaults.object(forKey: $0)) }
+        for key in keys { defaults.removeObject(forKey: key) }
+        defer {
+            for (key, value) in saved {
+                if let value {
+                    defaults.set(value, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+        try body()
+    }
+
+    private func makeTemporaryDirectory() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "bree-settings-file-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+}
+
+@Suite("Pane attention color")
+struct PaneAttentionColorTests {
+    @Test
+    func fallsBackToBreeAttentionSignalWhenUnset() {
+        assertUsesBreeAttentionSignal(configuredHex: nil)
+    }
+
+    @Test
+    func usesConfiguredHex() {
+        #expect(
+            WorkspaceAttentionColor(configuredHex: "#ff69b4").nsColor.hexString() == "#FF69B4"
+        )
+    }
+
+    @Test
+    func flashFollowsThemeForegroundWhenUnset() {
+        let color = WorkspaceAttentionColor(
+            configuredHex: nil,
+            themeForeground: NSColor(hex: "#CDD6F4"),
+            useThemeForeground: true
+        )
+        #expect(color.flashNSColor.hexString() == "#CDD6F4")
+        #expect(color.flashNSColor.alphaComponent == 1)
+        // Unread rings keep the Bree attention signal.
+        #expect(color.nsColor.hexString() == Self.breeAttentionHex)
+    }
+
+    @Test
+    func configuredHexOverridesThemeForegroundForFlash() {
+        let color = WorkspaceAttentionColor(configuredHex: "#ff69b4", themeForeground: .white, useThemeForeground: true)
+        #expect(color.flashNSColor.hexString() == "#FF69B4")
+        #expect(color.flashNSColor.alphaComponent == 1)
+    }
+
+    @Test(arguments: ["not-a-color", "#FFZZZZ", "FF69B4", "#FF69B4AA"])
+    func rejectsValuesOutsideSchema(configuredHex: String) {
+        assertUsesBreeAttentionSignal(configuredHex: configuredHex)
+    }
+
+    private static var breeAttentionHex: String {
+        BreeChromePalette.currentSnapshot.rgba(.signalAttention).nsColor.hexString()
+    }
+
+    private func assertUsesBreeAttentionSignal(configuredHex: String?) {
+        for mode in BreeAccentColorMode.allCases {
+            let accent = BreeAccentColor(mode: mode)
+            #expect(
+                WorkspaceAttentionColor(configuredHex: configuredHex, accent: accent).nsColor.hexString() ==
+                    Self.breeAttentionHex
+            )
+        }
+    }
+}

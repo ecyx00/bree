@@ -1,9 +1,9 @@
-import CmuxCloud
-import CmuxCore
+import BreeCloud
+import BreeCore
 import Foundation
 
 extension Workspace {
-    /// Managed SSH entrypoints without a cmuxd-remote relay converge here, including saved
+    /// Managed SSH entrypoints without a breed-remote relay converge here, including saved
     /// workspace descriptors. See `WorkspaceRemoteConfiguration.routesThroughSSHTui`.
     func configureSSHTuiConnection(_ configuration: WorkspaceRemoteConfiguration, autoConnect: Bool) -> Bool {
         AppDelegate.shared?.sshTuiWorkspaceCoordinator.disconnect(workspace: self)
@@ -61,7 +61,7 @@ extension Workspace {
                       catalog.provider(for: source.machine) === provider else { throw CancellationError() }
                 if !retiredOriginal {
                     do { try await provider.closeTerminal(original.id) }
-                    catch { guard CmuxTuiSurfaceProvider.isSelectorNotFound(error) else { throw error } }
+                    catch { guard BreeTuiSurfaceProvider.isSelectorNotFound(error) else { throw error } }
                     retiredOriginal = true
                 }
                 try Task.checkCancellation()
@@ -94,13 +94,13 @@ extension Workspace {
     /// Resolves both Cloud and SSH projections through their registered provider.
     func tuiMirrorSession(for surfaceID: UUID) -> CloudTuiManualMirrorSession? {
         guard let projection = SurfaceCatalog.shared.projectionIncludingPendingRestore(forPanel: surfaceID),
-              let provider = SurfaceCatalog.shared.provider(for: projection.resource.machine) as? CmuxTuiSurfaceProvider else { return nil }
+              let provider = SurfaceCatalog.shared.provider(for: projection.resource.machine) as? BreeTuiSurfaceProvider else { return nil }
         return provider.manualMirrorSessions[surfaceID]
     }
 }
 
 extension WorkspaceRemoteConfiguration {
-    /// cmux-tui owns managed SSH connections, which carry no cmuxd-remote channel
+    /// bree-tui owns managed SSH connections, which carry no breed-remote channel
     /// (`workspace.ssh.open` and restored descriptors leave the relay unset). A
     /// configuration that arrives with a relay or daemon endpoint was bootstrapped
     /// by the legacy `workspace.remote.configure` flow, which the CLI still uses

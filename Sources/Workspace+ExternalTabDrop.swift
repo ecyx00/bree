@@ -37,7 +37,7 @@ extension Workspace {
         }
 
         #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.externalDrop.begin ws=\(id.uuidString.prefix(5)) tab=\(request.tabId.uuid.uuidString.prefix(5)) " +
             "sourcePane=\(request.sourcePaneId.id.uuidString.prefix(5)) destination=\(destinationLabel)"
         )
@@ -52,7 +52,7 @@ extension Workspace {
             focusWindow: true
         )
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.externalDrop.end ws=\(id.uuidString.prefix(5)) tab=\(request.tabId.uuid.uuidString.prefix(5)) " +
             "moved=\(moved ? 1 : 0) elapsedMs=\(debugElapsedMs(since: dropStart))"
         )

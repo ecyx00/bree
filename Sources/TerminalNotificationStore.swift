@@ -1,17 +1,17 @@
-import CmuxCloud
-import CmuxFoundation
-import CmuxNotifications
+import BreeCloud
+import BreeFoundation
+import BreeNotifications
 import AppKit
 import Combine
 import Foundation
 import os
 import UserNotifications
 import Bonsplit
-import CmuxSettings
-import CmuxNotifications
+import BreeSettings
+import BreeNotifications
 
 nonisolated private let terminalNotificationLogger = Logger(
-    subsystem: "com.cmuxterm.app",
+    subsystem: "com.bree.app",
     category: "notification"
 )
 
@@ -45,12 +45,12 @@ final class TerminalNotificationStore: ObservableObject {
             center: UNUserNotificationCenter.current()
         )
     )
-    let notificationHookCache = CmuxNotificationHookCache()
+    let notificationHookCache = BreeNotificationHookCache()
 
-    static let authorizationStatusDidChangeNotification = Notification.Name("cmux.terminalNotificationAuthorizationStatusDidChange")
-    static let categoryIdentifier = "\(CmuxIdentity.current.reverseDNSPrefix).app.userNotification"
-    static let textReplyCategoryIdentifier = "\(CmuxIdentity.current.reverseDNSPrefix).app.userNotification.textReply"
-    static let actionShowIdentifier = "\(CmuxIdentity.current.reverseDNSPrefix).app.userNotification.show"
+    static let authorizationStatusDidChangeNotification = Notification.Name("bree.terminalNotificationAuthorizationStatusDidChange")
+    static let categoryIdentifier = "\(BreeIdentity.current.reverseDNSPrefix).app.userNotification"
+    static let textReplyCategoryIdentifier = "\(BreeIdentity.current.reverseDNSPrefix).app.userNotification.textReply"
+    static let actionShowIdentifier = "\(BreeIdentity.current.reverseDNSPrefix).app.userNotification.show"
     static let actionReplyIdentifier = "terminal.reply"
     nonisolated static let retargetsToLiveSurfaceOwnerUserInfoKey = "retargetsToLiveSurfaceOwner"
     /// Durable chronological notification history.
@@ -70,7 +70,7 @@ final class TerminalNotificationStore: ObservableObject {
         didSet {
             indexes = Self.buildIndexes(for: notifications)
             refreshUnreadPresentation()
-            if !suppressNotificationDiffPublishing { CmuxEventBus.shared.publishNotificationChanges(oldValue: oldValue, newValue: notifications) }
+            if !suppressNotificationDiffPublishing { BreeEventBus.shared.publishNotificationChanges(oldValue: oldValue, newValue: notifications) }
         }
     }
     @Published private(set) var notificationMenuSnapshot = NotificationMenuSnapshotBuilder.make(notifications: [])
@@ -460,7 +460,7 @@ final class TerminalNotificationStore: ObservableObject {
 
     private func logAuthorization(_ message: String) {
 #if DEBUG
-        cmuxDebugLog("notification.auth \(message)")
+        breeDebugLog("notification.auth \(message)")
 #endif
         terminalNotificationLogger.info("Authorization \(message, privacy: .private)")
     }
@@ -550,7 +550,7 @@ final class TerminalNotificationStore: ObservableObject {
                 )
                 content.categoryIdentifier = Self.categoryIdentifier
                 let request = UNNotificationRequest(
-                    identifier: "cmux.settings.test.\(UUID().uuidString)",
+                    identifier: "bree.settings.test.\(UUID().uuidString)",
                     content: content,
                     trigger: nil
                 )
@@ -925,7 +925,7 @@ final class TerminalNotificationStore: ObservableObject {
         cooldownInterval: TimeInterval? = nil,
         correlationKey: String? = nil,
         clickAction: TerminalNotificationClickAction? = nil, notificationGeneration: UInt64? = nil,
-        resolvedHooks: [CmuxResolvedNotificationHook]? = nil,
+        resolvedHooks: [BreeResolvedNotificationHook]? = nil,
         preRegisteredPolicyRequestId: UUID? = nil,
         notificationID: UUID? = nil,
         agent: TerminalNotificationPolicyAgentContext? = nil,
@@ -934,7 +934,7 @@ final class TerminalNotificationStore: ObservableObject {
         effects: TerminalNotificationPolicyEffectsPatch? = nil
     ) -> UUID? {
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "notification.store.add workspace=\(tabId.uuidString.prefix(8)) surface=\(surfaceId?.uuidString.prefix(8) ?? "nil") titleLen=\(title.count) subtitleLen=\(subtitle.count) bodyLen=\(body.count) cooldown=\(cooldownKey == nil ? 0 : 1) origin=\(origin.kind)"
         )
 #endif
@@ -974,7 +974,7 @@ final class TerminalNotificationStore: ObservableObject {
            let lastNotificationDate = lastNotificationDateByCooldownKey[cooldownKey],
            now.timeIntervalSince(lastNotificationDate) < resolvedCooldownInterval {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "notification.store.add.skip workspace=\(tabId.uuidString.prefix(8)) surface=\(surfaceId?.uuidString.prefix(8) ?? "nil") reason=cooldown"
             )
 #endif
@@ -1120,7 +1120,7 @@ final class TerminalNotificationStore: ObservableObject {
     private struct NotificationPolicyContext: Sendable {
         let request: TerminalNotificationPolicyRequest
         let scrollPosition: TerminalNotificationScrollPosition?
-        let hooks: [CmuxResolvedNotificationHook]
+        let hooks: [BreeResolvedNotificationHook]
         let globalConfigPath: String?
     }
 
@@ -1187,7 +1187,7 @@ final class TerminalNotificationStore: ObservableObject {
         replyShape: TerminalNotificationReplyShape = .none,
         retargetsToLiveSurfaceOwner: Bool,
         correlationKey: String?,
-        resolvedHooks: [CmuxResolvedNotificationHook]?,
+        resolvedHooks: [BreeResolvedNotificationHook]?,
         agent: TerminalNotificationPolicyAgentContext? = nil,
         soundContext: NotificationSoundOverrideContext? = nil,
         origin: TerminalNotificationOrigin = .local,
@@ -1195,7 +1195,7 @@ final class TerminalNotificationStore: ObservableObject {
     ) -> NotificationPolicyContext {
         let appDelegate = AppDelegate.shared
         let focusState = notificationFocusState(tabId: tabId, surfaceId: surfaceId)
-        let cmuxConfigStore = focusState.cmuxConfigStore
+        let breeConfigStore = focusState.breeConfigStore
         let workspace = focusState.workspace
         let isFocusedPanel = focusState.isActiveTab && focusState.isFocusedSurface
         let isAppFocused = focusState.isAppFocused
@@ -1242,10 +1242,10 @@ final class TerminalNotificationStore: ObservableObject {
                 effects: effects
             ),
             scrollPosition: scrollPosition,
-            hooks: resolvedHooks ?? (origin.isRemote ? [] : cmuxConfigStore?.notificationHooks(
+            hooks: resolvedHooks ?? (origin.isRemote ? [] : breeConfigStore?.notificationHooks(
                 startingFrom: workspace?.isRemoteWorkspace == true ? nil : cwd
             )) ?? [],
-            globalConfigPath: cmuxConfigStore?.globalConfigPath
+            globalConfigPath: breeConfigStore?.globalConfigPath
         )
     }
     struct NotificationFocusState {
@@ -1253,7 +1253,7 @@ final class TerminalNotificationStore: ObservableObject {
         let isActiveTab: Bool
         let isFocusedSurface: Bool
         let workspace: Workspace?
-        let cmuxConfigStore: CmuxConfigStore?
+        let breeConfigStore: BreeConfigStore?
     }
 
     /// Resolves focus and ownership once for both policy admission and the
@@ -1374,7 +1374,7 @@ final class TerminalNotificationStore: ObservableObject {
         }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "notification.store.effectsOnly workspace=\(notification.tabId.uuidString.prefix(8)) surface=\(notification.surfaceId?.uuidString.prefix(8) ?? "nil") desktop=\(effects.desktop ? 1 : 0) sound=\(effects.sound ? 1 : 0) command=\(effects.command ? 1 : 0) suppressExternal=\(shouldSuppressExternalDelivery ? 1 : 0)"
         )
 #endif
@@ -1448,7 +1448,7 @@ final class TerminalNotificationStore: ObservableObject {
         )
         commitCooldownReservation(cooldownReservation, at: now)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "notification.store.record workspace=\(notification.tabId.uuidString.prefix(8)) surface=\(notification.surfaceId?.uuidString.prefix(8) ?? "nil") removed=\(idsToClear.count) unread=\(!notification.isRead ? 1 : 0) paneFlash=\(notification.paneFlash ? 1 : 0) suppressExternal=\(shouldSuppressExternalDelivery ? 1 : 0) total=\(notifications.count)"
         )
 #endif
@@ -1482,7 +1482,7 @@ final class TerminalNotificationStore: ObservableObject {
         effects: TerminalNotificationPolicyEffects
     ) {
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "notification.store.sideEffects workspace=\(notification.tabId.uuidString.prefix(8)) surface=\(notification.surfaceId?.uuidString.prefix(8) ?? "nil") desktop=\(effects.desktop ? 1 : 0) sound=\(effects.sound ? 1 : 0) command=\(effects.command ? 1 : 0) suppressExternal=\(shouldSuppressExternalDelivery ? 1 : 0)"
         )
 #endif
@@ -1544,7 +1544,7 @@ final class TerminalNotificationStore: ObservableObject {
                 )
                 content.categoryIdentifier = Self.categoryIdentifier
                 let request = UNNotificationRequest(
-                    identifier: "cmux.notification-hook.failure.\(UUID().uuidString)",
+                    identifier: "bree.notification-hook.failure.\(UUID().uuidString)",
                     content: content,
                     trigger: nil
                 )
@@ -1985,7 +1985,7 @@ final class TerminalNotificationStore: ObservableObject {
         clearPanelDerivedWorkspaceUnread()
         clearWorkspaceRestoredUnread()
         focusedReadIndicatorByTabId.removeAll()
-        CmuxEventBus.shared.publishNotificationCleared(ids: ids, workspaceId: nil, surfaceId: nil)
+        BreeEventBus.shared.publishNotificationCleared(ids: ids, workspaceId: nil, surfaceId: nil)
         removeNotificationRequestsAndReleaseSoundReferences(withIdentifiers: ids)
     }
 
@@ -2039,7 +2039,7 @@ final class TerminalNotificationStore: ObservableObject {
         }
         indicatorTabIds.forEach { clearFocusedReadIndicator(forTabId: $0, surfaceId: surfaceId) }
         if !idsToClear.isEmpty {
-            CmuxEventBus.shared.publishNotificationCleared(ids: idsToClear, workspaceId: tabIds.count == 1 ? tabId : nil, surfaceId: surfaceId)
+            BreeEventBus.shared.publishNotificationCleared(ids: idsToClear, workspaceId: tabIds.count == 1 ? tabId : nil, surfaceId: surfaceId)
             removeNotificationRequestsAndReleaseSoundReferences(withIdentifiers: idsToClear)
         }
     }
@@ -2126,7 +2126,7 @@ final class TerminalNotificationStore: ObservableObject {
         }
         clearFocusedReadIndicator(forTabId: tabId)
         if !idsToClear.isEmpty {
-            CmuxEventBus.shared.publishNotificationCleared(ids: idsToClear, workspaceId: tabId, surfaceId: nil)
+            BreeEventBus.shared.publishNotificationCleared(ids: idsToClear, workspaceId: tabId, surfaceId: nil)
             removeNotificationRequestsAndReleaseSoundReferences(withIdentifiers: idsToClear)
         }
     }
@@ -2134,7 +2134,7 @@ final class TerminalNotificationStore: ObservableObject {
     private func resolvedNotificationTitle(for notification: TerminalNotification) -> String {
         let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
             ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
-            ?? CmuxIdentity.current.appDisplayName
+            ?? BreeIdentity.current.appDisplayName
         return notification.title.isEmpty ? appName : notification.title
     }
 

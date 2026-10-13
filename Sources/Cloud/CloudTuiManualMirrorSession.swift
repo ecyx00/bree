@@ -1,20 +1,20 @@
-import CmuxCloud
-import CmuxCloudTui
-import CmuxSurfaceCatalogModel
-import CmuxTerminal
-import CmuxTerminalSharing
-import CmuxTerminalSizing
-import CmuxCore
-import CmuxCloudImagePaste
+import BreeCloud
+import BreeCloudTui
+import BreeSurfaceCatalogModel
+import BreeTerminal
+import BreeTerminalSharing
+import BreeTerminalSizing
+import BreeCore
+import BreeCloudImagePaste
 import Foundation
 import os
-private let manualMirrorLogger = Logger(subsystem: "com.cmuxterm.app", category: "CloudManualMirror")
+private let manualMirrorLogger = Logger(subsystem: "com.bree.app", category: "CloudManualMirror")
 /// Owns one native cloud-terminal attachment.
 ///
-/// The session is the only bridge between a remote cmux-tui PTY and a local
+/// The session is the only bridge between a remote bree-tui PTY and a local
 /// ``TerminalSurface``. Remote VT bytes are injected into Ghostty, manual input
 /// is sent to the PTY, and the applied local grid is reported back through the
-/// cmux-tui control protocol. cmux-tui remains the PTY/session owner; it never
+/// bree-tui control protocol. bree-tui remains the PTY/session owner; it never
 /// renders a foreign viewport inside this pane.
 @MainActor
 final class CloudTuiManualMirrorSession {
@@ -108,7 +108,7 @@ final class CloudTuiManualMirrorSession {
     var allowsAutomaticReconnect: Bool { !automaticReconnectSuppressed }
 
     /// SSH hosts can continue over the byte-oriented attach protocol when the
-    /// remote cmux-tui predates replay framing. Cloud machines remain strict,
+    /// remote bree-tui predates replay framing. Cloud machines remain strict,
     /// because their managed transport cannot safely recover incomplete VT
     /// sequences without the modern capability.
     nonisolated static func shouldRejectStaleReplay(machineID: String, capabilities: [String]) -> Bool {
@@ -1034,7 +1034,7 @@ final class CloudTuiManualMirrorSession {
         pendingRequests[requestID] = .clientInfo
         connection.send(
             commandBuilder.setClientInfo(
-                name: "cmux cloud terminal",
+                name: "bree cloud terminal",
                 kind: "native-mirror",
                 identity: sizingRelay.isSupported ? sharingSelfIdentity() : nil,
                 requestID: requestID

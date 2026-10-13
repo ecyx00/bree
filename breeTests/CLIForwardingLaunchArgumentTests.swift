@@ -1,0 +1,46 @@
+#if canImport(Bree_Dev)
+@testable import Bree_Dev
+import Foundation
+import XCTest
+
+final class CLIForwardingLaunchArgumentTests: XCTestCase {
+    func testCliSubcommandsForwardToBundledCLI() {
+        XCTAssertTrue(CLIForwardingLaunchRouter.shouldForwardToBundledCLI(arguments: ["bree", "wait-for", "workspace:1"]))
+        XCTAssertTrue(CLIForwardingLaunchRouter.shouldForwardToBundledCLI(arguments: ["bree", "hooks", "setup"]))
+    }
+
+    func testGuiLaunchArgumentsStayInApp() {
+        XCTAssertFalse(CLIForwardingLaunchRouter.shouldForwardToBundledCLI(arguments: ["Bree Dev", "DEV"]))
+        XCTAssertFalse(CLIForwardingLaunchRouter.shouldForwardToBundledCLI(arguments: ["bree STAGING", "STAGING"]))
+        XCTAssertFalse(CLIForwardingLaunchRouter.shouldForwardToBundledCLI(arguments: ["bree NIGHTLY", "NIGHTLY"]))
+        XCTAssertFalse(CLIForwardingLaunchRouter.shouldForwardToBundledCLI(arguments: ["bree RC", "RC"]))
+        XCTAssertFalse(CLIForwardingLaunchRouter.shouldForwardToBundledCLI(arguments: ["bree", "-psn_0_12345"]))
+        XCTAssertFalse(CLIForwardingLaunchRouter.shouldForwardToBundledCLI(arguments: ["bree", "bree://workspace/foo"]))
+    }
+
+    func testBundledCliResolverFallsBackToExecutablePath() throws {
+        let fileManager = FileManager.default
+        let rootURL = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? fileManager.removeItem(at: rootURL) }
+
+        let appContentsURL = rootURL.appendingPathComponent("Bree Dev test.app/Contents", isDirectory: true)
+        let macOSURL = appContentsURL.appendingPathComponent("MacOS", isDirectory: true)
+        let resourcesBinURL = appContentsURL.appendingPathComponent("Resources/bin", isDirectory: true)
+        try fileManager.createDirectory(at: macOSURL, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: resourcesBinURL, withIntermediateDirectories: true)
+
+        let cliURL = resourcesBinURL.appendingPathComponent("bree")
+        XCTAssertTrue(fileManager.createFile(atPath: cliURL.path, contents: Data("#!/bin/sh\n".utf8)))
+        try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: cliURL.path)
+
+        let executableURL = macOSURL.appendingPathComponent("Bree Dev")
+        let resolvedURL = CLIForwardingLaunchRouter.bundledCLIURL(
+            bundle: Bundle(for: Self.self),
+            fileManager: fileManager,
+            executableURL: executableURL
+        )
+
+        XCTAssertEqual(resolvedURL?.standardizedFileURL.path, cliURL.standardizedFileURL.path)
+    }
+}
+#endif

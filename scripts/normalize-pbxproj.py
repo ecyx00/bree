@@ -33,7 +33,7 @@ import re
 import sys
 from pathlib import Path
 
-DEFAULT_PATH = Path("cmux.xcodeproj/project.pbxproj")
+DEFAULT_PATH = Path("bree.xcodeproj/project.pbxproj")
 
 ENTRY_COMMENT_RE = re.compile(r"/\*\s*(?P<label>.+?)\s*\*/")
 OPENSTEP_TOKEN_RE = re.compile(

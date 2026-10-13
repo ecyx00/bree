@@ -3,7 +3,7 @@
 // the full sheet as Google exports it (not the first HTML chunk).
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
   S.register(
     "googleSheets",

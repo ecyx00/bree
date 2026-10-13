@@ -1,8 +1,8 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
-import CmuxBrowser
-import CmuxCore
-import CmuxSettings
+import BreeBrowser
+import BreeCore
+import BreeSettings
 import Foundation
 import WebKit
 
@@ -63,7 +63,7 @@ struct BrowserExternalNavigationHandler {
     }
 
     /// The destination for a link the user chose in the sidebar.
-    /// `prefersEmbeddedBrowser` is the "open sidebar links in the cmux browser"
+    /// `prefersEmbeddedBrowser` is the "open sidebar links in the bree browser"
     /// preference. A matching external-open rule outranks it: a site listed there
     /// cannot work in the embedded web view at all. The rules are about web pages,
     /// so other schemes keep following the preference.

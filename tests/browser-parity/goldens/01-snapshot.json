@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "full": "title: Parity Fixture\nurl: PRIMARY/\n- navigation \"Main\" [ref=e1]:\n  - link \"Home\" [ref=e2]\n  - link \"Docs\" [ref=e3]\n- main:\n  - heading \"Sign up\" [level=1]\n  - textbox \"Email\" [ref=e4] [placeholder=\"you@x.com\"]\n  - checkbox \"Accept terms\" [ref=e5]\n  - combobox \"Plan\" [ref=e6] [options: Free, Pro, Team]: \"Pro\"\n  - textbox \"Bio\" [ref=e7]: \"hi\"\n  - button \"Create account\" [ref=e8]\n  - button \"Disabled\" [ref=e9] [disabled]\n  - list:\n    - listitem: \"One\"\n    - listitem: \"Two\"\n  - text: \"Plain bold text.\"\n  - img \"Logo\"\n  - button \"Far away\" [ref=e10]",
     "prints-tree-first": true,
     "interactive": "title: Parity Fixture\nurl: PRIMARY/\n- navigation \"Main\" [ref=e1]:\n  - link \"Home\" [ref=e2]\n  - link \"Docs\" [ref=e3]\n- main:\n  - heading \"Sign up\" [level=1]\n  - textbox \"Email\" [ref=e4] [placeholder=\"you@x.com\"]\n  - checkbox \"Accept terms\" [ref=e5]\n  - combobox \"Plan\" [ref=e6] [options: Free, Pro, Team]: \"Pro\"\n  - textbox \"Bio\" [ref=e7]: \"hi\"\n  - button \"Create account\" [ref=e8]\n  - button \"Disabled\" [ref=e9] [disabled]\n  - button \"Far away\" [ref=e10]",

@@ -1,9 +1,9 @@
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 import WebKit
 
 /// Name of the `WKScriptMessageHandler` the injected media-playback hook posts to.
-private let mediaPlaybackMessageHandlerName = "cmuxMediaPlayback"
+private let mediaPlaybackMessageHandlerName = "breeMediaPlayback"
 
 extension BrowserPanel {
     /// Isolated content world for the media-playback hook.
@@ -25,7 +25,7 @@ extension BrowserPanel {
     /// its hidden pane alive too. Each frame tags its report with a stable
     /// per-document id; the native side keeps a pane alive while any frame is
     /// playing and releases it once every frame has stopped
-    /// (https://github.com/manaflow-ai/cmux/issues/5409).
+    /// (https://github.com/ecyx00/bree/issues/5409).
     ///
     /// Reports only on change (debounced via `lastReported`) and on `pagehide`.
     /// The broad `playing` state uses `paused`/`ended`, so muted playback still
@@ -263,7 +263,7 @@ extension BrowserPanel {
 
     /// Reports `<video>`/`<audio>` playback so a hidden pane with actively-playing
     /// media is exempted from memory discard
-    /// (https://github.com/manaflow-ai/cmux/issues/5409). Injected into every
+    /// (https://github.com/ecyx00/bree/issues/5409). Injected into every
     /// frame so embedded players in cross-origin iframes keep the pane alive
     /// too. Runs in an isolated content world (shared DOM, separate JS scope)
     /// so the handler is hidden from page JavaScript that could otherwise post
@@ -322,7 +322,7 @@ extension BrowserPanel {
         guard instanceID == webViewInstanceID else { return }
         applyMediaPlaybackReport(report)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.media.playback panel=\(id.uuidString.prefix(5)) " +
             "frame=\(report.frameID.prefix(5)) playing=\(report.isPlaying ? 1 : 0) " +
             "audible=\(report.isAudible ? 1 : 0) pip=\(report.isPictureInPicture ? 1 : 0) " +

@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
-import CmuxFoundation
-import CmuxSettings
+import BreeFoundation
+import BreeSettings
 
 /// Geometry shared by the visible split button and the hidden minimal-mode
 /// click lanes (`TitlebarControlsHitRegions`), so both stay in lockstep.
@@ -56,7 +56,7 @@ struct TitlebarNewWorkspaceSplitButton: View {
                 ZStack {
                     Rectangle()
                         .fill(Color.clear)
-                    CmuxSystemSymbolImage(
+                    BreeSystemSymbolImage(
                         systemName: "plus",
                         pointSize: config.iconSize,
                         weight: .regular,
@@ -95,7 +95,7 @@ struct TitlebarNewWorkspaceSplitButton: View {
                 ZStack {
                     Rectangle()
                         .fill(Color.clear)
-                    CmuxSystemSymbolImage(
+                    BreeSystemSymbolImage(
                         systemName: "chevron.down",
                         pointSize: TitlebarNewWorkspaceSplitButtonMetrics.dropdownIconSize(config: config),
                         weight: .regular,

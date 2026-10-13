@@ -1,5 +1,5 @@
 import Carbon.HIToolbox
-import CmuxRemoteSession
+import BreeRemoteSession
 import GhosttyKit
 
 extension RemoteTmuxKeyName {

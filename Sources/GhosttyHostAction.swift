@@ -2,7 +2,7 @@ import GhosttyKit
 import os
 
 nonisolated private let ghosttyActionLogger = Logger(
-    subsystem: "com.cmuxterm.app", category: "ghostty.actions"
+    subsystem: "com.bree.app", category: "ghostty.actions"
 )
 
 /// Host intents decoded after Ghostty has evaluated a binding or key sequence.

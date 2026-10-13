@@ -1,9 +1,9 @@
 import AppKit
 import Bonsplit
-import CMUXAgentLaunch
-import CmuxTerminal
-import CmuxTerminalCore
-import CmuxWorkspaces
+import BREEAgentLaunch
+import BreeTerminal
+import BreeTerminalCore
+import BreeWorkspaces
 import Darwin
 
 /// Cross-container surface transfer for the Dock.

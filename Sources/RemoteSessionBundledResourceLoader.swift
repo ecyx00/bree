@@ -16,7 +16,7 @@ struct RemoteSessionBundledResourceLoader {
         guard let resourceURL else { return nil }
         let url = resourceURL
             .appendingPathComponent("bin", isDirectory: true)
-            .appendingPathComponent("cmux-codex-wrapper", isDirectory: false)
+            .appendingPathComponent("bree-codex-wrapper", isDirectory: false)
         guard fileManager.fileExists(atPath: url.path),
               let data = try? Data(contentsOf: url),
               let contents = String(data: data, encoding: .utf8) else {

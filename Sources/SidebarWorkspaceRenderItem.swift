@@ -1,4 +1,4 @@
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
 /// Stable value identity for one drawable item in the workspace sidebar.

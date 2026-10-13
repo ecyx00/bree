@@ -1,6 +1,6 @@
-import CMUXAuthCore
-import CmuxAuthRuntime
-import CmuxSettingsUI
+import BREEAuthCore
+import BreeAuthRuntime
+import BreeSettingsUI
 import Foundation
 import Observation
 

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Behavioral regression tests for cmux Codex hook argument composition.
+"""Behavioral regression tests for bree Codex hook argument composition.
 
 Codex discovers hooks per configuration layer and appends them from lowest to
 highest: the user's ``hooks.json`` and ``[hooks]`` table in ``config.toml``, a
 trusted project's ``.codex/hooks.json``, and finally the session flags. The
-``-c hooks.<event>=...`` values cmux injects only define that session-flags
-layer, so they must carry exactly one cmux group per event and must never
+``-c hooks.<event>=...`` values bree injects only define that session-flags
+layer, so they must carry exactly one bree group per event and must never
 re-declare the user's handlers: a copied user handler is discovered twice and
-runs twice (https://github.com/manaflow-ai/cmux/issues/12081).
+runs twice (https://github.com/ecyx00/bree/issues/12081).
 
-The argv-level tests run against the built cmux CLI. The live test also runs
-the real ``codex`` binary through ``Resources/bin/cmux-codex-wrapper`` against
+The argv-level tests run against the built bree CLI. The live test also runs
+the real ``codex`` binary through ``Resources/bin/bree-codex-wrapper`` against
 a hermetic local model provider and is skipped when no real codex is installed.
 """
 
@@ -35,13 +35,13 @@ import git_fixture_env  # noqa: F401  (disables git auto maintenance)
 from claude_teams_test_utils import (
     FOCUSED_SURFACE_ID,
     FOCUSED_WORKSPACE_ID,
-    focused_cmux_server,
-    resolve_cmux_cli,
+    focused_bree_server,
+    resolve_bree_cli,
 )
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "cmux-codex-wrapper"
+SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "bree-codex-wrapper"
 ACTIVATION_PREFIX = ["--enable", "hooks", "--dangerously-bypass-hook-trust"]
 # The events named in issue 12081. The CLI's own baseline (an empty hooks.json)
 # defines the complete injected set, which newer schemas extend.
@@ -53,10 +53,10 @@ ISSUE_EVENTS = [
     "PostToolUse",
     "PermissionRequest",
 ]
-# Every hook event Codex 0.153 knows, so user handlers on events cmux never
+# Every hook event Codex 0.153 knows, so user handlers on events bree never
 # injects are covered too. The issue events carry awkward commands: quotes,
 # backslashes, a TOML triple quote, and a newline. None of them may leak into
-# the args cmux emits, and none of them may break the cmux value shape.
+# the args bree emits, and none of them may break the bree value shape.
 USER_COMMANDS = {
     "SessionStart": 'user-12081-session-start "quoted" back\\slash',
     "UserPromptSubmit": "user-12081-prompt-submit '''triple'''",
@@ -77,9 +77,9 @@ LIVE_EVENTS = ["SessionStart", "UserPromptSubmit", "Stop"]
 # documented user layers (config.toml `[hooks]` and a trusted project's
 # `.codex/hooks.json`).
 LIVE_USER_MARKERS = LIVE_EVENTS + ["SessionStart:config.toml", "SessionStart:project"]
-# cmux's own handlers that a one-turn `codex exec` with no tool calls fires.
+# bree's own handlers that a one-turn `codex exec` with no tool calls fires.
 # The agent message handlers run too; in `codex exec` they return `{}` at once.
-LIVE_CMUX_SUBCOMMANDS = ["session-start", "prompt-submit", "stop", "inbox-drain", "inbox-stop"]
+LIVE_BREE_SUBCOMMANDS = ["session-start", "prompt-submit", "stop", "inbox-drain", "inbox-stop"]
 
 
 def user_hooks_json(commands: dict[str, str]) -> dict:
@@ -97,7 +97,7 @@ def user_hooks_json(commands: dict[str, str]) -> dict:
 
 
 def clean_environment(**overrides: str) -> dict[str, str]:
-    """A minimal environment with no ambient cmux terminal context."""
+    """A minimal environment with no ambient bree terminal context."""
     environment = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         "TERM": "xterm",
@@ -137,11 +137,11 @@ def assert_injection_shape(arguments: list[str], context: str) -> None:
         assert rest[index + 1].startswith("hooks."), f"{context}: non-hook override: {rest[index + 1]!r}"
 
 
-# Events whose cmux group also carries the direct agent message handler.
+# Events whose bree group also carries the direct agent message handler.
 INBOX_COMPANIONS = {"UserPromptSubmit": "inbox-drain", "Stop": "inbox-stop"}
 
 
-def assert_single_cmux_group(event: str, values: list[str], context: str) -> None:
+def assert_single_bree_group(event: str, values: list[str], context: str) -> None:
     assert len(values) == 1, f"{context}: {event} assigned {len(values)} times: {values}"
     value = values[0]
     assert value.count("{hooks=") == 1, f"{context}: {event} carries more than one group: {value}"
@@ -153,7 +153,7 @@ def assert_single_cmux_group(event: str, values: list[str], context: str) -> Non
     if event in INBOX_COMPANIONS:
         assert INBOX_COMPANIONS[event] in value, f"{context}: {event} lacks its agent message handler: {value}"
     assert value.startswith("[{hooks=[{type=\"command\",command='''"), f"{context}: {event} shape changed: {value}"
-    assert "cmux-codex-hook" in value or "hooks codex" in value, f"{context}: {event} is not cmux's handler: {value}"
+    assert "bree-codex-hook" in value or "hooks codex" in value, f"{context}: {event} is not bree's handler: {value}"
 
 
 def assert_no_user_handlers(arguments: list[str], context: str) -> None:
@@ -174,8 +174,8 @@ def baseline_events(cli_path: str, root: Path) -> set[str]:
 
 
 def test_injected_hooks_do_not_redeclare_user_hooks() -> None:
-    cli_path = resolve_cmux_cli()
-    with isolated_home("cmux-codex-wrapper-") as iso:
+    cli_path = resolve_bree_cli()
+    with isolated_home("bree-codex-wrapper-") as iso:
         root = iso.root
         expected_events = baseline_events(cli_path, root)
         codex_home = root / "codex"
@@ -187,18 +187,18 @@ def test_injected_hooks_do_not_redeclare_user_hooks() -> None:
         arguments = run_inject_args(cli_path, codex_home, root / "home")
         assert_injection_shape(arguments, "inject-args")
         assignments = hook_assignments(arguments)
-        # User hooks change nothing about which events cmux injects.
+        # User hooks change nothing about which events bree injects.
         assert set(assignments) == expected_events, (set(assignments), expected_events)
         for event, values in assignments.items():
-            assert_single_cmux_group(event, values, "inject-args")
+            assert_single_bree_group(event, values, "inject-args")
         assert_no_user_handlers(arguments, "inject-args")
         # The wrapper reads the user's file; it never rewrites it.
         assert hooks_path.read_bytes() == original_bytes, "inject-args rewrote hooks.json"
 
 
-def test_persistent_cmux_hook_is_not_duplicated() -> None:
-    cli_path = resolve_cmux_cli()
-    with isolated_home("cmux-codex-wrapper-") as iso:
+def test_persistent_bree_hook_is_not_duplicated() -> None:
+    cli_path = resolve_bree_cli()
+    with isolated_home("bree-codex-wrapper-") as iso:
         root = iso.root
         codex_home = root / "codex"
         codex_home.mkdir()
@@ -206,14 +206,14 @@ def test_persistent_cmux_hook_is_not_duplicated() -> None:
         baseline = hook_assignments(run_inject_args(cli_path, codex_home, root / "home"))
         session_start = baseline["SessionStart"][0]
         prefix = "[{hooks=[{type=\"command\",command='''"
-        cmux_command = session_start[len(prefix) :].split("'''", 1)[0]
-        assert cmux_command, session_start
+        bree_command = session_start[len(prefix) :].split("'''", 1)[0]
+        assert bree_command, session_start
 
-        # A persistent cmux SessionStart handler plus a user Stop handler: the
+        # A persistent bree SessionStart handler plus a user Stop handler: the
         # wrapper must skip SessionStart and still not copy the user's Stop.
         persistent = user_hooks_json({"Stop": USER_COMMANDS["Stop"]})
         persistent["hooks"]["SessionStart"] = [
-            {"hooks": [{"type": "command", "command": cmux_command}]}
+            {"hooks": [{"type": "command", "command": bree_command}]}
         ]
         hooks_path = codex_home / "hooks.json"
         hooks_path.write_text(json.dumps(persistent), encoding="utf-8")
@@ -225,7 +225,7 @@ def test_persistent_cmux_hook_is_not_duplicated() -> None:
         assert "SessionStart" not in assignments, f"persistent SessionStart was duplicated: {assignments}"
         assert set(assignments) == set(baseline) - {"SessionStart"}, (set(assignments), set(baseline))
         for event, values in assignments.items():
-            assert_single_cmux_group(event, values, "persistent")
+            assert_single_bree_group(event, values, "persistent")
         assert_no_user_handlers(arguments, "persistent")
         assert hooks_path.read_bytes() == original_bytes, "inject-args rewrote hooks.json"
 
@@ -278,11 +278,11 @@ class _FakeModelHandler(BaseHTTPRequestHandler):
 
 
 def resolve_real_codex() -> str | None:
-    explicit = os.environ.get("CMUX_TEST_REAL_CODEX")
+    explicit = os.environ.get("BREE_TEST_REAL_CODEX")
     if explicit and os.access(explicit, os.X_OK):
         return explicit
     for directory in os.environ.get("PATH", "").split(os.pathsep):
-        if not directory or "cmux-cli-shims" in directory or directory.endswith("/Resources/bin"):
+        if not directory or "bree-cli-shims" in directory or directory.endswith("/Resources/bin"):
             continue
         candidate = Path(directory) / "codex"
         if candidate.is_file() and os.access(candidate, os.X_OK):
@@ -313,7 +313,7 @@ def wait_for(predicate, timeout_seconds: float) -> bool:
 def scratch_directory(prefix: str) -> Iterator[str]:
     """A temporary directory whose removal tolerates stragglers.
 
-    cmux's fire-and-forget hooks keep writing payload files under TMPDIR for a
+    bree's fire-and-forget hooks keep writing payload files under TMPDIR for a
     moment after codex exits. Python 3.9 (the CI runner default) has no
     ``ignore_cleanup_errors``, so clean up by hand.
     """
@@ -337,8 +337,8 @@ def write_logging_shim(path: Path, log: Path, target: str) -> None:
     path.chmod(0o755)
 
 
-def cmux_hook_calls(log: Path) -> dict[str, int]:
-    """How many times each `cmux hooks codex <subcommand>` reached the CLI."""
+def bree_hook_calls(log: Path) -> dict[str, int]:
+    """How many times each `bree hooks codex <subcommand>` reached the CLI."""
     lines = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
     counts: dict[str, int] = {}
     for line in lines:
@@ -352,26 +352,26 @@ def cmux_hook_calls(log: Path) -> dict[str, int]:
     return counts
 
 
-def test_live_codex_runs_user_hooks_and_cmux_hook_once_each() -> None:
+def test_live_codex_runs_user_hooks_and_bree_hook_once_each() -> None:
     real_codex = resolve_real_codex()
     if real_codex is None:
         # CI runners do not provision Codex. Where it is provisioned, set
-        # CMUX_TEST_REQUIRE_REAL_CODEX=1 so a missing binary fails instead
+        # BREE_TEST_REQUIRE_REAL_CODEX=1 so a missing binary fails instead
         # of skipping.
-        message = "no real codex binary on PATH; set CMUX_TEST_REAL_CODEX to run"
-        assert os.environ.get("CMUX_TEST_REQUIRE_REAL_CODEX") != "1", message
+        message = "no real codex binary on PATH; set BREE_TEST_REAL_CODEX to run"
+        assert os.environ.get("BREE_TEST_REQUIRE_REAL_CODEX") != "1", message
         raise unittest.SkipTest(message)
-    cli_path = resolve_cmux_cli()
+    cli_path = resolve_bree_cli()
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), _FakeModelHandler)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
     try:
-        with scratch_directory("cmux-codex-live-") as temporary_directory:
+        with scratch_directory("bree-codex-live-") as temporary_directory:
             root = Path(temporary_directory)
             codex_home = root / "codex"
             home = root / "home"
-            state_dir = root / "cmux-state"
+            state_dir = root / "bree-state"
             work = root / "work"
             hooks_dir = root / "user-hooks"
             for directory in (codex_home, home, state_dir, work, hooks_dir):
@@ -433,23 +433,23 @@ def test_live_codex_runs_user_hooks_and_cmux_hook_once_each() -> None:
                 encoding="utf-8",
             )
             argv_shim.chmod(0o755)
-            # Every cmux CLI call (the wrapper's inject-args and each hook's
+            # Every bree CLI call (the wrapper's inject-args and each hook's
             # detached delivery) goes through this shim, so invocations can be
             # counted per subcommand.
-            cli_calls = root / "cmux-cli-calls.log"
-            cli_shim = root / "cmux-cli-shim"
+            cli_calls = root / "bree-cli-calls.log"
+            cli_shim = root / "bree-cli-shim"
             write_logging_shim(cli_shim, cli_calls, cli_path)
 
-            with focused_cmux_server(root / "cmux.sock") as (socket_path, requests):
+            with focused_bree_server(root / "bree.sock") as (socket_path, requests):
                 environment = clean_environment(
                     **{**home_env(home), "CODEX_HOME": str(codex_home)},
                     TMPDIR=str(root),
-                    CMUX_SURFACE_ID=FOCUSED_SURFACE_ID,
-                    CMUX_WORKSPACE_ID=FOCUSED_WORKSPACE_ID,
-                    CMUX_SOCKET_PATH=socket_path,
-                    CMUX_BUNDLED_CLI_PATH=str(cli_shim),
-                    CMUX_CUSTOM_CODEX_PATH=str(argv_shim),
-                    CMUX_AGENT_HOOK_STATE_DIR=str(state_dir),
+                    BREE_SURFACE_ID=FOCUSED_SURFACE_ID,
+                    BREE_WORKSPACE_ID=FOCUSED_WORKSPACE_ID,
+                    BREE_SOCKET_PATH=socket_path,
+                    BREE_BUNDLED_CLI_PATH=str(cli_shim),
+                    BREE_CUSTOM_CODEX_PATH=str(argv_shim),
+                    BREE_AGENT_HOOK_STATE_DIR=str(state_dir),
                 )
                 result = subprocess.run(
                     [
@@ -477,7 +477,7 @@ def test_live_codex_runs_user_hooks_and_cmux_hook_once_each() -> None:
                 assignments = hook_assignments(arguments)
                 assert set(ISSUE_EVENTS) <= set(assignments), (set(assignments), arguments)
                 for event, values in assignments.items():
-                    assert_single_cmux_group(event, values, "live argv")
+                    assert_single_bree_group(event, values, "live argv")
                 joined = "\0".join(arguments)
                 for event, command in commands.items():
                     assert command not in joined, f"live argv re-declared the user {event} handler: {arguments}"
@@ -486,27 +486,27 @@ def test_live_codex_runs_user_hooks_and_cmux_hook_once_each() -> None:
                 for marker in LIVE_USER_MARKERS:
                     assert fired.count(marker) == 1, f"user {marker} handler ran {fired.count(marker)} times: {fired}"
 
-                # cmux's handlers deliver through detached CLI calls, so give
+                # bree's handlers deliver through detached CLI calls, so give
                 # them a moment, then require exactly one call per event.
                 assert wait_for(
-                    lambda: all(cmux_hook_calls(cli_calls).get(s, 0) >= 1 for s in LIVE_CMUX_SUBCOMMANDS), 30
-                ), f"cmux hooks did not all reach the CLI: {cmux_hook_calls(cli_calls)}"
-                assert wait_for(lambda: len(requests) > 0, 30), "cmux hook never reached the cmux socket"
+                    lambda: all(bree_hook_calls(cli_calls).get(s, 0) >= 1 for s in LIVE_BREE_SUBCOMMANDS), 30
+                ), f"bree hooks did not all reach the CLI: {bree_hook_calls(cli_calls)}"
+                assert wait_for(lambda: len(requests) > 0, 30), "bree hook never reached the bree socket"
                 # `hooks enqueue codex <sub>` only admits the event to the
                 # app-owned queue (`agent.hook.enqueue`); the app replays it and
                 # writes codex-hook-sessions.json. The CLI no longer writes that
                 # ledger itself, and this fake server does not replay.
                 assert wait_for(lambda: "agent.hook.enqueue" in requests, 30), (
-                    f"cmux hooks were not admitted to the app queue: {requests}"
+                    f"bree hooks were not admitted to the app queue: {requests}"
                 )
                 # Let the detached hook runners finish with their payload files
                 # before the directory goes away; this also settles any late
                 # duplicate call that the exact counts below would catch.
-                wait_for(lambda: not list(root.glob("cmux-codex-*")), 35)
-                calls = cmux_hook_calls(cli_calls)
+                wait_for(lambda: not list(root.glob("bree-codex-*")), 35)
+                calls = bree_hook_calls(cli_calls)
                 assert calls.get("inject-args") == 1, f"wrapper injected {calls.get('inject-args')} times: {calls}"
-                for subcommand in LIVE_CMUX_SUBCOMMANDS:
-                    assert calls.get(subcommand) == 1, f"cmux {subcommand} hook ran {calls.get(subcommand)} times: {calls}"
+                for subcommand in LIVE_BREE_SUBCOMMANDS:
+                    assert calls.get(subcommand) == 1, f"bree {subcommand} hook ran {calls.get(subcommand)} times: {calls}"
     finally:
         server.shutdown()
         server.server_close()
@@ -515,12 +515,12 @@ def test_live_codex_runs_user_hooks_and_cmux_hook_once_each() -> None:
 
 if __name__ == "__main__":
     test_injected_hooks_do_not_redeclare_user_hooks()
-    print("PASS: injected Codex hooks carry one cmux group per event and no user handlers")
-    test_persistent_cmux_hook_is_not_duplicated()
-    print("PASS: persistent cmux hooks are not duplicated and user hooks are not copied")
+    print("PASS: injected Codex hooks carry one bree group per event and no user handlers")
+    test_persistent_bree_hook_is_not_duplicated()
+    print("PASS: persistent bree hooks are not duplicated and user hooks are not copied")
     try:
-        test_live_codex_runs_user_hooks_and_cmux_hook_once_each()
+        test_live_codex_runs_user_hooks_and_bree_hook_once_each()
     except unittest.SkipTest as skipped:
         print(f"SKIP: live codex composition test ({skipped})")
     else:
-        print("PASS: real codex ran user hooks and cmux's hook exactly once each")
+        print("PASS: real codex ran user hooks and bree's hook exactly once each")

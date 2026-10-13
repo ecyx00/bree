@@ -27,7 +27,7 @@
     ],
     "untrusted-events": []
   },
-  "cmux": {
+  "bree": {
     "element-at-canvas": {
       "ref": "e1",
       "role": "canvas",

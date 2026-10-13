@@ -1,4 +1,4 @@
-module github.com/manaflow-ai/cmux/daemon/remote
+module github.com/ecyx00/bree/daemon/remote
 
 go 1.22
 

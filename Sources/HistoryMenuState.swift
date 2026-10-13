@@ -1,4 +1,4 @@
-import CmuxWorkspaces
+import BreeWorkspaces
 
 /// The main History menu's immutable render state for one active manager.
 struct HistoryMenuState: Equatable {

@@ -1,7 +1,7 @@
 import AppKit
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Combine
-import CmuxTestSupport
+import BreeTestSupport
 import SwiftUI
 
 struct MinimalModeSidebarControlActionProxyView: NSViewRepresentable {
@@ -44,12 +44,11 @@ enum TitlebarControlsVisibility {
         }
     }
 
-    /// Single bell badge: unread count, or the waiting-agent count when nothing is unread.
-    @MainActor static func bellCounts(unread: Int) -> (count: Int, needsAttention: Bool) {
-        let attention = CmuxFeatureFlags.shared.isAgentInboxQuickViewEnabled
-            ? (FeedCoordinator.shared.store?.items ?? []).filter { $0.kind.isActionable && $0.status.isPending }.count
-            : 0
-        return (unread > 0 ? unread : attention, attention > 0)
+    /// Single bell badge: exactly the rows the popover's Attention list shows
+    /// (it opens on that list), so the badge and the list cannot disagree.
+    @MainActor static func bellCounts() -> (count: Int, needsAttention: Bool) {
+        let attention = AttentionStore.shared.projection().items.count
+        return (attention, attention > 0)
     }
 
     /// Records bell visibility for hit-region geometry; returns it for the caller.
@@ -215,8 +214,8 @@ final class MinimalModeSidebarControlActionView: NSView {
         }
         guard shouldAcceptAction(at: point) else { return nil }
         #if DEBUG
-        if ProcessInfo.processInfo.environment["CMUX_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" {
-            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+        if ProcessInfo.processInfo.environment["BREE_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" {
+            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
                 payload["\(telemetryPrefix)LastHitTestSlot"] = slot.debugName
                 payload["\(telemetryPrefix)LastHitTestPoint"] = windowDragHandleFormatPoint(point)
                 payload["\(telemetryPrefix)LastHitTestWindowNumber"] = window.map { String($0.windowNumber) } ?? "nil"
@@ -249,7 +248,7 @@ final class MinimalModeSidebarControlActionView: NSView {
         }
         switch slot {
         case .toggleSidebar:
-            CmuxExtensionSidebarSelection.showMenu(anchorView: self, event: event)
+            BreeExtensionSidebarSelection.showMenu(anchorView: self, event: event)
         case .newTab:
             _ = AppDelegate.shared?.showNewWorkspaceContextMenu(anchorView: self, event: event)
         case .newWorkspaceMenu:
@@ -304,8 +303,8 @@ final class MinimalModeSidebarControlActionView: NSView {
         guard isEnabled else { return }
 
         #if DEBUG
-        if ProcessInfo.processInfo.environment["CMUX_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" {
-            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+        if ProcessInfo.processInfo.environment["BREE_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" {
+            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
                 payload["\(telemetryPrefix)LastAction"] = slot.debugName
                 payload["\(telemetryPrefix)LastPoint"] = windowDragHandleFormatPoint(convert(locationInWindow, from: nil))
                 payload["\(telemetryPrefix)WindowNumber"] = window.map { String($0.windowNumber) } ?? "nil"

@@ -16,7 +16,7 @@ final class SpinnerGalleryDebugWindowController: ReleasingWindowController {
             defer: false
         )
         window.title = "Spinner Gallery"
-        window.identifier = NSUserInterfaceItemIdentifier("cmux.spinnerGallery")
+        window.identifier = NSUserInterfaceItemIdentifier("bree.spinnerGallery")
         window.minSize = NSSize(width: 420, height: 480)
         // Float above the workspace windows so frame-capture screenshots reliably
         // target this window (the debug screenshot picks key/main/largest, and

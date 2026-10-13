@@ -14,7 +14,7 @@ extension AppDelegate {
         // Single source of truth for "is a grabbable slice of the titlebar
         // visible" -- shared with the runtime constrain veto so the restore-time
         // clamp and the sleep/wake constrain pass agree on reachability.
-        return CmuxMainWindow.isTitlebarReachable(
+        return BreeMainWindow.isTitlebarReachable(
             frame: standardizedFrame,
             visibleFrame: targetDisplay.visibleFrame
         )
@@ -54,8 +54,8 @@ extension AppDelegate {
     /// grabbable slice of its titlebar is already reachable on some display, or
     /// there are no displays to reason about.
     ///
-    /// This is the reactive counterpart to `CmuxMainWindow.constrainFrameRect`:
-    /// a cmux main window sets `isMovable = false` for its custom titlebar drag
+    /// This is the reactive counterpart to `BreeMainWindow.constrainFrameRect`:
+    /// a bree main window sets `isMovable = false` for its custom titlebar drag
     /// handling, and a non-movable `NSWindow` is excluded from AppKit's automatic
     /// on-screen constraining when displays change -- so `constrainFrameRect` is
     /// never invoked on that path and nothing pulls a stranded window back. When

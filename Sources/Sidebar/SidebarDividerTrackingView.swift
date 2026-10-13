@@ -49,13 +49,13 @@ final class SidebarDividerTrackingView: NSView {
         NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
             if let contentView = event.window?.contentView {
                 let location = event.locationInWindow
-                let hit = contentView.cmuxHitTest(windowPoint: location)
+                let hit = contentView.breeHitTest(windowPoint: location)
                 // macOS 26 can deliver events whose window location is
                 // non-finite; `Int(_:)` traps on NaN/infinity and takes the
                 // whole app down from this log line. `%.0f` formats any
                 // Double without trapping ("nan"/"inf" for the odd ones).
                 let x = String(format: "%.0f", location.x)
-                cmuxDebugLog(
+                breeDebugLog(
                     "sidebar.divider.downRouting x=\(x) " +
                     "hit=\(hit.map { String(describing: type(of: $0)) } ?? "nil")"
                 )
@@ -98,7 +98,7 @@ final class SidebarDividerTrackingView: NSView {
             onEnded?()
 #if DEBUG
             let fmt = { (v: Double) in String(format: "%.0f", v * 1000) }
-            cmuxDebugLog(
+            breeDebugLog(
                 "sidebar.divider.drag events=\(eventCount) " +
                 "duration=\(fmt(CACurrentMediaTime() - startedAt))ms " +
                 "write=\(fmt(writeMs)) commit=\(fmt(commitMs)) layout=\(fmt(layoutMs)) " +

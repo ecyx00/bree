@@ -1,6 +1,6 @@
 #if DEBUG
 extension TerminalImageTransferPreparedContent {
-    var cmuxDebugDescription: String {
+    var breeDebugDescription: String {
         switch self {
         case .insertText(let text):
             return "insertText(length:\(text.utf8.count),hasNewlines:\(text.contains(where: \.isNewline) ? 1 : 0))"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""High-precision static checker for test-code determinism in cmux.
+"""High-precision static checker for test-code determinism in bree.
 
 Two principles are enforced:
 
@@ -64,8 +64,8 @@ from typing import Iterable, Optional
 # ---------------------------------------------------------------------------
 
 DEFAULT_ROOTS: tuple[str, ...] = (
-    "cmuxTests",
-    "cmuxUITests",
+    "breeTests",
+    "breeUITests",
     "Packages",
     "tests",
     "tests_v2",
@@ -3964,7 +3964,7 @@ def _self_test() -> int:
     # (filename, source, expected rules present, rules that must NOT be present)
     positives: list[tuple[str, str, set[str]]] = [
         (
-            "cmuxTests/a.swift",
+            "breeTests/a.swift",
             "let elapsed = end - start\nXCTAssertLessThan(elapsedMs, 250)\n",
             {RULE_ASSERT_ON_DURATION},
         ),
@@ -3990,7 +3990,7 @@ def _self_test() -> int:
         ),
         (
             "tests/curl.sh",
-            "curl -fsSL https://cmux.com/install.sh | sh\n",
+            "curl -fsSL https://github.com/ecyx00/bree/install.sh | sh\n",
             {RULE_LIVE_NETWORK_HOST},
         ),
         (
@@ -4184,7 +4184,7 @@ def _self_test() -> int:
             {RULE_LIVE_NETWORK_HOST},
         ),
         (
-            "cmuxTests/swift_interpolation_fetch.swift",
+            "breeTests/swift_interpolation_fetch.swift",
             (
                 'let value = "\\(try await fetch('
                 '\"https://api.openai.com/v1/items\"))"\n'
@@ -4192,7 +4192,7 @@ def _self_test() -> int:
             {RULE_LIVE_NETWORK_HOST},
         ),
         (
-            "cmuxTests/swift_raw_interpolation_fetch.swift",
+            "breeTests/swift_raw_interpolation_fetch.swift",
             (
                 'let value = #"\\#(try await fetch('
                 '"https://api.openai.com/v1/items"))"#\n'
@@ -4202,7 +4202,7 @@ def _self_test() -> int:
         (
             "web/tests/backtick_url_then_fetch.ts",
             (
-                "const docs = `https://cmux.com`;\n"
+                "const docs = `https://github.com/ecyx00/bree`;\n"
                 'const result = await fetch("https://api.openai.com/v1/items");\n'
             ),
             {RULE_LIVE_NETWORK_HOST},
@@ -4517,7 +4517,7 @@ def _self_test() -> int:
             {RULE_LIVE_NETWORK_HOST},
         ),
         (
-            "cmuxTests/swift_request_trailing_closure.swift",
+            "breeTests/swift_request_trailing_closure.swift",
             (
                 'request("https://api.openai.com/v1/items") { response in\n'
                 "    handle(response)\n"
@@ -4919,7 +4919,7 @@ def _self_test() -> int:
             {RULE_SLEEP_THEN_ASSERT},
         ),
         (
-            "cmuxUITests/f.swift",
+            "breeUITests/f.swift",
             "try await Task.sleep(nanoseconds: 300_000_000)\nXCTAssertTrue(view.exists)\n",
             {RULE_SLEEP_THEN_ASSERT},
         ),
@@ -4937,7 +4937,7 @@ def _self_test() -> int:
         # A condition poll bounded by a Task.yield() count, not a deadline
         # (#13903). The observed failure: SimulatorPanelThemeTests, 100 yields.
         (
-            "cmuxTests/yield_poll.swift",
+            "breeTests/yield_poll.swift",
             (
                 "        for _ in 0..<100 {\n"
                 "            if panel.coordinator.frameTransport != nil { break }\n"
@@ -4958,7 +4958,7 @@ def _self_test() -> int:
             {RULE_YIELD_COUNT_POLL},
         ),
         (
-            "cmuxTests/yield_poll_guard.swift",
+            "breeTests/yield_poll_guard.swift",
             (
                 "    for _ in 1...256 {\n"
                 "        await Task.yield()\n"
@@ -4968,12 +4968,12 @@ def _self_test() -> int:
             {RULE_YIELD_COUNT_POLL},
         ),
         (
-            "cmuxTests/yield_poll_one_line.swift",
+            "breeTests/yield_poll_one_line.swift",
             "for _ in 0..<20 { if model.isReady { break }; await Task.yield() }\n",
             {RULE_YIELD_COUNT_POLL},
         ),
         # A yield bound passed in as a parameter is still a count, not a
-        # deadline. CmuxSidebarGit's shared reader helpers hid 5_000-yield
+        # deadline. BreeSidebarGit's shared reader helpers hid 5_000-yield
         # polls behind `maxYields` and failed in 0.09 s on a loaded runner.
         (
             "Packages/macOS/Kit/Tests/KitTests/yield_poll_param.swift",
@@ -5030,12 +5030,12 @@ def _self_test() -> int:
         ),
         # Virtual-clock advance + invariant assert: not a wall-clock assert.
         (
-            "cmuxTests/n7.swift",
+            "breeTests/n7.swift",
             "clock.advance(by: .milliseconds(250))\nXCTAssertEqual(model.state, .timedOut)\n",
         ),
         # Awaiting a real expectation/signal then asserting an invariant.
         (
-            "cmuxTests/n8.swift",
+            "breeTests/n8.swift",
             "await fulfillment(of: [didFinish], timeout: 5)\nXCTAssertEqual(result, .ok)\n",
         ),
         # Asserting a count (non-duration) against a literal is fine.
@@ -5075,34 +5075,34 @@ def _self_test() -> int:
         ),
         # XCTAssertEqual on a non-duration value with a literal: not a latency assert.
         (
-            "cmuxTests/n16.swift",
+            "breeTests/n16.swift",
             "XCTAssertEqual(rows.count, 3)\n",
         ),
         # Public URL used as a STRING fixture (no network verb): not live network.
         (
             "web/tests/n17.ts",
-            'expect(text).toContain("Docs: https://cmux.com/docs/api")\n',
+            'expect(text).toContain("Docs: https://github.com/ecyx00/bree/docs/api")\n',
         ),
         (
             "web/tests/n18.ts",
-            'const llms = buildLlmsText("https://cmux.com")\n',
+            'const llms = buildLlmsText("https://github.com/ecyx00/bree")\n',
         ),
         # A rendered shell command is output text. Merely asserting that it is
         # present does not execute curl or open a network connection.
         (
             "web/tests/n18b.ts",
-            'expect(html).toContain("curl -fsSL https://cmux.com/install.sh | sh")\n',
+            'expect(html).toContain("curl -fsSL https://github.com/ecyx00/bree/install.sh | sh")\n',
         ),
         # The same applies to source-code examples embedded in asserted text.
         (
             "web/tests/n18c.ts",
-            'expect(help).toContain("fetch(\\"https://cmux.com/status\\")")\n',
+            'expect(help).toContain("fetch(\\"https://github.com/ecyx00/bree/status\\")")\n',
         ),
         # A process-launch example remains inert when the launcher itself is
         # part of the asserted string rather than executable code.
         (
             "web/tests/n18d.ts",
-            "expect(help).toContain('execSync(\\\"curl https://cmux.com/status\\\")')\n",
+            "expect(help).toContain('execSync(\\\"curl https://github.com/ecyx00/bree/status\\\")')\n",
         ),
         # Unrelated object methods named exec/eval/spawn do not launch processes.
         (
@@ -5124,7 +5124,7 @@ def _self_test() -> int:
         (
             "web/tests/n18d_request_helper.ts",
             (
-                'function request(body, url = "https://cmux.com/status") {\n'
+                'function request(body, url = "https://github.com/ecyx00/bree/status") {\n'
                 "  return new Request(url, { body });\n"
                 "}\n"
             ),
@@ -5150,7 +5150,7 @@ def _self_test() -> int:
         ),
         # An escaped Swift interpolation marker is inert string text.
         (
-            "cmuxTests/n18f_swift_escaped_interpolation.swift",
+            "breeTests/n18f_swift_escaped_interpolation.swift",
             (
                 'let example = "\\\\(fetch('
                 '\\"https://api.openai.com/v1/items\\"))"\n'
@@ -5219,7 +5219,7 @@ def _self_test() -> int:
             (
                 "Bun.spawn({\n"
                 '  cmd: ["printf", "curl https://api.openai.com/v1/items"],\n'
-                '  env: { DOCS_URL: "https://cmux.com" },\n'
+                '  env: { DOCS_URL: "https://github.com/ecyx00/bree" },\n'
                 "});\n"
             ),
         ),
@@ -5320,7 +5320,7 @@ def _self_test() -> int:
             ),
         ),
         (
-            "cmuxTests/n18n.swift",
+            "breeTests/n18n.swift",
             (
                 'let fixture = """\n'
                 'fetch("https://api.openai.com/v1/items")\n'
@@ -5352,7 +5352,7 @@ def _self_test() -> int:
         # Swift block comments nest, so the outer comment still owns source
         # after the inner close delimiter.
         (
-            "cmuxTests/n18p.swift",
+            "breeTests/n18p.swift",
             (
                 "/* outer\n"
                 "/* inner */\n"
@@ -5374,7 +5374,7 @@ def _self_test() -> int:
             (
                 "subprocess.run(\n"
                 '    ["curl", "http://127.0.0.1:4321/health"],\n'
-                '    env={"DOCS_URL": "https://cmux.com"},\n'
+                '    env={"DOCS_URL": "https://github.com/ecyx00/bree"},\n'
                 ")\n"
             ),
         ),
@@ -5384,7 +5384,7 @@ def _self_test() -> int:
             (
                 "await fetch(\n"
                 '  "http://127.0.0.1:4321/health",\n'
-                '  { headers: { Referer: "https://cmux.com" } },\n'
+                '  { headers: { Referer: "https://github.com/ecyx00/bree" } },\n'
                 ");\n"
             ),
         ),
@@ -5393,7 +5393,7 @@ def _self_test() -> int:
             (
                 "requests.get(\n"
                 '    "http://127.0.0.1:4321/health",\n'
-                '    headers={"Referer": "https://cmux.com"},\n'
+                '    headers={"Referer": "https://github.com/ecyx00/bree"},\n'
                 ")\n"
             ),
         ),
@@ -5404,7 +5404,7 @@ def _self_test() -> int:
                 "requests.get(\n"
                 "    timeout=1,\n"
                 '    url="http://127.0.0.1:4321/health",\n'
-                '    headers={"Referer": "https://cmux.com"},\n'
+                '    headers={"Referer": "https://github.com/ecyx00/bree"},\n'
                 ")\n"
             ),
         ),
@@ -5534,7 +5534,7 @@ def _self_test() -> int:
             (
                 'await axios.get("/health", {\n'
                 '  baseURL: "http://127.0.0.1:4321",\n'
-                '  headers: { Referer: "https://cmux.com" },\n'
+                '  headers: { Referer: "https://github.com/ecyx00/bree" },\n'
                 "});\n"
             ),
         ),
@@ -5555,7 +5555,7 @@ def _self_test() -> int:
         # A quoted shell command embedded in a Swift terminal-parser fixture is a
         # STRING literal, not a real delay: "sleep 5" must not flag sleep-then-assert.
         (
-            "cmuxTests/n19.swift",
+            "breeTests/n19.swift",
             'parser.consume(mark("A") + "sleep 5" + mark("C"))\n#expect(parser.blocks.count == 1)\n',
         ),
         # Same bare-command form in Python source is also a string fixture, not a sleep.
@@ -5586,7 +5586,7 @@ def _self_test() -> int:
         # A yield-count loop that already carries a deadline is the allowed
         # deadline-bounded poll; the count only caps spinning.
         (
-            "cmuxTests/n22.swift",
+            "breeTests/n22.swift",
             (
                 "        for _ in 0..<100 {\n"
                 "            guard !Task.isCancelled, ContinuousClock.now < deadline else { return nil }\n"
@@ -5598,12 +5598,12 @@ def _self_test() -> int:
         # Draining yields with no condition is a different shape (usually a wait
         # for a non-event) and is not what this rule targets.
         (
-            "cmuxTests/n23.swift",
+            "breeTests/n23.swift",
             "        for _ in 0..<100 { await Task.yield() }\n        #expect(sent.isEmpty)\n",
         ),
         # Exiting only on cancellation does not poll a condition.
         (
-            "cmuxTests/n24.swift",
+            "breeTests/n24.swift",
             (
                 "        for _ in 0..<256 {\n"
                 "            if Task.isCancelled { return }\n"
@@ -5613,7 +5613,7 @@ def _self_test() -> int:
         ),
         # A loop that uses its index is doing per-iteration work, not polling.
         (
-            "cmuxTests/n25.swift",
+            "breeTests/n25.swift",
             (
                 "        for step in 0..<300 {\n"
                 "            if step == 150 { break }\n"
@@ -5628,7 +5628,7 @@ def _self_test() -> int:
         ),
         # A yield-count poll that lives in a string fixture is not code.
         (
-            "cmuxTests/n27.swift",
+            "breeTests/n27.swift",
             'let source = "for _ in 0..<100 { if ready { break }; await Task.yield() }"\n',
         ),
     ]

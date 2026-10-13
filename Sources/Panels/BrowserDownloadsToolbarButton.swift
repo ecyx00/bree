@@ -1,5 +1,6 @@
+import BreeFoundation
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import SwiftUI
 
 /// Adapts a completed browser download to the app's existing file drop path.
@@ -87,10 +88,10 @@ struct BrowserDownloadsToolbarButton: View {
                     Text(unseenCount > 99 ? "99+" : "\(unseenCount)")
                         .font(.system(size: 9, weight: .bold))
                         .monospacedDigit()
-                        .foregroundStyle(.white)
+                        .foregroundStyle(BreeChromePalette.currentSnapshot.surfaceBase)
                         .padding(.horizontal, 3)
                         .frame(minWidth: 14, minHeight: 14)
-                        .background(Capsule().fill(Color.red))
+                        .background(Capsule().fill(BreeChromePalette.currentSnapshot.signalError))
                         .overlay(Capsule().stroke(Color(nsColor: .windowBackgroundColor), lineWidth: 1.5))
                         .offset(x: 6, y: -4)
                         .transition(.opacity)
@@ -196,7 +197,7 @@ private struct BrowserDownloadRow: View {
                     .truncationMode(.middle)
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(record.state == .failed ? Color.red : Color.secondary)
+                    .foregroundStyle(record.state == .failed ? BreeChromePalette.currentSnapshot.signalError : Color.secondary)
             }
 
             Spacer(minLength: 8)
@@ -240,7 +241,7 @@ private struct BrowserDownloadRow: View {
                 .imageScale(.large)
         case .failed:
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.red)
+                .foregroundStyle(BreeChromePalette.currentSnapshot.signalError)
                 .imageScale(.large)
         }
     }

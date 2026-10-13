@@ -9,8 +9,8 @@ TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 # 1. Stub archive (no Go on purpose) is rejected.
-CMUX_WIREGUARD_GO_BINARY=/nonexistent/go CMUX_WIREGUARD_GO_REQUIRE=0 \
-  CMUX_WIREGUARD_GO_OUTPUT="$TMP_DIR/stub.a" TARGET_TEMP_DIR="$TMP_DIR/stub-tmp" ARCHS="arm64" \
+BREE_WIREGUARD_GO_BINARY=/nonexistent/go BREE_WIREGUARD_GO_REQUIRE=0 \
+  BREE_WIREGUARD_GO_OUTPUT="$TMP_DIR/stub.a" TARGET_TEMP_DIR="$TMP_DIR/stub-tmp" ARCHS="arm64" \
   "$ROOT/scripts/build-wireguard-go.sh" >/dev/null 2>&1
 if "$VERIFIER" "$TMP_DIR/stub.a" >/dev/null 2>&1; then
   echo "FAIL: verifier accepted the stub bridge" >&2; exit 1
@@ -25,7 +25,7 @@ fi
 # 3. The real engine is accepted (only when Go is available).
 export PATH="/usr/local/go/bin:/opt/homebrew/bin:/usr/local/bin:${HOME}/go/bin:${PATH}"
 if command -v go >/dev/null 2>&1; then
-  CMUX_WIREGUARD_GO_REQUIRE=1 CMUX_WIREGUARD_GO_OUTPUT="$TMP_DIR/real.a" TARGET_TEMP_DIR="$TMP_DIR/real-tmp" ARCHS="$(uname -m | sed 's/aarch64/arm64/')" \
+  BREE_WIREGUARD_GO_REQUIRE=1 BREE_WIREGUARD_GO_OUTPUT="$TMP_DIR/real.a" TARGET_TEMP_DIR="$TMP_DIR/real-tmp" ARCHS="$(uname -m | sed 's/aarch64/arm64/')" \
     "$ROOT/scripts/build-wireguard-go.sh" >/dev/null 2>&1
   # Run repeatedly because the old grep -q pipelines failed nondeterministically
   # when otool or nm received SIGPIPE after grep found its first match.

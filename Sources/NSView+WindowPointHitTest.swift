@@ -8,10 +8,10 @@ extension NSView {
     /// host while the window's frame view is not, so a point converted into
     /// the content view itself and handed to `hitTest` is mirrored vertically:
     /// a press near the top of the window is answered by whatever sits near
-    /// the bottom (cmux issue 12152, where the file editor answered for the
+    /// the bottom (bree issue 12152, where the file editor answered for the
     /// pane tab strip). Every window-space hit-test in the app goes through
     /// this helper so the coordinate space is decided once.
-    func cmuxHitTest(windowPoint: NSPoint) -> NSView? {
+    func breeHitTest(windowPoint: NSPoint) -> NSView? {
         let reference = superview ?? self
         return hitTest(reference.convert(windowPoint, from: nil))
     }

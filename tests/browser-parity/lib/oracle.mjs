@@ -1,12 +1,12 @@
 // Oracle backend: runs scenarios on real Playwright (headless Google Chrome,
-// throwaway profile) with a thin shim of the cmux REPL globals, so behavior
+// throwaway profile) with a thin shim of the bree REPL globals, so behavior
 // values (page effects, event trust, Playwright return values) come from
 // Playwright itself. The shim reuses the REPL's cell rewriting so top-level
 // bindings persist across cells of a named session.
 //
 // snapshot() returns Playwright's AI snapshot so scenarios can pick refs with
 // the same regular expressions; its text is never compared (snapshot text is
-// cmux-owned). APIs with no Playwright counterpart (elementAt, clipboard)
+// bree-owned). APIs with no Playwright counterpart (elementAt, clipboard)
 // throw here; scenarios that need them are marked `oracle: skip`.
 import fs from "node:fs";
 import path from "node:path";
@@ -30,10 +30,10 @@ export async function runOracleCells(cells) {
   };
   const kept = new WeakSet();
 
-  // Adds the cmux Page members to a Playwright page.
+  // Adds the bree Page members to a Playwright page.
   const prepare = (p) => {
-    if (p.__cmux) return p;
-    p.__cmux = true;
+    if (p.__bree) return p;
+    p.__bree = true;
     idOf(p);
     const locator = p.locator.bind(p);
     p.locator = (sel, o) => locator(typeof sel === "string" && REF.test(sel.trim()) ? `aria-ref=${sel.trim()}` : sel, o);
@@ -161,7 +161,7 @@ export async function runOracleCells(cells) {
       console: Object.fromEntries(["log", "info", "warn", "error", "debug"].map((m) => [m, (...a) => print(m, a.map((x) => inspect(x)).join(" "))])),
       setTimeout,
       clearTimeout,
-      __cmuxImport: async (spec) => {
+      __breeImport: async (spec) => {
         const mod = await import(String(spec).startsWith("node:") ? spec : `node:${spec}`);
         return mod;
       },

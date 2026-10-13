@@ -1,4 +1,4 @@
-import CmuxTerminalCore
+import BreeTerminalCore
 import Foundation
 
 /// Command history for the shell editor, newest first. Seeded once off the

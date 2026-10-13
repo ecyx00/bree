@@ -107,7 +107,7 @@ final class SessionDragCoordinator {
         )
         item.setDraggingFrame(frame, contents: image)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "vault.drag.source.begin drag=\(dragID.uuidString.prefix(5)) agent=\(entry.agent.rawValue)"
         )
 #endif

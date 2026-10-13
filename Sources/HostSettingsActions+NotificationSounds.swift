@@ -1,4 +1,4 @@
-import CmuxSettingsUI
+import BreeSettingsUI
 import Foundation
 
 extension HostSettingsActions {

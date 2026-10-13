@@ -1,5 +1,5 @@
-import CmuxNotifications
-import CmuxSettings
+import BreeNotifications
+import BreeSettings
 import Foundation
 import UserNotifications
 

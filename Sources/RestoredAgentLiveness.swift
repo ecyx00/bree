@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 /// The one evaluator for "is this restored or hook-published agent still
@@ -21,15 +21,15 @@ struct RestoredAgentLiveness {
     /// Creates an evaluator with injectable process probes.
     init(
         currentProcessIdentity: @escaping (pid_t) -> AgentPIDProcessIdentity? = { AgentPIDProcessIdentity(pid: $0) },
-        foregroundProcessArguments: @escaping (Int) -> CmuxTopProcessArguments? =
-            CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for:)
+        foregroundProcessArguments: @escaping (Int) -> BreeTopProcessArguments? =
+            BreeTopProcessSnapshot.processArgumentsAndEnvironment(for:)
     ) {
         self.currentProcessIdentity = currentProcessIdentity
         self.foregroundProcessArguments = foregroundProcessArguments
     }
 
     private let currentProcessIdentity: (pid_t) -> AgentPIDProcessIdentity?
-    private let foregroundProcessArguments: (Int) -> CmuxTopProcessArguments?
+    private let foregroundProcessArguments: (Int) -> BreeTopProcessArguments?
 
     /// The runtime PID key hooks register for `agent`'s session.
     static func pidKey(for agent: SessionRestorableAgentSnapshot) -> String {
@@ -55,7 +55,7 @@ struct RestoredAgentLiveness {
         liveIndex: RestorableAgentSessionIndex?,
         foregroundProcessID: Int?,
         currentProcessIdentity: ((pid_t) -> AgentPIDProcessIdentity?)? = nil,
-        foregroundProcessArguments: ((Int) -> CmuxTopProcessArguments?)? = nil,
+        foregroundProcessArguments: ((Int) -> BreeTopProcessArguments?)? = nil,
         foregroundProcessIdentity: ((pid_t) -> AgentPIDProcessIdentity?)? = nil
     ) -> Bool {
         if agent.kind != .claude,

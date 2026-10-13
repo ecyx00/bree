@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Every cmux.json path a settings row advertises must appear in the declared
+"""Every bree.json path a settings row advertises must appear in the declared
 supported-path set.
 
-`CmuxSettingsFileStore+SupportedPaths.swift` says of its set: "Settings UI rows
-validate against this set so new persisted settings need an explicit cmux.json
+`BreeSettingsFileStore+SupportedPaths.swift` says of its set: "Settings UI rows
+validate against this set so new persisted settings need an explicit bree.json
 review." Nothing enforced that, so a row could advertise a path absent from the
 set and nobody noticed.
 
 Be precise about what this proves. `supportedSettingsJSONPaths` has **no
 production consumer** -- it is read by this guard and one test, and by nothing
-that parses cmux.json. What actually accepts a key is the hand-written section
+that parses bree.json. What actually accepts a key is the hand-written section
 parsers in `KeyboardShortcutSettingsFileStore.swift` and
-`CmuxSettingsFileStore+AppSection.swift`. So this is a consistency check between
+`BreeSettingsFileStore+AppSection.swift`. So this is a consistency check between
 two declarations (the UI row and the documented set), not proof that writing the
 key does anything.
 
@@ -28,8 +28,8 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SUPPORTED = REPO_ROOT / "Sources" / "CmuxSettingsFileStore+SupportedPaths.swift"
-UI_ROOT = REPO_ROOT / "Packages" / "macOS" / "CmuxSettingsUI" / "Sources"
+SUPPORTED = REPO_ROOT / "Sources" / "BreeSettingsFileStore+SupportedPaths.swift"
+UI_ROOT = REPO_ROOT / "Packages" / "macOS" / "BreeSettingsUI" / "Sources"
 SOURCE_ROOTS = (REPO_ROOT / "Sources", REPO_ROOT / "Packages")
 
 # `configurationReview: .json("a", "b")` may list several paths for one row.
@@ -103,9 +103,9 @@ def advertised_paths():
 
 # Rows advertising a path absent from the supported set when this guard was
 # added. `cloud` has no top-level case in the section dispatch, so writing
-# The former Cloud activation key was a UserDefaults marker, not a cmux.json
+# The former Cloud activation key was a UserDefaults marker, not a bree.json
 # setting. The `computerUse`
-# keys are JSON-backed catalog keys read straight from cmux.json by
+# keys are JSON-backed catalog keys read straight from bree.json by
 # JSONConfigStore rather than by a section parser. See the tracking issue.
 #
 # This list is NOT automatically ratcheted -- nothing compares it to a baseline,
@@ -136,10 +136,10 @@ class ConfigurationReviewPathsTests(unittest.TestCase):
         self.assertEqual(
             missing,
             [],
-            "settings rows advertise cmux.json paths the file store does not accept, "
-            "so writing them into cmux.json does nothing. Add each to "
+            "settings rows advertise bree.json paths the file store does not accept, "
+            "so writing them into bree.json does nothing. Add each to "
             "`supportedSettingsJSONPaths` and to the matching "
-            "`*SettingsFileMapping` in CmuxSettingsJSONPathSupport.swift.\n  "
+            "`*SettingsFileMapping` in BreeSettingsJSONPathSupport.swift.\n  "
             + "\n  ".join(missing)
             + (
                 "\n(unresolved symbolic entries in the supported set: "

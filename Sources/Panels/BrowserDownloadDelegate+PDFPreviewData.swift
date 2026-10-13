@@ -1,5 +1,5 @@
 import Foundation
-import CmuxBrowser
+import BreeBrowser
 import UniformTypeIdentifiers
 
 extension BrowserDownloadDelegate {

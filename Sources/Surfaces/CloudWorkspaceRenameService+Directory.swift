@@ -1,7 +1,7 @@
 import Foundation
 
 extension CloudWorkspaceRenameService {
-    /// Applies accepted cmux-tui terminal cwd values to projected Cloud panels.
+    /// Applies accepted bree-tui terminal cwd values to projected Cloud panels.
     ///
     /// - Parameters:
     ///   - localWorkspaceID: The local workspace whose projected panels are updated.

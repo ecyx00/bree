@@ -78,7 +78,7 @@ final class SessionDragSourceView: NSView {
             startPoint: point
         )
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "vault.drag.source.mouseDown agent=\(entry.agent.rawValue) clicks=\(event.clickCount)"
         )
 #endif

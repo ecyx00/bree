@@ -10,11 +10,11 @@
 // Group collapse is optimistic (a local signal flips instantly) and syncs via
 // workspace.group.collapse/expand so the built-in sidebar agrees.
 //
-// Install:  cp Examples/CustomSidebars/workspaces.js ~/.config/cmux/sidebars/
-// Open:     cmux sidebar open workspaces
+// Install:  cp Examples/CustomSidebars/workspaces.js ~/.config/bree/sidebars/
+// Open:     bree sidebar open workspaces
 
 // --- optimistic UI -------------------------------------------------------------
-// Every user action flips local state the same frame; the cmux command runs
+// Every user action flips local state the same frame; the bree command runs
 // behind it and the authoritative data context (which refreshes about once a
 // second) reconciles: each override clears itself as soon as the data agrees.
 let selectOverride = null;
@@ -34,7 +34,7 @@ function selectWorkspace(id) {
   if (!id) return;
   selectOverride = id;
   setSelectTick(selectTick() + 1);
-  cmux("workspace.select", { workspace_id: id });
+  bree("workspace.select", { workspace_id: id });
 }
 
 const closedOverride = new Set();
@@ -74,7 +74,7 @@ function visibleWorkspaces() {
 function closeWorkspace(id) {
   closedOverride.add(id);
   setCloseTick(closeTick() + 1);
-  cmux("workspace.close", { workspace_id: id });
+  bree("workspace.close", { workspace_id: id });
 }
 
 // Multi-select: Cmd-click toggles, Shift-click extends from the last click
@@ -166,7 +166,7 @@ function toggleCollapse(g) {
   const next = !isCollapsed(g);
   collapseOverride.set(g.id, next);
   setCollapseTick(collapseTick() + 1);
-  cmux(next ? "workspace.group.collapse" : "workspace.group.expand", { group_id: g.id });
+  bree(next ? "workspace.group.collapse" : "workspace.group.expand", { group_id: g.id });
 }
 
 // --- data helpers ------------------------------------------------------------
@@ -273,7 +273,7 @@ function handleMove(id, index, extra) {
     if (insertAt < 0) insertAt = rest.length;
     const full = [...rest.slice(0, insertAt), ...blockIds, ...rest.slice(insertAt)];
     setOrderOverride(full); // paint the new order now; reorder_many echoes behind it
-    cmux("workspace.reorder_many", { workspace_ids: JSON.stringify(full) });
+    bree("workspace.reorder_many", { workspace_ids: JSON.stringify(full) });
     return;
   }
 
@@ -338,9 +338,9 @@ function handleMove(id, index, extra) {
     if (!row) continue;
     if ((row.group ?? null) !== container) {
       if (container) {
-        cmux("workspace.group.add", { group_id: container, workspace_id: rid });
+        bree("workspace.group.add", { group_id: container, workspace_id: rid });
       } else {
-        cmux("workspace.group.remove", { workspace_id: rid });
+        bree("workspace.group.remove", { workspace_id: rid });
       }
     }
   }
@@ -353,7 +353,7 @@ function handleMove(id, index, extra) {
     if (insertAt < 0) insertAt = rest.length;
     const full = [...rest.slice(0, insertAt), ...movingIds, ...rest.slice(insertAt)];
     setOrderOverride(full); // gather instantly; reorder_many echoes behind it
-    cmux("workspace.reorder_many", { workspace_ids: JSON.stringify(full) });
+    bree("workspace.reorder_many", { workspace_ids: JSON.stringify(full) });
     clearMultiSelect();
     return;
   }
@@ -362,9 +362,9 @@ function handleMove(id, index, extra) {
     const draggedPosition = ws.findIndex((w) => w.id === dragged.id);
     const before = ws.findIndex((w) => w.id === nextWorkspace.id);
     const target = draggedPosition < before ? before - 1 : before;
-    cmux("workspace.reorder", { workspace_id: id, index: target });
+    bree("workspace.reorder", { workspace_id: id, index: target });
   } else {
-    cmux("workspace.reorder", { workspace_id: id, index: ws.length - 1 });
+    bree("workspace.reorder", { workspace_id: id, index: ws.length - 1 });
   }
   // Dragging an unselected row with a selection active clears the stale
   // selection (platform convention).
@@ -374,16 +374,16 @@ function handleMove(id, index, extra) {
 // --- rows ----------------------------------------------------------------------
 function workspaceMenu(w) {
   const act = (action) => () =>
-    cmux("workspace.action", { action, workspace_id: w().id });
+    bree("workspace.action", { action, workspace_id: w().id });
   const groupItems = (data.groups() ?? []).map((g) =>
     Button(() => (groupById(g.id)?.name ?? ""), () => {
-      for (const id of bulkIds(w())) cmux("workspace.group.add", { group_id: g.id, workspace_id: id });
+      for (const id of bulkIds(w())) bree("workspace.group.add", { group_id: g.id, workspace_id: id });
       clearMultiSelect();
     }));
   const count = () => bulkIds(w()).length;
   return [
     Button(() => (count() > 1 ? "New Group from " + count() + " Workspaces" : "New Group with This"), () => {
-      cmux("workspace.group.create", {
+      bree("workspace.group.create", {
         name: "New Group",
         child_workspace_ids: JSON.stringify(bulkIds(w())),
       });
@@ -392,9 +392,9 @@ function workspaceMenu(w) {
     Divider(),
     Button("Rename", () => setEditingId(w().id)),
     Button(() => (w()?.pinned ? "Unpin" : "Pin"), () =>
-      cmux("workspace.action", { action: w()?.pinned ? "unpin" : "pin", workspace_id: w().id })),
+      bree("workspace.action", { action: w()?.pinned ? "unpin" : "pin", workspace_id: w().id })),
     Button(() => (w()?.unread > 0 ? "Mark as Read" : "Mark as Unread"), () =>
-      cmux("workspace.action", { action: w()?.unread > 0 ? "mark_read" : "mark_unread", workspace_id: w().id })),
+      bree("workspace.action", { action: w()?.unread > 0 ? "mark_read" : "mark_unread", workspace_id: w().id })),
     Divider(),
     Menu("Move", [
       Button("Move Up", act("move_up")),
@@ -402,7 +402,7 @@ function workspaceMenu(w) {
       Button("Move to Top", act("move_top")),
     ]),
     Menu("Move to Group", groupItems),
-    Button("Remove from Group", () => cmux("workspace.group.remove", { workspace_id: w().id })),
+    Button("Remove from Group", () => bree("workspace.group.remove", { workspace_id: w().id })),
     Divider(),
     Button("Close Others", act("close_others")).destructive(),
     Button(() => (count() > 1 ? "Close " + count() + " Workspaces" : "Close"), () => {
@@ -480,9 +480,9 @@ function workspaceEditRow(w, entry) {
         if (title) {
           titleOverride.set(w().id, title);
           setTitleTick(titleTick() + 1);
-          cmux("workspace.action", { action: "rename", workspace_id: w().id, title });
+          bree("workspace.action", { action: "rename", workspace_id: w().id, title });
         } else {
-          cmux("workspace.action", { action: "clear_name", workspace_id: w().id });
+          bree("workspace.action", { action: "clear_name", workspace_id: w().id });
         }
         setEditingId(null);
       },
@@ -501,7 +501,7 @@ function groupHeader(groupId) {
   const g = () => groupById(groupId) ?? { id: groupId, name: "", collapsed: false, pinned: false };
   const anchor = () => (data.workspaces() ?? []).find((w) => w.id === g().anchorId);
   const groupAct = (action) => () =>
-    cmux("workspace.group.action", { group_id: groupId, action });
+    bree("workspace.group.action", { group_id: groupId, action });
   return HStack({ spacing: 6 }, [
     // The chevron toggles collapse; clicking anywhere else selects the
     // group's anchor workspace (built-in sidebar behavior). Chevron only,
@@ -532,7 +532,7 @@ function groupHeader(groupId) {
       Button("Rename Group", () => setEditingId("h:" + groupId)),
       Button(() => (isCollapsed(g()) ? "Expand" : "Collapse"), () => toggleCollapse(g())),
       Button(() => (g().pinned ? "Unpin Group" : "Pin Group"), () =>
-        cmux("workspace.group.action", { group_id: groupId, action: g().pinned ? "unpin" : "pin" })),
+        bree("workspace.group.action", { group_id: groupId, action: g().pinned ? "unpin" : "pin" })),
       Divider(),
       Button("Ungroup", groupAct("ungroup")),
       Button("Delete Group", groupAct("delete")).destructive(),
@@ -552,7 +552,7 @@ function groupEditRow(groupId) {
       placeholder: "Group name",
       onSubmit: (t) => {
         const name = (t ?? "").trim();
-        if (name) cmux("workspace.group.rename", { group_id: groupId, name });
+        if (name) bree("workspace.group.rename", { group_id: groupId, name });
         setEditingId(null);
       },
       onCancel: () => setEditingId(null),

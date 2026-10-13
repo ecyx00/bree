@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 
 /// Hands freed heap back to the OS and drops rebuildable caches. The policy

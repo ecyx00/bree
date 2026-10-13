@@ -3,7 +3,7 @@ import Darwin
 import Foundation
 /// Live delivery-target resolution for agent hook events.
 ///
-/// Invariant (https://github.com/manaflow-ai/cmux/issues/7939): an agent that
+/// Invariant (https://github.com/ecyx00/bree/issues/7939): an agent that
 /// finishes in pane P of workspace W gets its notification, unread ring, and
 /// status on exactly P in W. Attribution therefore resolves from LIVE identity
 /// at delivery time — the exact live process's controlling terminal and
@@ -33,7 +33,7 @@ struct AgentDeliveryTargetCandidate: Equatable {
 /// The default combines controlling-TTY and start-time-keyed environment
 /// evidence, preserving the delivery-time behavior for nested PTYs. Hook
 /// persistence requests ``AgentProcessBindingResolution/controllingTTY``:
-/// inherited `CMUX_SURFACE_ID` is the claim being verified there, so it cannot
+/// inherited `BREE_SURFACE_ID` is the claim being verified there, so it cannot
 /// also corroborate itself.
 nonisolated func agentDeliveryTargetCombining(
     ttyTarget: AgentDeliveryTargetCandidate?,
@@ -62,14 +62,14 @@ nonisolated func agentDeliveryTargetMatchingTTYDevice(
 /// Live identity of a process: its controlling-terminal device
 /// (`proc_bsdinfo.e_tdev`) and its start-time-keyed scope cache key. nil when
 /// the process is gone.
-nonisolated func agentLiveProcessIdentity(pid: pid_t) -> (ttyDevice: Int64?, scopeCacheKey: CmuxTopProcessScopeCacheKey)? {
+nonisolated func agentLiveProcessIdentity(pid: pid_t) -> (ttyDevice: Int64?, scopeCacheKey: BreeTopProcessScopeCacheKey)? {
     guard pid > 0 else { return nil }
     var info = proc_bsdinfo()
     let expectedSize = MemoryLayout<proc_bsdinfo>.stride
     let size = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, Int32(expectedSize))
     guard size == expectedSize else { return nil }
     let device = Int64(info.e_tdev)
-    return (device > 0 ? device : nil, CmuxTopProcessSnapshot.scopeCacheKey(from: info))
+    return (device > 0 ? device : nil, BreeTopProcessSnapshot.scopeCacheKey(from: info))
 }
 @MainActor
 extension Workspace {
@@ -105,7 +105,7 @@ extension Workspace {
             invalidateReportedSurfaceTTYRuntime(panelId: panelId)
             return
         }
-        surfaceRegistry.surfaceTTYDevices[panelId] = CmuxTopProcessSnapshot.deviceIdentifier(forTTYName: ttyName)
+        surfaceRegistry.surfaceTTYDevices[panelId] = BreeTopProcessSnapshot.deviceIdentifier(forTTYName: ttyName)
         surfaceRegistry.runtimeReportedTTYSurfaceIDs.insert(panelId)
         surfaceRegistry.runtimeReportedTTYSurfaceGenerations[panelId] =
             terminal.surface.runtimeSurfaceGeneration
@@ -223,7 +223,7 @@ extension DockSplitStore {
                transfer.ttyReportRuntimeSurfaceGeneration
                 == terminal.surface.runtimeSurfaceGeneration,
                let reportedDevice = transfer.ttyName.flatMap(
-                   CmuxTopProcessSnapshot.deviceIdentifier(forTTYName:)
+                   BreeTopProcessSnapshot.deviceIdentifier(forTTYName:)
                ),
                !devices.contains(reportedDevice) {
                 devices.append(reportedDevice)
@@ -238,7 +238,7 @@ extension AppDelegate {
     /// The live pane that owns the given agent process right now: the
     /// process's controlling tty matched against every surface's pty device
     /// (unique-match only), with the exact live process's start-time-keyed
-    /// `CMUX_SURFACE_ID` environment re-homed through
+    /// `BREE_SURFACE_ID` environment re-homed through
     /// `notificationSurfaceOwner` as a nested-PTY fallback. Disagreement fails
     /// closed.
     func liveAgentDeliveryTarget(
@@ -260,8 +260,8 @@ extension AppDelegate {
             return ttyTarget
         }
 
-        let processScope: CmuxTopProcessScope?
-        switch CmuxTopProcessSnapshot.cmuxScopeProbe(
+        let processScope: BreeTopProcessScope?
+        switch BreeTopProcessSnapshot.breeScopeProbe(
             for: Int(pid),
             expectedCacheKey: identity.scopeCacheKey
         ) {
@@ -390,7 +390,7 @@ extension TerminalController {
             guard params["tty_resolution"] as? String == ttyResolution,
                   let ttyName = params["tty_name"] as? String,
                   TerminalCallerTTYResolver.normalizedName(ttyName) != nil,
-                  let remoteWorkspaceId = v2UUID(params, "_cmux_remote_workspace_id"),
+                  let remoteWorkspaceId = v2UUID(params, "_bree_remote_workspace_id"),
                   let authenticatedWorkspace = controlTabForSidebarMutation(id: remoteWorkspaceId),
                   authenticatedWorkspace.isRemoteWorkspace,
                   let target = appDelegate.liveRelayAgentDeliveryTarget(

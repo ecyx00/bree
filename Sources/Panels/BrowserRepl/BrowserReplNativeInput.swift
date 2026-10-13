@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import UniformTypeIdentifiers
 import WebKit
 
@@ -325,7 +325,7 @@ final class BrowserReplOnce {
 
 /// Converts a REPL tab's virtual clipboard (`clipboard.read` /
 /// `clipboard.write` items) to and from the private pasteboard that
-/// `BrowserReplPasteboardRedirect` (CmuxBrowser) runs WebKit's Copy, Cut and
+/// `BrowserReplPasteboardRedirect` (BreeBrowser) runs WebKit's Copy, Cut and
 /// Paste against.
 @MainActor
 enum BrowserReplClipboardItems {

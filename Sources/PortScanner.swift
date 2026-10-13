@@ -1,5 +1,5 @@
-import CmuxCore
-import CmuxFoundation
+import BreeCore
+import BreeFoundation
 import Darwin
 import Foundation
 
@@ -28,7 +28,7 @@ final class PortScanner: @unchecked Sendable {
     @MainActor var onAgentPortsUpdated: (@MainActor (_ workspaceId: UUID, _ ports: [Int]) -> Bool)?
     // MARK: - State (all guarded by `queue`)
 
-    let queue = DispatchQueue(label: "com.cmux.port-scanner", qos: .utility)
+    let queue = DispatchQueue(label: "com.bree.port-scanner", qos: .utility)
     let processIdentityProvider: @Sendable (pid_t) -> AgentPIDProcessIdentity?
     let processPresenceProvider: @Sendable (pid_t) -> PIDPresence
     let listeningPortsProvider: @Sendable (pid_t) -> ListeningPortLookupResult

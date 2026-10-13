@@ -2,7 +2,7 @@
 """
 Regression: scrollback replay must not depend on PATH containing coreutils.
 
-cmux can launch shells with PATH initially pointing at app resources. If replay
+bree can launch shells with PATH initially pointing at app resources. If replay
 relies on bare `cat`/`rm`, startup replay silently fails before user rc files
 restore PATH.
 """
@@ -21,12 +21,12 @@ def main() -> int:
         (
             "zsh",
             ["/bin/zsh", "-f", "-c"],
-            root / "Resources" / "shell-integration" / "cmux-zsh-integration.zsh",
+            root / "Resources" / "shell-integration" / "bree-zsh-integration.zsh",
         ),
         (
             "bash",
             ["/bin/bash", "--noprofile", "--norc", "-c"],
-            root / "Resources" / "shell-integration" / "cmux-bash-integration.bash",
+            root / "Resources" / "shell-integration" / "bree-bash-integration.bash",
         ),
         (
             "fish",
@@ -35,7 +35,7 @@ def main() -> int:
         ),
     ]
 
-    base = Path("/tmp") / f"cmux_scrollback_restore_{os.getpid()}"
+    base = Path("/tmp") / f"bree_scrollback_restore_{os.getpid()}"
     try:
         shutil.rmtree(base, ignore_errors=True)
         base.mkdir(parents=True, exist_ok=True)
@@ -53,12 +53,12 @@ def main() -> int:
 
             env = dict(os.environ)
             env["PATH"] = str(base / "empty-bin")
-            env["CMUX_RESTORE_SCROLLBACK_FILE"] = str(replay_file)
-            env["CMUX_TEST_INTEGRATION_SCRIPT"] = str(integration_script)
-            env["CMUX_FISH_USER_CONFIG_ALREADY_LOADED"] = "1"
+            env["BREE_RESTORE_SCROLLBACK_FILE"] = str(replay_file)
+            env["BREE_TEST_INTEGRATION_SCRIPT"] = str(integration_script)
+            env["BREE_FISH_USER_CONFIG_ALREADY_LOADED"] = "1"
 
             result = subprocess.run(
-                [*command, 'source "$CMUX_TEST_INTEGRATION_SCRIPT"'],
+                [*command, 'source "$BREE_TEST_INTEGRATION_SCRIPT"'],
                 env=env,
                 capture_output=True,
                 text=True,
@@ -78,7 +78,7 @@ def main() -> int:
             hostname = subprocess.check_output(["/bin/hostname"], text=True).strip()
             boundary_root = (
                 "\x1b]1337;CurrentDir=kitty-shell-cwd://"
-                f"{hostname}/.cmux/session-scrollback-replay/{replay_file.name}"
+                f"{hostname}/.bree/session-scrollback-replay/{replay_file.name}"
             )
             expected_start = boundary_root + "/start\x07"
             expected_end = boundary_root + "/end\x07"

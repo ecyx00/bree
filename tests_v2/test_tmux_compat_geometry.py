@@ -20,18 +20,18 @@ from pathlib import Path
 from typing import List
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
 def _must(cond: bool, msg: str) -> None:
     if not cond:
-        raise cmuxError(msg)
+        raise breeError(msg)
 
 
-def _wait_for_pane_count(c: cmux, workspace_id: str, expected: int, timeout_s: float = 10.0) -> dict:
+def _wait_for_pane_count(c: bree, workspace_id: str, expected: int, timeout_s: float = 10.0) -> dict:
     """Poll pane.list until the workspace reports exactly `expected` panes.
 
     Returns the pane.list payload the instant the count matches, so callers
@@ -47,39 +47,39 @@ def _wait_for_pane_count(c: cmux, workspace_id: str, expected: int, timeout_s: f
         if count == expected:
             return payload
         time.sleep(0.02)
-    raise cmuxError(
+    raise breeError(
         f"Timed out waiting for {expected} pane(s) in workspace {workspace_id}; "
         f"last count={count}"
     )
 
 
 def _find_cli_binary() -> str:
-    env_cli = os.environ.get("CMUXTERM_CLI")
+    env_cli = os.environ.get("BREE_CLI")
     if env_cli and os.path.isfile(env_cli) and os.access(env_cli, os.X_OK):
         return env_cli
 
     candidates = glob.glob(os.path.expanduser(
-        "~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/cmux"
+        "~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/bree"
     ), recursive=True)
-    candidates += glob.glob("/tmp/cmux-*/Build/Products/Debug/cmux")
+    candidates += glob.glob("/tmp/bree-*/Build/Products/Debug/bree")
     candidates = [p for p in candidates if os.path.isfile(p) and os.access(p, os.X_OK)]
     if not candidates:
-        raise cmuxError("Could not locate cmux CLI binary; set CMUXTERM_CLI")
+        raise breeError("Could not locate bree CLI binary; set BREE_CLI")
     candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
     return candidates[0]
 
 
 def _run_tmux_compat(cli: str, args: List[str]) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
-    env.pop("CMUX_WORKSPACE_ID", None)
-    env.pop("CMUX_SURFACE_ID", None)
-    env["CMUX_SOCKET_PATH"] = SOCKET_PATH
-    env["CMUX_OMO_CMUX_BIN"] = cli
+    env.pop("BREE_WORKSPACE_ID", None)
+    env.pop("BREE_SURFACE_ID", None)
+    env["BREE_SOCKET_PATH"] = SOCKET_PATH
+    env["BREE_OMO_BREE_BIN"] = cli
     cmd = [cli, "--socket", SOCKET_PATH, "__tmux-compat"] + args
     return subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
 
 
-def test_pane_list_geometry_fields(c: cmux) -> None:
+def test_pane_list_geometry_fields(c: bree) -> None:
     """pane.list response includes geometry fields for each pane."""
     print("  test_pane_list_geometry_fields ... ", end="", flush=True)
     panes_raw = c.list_panes()
@@ -152,7 +152,7 @@ def test_list_panes_geometry_format(cli: str) -> None:
     print("PASS")
 
 
-def test_list_panes_pane_target(cli: str, c: cmux) -> None:
+def test_list_panes_pane_target(cli: str, c: bree) -> None:
     """list-panes -t %<pane-uuid> resolves pane target to workspace."""
     print("  test_list_panes_pane_target ... ", end="", flush=True)
     panes_raw = c.list_panes()
@@ -180,7 +180,7 @@ def test_display_geometry_format(cli: str) -> None:
     print("PASS")
 
 
-def test_multi_pane_geometry(cli: str, c: cmux) -> None:
+def test_multi_pane_geometry(cli: str, c: bree) -> None:
     """After splitting, two panes have different pane_left values and halved widths."""
     print("  test_multi_pane_geometry ... ", end="", flush=True)
     ws = c.new_workspace()
@@ -236,7 +236,7 @@ def main() -> int:
     failed = 0
     errors = []
 
-    with cmux(SOCKET_PATH) as c:
+    with bree(SOCKET_PATH) as c:
         tests = [
             ("test_pane_list_geometry_fields", lambda: test_pane_list_geometry_fields(c)),
             ("test_tmux_version", lambda: test_tmux_version(cli)),

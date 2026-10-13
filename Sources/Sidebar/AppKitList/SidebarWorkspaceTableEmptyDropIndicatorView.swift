@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// AppKit counterpart of the existing two-point accent drop indicator.
@@ -12,7 +12,7 @@ final class SidebarWorkspaceTableEmptyDropIndicatorView: NSView {
         }
     }
 
-    var accentColor = CmuxAccentColor() {
+    var accentColor = BreeAccentColor() {
         didSet {
             guard accentColor != oldValue else { return }
             updateAccentColor()

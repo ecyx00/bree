@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 
@@ -11,7 +11,7 @@ struct LiveAgentSessionOwnerObservation: Sendable {
         record: RestorableAgentHookSessionRecord,
         workspaceID: UUID,
         surfaceID: UUID,
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments?,
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments?,
         processIdentityProvider: (Int) -> AgentPIDProcessIdentity?,
         validator: CachedAgentProcessIdentityValidator
     ) -> Self? {
@@ -57,7 +57,7 @@ struct LiveAgentSessionOwnerObservation: Sendable {
         surfaceID: UUID,
         processIDs: Set<Int>,
         observedAt: TimeInterval,
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments?,
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments?,
         processIdentityProvider: (Int) -> AgentPIDProcessIdentity?,
         validator: CachedAgentProcessIdentityValidator
     ) -> [Self] {

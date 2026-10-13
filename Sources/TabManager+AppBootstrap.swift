@@ -1,5 +1,5 @@
-import CmuxRemoteSession
-import CmuxWorkspaces
+import BreeRemoteSession
+import BreeWorkspaces
 import Foundation
 
 /// Terminal-free routing owner used before a main window is registered.

@@ -1,6 +1,6 @@
 // Roles, names, states and visibility on the ARIA fixture.
-// oracle: skip (snapshot text is cmux-defined)
+// oracle: skip (snapshot text is bree-defined)
 await page.goto(`${PRIMARY}/aria.html`);
-emitCmux("full", (await snapshot()).tree);
-emitCmux("interactive", (await snapshot({ interactive: true })).tree);
-emitCmux("show-hidden", (await snapshot({ showHidden: true })).tree);
+emitBree("full", (await snapshot()).tree);
+emitBree("interactive", (await snapshot({ interactive: true })).tree);
+emitBree("show-hidden", (await snapshot({ showHidden: true })).tree);

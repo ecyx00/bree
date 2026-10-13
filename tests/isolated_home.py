@@ -1,23 +1,23 @@
 """Isolated HOME for tests that run the CLI (or anything that writes dot files).
 
-Why: Bree must never write into cmux's or the user's real local state. Twice,
-tests ran the CLI with the real HOME and leaked files into ~/.cmux/hooks.
+Why: Bree must never write into bree's or the user's real local state. Twice,
+tests ran the CLI with the real HOME and leaked files into ~/.bree/hooks.
 
-    with isolated_home("cmux-foo-", subdir="home") as iso:
-        subprocess.run([cli, ...], env=iso.env(CMUX_SOCKET_PATH="..."))
+    with isolated_home("bree-foo-", subdir="home") as iso:
+        subprocess.run([cli, ...], env=iso.env(BREE_SOCKET_PATH="..."))
         iso.root / "scratch"        # temp dir for fixtures
         iso.home / ".bree-dev"      # HOME seen by the child
 
 `isolated_home` creates a temp root with HOME, XDG_CONFIG_HOME, XDG_STATE_HOME,
 XDG_DATA_HOME, XDG_CACHE_HOME, CODEX_HOME and CLAUDE_CONFIG_DIR inside it, and
 by default wraps the block in `leak_guard()`: it records stat-only facts of the
-real ~/.cmux, ~/.bree, ~/.codex/hooks.json and ~/.claude/settings.json before
+real ~/.bree, ~/.bree, ~/.codex/hooks.json and ~/.claude/settings.json before
 and after, and raises AssertionError if they changed.
 
 The guard never opens a file: only existence, size, mtime and directory
 listings. It must not be pointed at ~/.codex/auth.json or ~/.secrets, and
-nothing here reads them. If cmux.app or Bree is running it may legitimately
-touch ~/.cmux or ~/.bree during the block; rerun with the apps idle to tell a
+nothing here reads them. If bree.app or Bree is running it may legitimately
+touch ~/.bree or ~/.bree during the block; rerun with the apps idle to tell a
 leak from background activity.
 """
 from __future__ import annotations
@@ -31,7 +31,7 @@ from pathlib import Path
 from typing import Iterator
 
 # Real-home targets watched by the leak guard (relative to the real home).
-GUARDED_PATHS = (".cmux", ".bree", ".codex/hooks.json", ".claude/settings.json")
+GUARDED_PATHS = (".bree", ".bree", ".codex/hooks.json", ".claude/settings.json")
 
 
 HOME_VARS = ("HOME", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME", "CODEX_HOME", "CLAUDE_CONFIG_DIR", "CFFIXED_USER_HOME")

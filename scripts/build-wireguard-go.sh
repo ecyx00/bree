@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Build libwg-go.a, the wireguard-go engine as a C archive, for the cmux Cloud
+# Build libwg-go.a, the wireguard-go engine as a C archive, for the bree Cloud
 # tunnel extensions: the macOS system extension (TunnelExtension/, target
-# cmuxTunnelExtension) and the iOS packet tunnel (ios/CloudVPN/, target
+# breeTunnelExtension) and the iOS packet tunnel (ios/CloudVPN/, target
 # CloudVPN).
 #
 # Runs as that target's "Build wireguard-go" phase and standalone. The Swift
@@ -9,26 +9,26 @@
 # puts the archive where the linker looks (BUILT_PRODUCTS_DIR).
 #
 # Inputs, all Xcode build settings when run as a phase (override for standalone):
-#   ARCHS / CMUX_WIREGUARD_GO_ARCHS   architectures (default: host)
+#   ARCHS / BREE_WIREGUARD_GO_ARCHS   architectures (default: host)
 #   BUILT_PRODUCTS_DIR                output directory for libwg-go.a
-#   CMUX_WIREGUARD_GO_OUTPUT          explicit output path (overrides the above)
+#   BREE_WIREGUARD_GO_OUTPUT          explicit output path (overrides the above)
 #   TARGET_TEMP_DIR                   per-arch intermediates
 #   PLATFORM_NAME                     macosx (default), iphoneos or iphonesimulator
 #   MACOSX_DEPLOYMENT_TARGET          minimum macOS (default 14.0)
 #   IPHONEOS_DEPLOYMENT_TARGET        minimum iOS (default 17.0)
 #   SDKROOT                           platform SDK (default: xcrun --show-sdk-path)
 #   CONFIGURATION                     Release always requires a real toolchain
-#   CMUX_WIREGUARD_GO_REQUIRE         1: fail when `go` is missing
+#   BREE_WIREGUARD_GO_REQUIRE         1: fail when `go` is missing
 #                                     0: build a stub archive and warn
 #                                     default: 1 for Release builds, else 0
 #                                     (Debug CI runners have no Go; the stub
 #                                     is fine there because a Debug build can
 #                                     never load the extension)
-#   CMUX_WIREGUARD_GO_BINARY          explicit `go` executable (default: PATH lookup)
+#   BREE_WIREGUARD_GO_BINARY          explicit `go` executable (default: PATH lookup)
 #
 # Without Go the script emits a STUB archive: every exported wg* symbol fails,
-# and the marker symbol `cmux_wireguard_go_bridge_is_stub` is defined so
-# scripts/sign-cmux-bundle.sh refuses to ship it. A Debug build cannot load the
+# and the marker symbol `bree_wireguard_go_bridge_is_stub` is defined so
+# scripts/sign-bree-bundle.sh refuses to ship it. A Debug build cannot load the
 # extension anyway (no signed entitlement), so a stub keeps `reload.sh` and the
 # Debug CI lanes green on machines without Go, while Release builds fail closed
 # and the release workflows install Go before building.
@@ -40,7 +40,7 @@ CONFIGURATION="${CONFIGURATION:-Debug}"
 MIN_MACOS="${MACOSX_DEPLOYMENT_TARGET:-14.0}"
 MIN_IOS="${IPHONEOS_DEPLOYMENT_TARGET:-17.0}"
 PLATFORM="${PLATFORM_NAME:-macosx}"
-OUTPUT="${CMUX_WIREGUARD_GO_OUTPUT:-${BUILT_PRODUCTS_DIR:-${GO_SRC_DIR}/out}/libwg-go.a}"
+OUTPUT="${BREE_WIREGUARD_GO_OUTPUT:-${BUILT_PRODUCTS_DIR:-${GO_SRC_DIR}/out}/libwg-go.a}"
 WORK_DIR="${TARGET_TEMP_DIR:-${GO_SRC_DIR}/.tmp}/wireguard-go"
 
 # shellcheck source=scripts/build-phase-caller-path.sh
@@ -48,7 +48,7 @@ WORK_DIR="${TARGET_TEMP_DIR:-${GO_SRC_DIR}/.tmp}/wireguard-go"
 # Xcode build phases do not inherit a login-shell PATH.
 export PATH="/usr/local/go/bin:/opt/homebrew/bin:/usr/local/bin:${HOME}/go/bin:${PATH}"
 
-case "${CMUX_WIREGUARD_GO_REQUIRE:-}" in
+case "${BREE_WIREGUARD_GO_REQUIRE:-}" in
   1|true|TRUE|yes|YES) REQUIRE_GO=1 ;;
   0|false|FALSE|no|NO) REQUIRE_GO=0 ;;
   "")
@@ -59,7 +59,7 @@ case "${CMUX_WIREGUARD_GO_REQUIRE:-}" in
     fi
     ;;
   *)
-    echo "error: CMUX_WIREGUARD_GO_REQUIRE must be 0 or 1, got '${CMUX_WIREGUARD_GO_REQUIRE}'" >&2
+    echo "error: BREE_WIREGUARD_GO_REQUIRE must be 0 or 1, got '${BREE_WIREGUARD_GO_REQUIRE}'" >&2
     exit 2
     ;;
 esac
@@ -83,7 +83,7 @@ platform_flags() {
   esac
 }
 
-requested_archs="${CMUX_WIREGUARD_GO_ARCHS:-${ARCHS:-}}"
+requested_archs="${BREE_WIREGUARD_GO_ARCHS:-${ARCHS:-}}"
 if [[ -z "$requested_archs" && "$PLATFORM" != macosx ]]; then
   requested_archs="arm64"
 fi
@@ -117,7 +117,7 @@ CLANG="$(xcrun --sdk "$SDK_NAME" --find clang)"
 
 mkdir -p "$WORK_DIR" "$(dirname "$OUTPUT")"
 
-GO_BIN="${CMUX_WIREGUARD_GO_BINARY:-$(command -v go || true)}"
+GO_BIN="${BREE_WIREGUARD_GO_BINARY:-$(command -v go || true)}"
 
 archives=()
 seen=""
@@ -151,7 +151,7 @@ if [[ -n "$GO_BIN" && -x "$GO_BIN" ]]; then
 else
   if [[ "$REQUIRE_GO" -eq 1 ]]; then
     cat >&2 <<MSG
-error: the Go toolchain is required to build the cmux Cloud tunnel extension
+error: the Go toolchain is required to build the bree Cloud tunnel extension
        (libwg-go.a) for ${CONFIGURATION} builds, and \`go\` was not found on PATH.
        Install it with \`brew install go\` (or from https://go.dev/dl/) and rebuild.
 MSG
@@ -164,7 +164,7 @@ MSG
  * Every entry point fails; the marker symbol lets release signing reject it. */
 #include <stddef.h>
 #include <stdint.h>
-const char cmux_wireguard_go_bridge_is_stub = 1;
+const char bree_wireguard_go_bridge_is_stub = 1;
 void wgSetLogger(void *context, void *logger_fn) { (void)context; (void)logger_fn; }
 int wgTurnOn(const char *settings, int32_t tun_fd) { (void)settings; (void)tun_fd; return -1; }
 void wgTurnOff(int handle) { (void)handle; }

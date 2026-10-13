@@ -1,9 +1,9 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 import os
 
-// Crash-safe terminal scrollback (https://github.com/manaflow-ai/cmux/issues/2016,
-// https://github.com/manaflow-ai/cmux/issues/2194).
+// Crash-safe terminal scrollback (https://github.com/ecyx00/bree/issues/2016,
+// https://github.com/ecyx00/bree/issues/2194).
 //
 // The 8 s session autosave never captures scrollback: capture is a synchronous
 // Ghostty VT export on the main thread, too expensive for that cadence. Only
@@ -50,7 +50,7 @@ enum SessionScrollbackCheckpointPolicy {
     /// Checkpoints follow session restore: when restore is disabled there is nothing to restore
     /// into, and automated test runs must not write into the real application support directory.
     static func isEnabled(environment: [String: String]) -> Bool {
-        environment["CMUX_DISABLE_SESSION_RESTORE"] != "1"
+        environment["BREE_DISABLE_SESSION_RESTORE"] != "1"
             && !SessionRestorePolicy.isRunningUnderAutomatedTests(environment: environment)
     }
 
@@ -253,7 +253,7 @@ struct SessionScrollbackCheckpointStore: Sendable {
         self.directoryURL = directoryURL
     }
 
-    /// `…/cmux/session-<bundle>.json` keeps its checkpoints in `…/cmux/session-<bundle>-scrollback/`.
+    /// `…/bree/session-<bundle>.json` keeps its checkpoints in `…/bree/session-<bundle>-scrollback/`.
     init(primarySnapshotURL: URL) {
         let stem = primarySnapshotURL.deletingPathExtension().lastPathComponent
         self.directoryURL = primarySnapshotURL

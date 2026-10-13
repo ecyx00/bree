@@ -1,10 +1,10 @@
-import CmuxCloud
+import BreeCloud
 import Combine
 import Foundation
 
 extension Notification.Name {
     /// Posted on the main actor after a machine's unread terminal set changes.
-    static let cmuxCloudNotificationUnreadDidChange = Notification.Name("cmux.cloudNotifications.unreadDidChange")
+    static let breeCloudNotificationUnreadDidChange = Notification.Name("bree.cloudNotifications.unreadDidChange")
 }
 
 /// App-wide registry of per-machine syncs. Owns the one subscription on the
@@ -47,7 +47,7 @@ final class CloudNotificationSyncHub {
     func unregister(machineID: String) {
         syncs.removeValue(forKey: machineID)
         if unreadTerminalIDs.removeValue(forKey: machineID) != nil {
-            NotificationCenter.default.post(name: .cmuxCloudNotificationUnreadDidChange, object: nil)
+            NotificationCenter.default.post(name: .breeCloudNotificationUnreadDidChange, object: nil)
         }
     }
 
@@ -63,9 +63,9 @@ final class CloudNotificationSyncHub {
             unreadTerminalIDs[machineID] = terminalIDs
         }
         #if DEBUG
-        cmuxDebugLog("cloud.notifications.unread machine=\(machineID) terminals=\(terminalIDs.count)")
+        breeDebugLog("cloud.notifications.unread machine=\(machineID) terminals=\(terminalIDs.count)")
         #endif
-        NotificationCenter.default.post(name: .cmuxCloudNotificationUnreadDidChange, object: nil)
+        NotificationCenter.default.post(name: .breeCloudNotificationUnreadDidChange, object: nil)
     }
 
     /// Correlation keys of cloud notifications that were unread in `previous`
@@ -109,7 +109,7 @@ final class CloudNotificationSyncHub {
     }
 
     /// A read the store applied by target (a focused pane, a visited
-    /// workspace, mark-all-read, `cmux notify --clear`). Every machine
+    /// workspace, mark-all-read, `bree notify --clear`). Every machine
     /// acknowledges the rows whose current placement the read covers, so the
     /// Cloud tree dot follows the dismissal even for rows that never became a
     /// local record; records for those rows that live on another workspace

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: the generated OMP extension is importable and emits cmux hook calls with complete payloads.
+Regression test: the generated OMP extension is importable and emits bree hook calls with complete payloads.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import time
 import threading
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 
 
 def make_executable(path: Path, content: str) -> None:
@@ -58,7 +58,7 @@ def wait_for_stable_text(
     return path.read_text(encoding="utf-8") if path.exists() else ""
 
 
-class MockCmuxSocket:
+class MockBreeSocket:
     def __init__(self, path: Path, workspace_id: str, surface_id: str) -> None:
         self.path = path
         self.workspace_id = workspace_id
@@ -69,7 +69,7 @@ class MockCmuxSocket:
         self._server: socket.socket | None = None
         self._thread: threading.Thread | None = None
 
-    def __enter__(self) -> "MockCmuxSocket":
+    def __enter__(self) -> "MockBreeSocket":
         try:
             self.path.unlink()
         except FileNotFoundError:
@@ -188,7 +188,7 @@ def verify_hook_persistence(cli_path: str, root: Path, base_env: dict[str, str])
     workspace_id = "11111111-1111-1111-1111-111111111111"
     surface_id = "22222222-2222-2222-2222-222222222222"
     session_id = "omp-hook-session-123"
-    socket_path = Path("/tmp") / f"cmux-omp-hook-{os.getpid()}-{time.monotonic_ns()}.sock"
+    socket_path = Path("/tmp") / f"bree-omp-hook-{os.getpid()}-{time.monotonic_ns()}.sock"
     launch_argv = [
         "/Users/example/.bun/bin/omp",
         "--resume",
@@ -199,22 +199,22 @@ def verify_hook_persistence(cli_path: str, root: Path, base_env: dict[str, str])
     ]
     hook_env = base_env.copy()
     hook_env.pop("PI_CODING_AGENT_DIR", None)
-    hook_env.pop("CMUX_SOCKET_CAPABILITY", None)
-    hook_env.pop("CMUX_SOCKET_PASSWORD", None)
+    hook_env.pop("BREE_SOCKET_CAPABILITY", None)
+    hook_env.pop("BREE_SOCKET_PASSWORD", None)
     hook_env.update(
         {
             "PWD": str(workspace),
-            "CMUX_SOCKET_PATH": str(socket_path),
-            "CMUX_WORKSPACE_ID": workspace_id,
-            "CMUX_SURFACE_ID": surface_id,
-            "CMUX_AGENT_HOOK_STATE_DIR": str(hook_state_dir),
-            "CMUX_AGENT_LAUNCH_KIND": "omp",
-            "CMUX_AGENT_LAUNCH_EXECUTABLE": launch_argv[0],
-            "CMUX_AGENT_LAUNCH_ARGV_B64": base64.b64encode(
+            "BREE_SOCKET_PATH": str(socket_path),
+            "BREE_WORKSPACE_ID": workspace_id,
+            "BREE_SURFACE_ID": surface_id,
+            "BREE_AGENT_HOOK_STATE_DIR": str(hook_state_dir),
+            "BREE_AGENT_LAUNCH_KIND": "omp",
+            "BREE_AGENT_LAUNCH_EXECUTABLE": launch_argv[0],
+            "BREE_AGENT_LAUNCH_ARGV_B64": base64.b64encode(
                 b"".join(value.encode("utf-8") + b"\0" for value in launch_argv)
             ).decode("ascii"),
-            "CMUX_AGENT_LAUNCH_CWD": str(workspace),
-            "CMUX_CLI_SENTRY_DISABLED": "1",
+            "BREE_AGENT_LAUNCH_CWD": str(workspace),
+            "BREE_CLI_SENTRY_DISABLED": "1",
             "PI_CONFIG_DIR": ".custom-omp",
             "OPENAI_API_KEY": "secret-should-not-persist",
         }
@@ -228,7 +228,7 @@ def verify_hook_persistence(cli_path: str, root: Path, base_env: dict[str, str])
         separators=(",", ":"),
     )
 
-    with MockCmuxSocket(socket_path, workspace_id=workspace_id, surface_id=surface_id) as server:
+    with MockBreeSocket(socket_path, workspace_id=workspace_id, surface_id=surface_id) as server:
         result = subprocess.run(
             [cli_path, "hooks", "omp", "session-start"],
             input=hook_input,
@@ -330,12 +330,12 @@ def main() -> int:
         return 0
 
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-omp-extension-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-omp-extension-") as td:
         root = Path(td)
         home = root / "home"
         home.mkdir()
@@ -372,7 +372,7 @@ def main() -> int:
             return 1
         extension_text = extension_path.read_text(encoding="utf-8")
         if "bree-omp-session-extension-marker" not in extension_text:
-            print(f"FAIL: expected cmux marker in {extension_path}")
+            print(f"FAIL: expected bree marker in {extension_path}")
             return 1
         if shared_pi_extension.read_text(encoding="utf-8") != "// bree-pi-session-extension-marker v1\n":
             print("FAIL: OMP install modified the Pi extension in PI_CODING_AGENT_DIR")
@@ -392,50 +392,50 @@ def main() -> int:
             print(f"stdout={reinstall.stdout.strip()}")
             print(f"stderr={reinstall.stderr.strip()}")
             return 1
-        extension_override = os.environ.get("CMUX_TEST_OMP_EXTENSION_OVERRIDE")
+        extension_override = os.environ.get("BREE_TEST_OMP_EXTENSION_OVERRIDE")
         if extension_override:
             shutil.copyfile(extension_override, extension_path)
 
-        fake_cmux = root / "fake-cmux"
-        fake_args_log = root / "fake-cmux-args.log"
-        fake_stdin_log = root / "fake-cmux-stdin.log"
-        fake_env_log = root / "fake-cmux-env.log"
-        fake_concurrency_log = root / "fake-cmux-concurrency.log"
-        fake_pid_log = root / "fake-cmux-pids.log"
-        fake_started_args_log = root / "fake-cmux-started-args.log"
+        fake_bree = root / "fake-bree"
+        fake_args_log = root / "fake-bree-args.log"
+        fake_stdin_log = root / "fake-bree-stdin.log"
+        fake_env_log = root / "fake-bree-env.log"
+        fake_concurrency_log = root / "fake-bree-concurrency.log"
+        fake_pid_log = root / "fake-bree-pids.log"
+        fake_started_args_log = root / "fake-bree-started-args.log"
         fake_args_log.touch()
         fake_pid_log.touch()
         fake_started_args_log.touch()
-        fake_lock_dir = root / "fake-cmux.lock"
+        fake_lock_dir = root / "fake-bree.lock"
         make_executable(
-            fake_cmux,
+            fake_bree,
             """#!/usr/bin/env bash
 set -euo pipefail
-if ! mkdir "$FAKE_CMUX_LOCK_DIR" 2>/dev/null; then
-  active_pid="$(cat "$FAKE_CMUX_LOCK_DIR/pid" 2>/dev/null || true)"
+if ! mkdir "$FAKE_BREE_LOCK_DIR" 2>/dev/null; then
+  active_pid="$(cat "$FAKE_BREE_LOCK_DIR/pid" 2>/dev/null || true)"
   if [ -n "$active_pid" ] && kill -0 "$active_pid" 2>/dev/null; then
-    printf 'overlap\n' >> "$FAKE_CMUX_CONCURRENCY_LOG"
+    printf 'overlap\n' >> "$FAKE_BREE_CONCURRENCY_LOG"
   fi
 fi
-printf '%s\n' "$$" > "$FAKE_CMUX_LOCK_DIR/pid"
-printf '%s\n' "$$" >> "$FAKE_CMUX_PID_LOG"
-printf '%s\n' "$*" >> "$FAKE_CMUX_STARTED_ARGS_LOG"
+printf '%s\n' "$$" > "$FAKE_BREE_LOCK_DIR/pid"
+printf '%s\n' "$$" >> "$FAKE_BREE_PID_LOG"
+printf '%s\n' "$*" >> "$FAKE_BREE_STARTED_ARGS_LOG"
 kill -STOP "$$"
-printf '%s\n' "$*" >> "$FAKE_CMUX_ARGS_LOG"
-cat >> "$FAKE_CMUX_STDIN_LOG"
-printf '\n---\n' >> "$FAKE_CMUX_STDIN_LOG"
+printf '%s\n' "$*" >> "$FAKE_BREE_ARGS_LOG"
+cat >> "$FAKE_BREE_STDIN_LOG"
+printf '\n---\n' >> "$FAKE_BREE_STDIN_LOG"
 {
-  printf 'kind=%s\n' "${CMUX_AGENT_LAUNCH_KIND-}"
-  printf 'cwd=%s\n' "${CMUX_AGENT_LAUNCH_CWD-}"
-  printf 'argv=%s\n' "${CMUX_AGENT_LAUNCH_ARGV_B64-}"
+  printf 'kind=%s\n' "${BREE_AGENT_LAUNCH_KIND-}"
+  printf 'cwd=%s\n' "${BREE_AGENT_LAUNCH_CWD-}"
+  printf 'argv=%s\n' "${BREE_AGENT_LAUNCH_ARGV_B64-}"
   if [ "${AMP_API_KEY-}" = "amp-secret" ]; then
     printf 'amp=present\n'
   else
     printf 'amp=missing\n'
   fi
-} >> "$FAKE_CMUX_ENV_LOG"
-rm -f "$FAKE_CMUX_LOCK_DIR/pid"
-rmdir "$FAKE_CMUX_LOCK_DIR" 2>/dev/null || true
+} >> "$FAKE_BREE_ENV_LOG"
+rm -f "$FAKE_BREE_LOCK_DIR/pid"
+rmdir "$FAKE_BREE_LOCK_DIR" 2>/dev/null || true
 """,
         )
 
@@ -450,29 +450,29 @@ rmdir "$FAKE_CMUX_LOCK_DIR" 2>/dev/null || true
 
         check_env = env.copy()
         for key in [
-            "CMUX_AGENT_LAUNCH_KIND",
-            "CMUX_AGENT_LAUNCH_EXECUTABLE",
-            "CMUX_AGENT_LAUNCH_ARGV_B64",
-            "CMUX_AGENT_LAUNCH_CWD",
+            "BREE_AGENT_LAUNCH_KIND",
+            "BREE_AGENT_LAUNCH_EXECUTABLE",
+            "BREE_AGENT_LAUNCH_ARGV_B64",
+            "BREE_AGENT_LAUNCH_CWD",
         ]:
             check_env.pop(key, None)
-        check_env["CMUX_TEST_OMP_EXTENSION_PATH"] = str(extension_path)
-        check_env["CMUX_TEST_OMP_PARENT_SESSION_FILE"] = str(parent_session_file)
-        check_env["CMUX_TEST_OMP_NESTED_SESSION_FILE"] = str(nested_session_file)
-        check_env["CMUX_SURFACE_ID"] = "surface-omp-test"
-        check_env["CMUX_OMP_CMUX_BIN"] = str(fake_cmux)
-        check_env["FAKE_CMUX_ARGS_LOG"] = str(fake_args_log)
-        check_env["FAKE_CMUX_STDIN_LOG"] = str(fake_stdin_log)
-        check_env["FAKE_CMUX_ENV_LOG"] = str(fake_env_log)
-        check_env["FAKE_CMUX_CONCURRENCY_LOG"] = str(fake_concurrency_log)
-        check_env["FAKE_CMUX_PID_LOG"] = str(fake_pid_log)
-        check_env["FAKE_CMUX_STARTED_ARGS_LOG"] = str(fake_started_args_log)
-        check_env["FAKE_CMUX_LOCK_DIR"] = str(fake_lock_dir)
+        check_env["BREE_TEST_OMP_EXTENSION_PATH"] = str(extension_path)
+        check_env["BREE_TEST_OMP_PARENT_SESSION_FILE"] = str(parent_session_file)
+        check_env["BREE_TEST_OMP_NESTED_SESSION_FILE"] = str(nested_session_file)
+        check_env["BREE_SURFACE_ID"] = "surface-omp-test"
+        check_env["BREE_OMP_BREE_BIN"] = str(fake_bree)
+        check_env["FAKE_BREE_ARGS_LOG"] = str(fake_args_log)
+        check_env["FAKE_BREE_STDIN_LOG"] = str(fake_stdin_log)
+        check_env["FAKE_BREE_ENV_LOG"] = str(fake_env_log)
+        check_env["FAKE_BREE_CONCURRENCY_LOG"] = str(fake_concurrency_log)
+        check_env["FAKE_BREE_PID_LOG"] = str(fake_pid_log)
+        check_env["FAKE_BREE_STARTED_ARGS_LOG"] = str(fake_started_args_log)
+        check_env["FAKE_BREE_LOCK_DIR"] = str(fake_lock_dir)
         check_env["AMP_API_KEY"] = "amp-secret"
         check_source = """
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
-const extensionPath = process.env.CMUX_TEST_OMP_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_OMP_EXTENSION_PATH;
 // OMP loads a fresh copy of the extension module for every session in the
 // process (unique ?mtime= cache-busting import URLs), so module scope is
 // per-session. Give each simulated session its own module instance.
@@ -504,21 +504,21 @@ const parentCtx = {
   cwd: "/tmp/omp-project",
   sessionManager: {
     getSessionId() { return currentSessionId; },
-    getSessionFile() { return process.env.CMUX_TEST_OMP_PARENT_SESSION_FILE; }
+    getSessionFile() { return process.env.BREE_TEST_OMP_PARENT_SESSION_FILE; }
   }
 };
 const nestedCtx = {
   cwd: "/tmp/omp-project",
   sessionManager: {
     getSessionId() { return "omp-nested-task-session"; },
-    getSessionFile() { return process.env.CMUX_TEST_OMP_NESTED_SESSION_FILE; }
+    getSessionFile() { return process.env.BREE_TEST_OMP_NESTED_SESSION_FILE; }
   }
 };
 const workerCtx = {
   cwd: "/tmp/omp-project",
   sessionManager: {
     getSessionId() { return "omp-worker-task-session"; },
-    getSessionFile() { return process.env.CMUX_TEST_OMP_PARENT_SESSION_FILE; }
+    getSessionFile() { return process.env.BREE_TEST_OMP_PARENT_SESSION_FILE; }
   }
 };
 let currentSessionId = "omp-session-test";
@@ -543,8 +543,8 @@ async function waitForLineCount(path, expected) {
   }
 }
 async function stoppedHookPID(expectedStartedCount) {
-  await waitForLineCount(process.env.FAKE_CMUX_PID_LOG, expectedStartedCount);
-  const pid = Number(nonEmptyLines(process.env.FAKE_CMUX_PID_LOG)[expectedStartedCount - 1]);
+  await waitForLineCount(process.env.FAKE_BREE_PID_LOG, expectedStartedCount);
+  const pid = Number(nonEmptyLines(process.env.FAKE_BREE_PID_LOG)[expectedStartedCount - 1]);
   if (!Number.isInteger(pid) || pid <= 0) throw new Error(`invalid hook pid: ${pid}`);
   while (true) {
     const state = spawnSync("/bin/ps", ["-o", "state=", "-p", String(pid)], { encoding: "utf8" });
@@ -558,7 +558,7 @@ async function releaseHook(expectedStartedCount) {
   process.kill(pid, "SIGCONT");
 }
 async function waitForCompletedHooks(expected) {
-  await waitForLineCount(process.env.FAKE_CMUX_ARGS_LOG, expected);
+  await waitForLineCount(process.env.FAKE_BREE_ARGS_LOG, expected);
 }
 const start = Date.now();
 await expectHandlerCompletion(handlers.get("session_start")({}, parentCtx), "session_start");
@@ -590,7 +590,7 @@ await waitForCompletedHooks(2);
 await releaseHook(3);
 await waitForCompletedHooks(3);
 await handlers.get("session_shutdown")({}, parentCtx);
-const firstPhasePids = nonEmptyLines(process.env.FAKE_CMUX_PID_LOG);
+const firstPhasePids = nonEmptyLines(process.env.FAKE_BREE_PID_LOG);
 if (firstPhasePids.length !== 3) {
   throw new Error(`nested OMP task session spawned a hook child: ${firstPhasePids}`);
 }
@@ -621,8 +621,8 @@ for (let index = 0; index < 40; index += 1) {
 }
 await handlers.get("agent_end")({ messages: [], stopReason: "completed" }, parentCtx);
 await handlers.get("session_shutdown")({}, parentCtx);
-const hungPidLines = nonEmptyLines(process.env.FAKE_CMUX_PID_LOG);
-const startedArgs = nonEmptyLines(process.env.FAKE_CMUX_STARTED_ARGS_LOG);
+const hungPidLines = nonEmptyLines(process.env.FAKE_BREE_PID_LOG);
+const startedArgs = nonEmptyLines(process.env.FAKE_BREE_STARTED_ARGS_LOG);
 if (hungPidLines.length !== 22) {
   throw new Error(`shutdown did not start the queued Stop after cancelling the active hook: ${hungPidLines}`);
 }
@@ -721,7 +721,7 @@ for (const rawPid of hungPidLines.slice(-2)) {
             print(f"FAIL: queued stop hook was evicted under session-start/prompt pressure: {stdin_log!r}")
             return 1
         if '"session_id":"omp-worker-task-session"' in stdin_log:
-            print(f"FAIL: a non-owner session id reached cmux hooks: {stdin_log!r}")
+            print(f"FAIL: a non-owner session id reached bree hooks: {stdin_log!r}")
             return 1
         if '"session_id":"priority-prompt-9","cwd":"/tmp/omp-project","hook_event_name":"SessionStart"' not in stdin_log:
             print(f"FAIL: session_switch did not rebind the switched session: {stdin_log!r}")
@@ -792,13 +792,13 @@ for (const rawPid of hungPidLines.slice(-2)) {
             timeout=20,
         )
         if uninstall_foreign.returncode != 0 or not foreign_path.exists() or "Refusing to remove" not in uninstall_foreign.stdout:
-            print("FAIL: omp extension uninstall did not preserve non-cmux file")
+            print("FAIL: omp extension uninstall did not preserve non-bree file")
             print(f"exit={uninstall_foreign.returncode}")
             print(f"stdout={uninstall_foreign.stdout.strip()}")
             print(f"stderr={uninstall_foreign.stderr.strip()}")
             return 1
 
-        invalid_extension_bytes = b"\xff\xfe\x00cmux-not-utf8"
+        invalid_extension_bytes = b"\xff\xfe\x00bree-not-utf8"
         foreign_path.write_bytes(invalid_extension_bytes)
         install_invalid = subprocess.run(
             [cli_path, "hooks", "omp", "install", "--yes"],
@@ -815,7 +815,7 @@ for (const rawPid of hungPidLines.slice(-2)) {
             print(f"stderr={install_invalid.stderr.strip()}")
             return 1
         install_invalid_output = install_invalid.stdout + install_invalid.stderr
-        if "Failed to read" not in install_invalid_output or "not a cmux extension" in install_invalid_output:
+        if "Failed to read" not in install_invalid_output or "not a bree extension" in install_invalid_output:
             print("FAIL: omp extension install did not report unreadable file distinctly")
             print(f"stdout={install_invalid.stdout.strip()}")
             print(f"stderr={install_invalid.stderr.strip()}")
@@ -835,7 +835,7 @@ for (const rawPid of hungPidLines.slice(-2)) {
             print(f"stderr={uninstall_invalid.stderr.strip()}")
             return 1
         uninstall_invalid_output = uninstall_invalid.stdout + uninstall_invalid.stderr
-        if "Failed to read" not in uninstall_invalid_output or "not a cmux extension" in uninstall_invalid_output:
+        if "Failed to read" not in uninstall_invalid_output or "not a bree extension" in uninstall_invalid_output:
             print("FAIL: omp extension uninstall did not report unreadable file distinctly")
             print(f"stdout={uninstall_invalid.stdout.strip()}")
             print(f"stderr={uninstall_invalid.stderr.strip()}")
@@ -876,11 +876,11 @@ for (const rawPid of hungPidLines.slice(-2)) {
             print(f"stdout={config_uninstall.stdout.strip()}")
             print(f"stderr={config_uninstall.stderr.strip()}")
             return 1
-    with tempfile.TemporaryDirectory(prefix="cmux-omp-agent-dir-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-omp-agent-dir-") as td:
         # Pi and OMP both read PI_CODING_AGENT_DIR, so someone who runs the two
         # side by side and points Pi at a directory sends OMP there too.
         # OMP_AGENT_DIR is OMP's own override and has to win.
-        # https://github.com/manaflow-ai/cmux/issues/4955
+        # https://github.com/ecyx00/bree/issues/4955
         root = Path(td)
         home = root / "home"
         home.mkdir()
@@ -931,7 +931,7 @@ for (const rawPid of hungPidLines.slice(-2)) {
             print(f"stderr={uninstall.stderr.strip()}")
             return 1
 
-    print("PASS: generated OMP extension installs, emits complete cmux hook payloads, and persists hook sessions")
+    print("PASS: generated OMP extension installs, emits complete bree hook payloads, and persists hook sessions")
     return 0
 
 

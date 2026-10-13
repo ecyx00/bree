@@ -1,6 +1,6 @@
 import AppKit
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import Foundation
 import SwiftUI
 
@@ -23,7 +23,7 @@ struct SidebarWorkspaceRowCommands {
     let allRemoteContextMenuTargetsDisconnected: Bool
     let contextMenuPinState: WorkspaceActionDispatcher.PinState?
     let workspaceGroupMenuSnapshot: WorkspaceGroupMenuSnapshot
-    /// Resolved cmux scheme used for menu swatches.
+    /// Resolved bree scheme used for menu swatches.
     let colorScheme: ColorScheme
     /// Re-runs the row's snapshot pump (pin/notification mutations that don't
     /// flow through the observation publishers).
@@ -41,14 +41,14 @@ struct SidebarWorkspaceRowCommands {
 
     func updateSelection(modifiers: NSEvent.ModifierFlags = NSEvent.modifierFlags) {
 #if DEBUG
-        cmuxDebugLog("sidebar.select.enter workspace=\(tab.id.uuidString.prefix(5)) hasTabManager=\(tabManager != nil)")
+        breeDebugLog("sidebar.select.enter workspace=\(tab.id.uuidString.prefix(5)) hasTabManager=\(tabManager != nil)")
 #endif
         guard let tabManager else { return }
         let isCommand = modifiers.contains(.command)
         let isShift = modifiers.contains(.shift)
         let wasSelected = tabManager.selectedTabId == tab.id
 #if DEBUG
-        cmuxDebugLog("sidebar.select workspace=\(tab.id.uuidString.prefix(5)) source=appKitRow")
+        breeDebugLog("sidebar.select workspace=\(tab.id.uuidString.prefix(5)) source=appKitRow")
 #endif
         var selectedTabIds = readSelectedTabIds()
         let workspaceIds = tabManager.tabs.map(\.id)
@@ -261,33 +261,29 @@ struct SidebarWorkspaceRowMenuBuilder {
         menu.delegate = menu
         guard let tabManager = commands.tabManager else { return menu }
 
+        // Everyday items first; rare ones live under "More". Disabled items are hidden, not greyed.
         addPinItem(to: menu, tabManager: tabManager)
         if let notificationStore = commands.notificationStore {
             addNotificationMuteItem(to: menu, notificationStore: notificationStore)
+            addMarkReadUnreadItem(to: menu, notificationStore: notificationStore)
         }
-        addGroupSection(to: menu, tabManager: tabManager)
         menu.addItem(.separator())
         addRenameAndDescriptionItems(
             to: menu,
             tabManager: tabManager,
             beginInlineRename: beginInlineRename
         )
-        addRemoteSection(to: menu, tabManager: tabManager)
         addColorMenu(to: menu)
+        addRemoteSection(to: menu, tabManager: tabManager)
         addSSHErrorItem(to: menu)
         menu.addItem(.separator())
+        addGroupSection(to: menu, tabManager: tabManager)
         addMoveItems(to: menu, tabManager: tabManager)
+        addCopyAndFinderItems(to: menu, tabManager: tabManager)
         menu.addItem(.separator())
         addCloseItems(to: menu, tabManager: tabManager)
-        // The notification section needs the store; the rest of the menu
-        // must not disappear with it.
-        if let notificationStore = commands.notificationStore {
-            menu.addItem(.separator())
-            addNotificationItems(to: menu, notificationStore: notificationStore)
-        }
-        addPauseResumeItem(to: menu)
         menu.addItem(.separator())
-        addCopyAndFinderItems(to: menu, tabManager: tabManager)
+        addMoreMenu(to: menu, tabManager: tabManager)
         return menu
     }
 
@@ -328,18 +324,10 @@ struct SidebarWorkspaceRowMenuBuilder {
         })
     }
 
+    /// New-group, move-to-group and remove-from-group in one place. With no groups yet it is
+    /// a single "New Group" item; otherwise a "Workspace Group" submenu. "New Empty Workspace
+    /// Group" is not here: it needs no row (File menu, empty sidebar area, its shortcut).
     private func addGroupSection(to menu: NSMenu, tabManager: TabManager) {
-        let newGroupShortcut = KeyboardShortcutSettings.shortcut(for: .newWorkspaceGroup)
-        let canCreateEmpty = tabManager.selectedTab?.isRemoteTmuxMirror != true
-        menu.addItem(item(
-            String(localized: "contextMenu.workspaceGroup.newEmpty", defaultValue: "New Empty Workspace Group"),
-            enabled: canCreateEmpty,
-            shortcut: newGroupShortcut
-        ) { [weak tabManager] in
-            guard let tabManager else { return }
-            _ = AppDelegate.shared?.createEmptyWorkspaceGroup(tabManager: tabManager)
-        })
-
         let targetWorkspaces = targetIds.compactMap { id in
             tabManager.tabs.first(where: { $0.id == id })
         }
@@ -360,35 +348,40 @@ struct SidebarWorkspaceRowMenuBuilder {
         let groupSelectedLabel = isMulti
             ? String(localized: "contextMenu.workspaceGroup.newFromSelection", defaultValue: "New Group from Selection")
             : String(localized: "contextMenu.workspaceGroup.newFromWorkspace", defaultValue: "New Group from Workspace")
-        menu.addItem(item(
+        let newGroupItem = item(
             groupSelectedLabel,
             shortcut: KeyboardShortcutSettings.shortcut(for: .groupSelectedWorkspaces)
         ) { [weak tabManager] in
             guard let tabManager, !eligibleTargetIds.isEmpty else { return }
             tabManager.createWorkspaceGroup(name: "", childWorkspaceIds: eligibleTargetIds)
-        })
+        }
+        guard moveToGroupMenuState.rendersSubmenu || hasAnyGroupedTarget else {
+            menu.addItem(newGroupItem)
+            return
+        }
 
-        let moveToGroupLabel = String(localized: "contextMenu.workspaceGroup.moveTo", defaultValue: "Move to Group")
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        submenu.addItem(newGroupItem)
         if moveToGroupMenuState.rendersSubmenu {
-            let submenu = NSMenu()
-            submenu.autoenablesItems = false
+            let moveMenu = NSMenu()
+            moveMenu.autoenablesItems = false
             for group in groups {
-                submenu.addItem(item(group.name, enabled: allTargetsInSameGroup != group.id) { [weak tabManager] in
+                moveMenu.addItem(item(group.name, enabled: allTargetsInSameGroup != group.id) { [weak tabManager] in
                     guard let tabManager else { return }
                     for id in eligibleTargetIds {
                         tabManager.addWorkspaceToGroup(workspaceId: id, groupId: group.id)
                     }
                 })
             }
-            let parent = item(moveToGroupLabel) {}
-            parent.submenu = submenu
-            menu.addItem(parent)
-        } else {
-            menu.addItem(item(moveToGroupLabel, enabled: false) {})
+            let moveParent = item(
+                String(localized: "contextMenu.workspaceGroup.moveTo", defaultValue: "Move to Group")
+            ) {}
+            moveParent.submenu = moveMenu
+            submenu.addItem(moveParent)
         }
-
         if hasAnyGroupedTarget {
-            menu.addItem(item(
+            submenu.addItem(item(
                 String(localized: "contextMenu.workspaceGroup.remove", defaultValue: "Remove from Group")
             ) { [weak tabManager] in
                 guard let tabManager else { return }
@@ -397,6 +390,9 @@ struct SidebarWorkspaceRowMenuBuilder {
                 }
             })
         }
+        let parent = item(String(localized: "contextMenu.workspaceGroup", defaultValue: "Workspace Group")) {}
+        parent.submenu = submenu
+        menu.addItem(parent)
     }
 
     private func addRenameAndDescriptionItems(
@@ -410,14 +406,6 @@ struct SidebarWorkspaceRowMenuBuilder {
             action: beginInlineRename
         ))
 
-        if tab.hasCustomTitle {
-            menu.addItem(item(
-                String(localized: "contextMenu.removeCustomWorkspaceName", defaultValue: "Remove Custom Workspace Name")
-            ) { [weak tabManager, tab] in
-                tabManager?.clearCustomTitle(tabId: tab.id)
-            })
-        }
-
         if !isMulti {
             menu.addItem(item(
                 String(localized: "contextMenu.editWorkspaceDescription", defaultValue: "Edit Workspace Description…"),
@@ -425,14 +413,6 @@ struct SidebarWorkspaceRowMenuBuilder {
             ) { [commands] in
                 commands.beginDescriptionEdit()
             })
-
-            if tab.hasCustomDescription {
-                menu.addItem(item(
-                    String(localized: "contextMenu.clearWorkspaceDescription", defaultValue: "Clear Workspace Description")
-                ) { [weak tabManager, tab] in
-                    tabManager?.clearCustomDescription(tabId: tab.id)
-                })
-            }
         }
     }
 
@@ -513,15 +493,6 @@ struct SidebarWorkspaceRowMenuBuilder {
     }
 
     private func addMoveItems(to menu: NSMenu, tabManager: TabManager) {
-        menu.addItem(item(
-            String(localized: "contextMenu.moveToTop", defaultValue: "Move to Top"),
-            enabled: !targetIds.isEmpty
-        ) { [weak tabManager, commands] in
-            guard let tabManager else { return }
-            tabManager.moveTabsToTop(Set(commands.contextMenuWorkspaceIds))
-            commands.syncSelectionAfterMutation()
-        })
-
         let referenceWindowId = AppDelegate.shared?.windowId(for: tabManager)
         let windowMoveTargets = AppDelegate.shared?.windowMoveTargets(referenceWindowId: referenceWindowId) ?? []
         let moveMenuTitle = isMulti
@@ -562,33 +533,78 @@ struct SidebarWorkspaceRowMenuBuilder {
         ) { [commands] in
             commands.closeTabs(commands.contextMenuWorkspaceIds, allowPinned: true)
         })
-        menu.addItem(item(
-            String(localized: "contextMenu.closeOtherWorkspaces", defaultValue: "Close Other Workspaces"),
-            enabled: !(tabManager.tabs.count <= 1 || targetIds.count == tabManager.tabs.count)
+        // Bulk closes are rare: one submenu, and only the entries that apply.
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        if !(tabManager.tabs.count <= 1 || targetIds.count == tabManager.tabs.count) {
+            submenu.addItem(item(
+                String(localized: "contextMenu.closeOtherWorkspaces", defaultValue: "Close Other Workspaces")
+            ) { [weak tabManager, commands] in
+                guard let tabManager else { return }
+                let keepIds = Set(commands.contextMenuWorkspaceIds)
+                let idsToClose = tabManager.tabs.compactMap { keepIds.contains($0.id) ? nil : $0.id }
+                commands.closeTabs(idsToClose, allowPinned: true)
+            })
+        }
+        if commands.index < tabManager.tabs.count - 1 {
+            submenu.addItem(item(
+                String(localized: "contextMenu.closeWorkspacesBelow", defaultValue: "Close Workspaces Below")
+            ) { [weak tabManager, commands] in
+                guard let tabManager,
+                      let anchorIndex = tabManager.tabs.firstIndex(where: { $0.id == commands.tab.id }) else { return }
+                let idsToClose = tabManager.tabs.suffix(from: anchorIndex + 1).map { $0.id }
+                commands.closeTabs(idsToClose, allowPinned: true)
+            })
+        }
+        if commands.index != 0 {
+            submenu.addItem(item(
+                String(localized: "contextMenu.closeWorkspacesAbove", defaultValue: "Close Workspaces Above")
+            ) { [weak tabManager, commands] in
+                guard let tabManager,
+                      let anchorIndex = tabManager.tabs.firstIndex(where: { $0.id == commands.tab.id }) else { return }
+                let idsToClose = tabManager.tabs.prefix(upTo: anchorIndex).map { $0.id }
+                commands.closeTabs(idsToClose, allowPinned: true)
+            })
+        }
+        guard !submenu.items.isEmpty else { return }
+        let parent = item(String(localized: "contextMenu.closeMultiple", defaultValue: "Close Multiple")) {}
+        parent.submenu = submenu
+        menu.addItem(parent)
+    }
+
+    /// Rare and technical items, kept reachable but off the first level.
+    private func addMoreMenu(to menu: NSMenu, tabManager: TabManager) {
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        submenu.addItem(item(
+            String(localized: "contextMenu.moveToTop", defaultValue: "Move to Top"),
+            enabled: !targetIds.isEmpty
         ) { [weak tabManager, commands] in
             guard let tabManager else { return }
-            let keepIds = Set(commands.contextMenuWorkspaceIds)
-            let idsToClose = tabManager.tabs.compactMap { keepIds.contains($0.id) ? nil : $0.id }
-            commands.closeTabs(idsToClose, allowPinned: true)
+            tabManager.moveTabsToTop(Set(commands.contextMenuWorkspaceIds))
+            commands.syncSelectionAfterMutation()
         })
-        menu.addItem(item(
-            String(localized: "contextMenu.closeWorkspacesBelow", defaultValue: "Close Workspaces Below"),
-            enabled: commands.index < tabManager.tabs.count - 1
-        ) { [weak tabManager, commands] in
-            guard let tabManager,
-                  let anchorIndex = tabManager.tabs.firstIndex(where: { $0.id == commands.tab.id }) else { return }
-            let idsToClose = tabManager.tabs.suffix(from: anchorIndex + 1).map { $0.id }
-            commands.closeTabs(idsToClose, allowPinned: true)
-        })
-        menu.addItem(item(
-            String(localized: "contextMenu.closeWorkspacesAbove", defaultValue: "Close Workspaces Above"),
-            enabled: commands.index != 0
-        ) { [weak tabManager, commands] in
-            guard let tabManager,
-                  let anchorIndex = tabManager.tabs.firstIndex(where: { $0.id == commands.tab.id }) else { return }
-            let idsToClose = tabManager.tabs.prefix(upTo: anchorIndex).map { $0.id }
-            commands.closeTabs(idsToClose, allowPinned: true)
-        })
+        if tab.hasCustomTitle {
+            submenu.addItem(item(
+                String(localized: "contextMenu.removeCustomWorkspaceName", defaultValue: "Remove Custom Workspace Name")
+            ) { [weak tabManager, tab] in
+                tabManager?.clearCustomTitle(tabId: tab.id)
+            })
+        }
+        if !isMulti, tab.hasCustomDescription {
+            submenu.addItem(item(
+                String(localized: "contextMenu.clearWorkspaceDescription", defaultValue: "Clear Workspace Description")
+            ) { [weak tabManager, tab] in
+                tabManager?.clearCustomDescription(tabId: tab.id)
+            })
+        }
+        if let notificationStore = commands.notificationStore {
+            addClearLatestNotificationItem(to: submenu, notificationStore: notificationStore)
+        }
+        addPauseResumeItem(to: submenu)
+        let parent = item(String(localized: "contextMenu.more", defaultValue: "More")) {}
+        parent.submenu = submenu
+        menu.addItem(parent)
     }
 
     /// Resource guard: SIGSTOP/SIGCONT the selected pane's foreground process group.
@@ -596,46 +612,47 @@ struct SidebarWorkspaceRowMenuBuilder {
         guard !isMulti, let workspace = commands.tabManager?.tabs.first(where: { $0.id == tab.id }) else { return }
         let paused = ResourceGuard.shared.isPaused(workspaceId: workspace.id)
         let title = paused
-            ? String(localized: "contextMenu.resumeProcess", defaultValue: "Resume Paused Process")
-            : String(localized: "contextMenu.pauseProcess", defaultValue: "Pause Foreground Process")
+            ? String(localized: "contextMenu.resumeProcess", defaultValue: "Resume Suspended Process")
+            : String(localized: "contextMenu.pauseProcess", defaultValue: "Suspend Running Process (SIGSTOP)")
         menu.addItem(item(title) { [weak workspace] in
             guard let workspace else { return }
             ResourceGuard.shared.togglePause(workspace: workspace)
         })
     }
 
-    private func addNotificationItems(to menu: NSMenu, notificationStore: TerminalNotificationStore) {
-        let markReadLabel = label(
-            multi: String(localized: "contextMenu.markWorkspacesRead", defaultValue: "Mark Workspaces as Read"),
-            single: String(localized: "contextMenu.markWorkspaceRead", defaultValue: "Mark Workspace as Read"))
-        menu.addItem(item(
-            markReadLabel,
-            enabled: notificationStore.canMarkWorkspaceRead(forTabIds: targetIds)
-        ) { [weak notificationStore, commands] in
-            guard let notificationStore else { return }
-            for id in commands.contextMenuWorkspaceIds where
-                notificationStore.canMarkWorkspaceRead(forTabIds: [id]) {
-                notificationStore.markRead(forTabId: id)
-            }
-        })
-        let markUnreadLabel = label(
-            multi: String(localized: "contextMenu.markWorkspacesUnread", defaultValue: "Mark Workspaces as Unread"),
-            single: String(localized: "contextMenu.markWorkspaceUnread", defaultValue: "Mark Workspace as Unread"))
-        menu.addItem(item(
-            markUnreadLabel,
-            enabled: notificationStore.canMarkWorkspaceUnread(forTabIds: targetIds)
-        ) { [weak notificationStore, commands] in
-            guard let notificationStore else { return }
-            for id in commands.contextMenuWorkspaceIds where
-                notificationStore.canMarkWorkspaceUnread(forTabIds: [id]) {
-                notificationStore.markUnread(forTabId: id)
-            }
-        })
-        let clearLatestLabel = label(
+    /// One entry instead of two: "Mark as Read" when the workspace has unread items, else "Mark as Unread".
+    private func addMarkReadUnreadItem(to menu: NSMenu, notificationStore: TerminalNotificationStore) {
+        if notificationStore.canMarkWorkspaceRead(forTabIds: targetIds) {
+            menu.addItem(item(label(
+                multi: String(localized: "contextMenu.markWorkspacesRead", defaultValue: "Mark Workspaces as Read"),
+                single: String(localized: "contextMenu.markWorkspaceRead", defaultValue: "Mark Workspace as Read"))
+            ) { [weak notificationStore, commands] in
+                guard let notificationStore else { return }
+                for id in commands.contextMenuWorkspaceIds where
+                    notificationStore.canMarkWorkspaceRead(forTabIds: [id]) {
+                    notificationStore.markRead(forTabId: id)
+                }
+            })
+        } else if notificationStore.canMarkWorkspaceUnread(forTabIds: targetIds) {
+            menu.addItem(item(label(
+                multi: String(localized: "contextMenu.markWorkspacesUnread", defaultValue: "Mark Workspaces as Unread"),
+                single: String(localized: "contextMenu.markWorkspaceUnread", defaultValue: "Mark Workspace as Unread"))
+            ) { [weak notificationStore, commands] in
+                guard let notificationStore else { return }
+                for id in commands.contextMenuWorkspaceIds where
+                    notificationStore.canMarkWorkspaceUnread(forTabIds: [id]) {
+                    notificationStore.markUnread(forTabId: id)
+                }
+            })
+        }
+    }
+
+    private func addClearLatestNotificationItem(to menu: NSMenu, notificationStore: TerminalNotificationStore) {
+        guard targetIds.contains(where: { notificationStore.latestNotification(forTabId: $0) != nil }) else { return }
+        menu.addItem(item(label(
             multi: String(localized: "contextMenu.clearLatestNotifications", defaultValue: "Clear Latest Notifications"),
             single: String(localized: "contextMenu.clearLatestNotification", defaultValue: "Clear Latest Notification"))
-        let hasLatest = targetIds.contains { notificationStore.latestNotification(forTabId: $0) != nil }
-        menu.addItem(item(clearLatestLabel, enabled: hasLatest) { [weak notificationStore, commands] in
+        ) { [weak notificationStore, commands] in
             guard let notificationStore else { return }
             for id in commands.contextMenuWorkspaceIds {
                 notificationStore.clearLatestNotification(forTabId: id)
@@ -671,13 +688,10 @@ struct SidebarWorkspaceRowMenuBuilder {
     }
 
     private func addCopyAndFinderItems(to menu: NSMenu, tabManager: TabManager) {
-        if !isMulti {
-            let finderPath = commands.snapshotProvider()?.finderDirectoryPath
+        if !isMulti, let finderPath = commands.snapshotProvider()?.finderDirectoryPath {
             menu.addItem(item(
-                String(localized: "contextMenu.showWorkspaceInFinder", defaultValue: "Show in Finder"),
-                enabled: finderPath != nil
+                String(localized: "contextMenu.showWorkspaceInFinder", defaultValue: "Show in Finder")
             ) {
-                guard let finderPath else { return }
                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: finderPath, isDirectory: true)])
             })
         }

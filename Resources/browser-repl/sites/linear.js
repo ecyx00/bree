@@ -3,7 +3,7 @@
 // web session's cookies, the way the Linear web app calls it.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
   const APP = "https://linear.app";
   const API = "https://client-api.linear.app/graphql";
@@ -179,7 +179,7 @@
       async function q(query, variables, operationName) {
         const r = await t.inOrigin(APP, graphql, { api: API, query, variables, operationName });
         const errors = (r.json && r.json.errors) || [];
-        if (r.status === 401 || errors.some((e) => /auth/i.test((e.extensions && e.extensions.code) || e.message || ""))) throw new S.SiteError("not_signed_in", "linear: the cmux browser is not signed in to Linear; open https://linear.app with tabs.open() and ask the user to sign in");
+        if (r.status === 401 || errors.some((e) => /auth/i.test((e.extensions && e.extensions.code) || e.message || ""))) throw new S.SiteError("not_signed_in", "linear: the bree browser is not signed in to Linear; open https://linear.app with tabs.open() and ask the user to sign in");
         if (errors.length) throw new S.SiteError("graphql", `linear: ${errors.map((e) => e.message).join("; ")}`);
         if (!r.json || !r.json.data) throw new S.SiteError("http", `linear: HTTP ${r.status}`);
         return r.json.data;

@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 /// The surface-domain input / read / resume / reporting witnesses, plus the
 /// `surface.move` bridge and `debug.terminals` passthrough. Split out of

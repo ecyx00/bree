@@ -1,8 +1,8 @@
-import CmuxCloud
+import BreeCloud
 import Bonsplit
-import CmuxCore
-import CmuxSettings
-import CmuxSurfaceCatalogModel
+import BreeCore
+import BreeSettings
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension Workspace {

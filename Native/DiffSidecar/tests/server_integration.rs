@@ -46,7 +46,7 @@ fn rpc_accepts_request_at_one_mib_limit() {
 #[test]
 fn cancelling_rpc_terminates_its_process_group_and_removes_partial_patch() {
     let root = std::env::temp_dir().join(format!(
-        "cmux-diff-sidecar-cancel-test-{}-{}",
+        "bree-diff-sidecar-cancel-test-{}-{}",
         std::process::id(),
         uuid::Uuid::new_v4()
     ));
@@ -67,11 +67,11 @@ fn cancelling_rpc_terminates_its_process_group_and_removes_partial_patch() {
         }
     }))
     .expect("encode request");
-    let mut child = Command::new(env!("CARGO_BIN_EXE_cmux-diff-sidecar"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_bree-diff-sidecar"))
         .arg("rpc")
         .arg("--root")
         .arg(&root)
-        .arg("--cmux")
+        .arg("--bree")
         .arg(env!("CARGO_BIN_EXE_diff-sidecar-test-host"))
         .arg("--process-group-ready")
         .stdin(Stdio::piped())
@@ -83,7 +83,7 @@ fn cancelling_rpc_terminates_its_process_group_and_removes_partial_patch() {
     BufReader::new(child.stderr.take().expect("sidecar stderr"))
         .read_line(&mut ready)
         .expect("read process-group readiness");
-    assert_eq!(ready, "cmux-diff-sidecar-process-group-ready\n");
+    assert_eq!(ready, "bree-diff-sidecar-process-group-ready\n");
     child
         .stdin
         .take()
@@ -147,8 +147,8 @@ fn create_large_changed_repo(root: &Path) -> std::path::PathBuf {
     let repo = root.join("repo");
     std::fs::create_dir_all(&repo).expect("create repo");
     run_git(&repo, &["init"]);
-    run_git(&repo, &["config", "user.name", "cmux tests"]);
-    run_git(&repo, &["config", "user.email", "cmux@example.invalid"]);
+    run_git(&repo, &["config", "user.name", "bree tests"]);
+    run_git(&repo, &["config", "user.email", "bree@example.invalid"]);
     let mut contents = vec![b'a'; 32 * 1024 * 1024];
     std::fs::write(repo.join("large.txt"), &contents).expect("write initial file");
     run_git(&repo, &["add", "large.txt"]);
@@ -205,7 +205,7 @@ fn wait_for_direct_child(parent_pid: u32) -> rustix::process::Pid {
 
 fn run_stdio_rpc(input: &[u8]) -> Output {
     let root = std::env::temp_dir().join(format!(
-        "cmux-diff-sidecar-rpc-test-{}-{}",
+        "bree-diff-sidecar-rpc-test-{}-{}",
         std::process::id(),
         uuid::Uuid::new_v4()
     ));
@@ -223,11 +223,11 @@ fn run_stdio_rpc(input: &[u8]) -> Output {
 }
 
 fn run_stdio_rpc_in_root(input: &[u8], root: &Path) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_cmux-diff-sidecar"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_bree-diff-sidecar"))
         .arg("rpc")
         .arg("--root")
         .arg(root)
-        .arg("--cmux")
+        .arg("--bree")
         .arg(env!("CARGO_BIN_EXE_diff-sidecar-test-host"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -246,7 +246,7 @@ fn run_stdio_rpc_in_root(input: &[u8], root: &Path) -> Output {
 fn assert_rpc_failure(output: &Output, code: &str) {
     let response: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("decode typed failure");
-    assert_eq!(response["id"], "__cmux_untrusted_request__");
+    assert_eq!(response["id"], "__bree_untrusted_request__");
     assert_eq!(response["version"], 1);
     assert!(response["result"].is_null());
     assert_eq!(response["error"]["code"], code);
@@ -255,7 +255,7 @@ fn assert_rpc_failure(output: &Output, code: &str) {
 #[test]
 fn rpc_git_sessions_match_git_without_starting_a_server() {
     let root = std::env::temp_dir().join(format!(
-        "cmux-diff-sidecar-session-test-{}-{}",
+        "bree-diff-sidecar-session-test-{}-{}",
         std::process::id(),
         uuid::Uuid::new_v4()
     ));
@@ -267,8 +267,8 @@ fn rpc_git_sessions_match_git_without_starting_a_server() {
             .expect("secure root permissions");
     }
     run_git(&repo, &["init"]);
-    run_git(&repo, &["config", "user.name", "cmux tests"]);
-    run_git(&repo, &["config", "user.email", "cmux@example.invalid"]);
+    run_git(&repo, &["config", "user.name", "bree tests"]);
+    run_git(&repo, &["config", "user.email", "bree@example.invalid"]);
     std::fs::write(repo.join("story.txt"), b"one\n").expect("write initial file");
     run_git(&repo, &["add", "story.txt"]);
     run_git(&repo, &["commit", "-m", "initial"]);
@@ -467,7 +467,7 @@ fn open_session_matches_git(
     let id = response["result"]["value"]["patch"]["id"]
         .as_str()
         .expect("patch id");
-    assert!(id.starts_with(&format!("cmux-diff-viewer://{token}/diff-session-")));
+    assert!(id.starts_with(&format!("bree-diff-viewer://{token}/diff-session-")));
     let request_path = id.split_once(token).expect("token in id").1.to_owned();
     let generated = std::fs::read(root.join(request_path.trim_start_matches('/')))
         .expect("read generated patch");
@@ -517,7 +517,7 @@ fn run_git(repo: &Path, arguments: &[&str]) {
 fn serves_only_manifest_allowlisted_files() {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let root = std::env::temp_dir().join(format!(
-        "cmux-diff-sidecar-test-{}-{}",
+        "bree-diff-sidecar-test-{}-{}",
         std::process::id(),
         uuid::Uuid::new_v4()
     ));
@@ -564,11 +564,11 @@ fn serves_only_manifest_allowlisted_files() {
     )
     .expect("write branch session");
 
-    let mut child = Command::new(env!("CARGO_BIN_EXE_cmux-diff-sidecar"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_bree-diff-sidecar"))
         .arg("serve")
         .arg("--root")
         .arg(&root)
-        .arg("--cmux")
+        .arg("--bree")
         .arg(env!("CARGO_BIN_EXE_diff-sidecar-test-host"))
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -595,7 +595,7 @@ fn serves_only_manifest_allowlisted_files() {
 async fn verify_resources(client: &reqwest::Client, port: u16, token: &str, root: &Path) {
     let health = client
         .get(format!(
-            "http://127.0.0.1:{port}/__cmux_diff_viewer_healthz"
+            "http://127.0.0.1:{port}/__bree_diff_viewer_healthz"
         ))
         .send()
         .await
@@ -603,7 +603,7 @@ async fn verify_resources(client: &reqwest::Client, port: u16, token: &str, root
     assert_eq!(health.status(), reqwest::StatusCode::OK);
     assert_eq!(
         health.text().await.expect("health body"),
-        cmux_diff_sidecar::health_response()
+        bree_diff_sidecar::health_response()
     );
     let patch = client
         .get(format!("http://127.0.0.1:{port}/{token}/sample.patch"))
@@ -661,7 +661,7 @@ async fn verify_resources(client: &reqwest::Client, port: u16, token: &str, root
 }
 
 async fn verify_rpc(client: &reqwest::Client, port: u16, token: &str, group: &str, root: &Path) {
-    let endpoint = format!("http://127.0.0.1:{port}/__cmux_diff_rpc");
+    let endpoint = format!("http://127.0.0.1:{port}/__bree_diff_rpc");
     let origin = format!("http://127.0.0.1:{port}");
     let branch_request = serde_json::json!({
         "id": "branches",
@@ -788,7 +788,7 @@ async fn verify_branch_change(
 async fn verify_websocket(port: u16) {
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
-    let mut request = format!("ws://127.0.0.1:{port}/__cmux_diff_ws")
+    let mut request = format!("ws://127.0.0.1:{port}/__bree_diff_ws")
         .into_client_request()
         .expect("WebSocket request");
     request.headers_mut().insert(

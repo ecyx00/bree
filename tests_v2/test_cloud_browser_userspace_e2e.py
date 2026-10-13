@@ -8,7 +8,7 @@ terminal each. ``assert`` checks pages that the real command-clicks opened.
 ``cleanup`` removes only this run's fixture directories and workspaces. It never
 creates/deletes VMs or touches another app/socket.
 
-Examples (on the leased Mac; CMUX_SOCKET_PATH must name the tagged app):
+Examples (on the leased Mac; BREE_SOCKET_PATH must name the tagged app):
   python3 test_cloud_browser_userspace_e2e.py prepare --vm-a VM_A --vm-b VM_B --state evidence/state.json
   python3 test_cloud_browser_userspace_e2e.py assert --state evidence/state.json --label initial
   python3 test_cloud_browser_userspace_e2e.py cleanup --state evidence/state.json
@@ -132,11 +132,11 @@ def serve(identity: str, bind: str, port: int) -> None:
 
 
 def client():
-    from cmux import cmux
-    path = os.environ['CMUX_SOCKET_PATH']
-    if not path.startswith('/tmp/cmux-debug-'):
+    from bree import bree
+    path = os.environ['BREE_SOCKET_PATH']
+    if not path.startswith('/tmp/bree-debug-'):
         raise ValueError('Use an explicit isolated tagged debug socket')
-    return cmux(path)
+    return bree(path)
 
 
 def save(path: pathlib.Path, value: dict) -> None:
@@ -157,7 +157,7 @@ def prepare(args) -> None:
     if args.state.exists():
         raise ValueError('Existing state must be cleaned up before preparing another run')
     run = 'cwg-' + uuid.uuid4().hex[:8]
-    state = dict(run=run, socket=os.environ['CMUX_SOCKET_PATH'], fixtures=[], build_sha=args.build_sha)
+    state = dict(run=run, socket=os.environ['BREE_SOCKET_PATH'], fixtures=[], build_sha=args.build_sha)
     save(args.state, state)
     with client() as c:
         source = base64.b64encode(pathlib.Path(__file__).read_bytes()).decode()
@@ -206,7 +206,7 @@ def evaluate(c, surface: str) -> dict:
 
 def assert_pages(args) -> None:
     state = json.loads(args.state.read_text())
-    if state['socket'] != os.environ['CMUX_SOCKET_PATH']:
+    if state['socket'] != os.environ['BREE_SOCKET_PATH']:
         raise ValueError('State belongs to another tagged app')
     records = []
     with client() as c:
@@ -255,7 +255,7 @@ def assert_pages(args) -> None:
 
 def cleanup(args) -> None:
     state = json.loads(args.state.read_text())
-    if state['socket'] != os.environ['CMUX_SOCKET_PATH']:
+    if state['socket'] != os.environ['BREE_SOCKET_PATH']:
         raise ValueError('State belongs to another tagged app')
     errors = []
     with client() as c:

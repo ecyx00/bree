@@ -145,10 +145,10 @@ final class SharedLiveAgentIndex {
 
     private var directoryWatchSource: DispatchSourceFileSystemObject?
     // DispatchSource file watching requires a delivery queue; state hops back to MainActor.
-    private let watchQueue = DispatchQueue(label: "com.cmuxterm.app.sharedLiveAgentIndexWatch")
+    private let watchQueue = DispatchQueue(label: "com.bree.app.sharedLiveAgentIndexWatch")
 
     private let indexLoader: @Sendable () async -> SharedLiveAgentIndexLoader.LoadResult
-    private let processSnapshotLoader: @Sendable () async -> CmuxTopProcessSnapshot
+    private let processSnapshotLoader: @Sendable () async -> BreeTopProcessSnapshot
     private let forkExecutableIdentityResolver: AgentForkExecutableIdentityResolver
     private let forkCapabilityProbeCache: ForkCapabilityProbeResultCache
     private let customForkSupportProvider: (@Sendable (SessionRestorableAgentSnapshot, Bool) async -> Bool)?
@@ -159,7 +159,7 @@ final class SharedLiveAgentIndex {
         indexLoader: @escaping @Sendable () async -> SharedLiveAgentIndexLoader.LoadResult = {
             await SharedLiveAgentIndexLoader.loadFreshResult()
         },
-        processSnapshotLoader: @escaping @Sendable () async -> CmuxTopProcessSnapshot = { await CmuxTopProcessSnapshot.capture(includeProcessDetails: true, includeCMUXScope: true, includeResources: false) },
+        processSnapshotLoader: @escaping @Sendable () async -> BreeTopProcessSnapshot = { await BreeTopProcessSnapshot.capture(includeProcessDetails: true, includeBREEScope: true, includeResources: false) },
         forkExecutableIdentityResolver: AgentForkExecutableIdentityResolver = AgentForkExecutableIdentityResolver(),
         forkCapabilityProbeCache: ForkCapabilityProbeResultCache = ForkCapabilityProbeResultCache(),
         forkSupportProvider: (@Sendable (SessionRestorableAgentSnapshot, Bool) async -> Bool)? = nil,
@@ -497,7 +497,7 @@ final class SharedLiveAgentIndex {
     /// before the caller asked. Hook-store events that land while it runs are
     /// left to the ordinary coalesced refresh instead of restarting the wait:
     /// the admission boundary revalidates the recorded owner's PID generation
-    /// and argv itself, and `AgentResumeLaunchGuard` serialises cmux's own
+    /// and argv itself, and `AgentResumeLaunchGuard` serialises bree's own
     /// launches, so a later scan could not make this point-in-time answer
     /// safer. Requiring the shared hook-store directory to stay quiet for a
     /// whole scan made admission fail on any Mac where other agents keep
@@ -2543,5 +2543,5 @@ final class SharedLiveAgentIndex {
 }
 
 extension Notification.Name {
-    static let sharedLiveAgentIndexDidChange = Notification.Name("cmux.sharedLiveAgentIndexDidChange")
+    static let sharedLiveAgentIndexDidChange = Notification.Name("bree.sharedLiveAgentIndexDidChange")
 }

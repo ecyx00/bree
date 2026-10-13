@@ -1,9 +1,9 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxSidebar
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeSidebar
 import SwiftUI
-import CmuxSettings
+import BreeSettings
 
 /// Collapsible group header that doubles as the anchor workspace row.
 struct SidebarWorkspaceGroupHeaderView: View, Equatable {
@@ -78,14 +78,14 @@ struct SidebarWorkspaceGroupHeaderView: View, Equatable {
     let shortcutHintXOffset: Double
     let shortcutHintYOffset: Double
     let fontScale: CGFloat
-    let cwdContextMenuItems: [CmuxResolvedConfigContextMenuItem]
+    let cwdContextMenuItems: [BreeResolvedConfigContextMenuItem]
     let newWorkspacePlacement: WorkspaceGroupNewPlacement?
     let rowSpacing: CGFloat
     let isFirstRow: Bool
     let isBeingDragged: Bool
     let topDropIndicatorVisible: Bool
     let bottomDropIndicatorVisible: Bool
-    /// Notification Badge color setting; nil falls back to the cmux accent.
+    /// Notification Badge color setting; nil falls back to the bree accent.
     let notificationBadgeColorHex: String?
     /// Shared group-header actions used by both the lazy SwiftUI row and the
     /// retained AppKit table cell.
@@ -95,10 +95,10 @@ struct SidebarWorkspaceGroupHeaderView: View, Equatable {
 
     @State private var contextMenuVisible = false
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.cmuxAccentColor) private var accentColor
+    @Environment(\.breeAccentColor) private var accentColor
     @Environment(\.breePalette) private var palette
 
-    @Environment(\.cmuxGlobalFontMagnificationPercent) private var globalFontMagnificationPercent
+    @Environment(\.breeGlobalFontMagnificationPercent) private var globalFontMagnificationPercent
 
 #if DEBUG
     // Plain-value environment probe set only by SidebarLazyLayoutScaleTests;
@@ -167,7 +167,7 @@ struct SidebarWorkspaceGroupHeaderView: View, Equatable {
 #endif
         HStack(spacing: 4) {
             if isPinned {
-                CmuxSystemSymbolImage(
+                BreeSystemSymbolImage(
                     magnified: "pin.fill",
                     pointSize: glyphSize(.caption),
                     weight: .regular,
@@ -177,7 +177,7 @@ struct SidebarWorkspaceGroupHeaderView: View, Equatable {
                 .safeHelp(pinnedGroupTooltip)
                 .accessibilityLabel(Text(pinnedGroupTooltip))
             }
-            CmuxSystemSymbolImage(
+            BreeSystemSymbolImage(
                 systemName: isCollapsed ? "chevron.right" : "chevron.down",
                 pointSize: glyphSize(.caption),
                 weight: .regular,
@@ -196,7 +196,7 @@ struct SidebarWorkspaceGroupHeaderView: View, Equatable {
                 )
 
             HStack(spacing: 6) {
-                CmuxSystemSymbolImage(
+                BreeSystemSymbolImage(
                     systemName: displayedIconSymbol,
                     pointSize: glyphSize(.body),
                     weight: .regular,
@@ -223,9 +223,9 @@ struct SidebarWorkspaceGroupHeaderView: View, Equatable {
                         .foregroundStyle(notificationBadgeColorHex == nil ? palette.surfaceBase : Color.white)
                         .padding(.horizontal, metrics.unreadHorizontalPadding)
                         .padding(.vertical, metrics.unreadVerticalPadding)
-                        .background(Capsule().fill(Color(nsColor: cmuxNotificationBadgeNSColor(
+                        .background(Capsule().fill(Color(nsColor: breeNotificationBadgeNSColor(
                             hex: notificationBadgeColorHex,
-                            fallback: NSColor(palette.signalAttention)
+                            fallback: NSColor(palette.accentFill)
                         ))))
                         .accessibilityLabel(Text(String.localizedStringWithFormat(
                             String(localized: "workspaceGroup.unread.a11y", defaultValue: "%lld unread"),
@@ -247,7 +247,7 @@ struct SidebarWorkspaceGroupHeaderView: View, Equatable {
 
             let plusVisible = isPointerHovering && !contextMenuVisible && !showsShortcutHint
             Button(action: actions.onTapPlus) {
-                CmuxSystemSymbolImage(
+                BreeSystemSymbolImage(
                     systemName: "plus",
                     pointSize: glyphSize(.body),
                     weight: .regular,

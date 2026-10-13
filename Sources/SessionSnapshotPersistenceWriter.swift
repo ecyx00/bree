@@ -1,6 +1,6 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
-import CmuxWorkspaces
+import BreeWorkspaces
 
 /// Owns the durable write side of the application session snapshot.
 ///
@@ -28,7 +28,7 @@ struct SessionSnapshotPersistenceWriter: @unchecked Sendable {
         self.targetQueue = queue
         // Own serial ordering even if the supplied scheduling target is concurrent.
         self.queue = DispatchQueue(
-            label: "com.cmuxterm.app.sessionPersistence.writer",
+            label: "com.bree.app.sessionPersistence.writer",
             qos: .utility,
             target: queue
         )
@@ -81,12 +81,12 @@ struct SessionSnapshotPersistenceWriter: @unchecked Sendable {
         }
     }
 
-    static let persistedWindowGeometryDefaultsKey = "cmux.session.lastWindowGeometry.v2"
+    static let persistedWindowGeometryDefaultsKey = "bree.session.lastWindowGeometry.v2"
     private static let legacyPersistedWindowGeometryDefaultsKeys = [
-        "cmux.session.lastWindowGeometry.v1"
+        "bree.session.lastWindowGeometry.v1"
     ]
     private static let crashOnlyPrimarySnapshotRemovalDefaultsKey =
-        "cmux.session.crashOnlyPrimarySnapshotRemoval.v1"
+        "bree.session.crashOnlyPrimarySnapshotRemoval.v1"
 
     static func removeLegacyPersistedWindowGeometry(defaults: UserDefaults = .standard) {
         legacyPersistedWindowGeometryDefaultsKeys.forEach { defaults.removeObjectIfPresent(forKey: $0) }

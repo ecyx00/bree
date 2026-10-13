@@ -1,5 +1,5 @@
-import CmuxAgentJournal
-import CmuxControlSocket
+import BreeAgentJournal
+import BreeControlSocket
 import Foundation
 
 /// Where a message goes, resolved on the main actor.
@@ -9,7 +9,7 @@ struct AgentMessageRecipient: Sendable {
     let surfaceRef: String
     let workspaceRef: String
     let workspaceTitle: String
-    /// True when cmux has seen agent hook activity on the surface.
+    /// True when bree has seen agent hook activity on the surface.
     let hasAgent: Bool
 }
 
@@ -499,7 +499,7 @@ extension TerminalController {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    /// Hooks pass the surface UUID from `CMUX_SURFACE_ID`; stored ids use the
+    /// Hooks pass the surface UUID from `BREE_SURFACE_ID`; stored ids use the
     /// canonical uppercase form.
     nonisolated static func agentMessageSurfaceUUID(_ raw: Any?) -> String? {
         guard let string = agentMessageTrimmed(raw), let uuid = UUID(uuidString: string) else { return nil }

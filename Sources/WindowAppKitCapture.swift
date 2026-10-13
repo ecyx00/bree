@@ -56,7 +56,7 @@ struct WindowAppKitCapture: Sendable {
     }
 
     /// Returns explicitly owned overlays without treating WebKit's internal
-    /// native view hierarchy as cmux UI.
+    /// native view hierarchy as bree UI.
     @MainActor
     static func ownedNativeOverlayCandidates(inside externalView: NSView) -> [NSView] {
         externalView.subviews.filter { view in

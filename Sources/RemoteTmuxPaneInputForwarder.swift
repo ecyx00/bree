@@ -1,4 +1,4 @@
-import CmuxTerminal
+import BreeTerminal
 import os
 
 /// Preserves Ghostty manual-I/O order while crossing to the tmux main-actor owner.

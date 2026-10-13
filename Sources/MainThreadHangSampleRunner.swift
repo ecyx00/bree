@@ -7,7 +7,7 @@ import Foundation
 final class MainThreadHangSampleRunner: @unchecked Sendable {
     private let executableURL: URL
     private let queue = DispatchQueue(
-        label: "com.cmuxterm.main-thread-hang-sampler",
+        label: "com.bree.main-thread-hang-sampler",
         qos: .utility
     )
     private var activeSamples: [UUID: Process] = [:]

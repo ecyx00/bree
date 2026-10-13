@@ -1,6 +1,6 @@
 import AppKit
-import CmuxTerminalCore
-import CmuxTerminal
+import BreeTerminalCore
+import BreeTerminal
 
 // The retire sweep is the MainWindowRouteRetiring witness: terminal topology
 // changes prompt a coalesced lifecycle audit through the seam instead of the
@@ -148,7 +148,7 @@ extension AppDelegate {
         }.count
 #if DEBUG
         if after != before {
-            cmuxDebugLog("recoverableRoute.prune reason=\(reason) removed=\(before - after)")
+            breeDebugLog("recoverableRoute.prune reason=\(reason) removed=\(before - after)")
         }
 #endif
     }
@@ -697,7 +697,7 @@ extension AppDelegate {
         }
 #if DEBUG
         if removed > 0 {
-            cmuxDebugLog("recoverableRoute.prune reason=\(reason) removed=\(removed)")
+            breeDebugLog("recoverableRoute.prune reason=\(reason) removed=\(removed)")
         }
 #endif
     }
@@ -788,7 +788,7 @@ extension AppDelegate {
         }
         retireRecoverableMainWindowRouteIfCurrent(route, reason: "forget")
 #if DEBUG
-        cmuxDebugLog("recoverableRoute.forget windowId=\(String(windowId.uuidString.prefix(8)))")
+        breeDebugLog("recoverableRoute.forget windowId=\(String(windowId.uuidString.prefix(8)))")
 #endif
     }
 
@@ -851,7 +851,7 @@ extension AppDelegate {
         route.markForTeardown()
         remoteTmuxController.handleWindowWorkspacesClosed(workspaceIds: workspaceIds)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "recoverableRoute.retire reason=\(reason) windowId=\(String(route.windowId.uuidString.prefix(8)))"
         )
 #endif
@@ -962,7 +962,7 @@ extension AppDelegate {
             scheduleWindowlessRecoverableMainWindowRouteFreeze(route)
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "recoverableRoute.remember windowId=\(String(windowId.uuidString.prefix(8))) " +
                 "phase=orphaned"
         )
@@ -996,7 +996,7 @@ extension AppDelegate {
             window: window
         ) else { return false }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "recoverableRoute.teardown windowId=\(String(windowId.uuidString.prefix(8)))"
         )
 #endif
@@ -1234,7 +1234,7 @@ extension AppDelegate {
     /// notification lists O(tabs + groups) rather than O(notifications × tabs).
     /// Registered/recoverable window routes win, then the active `tabManager`
     /// fills any missing ids.
-    /// See https://github.com/manaflow-ai/cmux/issues/5794.
+    /// See https://github.com/ecyx00/bree/issues/5794.
     func tabTitlesByTabId(for requestedTabIds: Set<UUID>? = nil) -> [UUID: String] {
         var titles: [UUID: String] = [:]
 

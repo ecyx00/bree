@@ -1,5 +1,5 @@
 import Foundation
-import CmuxBrowser
+import BreeBrowser
 
 enum BrowserImportAutomation {
     static func importCookies(

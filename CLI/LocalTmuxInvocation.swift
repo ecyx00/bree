@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 struct LocalTmuxInvocation {
@@ -29,7 +29,7 @@ struct LocalTmuxInvocation {
     let all: Bool
     let prune: Bool
 
-    var canRunWithoutCmux: Bool {
+    var canRunWithoutBree: Bool {
         switch action {
         case .list, .status, .detach, .close, .cleanup:
             return true
@@ -247,7 +247,7 @@ struct LocalTmuxInvocation {
     close <name|--id <uuid>>
     cleanup [--prune]
 
-    The registry and tmux server socket live under \(CmuxIdentity.current.dotDirectoryTildePath)/local-tmux with
+    The registry and tmux server socket live under \(BreeIdentity.current.dotDirectoryTildePath)/local-tmux with
     user-only permissions. `attach --headless` hands the terminal directly to
     tmux for a client outside the Bree GUI.
     """)

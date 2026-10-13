@@ -1,5 +1,5 @@
 // Credential fill for sites.browserAuth.request, run by the app (not the
-// REPL) after the user types into cmux's credential sheet: the body of an
+// REPL) after the user types into bree's credential sheet: the body of an
 // async function evaluated with WKWebView.callAsyncJavaScript in the app's
 // own content world (not the agent world agent code can script) of the
 // frame that holds the fields. Arguments: __fields ([{ id, type, marker }]),
@@ -26,7 +26,7 @@ const kindOf = (el) => {
 };
 const found = [];
 for (const f of __fields) {
-  const el = document.querySelector('[data-cmux-auth="' + String(f.marker).replace(/["\\]/g, "") + '"]');
+  const el = document.querySelector('[data-bree-auth="' + String(f.marker).replace(/["\\]/g, "") + '"]');
   if (!el) return { status: "page_changed", field: f.id };
   if (!(el instanceof HTMLInputElement) || el.disabled || el.readOnly) return { status: "locator_invalid", field: f.id };
   const kind = kindOf(el);
@@ -42,6 +42,6 @@ for (const [f, el] of found) {
   setter.call(el, value);
   el.dispatchEvent(new InputEvent("input", { bubbles: true, composed: true, inputType: "insertReplacementText" }));
   el.dispatchEvent(new Event("change", { bubbles: true }));
-  el.removeAttribute("data-cmux-auth");
+  el.removeAttribute("data-bree-auth");
 }
 return { status: "filled" };

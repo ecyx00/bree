@@ -12,10 +12,10 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
 def _wait_until(predicate, timeout_s=4.0, interval_s=0.04, message="timeout"):
@@ -24,7 +24,7 @@ def _wait_until(predicate, timeout_s=4.0, interval_s=0.04, message="timeout"):
         if predicate():
             return
         time.sleep(interval_s)
-    raise cmuxError(message)
+    raise breeError(message)
 
 
 def _palette_visible(client, window_id):
@@ -79,7 +79,7 @@ def _open_palette(client, window_id):
 
 
 def main():
-    with cmux(SOCKET_PATH) as client:
+    with bree(SOCKET_PATH) as client:
         client.activate_app()
         time.sleep(0.2)
 

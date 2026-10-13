@@ -8,7 +8,7 @@ public final class DebugEventLog: @unchecked Sendable {
 
     private var entries: [String] = []
     private let capacity = 500
-    private let queue = DispatchQueue(label: "cmux.debug-event-log")
+    private let queue = DispatchQueue(label: "bree.debug-event-log")
     private static let logPath = resolveLogPath()
 
     /// When set, lines are handed to this closure instead of appended here.
@@ -49,30 +49,30 @@ public final class DebugEventLog: @unchecked Sendable {
     private static func resolveLogPath() -> String {
         let env = ProcessInfo.processInfo.environment
 
-        if let explicit = env["CMUX_DEBUG_LOG"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+        if let explicit = env["BREE_DEBUG_LOG"]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !explicit.isEmpty {
             return explicit
         }
 
-        if let tag = env["CMUX_TAG"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+        if let tag = env["BREE_TAG"]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !tag.isEmpty {
-            return "/tmp/cmux-debug-\(sanitizePathToken(tag)).log"
+            return "/tmp/bree-debug-\(sanitizePathToken(tag)).log"
         }
 
-        if let socketPath = env["CMUX_SOCKET_PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+        if let socketPath = env["BREE_SOCKET_PATH"]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !socketPath.isEmpty {
             let socketBase = URL(fileURLWithPath: socketPath).deletingPathExtension().lastPathComponent
-            if socketBase.hasPrefix("cmux-debug-") {
+            if socketBase.hasPrefix("bree-debug-") {
                 return "/tmp/\(socketBase).log"
             }
         }
 
         if let bundleId = Bundle.main.bundleIdentifier,
-           bundleId != "com.cmuxterm.app.debug" {
-            return "/tmp/cmux-debug-\(sanitizePathToken(bundleId)).log"
+           bundleId != "com.bree.app.debug" {
+            return "/tmp/bree-debug-\(sanitizePathToken(bundleId)).log"
         }
 
-        return "/tmp/cmux-debug.log"
+        return "/tmp/bree-debug.log"
     }
 
     public func log(_ msg: String) {

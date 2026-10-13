@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tests for the timing harness in tests/test_cli_version_memory_guard.py.
 
-The guard times `cmux --version` on a fresh copy of the CLI. On the owned CI
+The guard times `bree --version` on a fresh copy of the CLI. On the owned CI
 Macs the first launch of any new executable pays a one-time system check (about
 3 s, up to 15 s on a busy host) before main runs, which failed compile
 admission in 4 of 61 jobs while the CLI itself answered correctly. These drive
@@ -34,20 +34,20 @@ def load_guard():
 
 
 def fake_cli(directory: str, body: str) -> str:
-    path = os.path.join(directory, "cmux")
+    path = os.path.join(directory, "bree")
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("#!/bin/sh\n" + body)
     os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     return path
 
 
-VERSION_REPLY = 'if [ "$1" = "--version" ]; then echo "cmux 9.9.9 (999)"; fi\n'
+VERSION_REPLY = 'if [ "$1" = "--version" ]; then echo "bree 9.9.9 (999)"; fi\n'
 
 
 class GuardHarnessTests(unittest.TestCase):
     def setUp(self) -> None:
         self.guard = load_guard()
-        self.scratch = tempfile.TemporaryDirectory(prefix="cmux-guard-harness-")
+        self.scratch = tempfile.TemporaryDirectory(prefix="bree-guard-harness-")
         self.addCleanup(self.scratch.cleanup)
         patches = [
             unittest.mock.patch.object(self.guard, "JUNK_APP_COUNT", 10),
@@ -59,7 +59,7 @@ class GuardHarnessTests(unittest.TestCase):
 
     def run_guard(self, cli: str) -> int:
         # The guard's FAIL lines are expected in some tests; keep them out of the log.
-        with unittest.mock.patch.dict(os.environ, {"CMUX_CLI_BIN": cli}), contextlib.redirect_stdout(io.StringIO()):
+        with unittest.mock.patch.dict(os.environ, {"BREE_CLI_BIN": cli}), contextlib.redirect_stdout(io.StringIO()):
             return self.guard.main()
 
     def test_a_one_time_first_launch_cost_does_not_fail_the_guard(self) -> None:

@@ -1,14 +1,14 @@
-# CMUX workload profiles
+# BREE workload profiles
 
-CMUX workload profiles give CI, developers, Glaeda, machine acceptance, and fleet measurements one repository-owned name for the operations CMUX repeatedly asks a machine to perform.
+BREE workload profiles give CI, developers, Glaeda, machine acceptance, and fleet measurements one repository-owned name for the operations BREE repeatedly asks a machine to perform.
 
-The profile registry lives at `scripts/ci/cmux-workload-profiles.json`. `scripts/ci/cmux_workload_profile.py` validates, plans, runs, and compares those profiles. Each profile delegates to checked-in CMUX entrypoints; the runner is a semantic dispatcher and receipt producer.
+The profile registry lives at `scripts/ci/bree-workload-profiles.json`. `scripts/ci/bree_workload_profile.py` validates, plans, runs, and compares those profiles. Each profile delegates to checked-in BREE entrypoints; the runner is a semantic dispatcher and receipt producer.
 
 ## Identity
 
 A request freezes three independent identities:
 
-- source: `manaflow-ai/cmux` plus exact commit and tree;
+- source: `ecyx00/bree` plus exact commit and tree;
 - semantic operation: profile ID/generation plus its reviewed environment class;
 - physical execution: backend, machine, attempt, cache placement, and other executor facts.
 
@@ -31,10 +31,10 @@ The exact source commit/tree still records which implementation ran.
 
 | Profile | Generation | Repository entrypoint | Meaning |
 | --- | ---: | --- | --- |
-| `cmux.macos.compile-admission` | 1 | `scripts/ci/workloads/macos-compile-admission.sh` | Resolve dependencies, use the canonical app-host compile script, compile the app-host test products, and validate the warning budget. |
-| `cmux.macos.dev-check` | 1 | `scripts/ci/workloads/macos-dev-check.sh` | Run the canonical tagged `reload.sh` build with a profile-owned unique tag, private DerivedData/SourcePackages, no launch, no global CLI links, local backend mode, and cloud dogfood disabled. |
-| `cmux.macos.app-host-test-shard` | 1 | `scripts/ci/workloads/macos-app-host-test-shard.sh` | Run one of six physical app-host shards as the same two deterministic logical selector batches used by CI, against an exact xctestrun input. |
-| `cmux.ci.guard` | 1 | `scripts/ci/workloads/ci-guard.sh` | Run the portable CI routing, runner-policy, required-check, shard-definition, and test-wiring guard set. |
+| `bree.macos.compile-admission` | 1 | `scripts/ci/workloads/macos-compile-admission.sh` | Resolve dependencies, use the canonical app-host compile script, compile the app-host test products, and validate the warning budget. |
+| `bree.macos.dev-check` | 1 | `scripts/ci/workloads/macos-dev-check.sh` | Run the canonical tagged `reload.sh` build with a profile-owned unique tag, private DerivedData/SourcePackages, no launch, no global CLI links, local backend mode, and cloud dogfood disabled. |
+| `bree.macos.app-host-test-shard` | 1 | `scripts/ci/workloads/macos-app-host-test-shard.sh` | Run one of six physical app-host shards as the same two deterministic logical selector batches used by CI, against an exact xctestrun input. |
+| `bree.ci.guard` | 1 | `scripts/ci/workloads/ci-guard.sh` | Run the portable CI routing, runner-policy, required-check, shard-definition, and test-wiring guard set. |
 
 This is intentionally a small set. Tiny workflow steps stay ordinary workflow steps until they have useful machine-acceptance, routing, cache, or performance meaning.
 
@@ -43,14 +43,14 @@ This is intentionally a small set. Tiny workflow steps stay ordinary workflow st
 Inspect the current registry:
 
 ```sh
-python3 scripts/ci/cmux_workload_profile.py list
-python3 scripts/ci/cmux_workload_profile.py describe cmux.ci.guard
+python3 scripts/ci/bree_workload_profile.py list
+python3 scripts/ci/bree_workload_profile.py describe bree.ci.guard
 ```
 
 Plan against the current exact checkout:
 
 ```sh
-python3 scripts/ci/cmux_workload_profile.py plan cmux.ci.guard \
+python3 scripts/ci/bree_workload_profile.py plan bree.ci.guard \
   --generation 1 \
   --state-class cold
 ```
@@ -60,7 +60,7 @@ Run it and publish a canonical semantic result:
 ```sh
 state_root="$(mktemp -d)"
 result_path="$state_root/result.json"
-python3 scripts/ci/cmux_workload_profile.py run cmux.ci.guard \
+python3 scripts/ci/bree_workload_profile.py run bree.ci.guard \
   --generation 1 \
   --state-class cold \
   --state-root "$state_root" \
@@ -69,11 +69,11 @@ python3 scripts/ci/cmux_workload_profile.py run cmux.ci.guard \
 
 An external execution request should also pass the frozen `--commit` and `--tree`. The runner refuses source drift and generation drift. Keeping a file result under the profile state root is the preferred path and gives downstream consumers mode-`0600` canonical bytes. The publisher also supports trusted root-owned sticky temporary directories such as `/tmp` through the same descriptor-relative exclusive staging and atomic replacement path.
 
-`cmux.macos.app-host-test-shard` has one semantic parameter:
+`bree.macos.app-host-test-shard` has one semantic parameter:
 
 ```sh
-CMUX_APP_HOST_XCTESTRUN=/absolute/path/to/exact.xctestrun \
-python3 scripts/ci/cmux_workload_profile.py run cmux.macos.app-host-test-shard \
+BREE_APP_HOST_XCTESTRUN=/absolute/path/to/exact.xctestrun \
+python3 scripts/ci/bree_workload_profile.py run bree.macos.app-host-test-shard \
   --generation 1 \
   --state-class exact-product-reuse \
   --state-root /absolute/private/state \
@@ -84,18 +84,18 @@ The xctestrun path is a runtime binding. Its content digest enters the compariso
 
 
 For macOS profiles, Xcode selection is local to the workload environment. The profile runner sets
-`CMUX_CI_SKIP_XCODE_SELECT=1`, so `scripts/select-ci-xcode.sh` exports the selected
+`BREE_CI_SKIP_XCODE_SELECT=1`, so `scripts/select-ci-xcode.sh` exports the selected
 `DEVELOPER_DIR` without changing the machine-wide `xcode-select` default. The exact selected
 toolchain is then re-observed through the profile's private environment and included in the result
 context.
 
 ## Result contract
 
-Every completed run emits `cmux-workload-result/v1` with:
+Every completed run emits `bree-workload-result/v1` with:
 
 - exact repository, commit, and tree;
 - profile ID and generation;
-- CMUX semantic validator identity and reviewed environment class;
+- BREE semantic validator identity and reviewed environment class;
 - `passed`, `failed`, `timed_out`, or `ambiguous`;
 - runtime input and output artifact identities;
 - named stage timings;
@@ -103,7 +103,7 @@ Every completed run emits `cmux-workload-result/v1` with:
 - benchmark state class and comparison keys;
 - cleanup/process-settlement state.
 
-CMUX owns this semantic result. Glaeda and other executors can wrap it with queue time, machine identity, placement evidence, resource accounting, transfer time, cache placement, lease/attempt identity, and physical cleanup evidence.
+BREE owns this semantic result. Glaeda and other executors can wrap it with queue time, machine identity, placement evidence, resource accounting, transfer time, cache placement, lease/attempt identity, and physical cleanup evidence.
 
 A leaked child process makes the semantic result ambiguous even when the entrypoint exited zero.
 
@@ -127,50 +127,50 @@ The result contains two comparison identities:
 `compare` rejects results when either key differs, either semantic result failed, required artifact validation is incomplete, or cleanup was incomplete:
 
 ```sh
-python3 scripts/ci/cmux_workload_profile.py compare left.json right.json
+python3 scripts/ci/bree_workload_profile.py compare left.json right.json
 ```
 
-Backend and hardware class stay outside that key so the same valid operation can compare GitHub-hosted, CMUX-owned, and Glaeda-dispatched machines while preserving source, tests, validator, cache class, and toolchain equivalence.
+Backend and hardware class stay outside that key so the same valid operation can compare GitHub-hosted, BREE-owned, and Glaeda-dispatched machines while preserving source, tests, validator, cache class, and toolchain equivalence.
 
 ## Machine roles
 
 The first role mapping is:
 
 ```yaml
-cmux_linux_ci:
+bree_linux_ci:
   acceptance:
-    profile: cmux.ci.guard
+    profile: bree.ci.guard
     generation: 1
 
-cmux_macos_native_build:
+bree_macos_native_build:
   acceptance:
-    profile: cmux.macos.dev-check
+    profile: bree.macos.dev-check
     generation: 1
 ```
 
-`cmux.macos.compile-admission` is the acceptance target for a future compile-admission role used by persistent CI Macs. `cmux.macos.app-host-test-shard` can back `cmux_macos_test` after the role has an exact product-delivery contract.
+`bree.macos.compile-admission` is the acceptance target for a future compile-admission role used by persistent CI Macs. `bree.macos.app-host-test-shard` can back `bree_macos_test` after the role has an exact product-delivery contract.
 
 A node may claim a role only after the current exact acceptance profile succeeds for that role and current enrollment/toolchain generations.
 
 ## Glaeda boundary
 
-A Glaeda request for CMUX work should carry semantic identity only:
+A Glaeda request for BREE work should carry semantic identity only:
 
 ```json
 {
   "source": {
-    "repository": "manaflow-ai/cmux",
+    "repository": "ecyx00/bree",
     "commit": "<40-hex>",
     "tree": "<40-hex>"
   },
   "profile": {
-    "id": "cmux.ci.guard",
+    "id": "bree.ci.guard",
     "generation": 1
   }
 }
 ```
 
-Glaeda may choose an eligible backend, allocate resources, restore admitted cache state, and execute the checked-in profile runner from the exact source tree. It should never reconstruct the profile's shell/Xcode command or maintain its own definition of CMUX pass/fail semantics.
+Glaeda may choose an eligible backend, allocate resources, restore admitted cache state, and execute the checked-in profile runner from the exact source tree. It should never reconstruct the profile's shell/Xcode command or maintain its own definition of BREE pass/fail semantics.
 
 ## Benchmark corpus
 

@@ -23,7 +23,7 @@ enum TerminalPasteFailureNotice: Equatable, Sendable {
         switch self {
         case .imageTooLarge:
             // Matches TerminalPasteboardService.maxClipboardImageSize (10 MiB);
-            // CmuxTerminal's tests pin that constant to this text.
+            // BreeTerminal's tests pin that constant to this text.
             return String(
                 localized: "terminal.paste.notice.imageTooLarge",
                 defaultValue: "Image is larger than 10 MB"

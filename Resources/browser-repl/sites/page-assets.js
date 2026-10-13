@@ -3,9 +3,9 @@
 // downloaded through the signed-in session (reference B's pageAssets).
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
-  const { URL } = root.CmuxBrowserRepl.core;
+  const { URL } = root.BreeBrowserRepl.core;
   const KINDS = ["image", "font", "stylesheet", "video", "script", "other"];
 
   function inventory(arg) {

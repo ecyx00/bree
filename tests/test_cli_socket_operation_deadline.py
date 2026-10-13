@@ -34,24 +34,24 @@ def output_text(value: str | bytes | None) -> str:
     return value
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit and os.path.exists(explicit) and os.access(explicit, os.X_OK):
         return explicit
 
     candidates: list[str] = []
-    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/cmux")))
-    candidates.extend(glob.glob("/tmp/cmux-*/Build/Products/Debug/cmux"))
+    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/bree")))
+    candidates.extend(glob.glob("/tmp/bree-*/Build/Products/Debug/bree"))
     candidates = [path for path in candidates if os.path.exists(path) and os.access(path, os.X_OK)]
     if candidates:
         candidates.sort(key=os.path.getmtime, reverse=True)
         return candidates[0]
 
-    in_path = shutil.which("cmux")
+    in_path = shutil.which("bree")
     if in_path:
         return in_path
 
-    raise RuntimeError("Unable to find cmux CLI binary. Set CMUX_CLI_BIN.")
+    raise RuntimeError("Unable to find bree CLI binary. Set BREE_CLI_BIN.")
 
 
 class FakeUnixServer:
@@ -59,7 +59,7 @@ class FakeUnixServer:
         self.handler = handler
         self.stop_event = threading.Event()
         self.ready_event = threading.Event()
-        self.root = tempfile.TemporaryDirectory(prefix="cmuxsock-", dir="/tmp")
+        self.root = tempfile.TemporaryDirectory(prefix="breesock-", dir="/tmp")
         self.path = os.path.join(self.root.name, f"s-{uuid.uuid4().hex[:8]}.sock")
         self.thread = threading.Thread(target=self._serve, daemon=True)
         self.server: socket.socket | None = None
@@ -195,15 +195,15 @@ def capabilities_response_handler(conn: socket.socket, stop_event: threading.Eve
     if not isinstance(request, dict) or request.get("method") != "system.capabilities":
         return
     conn.sendall(
-        b'{"ok":true,"result":{"socket_path":"/tmp/cmux.sock","protocol":"cmux-socket",'
-        b'"access_mode":"cmuxOnly","version":"test","methods":["zeta","alpha"]}}\n'
+        b'{"ok":true,"result":{"socket_path":"/tmp/bree.sock","protocol":"bree-socket",'
+        b'"access_mode":"breeOnly","version":"test","methods":["zeta","alpha"]}}\n'
     )
 
 
 def trickle_relay_challenge_handler(conn: socket.socket, stop_event: threading.Event) -> None:
     with conn:
         challenge = (
-            b'{"protocol":"cmux-relay-auth","version":1,'
+            b'{"protocol":"bree-relay-auth","version":1,'
             b'"relay_id":"deadline-test","nonce":"slow"}\n'
         )
         for byte in challenge:
@@ -223,12 +223,12 @@ def trickle_relay_challenge_handler(conn: socket.socket, stop_event: threading.E
 
 def run_cli(cli_path: str, socket_path: str, timeout: float = 3.0, args: tuple[str, ...] = ("ping",)) -> RunResult:
     env = cli_environment(socket_path)
-    env["CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC"] = "0.2"
-    env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-    env["CMUX_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
+    env["BREE_CLI_RESPONSE_TIMEOUT_SEC"] = "0.2"
+    env["BREE_CLI_SENTRY_DISABLED"] = "1"
+    env["BREE_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
     if socket_path.startswith("127.0.0.1:"):
-        env["CMUX_RELAY_ID"] = "deadline-test"
-        env["CMUX_RELAY_TOKEN"] = "11" * 32
+        env["BREE_RELAY_ID"] = "deadline-test"
+        env["BREE_RELAY_TOKEN"] = "11" * 32
     started = time.monotonic()
     try:
         proc = subprocess.run(
@@ -258,7 +258,7 @@ def run_cli(cli_path: str, socket_path: str, timeout: float = 3.0, args: tuple[s
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1

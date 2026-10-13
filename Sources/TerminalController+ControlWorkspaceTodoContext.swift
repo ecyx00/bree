@@ -1,5 +1,5 @@
-import CmuxControlSocket
-import CmuxWorkspaces
+import BreeControlSocket
+import BreeWorkspaces
 import Foundation
 
 /// The workspace-todo witnesses for ``ControlCommandCoordinator``: resolves

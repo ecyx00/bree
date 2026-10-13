@@ -5,7 +5,7 @@ import SwiftUI
 /// inside the checklist popover.
 ///
 /// It exists because a SwiftUI `TextField` does not reliably become first
-/// responder inside an `NSPopover` window while cmux's terminal is the focused
+/// responder inside an `NSPopover` window while bree's terminal is the focused
 /// pane behind it: the terminal keeps AppKit first responder unless the
 /// popover window becomes key. This field, like the sidebar rename field,
 /// calls `window.makeFirstResponder(self)` the moment it enters its window.
@@ -138,7 +138,7 @@ class FocusGrabbingTextField: NSTextField {
 #if DEBUG
         let windowKind = String(describing: type(of: window))
         let makeFirstResponderResult = window.makeFirstResponder(self)
-        cmuxDebugLog(
+        breeDebugLog(
             "focus.todoPopover.textField windowKind=\(windowKind) "
                 + "isKeyWindow=\(window.isKeyWindow) "
                 + "makeFirstResponder=\(makeFirstResponderResult)"

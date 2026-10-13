@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """Coverage guard: every top-level CLI verb is in `docs/cli-contract.md`.
 
-`docs/cli-contract.md` is the contract an agent reads to find out what the cmux
+`docs/cli-contract.md` is the contract an agent reads to find out what the bree
 CLI can do. A verb that is not in it is a verb nobody finds, and nothing else
 notices the gap: a new verb in the top-level dispatch ships a working command
 whose only documentation is help text you have to already know to ask for. An
 agent-reachability audit read this file, concluded that saved layouts had no CLI
-path, and was wrong only because `cmux layout` had never been written down.
+path, and was wrong only because `bree layout` had never been written down.
 
 So the guard reads both sides and fails until they agree:
 
-  * the dispatch: every top-level verb routed inside `CMUXCLI.run()`. There are
+  * the dispatch: every top-level verb routed inside `BREECLI.run()`. There are
     several routes and all of them count. Most verbs are `case "…"` arms of
     `switch command`, but roughly a third are handled before the switch is
     reached, and those early routes come in three shapes: `if command == "…"`,
     `if command == SomeType.someConstant`, and `SomeType(command: command, …)`,
-    an initializer that returns nil unless it recognizes the verb. `cmux diff`
-    and `cmux version` are the first shape; the sudo broker entrypoints are the
+    an initializer that returns nil unless it recognizes the verb. `bree diff`
+    and `bree version` are the first shape; the sudo broker entrypoints are the
     second; the owned-process supervisors are the third. A guard that read only
     the switch would be blind to the cheapest way to add a verb to this file.
   * the contract: the first cell of every row of every table whose first
@@ -71,7 +71,7 @@ import os
 import re
 import sys
 
-CLI_SOURCE = os.path.join("CLI", "cmux.swift")
+CLI_SOURCE = os.path.join("CLI", "bree.swift")
 DOC_PATH = os.path.join("docs", "cli-contract.md")
 
 RUN_FUNC = re.compile(r"^    func run\(\) async throws \{")
@@ -622,7 +622,7 @@ def parse_documented_verbs(path):
     (the tmux compatibility set, the `vm` and `surface` subcommand tables) counts
     as documented. The document's other tables describe flags, environment
     variables and JSON payload fields, and letting those vouch for a verb would
-    mean the `sessions` field of `cmux sessions --json` silently documents the
+    mean the `sessions` field of `bree sessions --json` silently documents the
     `sessions` verb, which is how that verb went undocumented for so long.
     """
     with open(path, "r", encoding="utf-8") as handle:

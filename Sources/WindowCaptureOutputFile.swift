@@ -17,7 +17,7 @@ enum WindowCaptureOutputFile {
         )
     }
 
-    /// Whether cmux may put a file at this path.
+    /// Whether bree may put a file at this path.
     ///
     /// Nothing there is fine, and so is a file or a symlink the caller chose. A
     /// directory, socket, fifo or device is not something a capture gets to

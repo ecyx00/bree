@@ -1,11 +1,11 @@
 # Reference C parity
 
 Every agent-facing capability of reference C, an open-source browser agent,
-mapped to `cmux browser repl`. Reference C runs its own model loop over a
+mapped to `bree browser repl`. Reference C runs its own model loop over a
 numbered DOM list and a Python tool registry. The REPL is driven by an outside
 agent in JavaScript, so a reference C tool becomes a Playwright call, a ref, or
 one of the additions in `Resources/browser-repl/agent-tools.js`. Nothing in
-cmux calls a model. Reference C's model-backed tools (extraction with a
+bree calls a model. Reference C's model-backed tools (extraction with a
 question, finding an element from a description) map to deterministic reads
 the calling agent reasons over.
 
@@ -17,7 +17,7 @@ scenario (`key` its golden value), `unit:` a `node --test` file.
 
 ## Tools
 
-| Reference C | cmux | Proof | Verdict |
+| Reference C | bree | Proof | Verdict |
 | --- | --- | --- | --- |
 | Navigate to a URL, optionally in a new tab | `page.goto(url)`, `tabs.open(url)` | 12-navigation, 13-tabs | same |
 | Go back | `page.goBack()` | 12-navigation | same |
@@ -46,9 +46,9 @@ scenario (`key` its golden value), `unit:` a `node --test` file.
 
 ## DOM representation
 
-The format studies and the representation comparison live in the private repository `manaflow-ai/cmux-browser-parity-private`.
+The format studies and the representation comparison live in the private repository `ecyx00/bree-browser-parity-private`.
 
-| Reference C | cmux | Proof | Verdict |
+| Reference C | bree | Proof | Verdict |
 | --- | --- | --- | --- |
 | Interactive elements listed with a number | snapshot refs `[ref=e12]` usable as locators | 01-snapshot, 17-refs | better: a ref is bound to its node and never reused; stale refs fail with a reason |
 | Markers on elements that are new since the last step | the snapshot prints its diff against the previous one | 04-actions-diff, 18-print | better: added, removed and changed lines with context |
@@ -61,7 +61,7 @@ The format studies and the representation comparison live in the private reposit
 
 ## Browser session and profile
 
-| Reference C | cmux | Proof | Verdict |
+| Reference C | bree | Proof | Verdict |
 | --- | --- | --- | --- |
 | Allowed and prohibited domains, blocking IP addresses | `session.allowedDomains([...], { lock })`, `session.prohibitedDomains([...])`, `session.blockIPAddresses(true)`, `session.blockedNavigations()` | 32-agent-tools `policy-*`; unit: agent-tools `domain patterns`, `hosts compare…` | better: the policy is kept and enforced by the native session and driver, outside the JavaScript context agent code runs in, so `{ lock: true }` holds even against agent code that replaces runtime objects or calls the driver directly. It covers navigations and new tabs, the REPL's `fetch` (every redirect hop), `tabs.content` and site tools, and blocks subresources (images, scripts, styles, fonts, media, XHR and fetch, WebSockets, iframes) through a WebKit content rule list built natively, where reference C filters navigations only (32-agent-tools `policy-subresources`). Hosts compare without case, trailing dots or Unicode spelling (Punycode); a port in a pattern must match; unsafe patterns are refused instead of ignored |
 | Redirect or link to a blocked domain | in a tab the session opened, the driver cancels the navigation (the tab stays on its page), logs it as `cancelled` and fails the action that caused it; a tab the user owns is never navigated away for the policy: reads of and input on it fail while it shows a blocked page | 32-agent-tools `policy-after-link` | better: reference C loads the page and then leaves it |
@@ -71,7 +71,7 @@ The format studies and the representation comparison live in the private reposit
 | Viewport size, window size, device scale factor | `page.setViewportSize(size)` | 22-api-surface `viewport` | same (scale factor follows the screen) |
 | Headless mode | hidden tabs render off screen without taking focus | 20-session | same |
 | Keep the browser alive after a task | named sessions; `page.keep()` | 20-session | same |
-| Browser launch settings: profile directory, connection to a running browser, executable, release channel, command-line arguments, sandbox, developer tools, deterministic rendering, disabled web security | none | | skipped: the REPL drives the user's cmux browser and its profile; it launches no browser |
+| Browser launch settings: profile directory, connection to a running browser, executable, release channel, command-line arguments, sandbox, developer tools, deterministic rendering, disabled web security | none | | skipped: the REPL drives the user's bree browser and its profile; it launches no browser |
 | User agent, extra HTTP headers | `session.configure({ userAgent, extraHTTPHeaders })` | diff `edge.context-options` | same: applies to the tabs the session created (a user's tab it drives keeps its own) and is undone when it ends or passes `null`. Headers go on main-frame GET navigations (a navigation without them restarts with them, as the user-agent policy does); WebKit has no request interception, so subresource requests do not carry them |
 | Proxy | `session.configure({ proxy: { server: "http://h:p" \| "socks5://h:p", username, password, bypass } })` | diff `edge.context-options` | same: tabs the session opens afterwards use a private, non-persistent data store that connects through the proxy (HTTP CONNECT or SOCKS5), so the user's profile and its other tabs are not proxied; such tabs start without the profile's cookies |
 | Permissions (geolocation, clipboard, notifications) | `session.configure({ permissions: ["camera", "microphone", "geolocation", "notifications"] })`; the per-tab clipboard `page.clipboard` | diff `edge.context-options`, `edge.permission-*`, 19-clipboard | same: a granted permission is answered at once, the rest denied at once (no prompt nobody can answer). A geolocation grant reads macOS Location Services (no coordinates override); a camera or microphone grant opens the real device and macOS may ask the user once; `clipboard-read` is not grantable because WebKit would read the system clipboard |
@@ -79,13 +79,13 @@ The format studies and the representation comparison live in the private reposit
 | Trace files | `trace.jsonl` from `session.record()`: time, tab, method, URL, frame file | 32-agent-tools `record` | same |
 | HAR recording | `page.on("request" \| "response")` | 16-network-console | skipped: WebKit's resource-load delegate gives no timings or bodies, so a HAR file would be hollow |
 | CAPTCHA solving, default extensions (ad and cookie-banner blockers, with domains exempt from cookie blocking) | none | | skipped: no CAPTCHA solving ([site-tools.md](site-tools.md) decisions); WKWebView loads no extensions |
-| Demo mode (in-page log panel) | `session.name(label)` labels the session's tabs; `page.highlight()` | 20-session, 32-agent-tools `highlight` | skipped: the panel shows a reference C agent's thoughts; there are none in cmux |
+| Demo mode (in-page log panel) | `session.name(label)` labels the session's tabs; `page.highlight()` | 20-session, 32-agent-tools `highlight` | skipped: the panel shows a reference C agent's thoughts; there are none in bree |
 
 ## Secrets
 
 Reference C keeps credentials out of the model's context. The model writes a
 placeholder with the secret's name, and the value is substituted when typed,
-if the page's domain matches. In cmux the model is the caller, so the
+if the page's domain matches. In bree the model is the caller, so the
 value comes from a file or from code it writes.
 
 What `secrets.load(path)` protects: the native session reads the file (it
@@ -114,7 +114,7 @@ runs in the page, can read its value and transform it past the masks
     secrets.set("otp", base32Seed, { domains: ["example.com"], totp: true })
     await page.getByLabel("Password").fill(secret("pw"))
 
-| Reference C | cmux | Proof | Verdict |
+| Reference C | bree | Proof | Verdict |
 | --- | --- | --- | --- |
 | Placeholders substituted at type time | `locator.fill(secret(name))`, `locator.type(secret(name))`, `pressSequentially` (the value is inserted in one piece, not key by key) | unit: agent-tools `secrets: a registered value never appears…` | same |
 | Secrets scoped by domain (a map from domain to names and values) | `secrets.load(file \| object)` takes that shape; `secrets.set(name, value, { domains })` | 32-agent-tools `secret-*` | better: the frame that receives the text must match, so a cross-origin iframe on an allowed page cannot get it; a domain-only pattern needs https (or loopback http); a secret without domains is refused (reference C allows one everywhere) |
@@ -124,13 +124,13 @@ runs in the page, can read its value and transform it past the masks
 
 ## Custom actions, MCP and the agent loop
 
-| Reference C | cmux | Proof | Verdict |
+| Reference C | bree | Proof | Verdict |
 | --- | --- | --- | --- |
 | Register custom actions with a description, parameters and domains; exclude built-in actions | `tools.register(name, fn, { description, params, domains })`, `tools.list()`, `tools.call()`, `tools.unregister()`; tools persist in a named session | 32-agent-tools `tools-*` | same |
 | Skills (cloud-hosted recorded APIs) | `sites` tools ([site-tools.md](site-tools.md)) and `tools.register` | sites/*.test.mjs | same |
 | Gmail 2FA integration, Google Sheets actions | `sites.gmail`, `sites.googleSheets` | sites/*.test.mjs | same (owned by the site tools) |
-| MCP server with one tool per browser action, over stdio | `cmux browser repl mcp [--session NAME]`: tools `eval` (code to output), `snapshot`, `screenshot` (an image), `tabs`, `reset`, run in one REPL session (one per server process by default, `--session` to share one) through the same `browser.repl.eval`/`browser.repl.reset` socket methods | unit: mcp `repl mcp: handshake…` | better (the test runs against a tagged CLI given in `PARITY_CMUX_CLI`): one `eval` tool reaches the whole API (Playwright, refs, `sites`, `session`) instead of a fixed tool per action, and variables persist between calls |
-| MCP client (the agent uses MCP tools) | the calling agent's own MCP client | | skipped: no agent loop in cmux |
+| MCP server with one tool per browser action, over stdio | `bree browser repl mcp [--session NAME]`: tools `eval` (code to output), `snapshot`, `screenshot` (an image), `tabs`, `reset`, run in one REPL session (one per server process by default, `--session` to share one) through the same `browser.repl.eval`/`browser.repl.reset` socket methods | unit: mcp `repl mcp: handshake…` | better (the test runs against a tagged CLI given in `PARITY_BREE_CLI`): one `eval` tool reaches the whole API (Playwright, refs, `sites`, `session`) instead of a fixed tool per action, and variables persist between calls |
+| MCP client (the agent uses MCP tools) | the calling agent's own MCP client | | skipped: no agent loop in bree |
 | Structured output for the final result and for extraction | the agent returns its own JSON; `page.extract(spec)` | 32-agent-tools `extract` | same |
 | A judge model that grades the run, optionally against a known answer | none | | skipped: a model grading its own run belongs to the agent harness |
 | Planner, loop detection, message compaction, memory, prompts, flash and thinking modes, vision settings, fallback model, cost and token tracking, telemetry, cloud sync, sandbox | none | | skipped: agent-loop internals with no meaning for a REPL an outside agent drives |

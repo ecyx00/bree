@@ -1,5 +1,5 @@
 import AppKit
-import CmuxWindowing
+import BreeWindowing
 
 /// Repairs main-window geometry after AppKit or the display system changes it.
 /// Display changes, activation, and restoration share one policy: recover
@@ -52,7 +52,7 @@ final class MainWindowFrameReconciler {
     ) -> Bool {
         guard !displays.isEmpty else { return false }
 
-        let mainWindows = windows.compactMap { $0 as? CmuxMainWindow }
+        let mainWindows = windows.compactMap { $0 as? BreeMainWindow }
         guard !mainWindows.isEmpty else { return true }
 
         // A ramping display set may expose one usable screen before the others
@@ -73,7 +73,7 @@ final class MainWindowFrameReconciler {
                 mode = trigger.repairsFullscreenWindows
                     ? .nativeFullscreenTopologyChange
                     : .nativeFullscreen
-            } else if window.cmuxWantsZoomedFrame {
+            } else if window.breeWantsZoomedFrame {
                 mode = .zoomed
             } else if trigger.repairsOrdinaryWindows {
                 mode = .visibleFrame
@@ -94,7 +94,7 @@ final class MainWindowFrameReconciler {
             guard targetFrame != window.frame else { continue }
             let originalFrame = window.frame
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "mainWindow.frameRepair.clamp win=\(window.windowNumber) " +
                     "from={\(Self.rectDescription(originalFrame))} to={\(Self.rectDescription(targetFrame))}"
             )

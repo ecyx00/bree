@@ -1,5 +1,5 @@
-import CmuxSettings
-import CmuxSettingsUI
+import BreeSettings
+import BreeSettingsUI
 import Foundation
 
 extension KeyboardShortcutSettings {
@@ -32,29 +32,29 @@ extension KeyboardShortcutSettings {
         for action: Action,
         explicitlyConfiguredShortcut: (Action) -> StoredShortcut?
     ) -> StoredShortcut? {
-        guard let settingsAction = CmuxSettings.ShortcutAction(rawValue: action.rawValue) else {
+        guard let settingsAction = BreeSettings.ShortcutAction(rawValue: action.rawValue) else {
             return action.defaultShortcut.isUnbound ? nil : action.defaultShortcut
         }
         return settingsAction.effectivePersistedShortcutResolvingLegacyConflicts(
             nil,
-            defaultShortcut: action.defaultShortcut.cmuxSettingsStoredShortcut,
+            defaultShortcut: action.defaultShortcut.breeSettingsStoredShortcut,
             explicitlyConfiguredShortcut: { settingsConfiguredAction in
                 guard let configuredAction = Action(rawValue: settingsConfiguredAction.rawValue) else {
                     return nil
                 }
-                return explicitlyConfiguredShortcut(configuredAction)?.cmuxSettingsStoredShortcut
+                return explicitlyConfiguredShortcut(configuredAction)?.breeSettingsStoredShortcut
             },
             bindingsConflict: { proposed, settingsConfiguredAction, configured in
                 guard let configuredAction = Action(rawValue: settingsConfiguredAction.rawValue) else {
                     return false
                 }
                 return configuredAction.conflicts(
-                    with: StoredShortcut(cmuxSettingsStoredShortcut: proposed),
+                    with: StoredShortcut(breeSettingsStoredShortcut: proposed),
                     proposedAction: action,
-                    configuredShortcut: StoredShortcut(cmuxSettingsStoredShortcut: configured)
+                    configuredShortcut: StoredShortcut(breeSettingsStoredShortcut: configured)
                 )
             }
-        ).map(StoredShortcut.init(cmuxSettingsStoredShortcut:))
+        ).map(StoredShortcut.init(breeSettingsStoredShortcut:))
     }
 
     static func shortcut(for action: Action) -> StoredShortcut {
@@ -104,7 +104,7 @@ extension KeyboardShortcutSettings {
         settingsFileStore.isManagedByFile(action)
     }
 
-    /// Whether the user persisted a binding for `action`, either in cmux.json
+    /// Whether the user persisted a binding for `action`, either in bree.json
     /// or the legacy UserDefaults store. Used to preserve the precedence of an
     /// existing binding when a newly introduced default reuses its keystroke.
     static func hasExplicitShortcutOverride(for action: Action) -> Bool {
@@ -113,7 +113,7 @@ extension KeyboardShortcutSettings {
     }
 
     /// The effective focus predicate gating `action`: the `shortcuts.when`
-    /// override from cmux.json if present, otherwise the action's built-in
+    /// override from bree.json if present, otherwise the action's built-in
     /// ``KeyboardShortcutSettings/Action/shortcutContext`` expressed as a
     /// ``ShortcutWhenClause``. Drives both runtime availability and conflict
     /// detection so the same keystroke can be context-routed.

@@ -1,6 +1,6 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
-import CMUXProjectModel
+import BREEProjectModel
 import SwiftUI
 
 /// Top-level SwiftUI view for a ``ProjectPanel``.
@@ -70,8 +70,8 @@ struct ProjectPanelView: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(palette.signalAttention.opacity(0.15))
-                .foregroundStyle(palette.signalAttention)
+                .background(palette.signalError.opacity(0.15))
+                .foregroundStyle(palette.signalError)
                 .clipShape(RoundedRectangle(cornerRadius: BreeMetrics.radiusSmall))
             }
             tabStrip

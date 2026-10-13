@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// Quick View chrome in the transparent title bar over the existing panel view:

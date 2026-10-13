@@ -1,10 +1,10 @@
-import CmuxSettings
+import BreeSettings
 import Foundation
 import Observation
 import os
 
 /// Local runtime feature flags for the macOS app. Nothing is fetched: every
-/// flag resolves from a permitted local override (`cmux.flags.override.`),
+/// flag resolves from a permitted local override (`bree.flags.override.`),
 /// then the explicit per-flag compiled default.
 ///
 /// Registry contract (enforced by scripts/lint-feature-flags.py in CI): each
@@ -12,8 +12,8 @@ import os
 /// comment above its property, and its key literal appears nowhere else.
 @MainActor
 @Observable
-final class CmuxFeatureFlags {
-    static let shared = CmuxFeatureFlags(publishesOffMainSnapshot: true)
+final class BreeFeatureFlags {
+    static let shared = BreeFeatureFlags(publishesOffMainSnapshot: true)
 
     private static let appKitSidebarListDefault = true
     private static let agentInboxQuickViewDefault = true
@@ -23,14 +23,14 @@ final class CmuxFeatureFlags {
     nonisolated static let cloudMachinesDefault = false
     #endif
 
-    private static let overrideKeyPrefix = "cmux.flags.override."
+    private static let overrideKeyPrefix = "bree.flags.override."
 
     // FLAG(key: sidebar-appkit-list-experiment, owner: lawrencecchen,
     //      reviewBy: 2026-11-16, defaultWhenUnavailable: true)
     // Renders the workspace sidebar with the AppKit NSTableView list
     // (virtualized rows, measured-once heights) instead of the SwiftUI
     // LazyVStack. On by default.
-    static let appKitSidebarListFlag = CmuxFeatureFlagDefinition(
+    static let appKitSidebarListFlag = BreeFeatureFlagDefinition(
         key: "sidebar-appkit-list-experiment",
         title: String(
             localized: "featureFlags.appKitSidebarList.title",
@@ -40,21 +40,21 @@ final class CmuxFeatureFlags {
             localized: "featureFlags.appKitSidebarList.description",
             defaultValue: "Renders the workspace sidebar with a native AppKit list and divider for smoother scrolling and resizing with many workspaces."
         ),
-        defaultWhenUnavailable: CmuxFeatureFlags.appKitSidebarListDefault
+        defaultWhenUnavailable: BreeFeatureFlags.appKitSidebarListDefault
     )
 
     // FLAG(key: agent-inbox-quick-view-enabled-release, owner: lawrencecchen,
     //      reviewBy: 2026-10-15, defaultWhenUnavailable: true)
     // Keeps the agent inbox quick view behind an explicit rollout while the
     // placement and cross-agent attention model are evaluated.
-    static let agentInboxQuickViewFlag = CmuxFeatureFlagDefinition(
+    static let agentInboxQuickViewFlag = BreeFeatureFlagDefinition(
         key: "agent-inbox-quick-view-enabled-release",
         title: String(localized: "featureFlags.agentInbox.title", defaultValue: "Agent Inbox quick view"),
         flagDescription: String(localized: "featureFlags.agentInbox.description", defaultValue: "Shows a keyboard-summoned inbox for agent messages, pending Feed decisions, and finished turns."),
-        defaultWhenUnavailable: CmuxFeatureFlags.agentInboxQuickViewDefault
+        defaultWhenUnavailable: BreeFeatureFlags.agentInboxQuickViewDefault
     )
 
-    static let allFlags: [CmuxFeatureFlagDefinition] = [
+    static let allFlags: [BreeFeatureFlagDefinition] = [
         appKitSidebarListFlag,
         cloudMachinesFlag,
         agentInboxQuickViewFlag,
@@ -78,7 +78,7 @@ final class CmuxFeatureFlags {
     )
 
     nonisolated static func offMainEffectiveValue(
-        for definition: CmuxFeatureFlagDefinition
+        for definition: BreeFeatureFlagDefinition
     ) -> Bool {
         offMainEffectiveValues.withLock { $0[definition.key] }
             ?? definition.defaultWhenUnavailable
@@ -87,16 +87,16 @@ final class CmuxFeatureFlags {
     @ObservationIgnored
     private let publishesOffMainSnapshot: Bool
     @ObservationIgnored
-    private let overrideCapability: CmuxFeatureFlagOverrideCapability
+    private let overrideCapability: BreeFeatureFlagOverrideCapability
     @ObservationIgnored
     private let defaults: UserDefaults
 
     private var localOverridesByKey: [String: Bool] = [:]
-    private var resolutionsByKey: [String: CmuxFeatureFlagResolution] = [:]
+    private var resolutionsByKey: [String: BreeFeatureFlagResolution] = [:]
 
     init(
         defaults: UserDefaults = .standard,
-        overrideCapability: CmuxFeatureFlagOverrideCapability = .init(),
+        overrideCapability: BreeFeatureFlagOverrideCapability = .init(),
         publishesOffMainSnapshot: Bool = false
     ) {
         self.defaults = defaults
@@ -124,23 +124,23 @@ final class CmuxFeatureFlags {
         recomputeEffectiveValues()
     }
 
-    func effectiveValue(for definition: CmuxFeatureFlagDefinition) -> Bool {
+    func effectiveValue(for definition: BreeFeatureFlagDefinition) -> Bool {
         resolution(for: definition).effectiveValue
     }
 
-    func resolution(for definition: CmuxFeatureFlagDefinition) -> CmuxFeatureFlagResolution {
-        resolutionsByKey[definition.key] ?? CmuxFeatureFlagResolution(
+    func resolution(for definition: BreeFeatureFlagDefinition) -> BreeFeatureFlagResolution {
+        resolutionsByKey[definition.key] ?? BreeFeatureFlagResolution(
             overrideValue: localOverridesByKey[definition.key],
             defaultValue: definition.defaultWhenUnavailable,
             overridePolicy: overrideCapability.policy(for: definition)
         )
     }
 
-    func overrideValue(for definition: CmuxFeatureFlagDefinition) -> Bool? {
+    func overrideValue(for definition: BreeFeatureFlagDefinition) -> Bool? {
         localOverridesByKey[definition.key]
     }
 
-    func setOverride(_ value: Bool?, for definition: CmuxFeatureFlagDefinition) {
+    func setOverride(_ value: Bool?, for definition: BreeFeatureFlagDefinition) {
         guard value == nil || resolution(for: definition).allowsLocalOverride else { return }
 
         let previousResolutions = resolutionsByKey
@@ -171,7 +171,7 @@ final class CmuxFeatureFlags {
 
     private func recomputeEffectiveValues() {
         resolutionsByKey = Self.allFlags.reduce(into: [:]) { values, definition in
-            values[definition.key] = CmuxFeatureFlagResolution(
+            values[definition.key] = BreeFeatureFlagResolution(
                 overrideValue: localOverridesByKey[definition.key],
                 defaultValue: definition.defaultWhenUnavailable,
                 overridePolicy: overrideCapability.policy(for: definition)
@@ -183,9 +183,9 @@ final class CmuxFeatureFlags {
         }
     }
 
-    private func postChangeIfNeeded(previousResolutions: [String: CmuxFeatureFlagResolution]) {
+    private func postChangeIfNeeded(previousResolutions: [String: BreeFeatureFlagResolution]) {
         if previousResolutions != resolutionsByKey {
-            NotificationCenter.default.post(name: .cmuxFeatureFlagsDidChange, object: self)
+            NotificationCenter.default.post(name: .breeFeatureFlagsDidChange, object: self)
         }
     }
 
@@ -212,5 +212,5 @@ final class CmuxFeatureFlags {
 }
 
 extension Notification.Name {
-    static let cmuxFeatureFlagsDidChange = Notification.Name("cmuxFeatureFlagsDidChange")
+    static let breeFeatureFlagsDidChange = Notification.Name("breeFeatureFlagsDidChange")
 }

@@ -1,6 +1,6 @@
 import AppKit
-import CmuxAgentChat
-import CmuxBrowser
+import BreeAgentChat
+import BreeBrowser
 import SwiftUI
 import WebKit
 
@@ -77,10 +77,10 @@ struct MarkdownWebRenderer: NSViewRepresentable {
         let config = WKWebViewConfiguration()
         config.suppressesIncrementalRendering = false
         WebSurfaceSelectionReader.installTracking(in: config.userContentController)
-        // Bridge: JS posts to `cmuxLib` to request lazy-loaded libraries
+        // Bridge: JS posts to `breeLib` to request lazy-loaded libraries
         // (mermaid / vega-lite). Swift fetches the bundled source from the
         // app bundle and injects it via evaluateJavaScript.
-        config.userContentController.add(WeakMarkdownScriptMessageHandler(context.coordinator), name: "cmuxLib")
+        config.userContentController.add(WeakMarkdownScriptMessageHandler(context.coordinator), name: "breeLib")
         config.setURLSchemeHandler(
             context.coordinator,
             forURLScheme: Self.localImageURLScheme
@@ -152,7 +152,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
         if let retainedWebView = coordinator.webView, retainedWebView === nsView {
             return
         }
-        nsView.configuration.userContentController.removeScriptMessageHandler(forName: "cmuxLib")
+        nsView.configuration.userContentController.removeScriptMessageHandler(forName: "breeLib")
         nsView.navigationDelegate = nil
         nsView.uiDelegate = nil
         (nsView as? MarkdownWebView)?.onPointerDown = nil
@@ -164,7 +164,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
 
     /// WebKit's `prefers-color-scheme` media query reflects the WKWebView's
     /// effective NSAppearance. Forcing it here lets us decouple the markdown
-    /// panel from the system appearance and follow the cmux color scheme.
+    /// panel from the system appearance and follow the bree color scheme.
     private func applyAppearance(to webView: WKWebView, isDark: Bool) {
         let appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
         if webView.appearance !== appearance {
@@ -265,7 +265,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             let zoom = MarkdownFontSizeSettings.pageZoom(forPointSize: lastFontSize)
             let shouldSyncShell = forceShellSync || abs(webView.pageZoom - zoom) > 0.0001
             if abs(webView.pageZoom - zoom) > 0.0001 { webView.pageZoom = zoom }
-            if shouldSyncShell { webView.evaluateJavaScript("window.__cmuxSetMarkdownZoom && window.__cmuxSetMarkdownZoom(\(Double(zoom)), \(Double(webView.bounds.width)));", completionHandler: nil) }
+            if shouldSyncShell { webView.evaluateJavaScript("window.__breeSetMarkdownZoom && window.__breeSetMarkdownZoom(\(Double(zoom)), \(Double(webView.bounds.width)));", completionHandler: nil) }
         }
 
         /// Records the desired body prose font and applies it as an inline
@@ -314,7 +314,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
         func close() {
             if let webView {
                 webView.stopLoading()
-                webView.configuration.userContentController.removeScriptMessageHandler(forName: "cmuxLib")
+                webView.configuration.userContentController.removeScriptMessageHandler(forName: "breeLib")
                 webView.navigationDelegate = nil
                 webView.uiDelegate = nil
                 webView.onPointerDown = nil
@@ -396,12 +396,12 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             }
             // We export an explicit "rendered HTML" getter from JS so callers
             // get the *content* div only, without the shell <style>/<script>.
-            return await evaluateString("window.__cmuxRenderedHTML && window.__cmuxRenderedHTML()")
+            return await evaluateString("window.__breeRenderedHTML && window.__breeRenderedHTML()")
         }
 
         func renderedText() async -> String? {
             guard isLoaded else { return nil }
-            return await evaluateString("window.__cmuxRenderedText && window.__cmuxRenderedText()")
+            return await evaluateString("window.__breeRenderedText && window.__breeRenderedText()")
         }
 
         func readSurfaceSelection(filePath: String) async -> SurfaceSelectionReadResult {
@@ -445,7 +445,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
                 content.style.setProperty(name, vars[name]);
               });
               content.style.background = 'transparent';
-              if (window.__cmuxApplyTheme) { window.__cmuxApplyTheme(); }
+              if (window.__breeApplyTheme) { window.__breeApplyTheme(); }
             })(\(json));
             """
             webView.evaluateJavaScript(js, completionHandler: nil)
@@ -508,12 +508,12 @@ struct MarkdownWebRenderer: NSViewRepresentable {
                   let vaultData = try? JSONSerialization.data(withJSONObject: [vaultValue]),
                   let vaultLiteral = String(data: vaultData, encoding: .utf8) else { return nil }
             return """
-            window.__cmuxVault = \(vaultLiteral)[0] ? { root: \(vaultLiteral)[0] } : null;
-            window.__cmuxWiki = \(wiki ? "true" : "false");
-            window.__cmuxWikiStyle = \(style ? "true" : "false");
+            window.__breeVault = \(vaultLiteral)[0] ? { root: \(vaultLiteral)[0] } : null;
+            window.__breeWiki = \(wiki ? "true" : "false");
+            window.__breeWikiStyle = \(style ? "true" : "false");
             (function(md) {
-              if (window.__cmuxRenderMarkdown) {
-                window.__cmuxRenderMarkdown(md);
+              if (window.__breeRenderMarkdown) {
+                window.__breeRenderMarkdown(md);
                 return;
               }
               var el = document.getElementById('content') || document.body;
@@ -533,7 +533,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             _ userContentController: WKUserContentController,
             didReceive message: WKScriptMessage
         ) {
-            guard message.name == "cmuxLib",
+            guard message.name == "breeLib",
                   let body = message.body as? [String: Any] else { return }
             if let lib = body["lib"] as? String {
                 handleLibRequest(lib)
@@ -614,7 +614,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
                       let data = try? JSONSerialization.data(withJSONObject: payload),
                       let json = String(data: data, encoding: .utf8) else { return }
                 webView.evaluateJavaScript(
-                    "window.__cmuxWikilinksResolved && window.__cmuxWikilinksResolved(\(json));",
+                    "window.__breeWikilinksResolved && window.__breeWikilinksResolved(\(json));",
                     completionHandler: nil
                 )
             }
@@ -644,7 +644,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
                 guard let data = try? JSONSerialization.data(withJSONObject: items),
                       let json = String(data: data, encoding: .utf8) else { return }
                 webView.evaluateJavaScript(
-                    "window.__cmuxSetBacklinks && window.__cmuxSetBacklinks(\(json));",
+                    "window.__breeSetBacklinks && window.__breeSetBacklinks(\(json));",
                     completionHandler: nil
                 )
             }
@@ -657,7 +657,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             guard let webView,
                   let data = try? JSONSerialization.data(withJSONObject: [rawURL]),
                   let literal = String(data: data, encoding: .utf8) else { return }
-            let callback = approved ? "__cmuxRemoteImageApproved" : "__cmuxRemoteImageRejected"
+            let callback = approved ? "__breeRemoteImageApproved" : "__breeRemoteImageRejected"
             webView.evaluateJavaScript(
                 "window.\(callback) && window.\(callback)(\(literal)[0]);",
                 completionHandler: nil
@@ -821,7 +821,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             ]
             guard let data = try? JSONSerialization.data(withJSONObject: payload),
                   let json = String(data: data, encoding: .utf8) else { return }
-            webView.evaluateJavaScript("window.__cmuxMarkdownFileResolved && window.__cmuxMarkdownFileResolved(\(json));", completionHandler: nil)
+            webView.evaluateJavaScript("window.__breeMarkdownFileResolved && window.__breeMarkdownFileResolved(\(json));", completionHandler: nil)
         }
 
         private func resolvedMarkdownFilePath(_ rawPath: String) -> String? {
@@ -888,7 +888,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             // JSON-encode the lib name to safely splice into JS.
             let libLiteral = (try? JSONSerialization.data(withJSONObject: [lib]))
                 .flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
-            let suffix = "\nwindow.__cmuxLibLoaded && window.__cmuxLibLoaded(\(libLiteral)[0]);"
+            let suffix = "\nwindow.__breeLibLoaded && window.__breeLibLoaded(\(libLiteral)[0]);"
             webView.evaluateJavaScript(injection + suffix) { [weak self] _, error in
                 if let error {
                     // Allow retry on next render if this attempt failed.
@@ -1011,7 +1011,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             ).closure
 
             // The shell load (loadHTMLString) is the only navigation allowed
-            // without user activation. Activated links route through the cmux
+            // without user activation. Activated links route through the bree
             // tab/browser machinery; everything else rendered content might
             // trigger (script navigation, forms, refresh) is cancelled.
             let url = navigationAction.request.url
@@ -1066,7 +1066,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
 
         // MARK: - Link routing
 
-        /// Route a clicked link to a brand-new cmux browser tab in the same
+        /// Route a clicked link to a brand-new bree browser tab in the same
         /// pane as this markdown panel — mirroring how Browser panels open
         /// child links via `openLinkInNewTab`. Falls back to the system
         /// browser only when the in-app browser is disabled or the panel
@@ -1076,7 +1076,7 @@ struct MarkdownWebRenderer: NSViewRepresentable {
             NSLog("MarkdownPanel.handleExternalLink url=\(url.absoluteString)")
 #endif
             // First preference: links that resolve to local markdown files
-            // open as markdown tabs in cmux, not in the browser.
+            // open as markdown tabs in bree, not in the browser.
             let fileCandidate = url.scheme == "file" ? url.path : url.absoluteString
             if let markdownPath = resolvedMarkdownFilePath(fileCandidate) {
                 openMarkdownFile(markdownPath)

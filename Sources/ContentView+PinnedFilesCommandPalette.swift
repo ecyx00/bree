@@ -1,5 +1,5 @@
 import AppKit
-import CmuxCommandPalette
+import BreeCommandPalette
 import Foundation
 
 extension ContentView {

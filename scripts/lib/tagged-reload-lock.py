@@ -12,7 +12,7 @@ import tempfile
 
 def main() -> int:
     tag, script, *arguments = sys.argv[1:]
-    lock_directory = Path(tempfile.gettempdir()) / f"cmux-reload-tags-{os.getuid()}"
+    lock_directory = Path(tempfile.gettempdir()) / f"bree-reload-tags-{os.getuid()}"
     lock_directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     with (lock_directory / f"{tag}.lock").open("a") as lease:
         try:
@@ -24,7 +24,7 @@ def main() -> int:
         # Only this supervisor owns the lease. Build services and the launched
         # app must not inherit it and keep later reloads locked indefinitely.
         environment = os.environ.copy()
-        environment["CMUX_RELOAD_TAG_LOCK_OWNER"] = str(os.getpid())
+        environment["BREE_RELOAD_TAG_LOCK_OWNER"] = str(os.getpid())
         child = None
         pending_signals = []
 

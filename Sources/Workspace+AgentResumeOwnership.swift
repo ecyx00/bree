@@ -1,8 +1,8 @@
-import CmuxFoundation
-import CMUXAgentLaunch
-import CmuxFoundation
+import BreeFoundation
+import BREEAgentLaunch
+import BreeFoundation
 import Foundation
-import CmuxFoundation
+import BreeFoundation
 
 extension Workspace {
     /// Whether `restoredAgent` is verifiably still running in `panelId`; see

@@ -24,19 +24,19 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 
 seed() {
   BUILD_PRODUCTS_DEBUG_DIR="$TMP_DIR/$1/Build/Products/Debug"
-  XCODEBUILD_SOURCE_APP_PATH="$BUILD_PRODUCTS_DEBUG_DIR/cmux DEV.app"
-  XCODEBUILD_TAG_APP_PATH="$BUILD_PRODUCTS_DEBUG_DIR/cmux DEV probe.app"
-  TAG_APP_STAGING_PATH="$BUILD_PRODUCTS_DEBUG_DIR/.cmux DEV probe.reload-1.app"
+  XCODEBUILD_SOURCE_APP_PATH="$BUILD_PRODUCTS_DEBUG_DIR/Bree Dev.app"
+  XCODEBUILD_TAG_APP_PATH="$BUILD_PRODUCTS_DEBUG_DIR/Bree Dev probe.app"
+  TAG_APP_STAGING_PATH="$BUILD_PRODUCTS_DEBUG_DIR/.Bree Dev probe.reload-1.app"
   XCODEBUILD_CLEANED_OUTPUTS=0
   mkdir -p "$XCODEBUILD_SOURCE_APP_PATH" "$XCODEBUILD_TAG_APP_PATH/Contents/MacOS" "$TAG_APP_STAGING_PATH"
-  printf 'running\n' > "$XCODEBUILD_TAG_APP_PATH/Contents/MacOS/cmux DEV"
+  printf 'running\n' > "$XCODEBUILD_TAG_APP_PATH/Contents/MacOS/Bree Dev"
 }
 
 # Build-only: the tagged bundle survives; this run's own outputs are still cleared.
 seed build-only
 BUILD_ONLY=1
 cleanup_incomplete_xcodebuild_outputs
-[[ -f "$XCODEBUILD_TAG_APP_PATH/Contents/MacOS/cmux DEV" ]] \
+[[ -f "$XCODEBUILD_TAG_APP_PATH/Contents/MacOS/Bree Dev" ]] \
   || fail "--build-only removed the tagged app bundle a running app executes from"
 [[ ! -e "$XCODEBUILD_SOURCE_APP_PATH" ]] || fail "--build-only kept a stale xcodebuild source app"
 [[ ! -e "$TAG_APP_STAGING_PATH" ]] || fail "--build-only kept a stale staging app"
@@ -53,11 +53,11 @@ echo "PASS: a normal reload still clears the stale tagged app"
 # A build-only base-name override aliases the xcodebuild source bundle to the
 # running tagged bundle, so it must be rejected before any build or cleanup.
 set +e
-collision_output="$(CMUX_DEV_BACKEND_MODE=local "$RELOAD" --tag probe --name "cmux DEV" --build-only 2>&1)"
+collision_output="$(BREE_DEV_BACKEND_MODE=local "$RELOAD" --tag probe --name "Bree Dev" --build-only 2>&1)"
 collision_status=$?
 set -e
 [[ "$collision_status" -ne 0 ]] || fail "--build-only accepted a source/tag bundle name collision"
-[[ "$collision_output" == *"--build-only cannot use --name 'cmux DEV'"* ]] \
+[[ "$collision_output" == *"--build-only cannot use --name 'Bree Dev'"* ]] \
   || fail "collision refusal did not explain the protected bundle name"
 echo "PASS: --build-only rejects a name override that aliases the running tagged bundle"
 

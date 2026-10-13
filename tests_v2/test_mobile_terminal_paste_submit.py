@@ -73,13 +73,13 @@ def wait_for(path):
 
 
 def main():
-    path = os.environ.get("CMUX_SOCKET_PATH", "")
-    if not path.startswith("/tmp/cmux-debug-") or not path.endswith(".sock"):
-        raise RuntimeError("CMUX_SOCKET_PATH must explicitly name a tagged socket")
+    path = os.environ.get("BREE_SOCKET_PATH", "")
+    if not path.startswith("/tmp/bree-debug-") or not path.endswith(".sock"):
+        raise RuntimeError("BREE_SOCKET_PATH must explicitly name a tagged socket")
     identity = call(path, "system.identify")
     if identity.get("socket_path") != path:
         raise RuntimeError(f"Unexpected socket identity: {identity}")
-    with tempfile.TemporaryDirectory(prefix="cmux-reply-submit-") as directory:
+    with tempfile.TemporaryDirectory(prefix="bree-reply-submit-") as directory:
         root = Path(directory)
         script = root / "capture.py"
         script.write_text(CAPTURE)

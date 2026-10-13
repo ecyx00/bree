@@ -4,11 +4,11 @@ import OSLog
 @MainActor
 final class MemoryPressureResponderRegistry {
     private static let logger = Logger(
-        subsystem: "com.cmuxterm.app",
+        subsystem: "com.bree.app",
         category: "MemoryPressure"
     )
     private static let signposter = OSSignposter(
-        subsystem: "com.cmuxterm.app",
+        subsystem: "com.bree.app",
         category: "MemoryPressure"
     )
 

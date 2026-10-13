@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Whether a browser panel view is in a window
-/// (https://github.com/manaflow-ai/cmux/issues/15069).
+/// (https://github.com/ecyx00/bree/issues/15069).
 ///
 /// Memory Saver discards a hidden pane from its visibility reports, so a pane
 /// counts as visible only while one of its views is in a window. SwiftUI can

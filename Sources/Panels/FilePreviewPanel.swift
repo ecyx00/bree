@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import Bonsplit
 import Combine
@@ -90,8 +90,8 @@ struct FileExternalOpenApplicationResolver: Sendable {
         if Bundle.main.bundleIdentifier?.lowercased() == bundleIdentifier {
             return false
         }
-        return !bundleIdentifier.hasPrefix("dev.cmux.")
-            && !bundleIdentifier.hasPrefix("com.cmuxterm.")
+        return !bundleIdentifier.hasPrefix("dev.bree.")
+            && !bundleIdentifier.hasPrefix("com.bree.")
     }
 }
 
@@ -283,7 +283,7 @@ struct FileExternalOpenMenu: View {
             PanelHeaderIconGlyph(systemName: "square.and.arrow.up")
         case .chrome:
             Image(systemName: "square.and.arrow.up")
-                .cmuxFont(size: 16, weight: .semibold)
+                .scaledFont(size: 16, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .frame(width: style.buttonSize.width, height: style.buttonSize.height)
                 .contentShape(Rectangle())
@@ -1894,19 +1894,19 @@ struct FilePreviewPanelView: View {
     private var fileUnavailableView: some View {
         VStack(spacing: 12) {
             Image(systemName: "doc.questionmark")
-                .cmuxFont(size: 40)
+                .scaledFont(size: 40)
                 .foregroundStyle(.secondary)
             Text(String(localized: "filePreview.fileUnavailable.title", defaultValue: "File unavailable"))
-                .cmuxFont(.headline)
+                .scaledFont(.headline)
             Text(panel.filePath)
-                .cmuxFont(size: 12, design: .monospaced)
+                .scaledFont(size: 12, design: .monospaced)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .copyOnlyTextSelection(for: panel.filePath)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 24)
             Text(String(localized: "filePreview.fileUnavailable.message", defaultValue: "The file may have been moved or deleted."))
-                .cmuxFont(.caption)
+                .scaledFont(.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -2071,9 +2071,9 @@ private struct FilePreviewPDFSidebarChromeView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "sidebar.left")
-                    .cmuxFont(size: 17, weight: .regular)
+                    .scaledFont(size: 17, weight: .regular)
                 Image(systemName: "chevron.down")
-                    .cmuxFont(size: 10, weight: .semibold)
+                    .scaledFont(size: 10, weight: .semibold)
                     .foregroundStyle(.secondary)
             }
             .frame(width: 58, height: 36)
@@ -2151,7 +2151,7 @@ struct FilePreviewChromeIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .cmuxFont(size: 16, weight: .semibold)
+                .scaledFont(size: 16, weight: .semibold)
                 .frame(width: 42, height: 40)
         }
         .buttonStyle(FilePreviewChromeHoverButtonStyle(isHovered: isHovered))
@@ -2171,9 +2171,9 @@ private struct FilePreviewChromeSidebarMenuLabel: View {
         HStack(spacing: 6) {
             Image(systemName: "sidebar.left")
             Image(systemName: "chevron.down")
-                .cmuxFont(size: 11, weight: .semibold)
+                .scaledFont(size: 11, weight: .semibold)
         }
-        .cmuxFont(size: 16, weight: .semibold)
+        .scaledFont(size: 16, weight: .semibold)
         .foregroundStyle(isHovered ? Color.primary : Color.secondary)
         .frame(width: 68, height: 34)
         .background {
@@ -3506,7 +3506,7 @@ final class FilePreviewPDFContainerView: NSView, NSSplitViewDelegate, NSOutlineV
         let preferredWidth = preferredSidebarWidthForCurrentMode()
         let thumbnailWidth = thumbnailView.preferredSidebarWidth()
         let tocWidth = FilePreviewPDFSizing.preferredOutlineSidebarWidth(for: outlineRoot)
-        cmuxDebugLog(
+        breeDebugLog(
             "filePreview.pdf.sidebarWidth reason=\(reason) mode=\(mode) " +
             "current=\(formatSidebarWidth(currentWidth)) " +
             "proposed=\(formatSidebarWidth(proposed)) " +
@@ -3874,7 +3874,7 @@ final class FilePreviewPDFContainerView: NSView, NSSplitViewDelegate, NSOutlineV
 
     #if DEBUG
     private func logPDFResizeProbe(_ message: @autoclosure () -> String) {
-        cmuxDebugLog("filePreview.pdf.resize \(message())")
+        breeDebugLog("filePreview.pdf.resize \(message())")
     }
 
     private func pdfDebugState() -> String {

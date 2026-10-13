@@ -1,4 +1,4 @@
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 private func sanitizedInitialEnvironment(_ environment: [String: String]) -> [String: String] {
@@ -28,7 +28,7 @@ extension TerminalController {
         let groupID: UUID?
         let groupPlacement: WorkspaceGroupNewPlacement?
         let groupReferenceWorkspaceID: UUID?
-        let layoutNode: CmuxLayoutNode?
+        let layoutNode: BreeLayoutNode?
         let shouldFocus: Bool
         let shouldEagerLoadTerminal: Bool
         let shouldAutoRefreshMetadata: Bool
@@ -125,7 +125,7 @@ extension TerminalController {
             groupReferenceWorkspaceID = nil
         }
 
-        var layoutNode: CmuxLayoutNode?
+        var layoutNode: BreeLayoutNode?
         if let rawLayout = params["layout"] {
             guard JSONSerialization.isValidJSONObject(rawLayout),
                   let layoutData = try? JSONSerialization.data(withJSONObject: rawLayout) else {
@@ -136,7 +136,7 @@ extension TerminalController {
                 ))
             }
             do {
-                layoutNode = try JSONDecoder().decode(CmuxLayoutNode.self, from: layoutData)
+                layoutNode = try JSONDecoder().decode(BreeLayoutNode.self, from: layoutData)
             } catch {
                 return .failure(.err(
                     code: "invalid_params",

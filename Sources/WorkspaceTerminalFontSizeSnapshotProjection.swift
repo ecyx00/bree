@@ -1,5 +1,5 @@
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeTerminal
+import BreeTerminalCore
 import Foundation
 
 /// Read-only overlay used while serializing a workspace or Dock.

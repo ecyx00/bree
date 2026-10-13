@@ -9,15 +9,15 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
 def _must(cond: bool, msg: str) -> None:
     if not cond:
-        raise cmuxError(msg)
+        raise breeError(msg)
 
 
 def _first_terminal_surface_id(payload: dict) -> str:
@@ -26,11 +26,11 @@ def _first_terminal_surface_id(payload: dict) -> str:
             surface_id = str(row.get("id") or "")
             if surface_id:
                 return surface_id
-    raise cmuxError(f"surface.list returned no terminal surface: {payload}")
+    raise breeError(f"surface.list returned no terminal surface: {payload}")
 
 
 def main() -> int:
-    with cmux(SOCKET_PATH) as c:
+    with bree(SOCKET_PATH) as c:
         baseline_workspace = c.current_workspace()
         created_workspace = ""
         try:

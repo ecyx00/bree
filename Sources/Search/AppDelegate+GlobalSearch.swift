@@ -1,5 +1,5 @@
 import AppKit
-import CmuxTerminal
+import BreeTerminal
 import Foundation
 
 extension AppDelegate {

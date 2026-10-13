@@ -1305,7 +1305,7 @@ function cardId(item: FeedItem): string {
 }
 
 function writeReadyMarker(stage: string, details: Record<string, string> = {}): void {
-  const markerPath = process.env.CMUX_FEED_TUI_READY_PATH?.trim();
+  const markerPath = process.env.BREE_FEED_TUI_READY_PATH?.trim();
   if (!markerPath) {
     return;
   }
@@ -1314,7 +1314,7 @@ function writeReadyMarker(stage: string, details: Record<string, string> = {}): 
       stage,
       pid: String(process.pid),
       time: String(Date.now() / 1000),
-      tui: process.env.CMUX_FEED_TUI_PATH ?? "opentui",
+      tui: process.env.BREE_FEED_TUI_PATH ?? "opentui",
       ...details,
     });
     mkdirSync(dirname(markerPath), { recursive: true });
@@ -1325,9 +1325,9 @@ function writeReadyMarker(stage: string, details: Record<string, string> = {}): 
 }
 
 async function main() {
-  const socketPath = process.env.CMUX_SOCKET_PATH;
+  const socketPath = process.env.BREE_SOCKET_PATH;
   if (!socketPath) {
-    throw new Error("CMUX_SOCKET_PATH is required.");
+    throw new Error("BREE_SOCKET_PATH is required.");
   }
 
   const renderer = await createCliRenderer({
@@ -1337,7 +1337,7 @@ async function main() {
     autoFocus: true,
     targetFps: 30,
   });
-  const app = new FeedApp(renderer, new FeedSocketClient(socketPath, process.env.CMUX_SOCKET_PASSWORD));
+  const app = new FeedApp(renderer, new FeedSocketClient(socketPath, process.env.BREE_SOCKET_PASSWORD));
 
   const shutdown = () => {
     app.stop();

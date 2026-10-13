@@ -1,6 +1,6 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
-import CmuxTerminal
+import BreeCloud
+import BreeSurfaceCatalogModel
+import BreeTerminal
 import GhosttyKit
 import Foundation
 

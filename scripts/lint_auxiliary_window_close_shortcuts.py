@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Require standalone cmux windows to own the standard close shortcut."""
+"""Require standalone bree windows to own the standard close shortcut."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ import sys
 
 
 DEFAULT_ROOTS = ("Sources",)
-OWNER_LIST_PATH = pathlib.Path("Sources/cmuxApp.swift")
-OWNER_LIST_NAME = "cmuxAuxiliaryWindowIdentifiers"
+OWNER_LIST_PATH = pathlib.Path("Sources/breeApp.swift")
+OWNER_LIST_NAME = "breeAuxiliaryWindowIdentifiers"
 
 # Hidden/internal bootstrap windows should not take Cmd+W away from the active
 # main window. Add to this set only when a window is intentionally not user
@@ -19,42 +19,42 @@ OWNER_LIST_NAME = "cmuxAuxiliaryWindowIdentifiers"
 IGNORED_IDENTIFIERS = {
     # NSHostingView inside a terminal pane, not an auxiliary window. Cmd+W
     # belongs to the containing pane rather than this inline failure card.
-    "cmux.cloudPaneCreationFailure.card",
+    "bree.cloudPaneCreationFailure.card",
     # Hidden WebKit preload host; it is not user closable and must not own Cmd+W.
-    "cmux.browserBackgroundPreload",
+    "bree.browserBackgroundPreload",
     # Hidden WebKit hover-prewarm host; it is not user closable and must not own Cmd+W.
-    "cmux.browserPrewarmPool",
+    "bree.browserPrewarmPool",
     # Hidden WebKit visual automation host; it renders offscreen and never becomes key/main.
-    "cmux.browserVisualAutomationRender",
-    "cmux.bootstrap",
+    "bree.browserVisualAutomationRender",
+    "bree.bootstrap",
     # Cursor-anchored textbox completion popup; it never becomes key/main.
-    "cmux.textbox.mentionCompletionPanel",
+    "bree.textbox.mentionCompletionPanel",
     # Ghostty config-error notice: a non-activating child panel of a main
     # window that never becomes key/main; Cmd+W belongs to the main window.
-    "cmux.ghosttyConfigDiagnosticsNotice",
+    "bree.ghosttyConfigDiagnosticsNotice",
     # Full-screen Sleepy Mode screensaver overlay: it intentionally consumes
     # every key (including Cmd+W, via performKeyEquivalent) to wake/dismiss the
     # cover, so it must not own a standard Close-window shortcut.
-    "cmux.sleepyMode",
+    "bree.sleepyMode",
 }
 
 IDENTIFIER_ASSIGNMENT_RE = re.compile(
-    r"""\b[A-Za-z_][A-Za-z0-9_]*\.identifier\s*=\s*NSUserInterfaceItemIdentifier\("(?P<identifier>cmux\.[^"]+)"\)"""
+    r"""\b[A-Za-z_][A-Za-z0-9_]*\.identifier\s*=\s*NSUserInterfaceItemIdentifier\("(?P<identifier>bree\.[^"]+)"\)"""
 )
 # `window.identifier = NSUserInterfaceItemIdentifier(Self.windowIdentifier)` —
 # the identifier comes from a named constant instead of an inline literal. The
-# constant is resolved against `let <name> = "cmux...."` declarations in the
+# constant is resolved against `let <name> = "bree...."` declarations in the
 # same file (the prevailing pattern: a `static let windowIdentifier` next to
 # the controller that assigns it). The pairing window regressed exactly here:
-# the literal-only regex never saw `cmux.mobilePairingWindow`, so the lint
+# the literal-only regex never saw `bree.mobilePairingWindow`, so the lint
 # passed while Cmd+W fell through to the terminal's Close Tab.
 CONSTANT_ASSIGNMENT_RE = re.compile(
     r"""\b[A-Za-z_][A-Za-z0-9_]*\.identifier\s*=\s*NSUserInterfaceItemIdentifier\(\s*(?P<expr>[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s*\)"""
 )
 STRING_CONSTANT_DECL_RE = re.compile(
-    r"""\blet\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*(?::\s*String\s*)?=\s*"(?P<identifier>cmux\.[^"]+)\""""
+    r"""\blet\s+(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*(?::\s*String\s*)?=\s*"(?P<identifier>bree\.[^"]+)\""""
 )
-STRING_LITERAL_RE = re.compile(r'"(?P<identifier>cmux\.[^"]+)"')
+STRING_LITERAL_RE = re.compile(r'"(?P<identifier>bree\.[^"]+)"')
 BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 LINE_COMMENT_RE = re.compile(r"//[^\n]*")
 
@@ -162,7 +162,7 @@ def main(argv: list[str]) -> int:
         print("Auxiliary window close-shortcut lint failed.")
         print("")
         print(
-            "These cmux window identifiers are assigned to NSWindow/NSPanel "
+            "These bree window identifiers are assigned to NSWindow/NSPanel "
             f"but are missing from {OWNER_LIST_NAME}:"
         )
         for identifier in sorted(missing):
@@ -177,7 +177,7 @@ def main(argv: list[str]) -> int:
         return 1
 
     print("Auxiliary window close-shortcut lint passed.")
-    print(f"Checked {len(assignments)} cmux window identifier(s).")
+    print(f"Checked {len(assignments)} bree window identifier(s).")
     return 0
 
 

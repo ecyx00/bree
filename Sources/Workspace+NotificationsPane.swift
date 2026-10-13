@@ -1,5 +1,5 @@
 import Bonsplit
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
 /// Notification-pane creation and the shared one-per-workspace open path.
@@ -37,7 +37,7 @@ extension Workspace {
         if let targetIndex {
             _ = bonsplitController.reorderTab(newTabId, toIndex: targetIndex)
         }
-        publishCmuxSurfaceCreated(
+        publishBreeSurfaceCreated(
             notificationsPanel.id,
             paneId: paneId,
             kind: SurfaceKind.notifications.rawValue,

@@ -1,11 +1,11 @@
 import AppKit
-import CmuxBrowser
-import CmuxSettings
+import BreeBrowser
+import BreeSettings
 import Foundation
 import WebKit
 
 /// Page state kept across a hidden-pane discard
-/// (https://github.com/manaflow-ai/cmux/issues/15069).
+/// (https://github.com/ecyx00/bree/issues/15069).
 ///
 /// A discard reads the dropped web view's WebKit session state, which holds
 /// the back/forward list plus each entry's scroll position. The restore
@@ -176,7 +176,7 @@ extension BrowserPanel {
         // bookkeeping falls back to matching the restore URL.
         pendingDiscardRestoreNavigation = nil
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.discard.restore panel=\(id.uuidString.prefix(5)) method=interactionState " +
             "bytes=\(interactionState.count) started=\(webView.isLoading ? 1 : 0)"
         )

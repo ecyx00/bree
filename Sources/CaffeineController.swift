@@ -1,10 +1,10 @@
 import Foundation
 import Observation
 
-/// Owns cmux's process-scoped idle-sleep activity.
+/// Owns bree's process-scoped idle-sleep activity.
 ///
 /// The assertion keeps the Mac reachable while its display remains free to
-/// sleep. It is intentionally not persisted: quitting cmux always releases it.
+/// sleep. It is intentionally not persisted: quitting bree always releases it.
 @MainActor
 @Observable
 final class CaffeineController {

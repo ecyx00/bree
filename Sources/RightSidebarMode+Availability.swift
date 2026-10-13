@@ -31,7 +31,7 @@ extension RightSidebarMode {
         case .customSidebar:
             // Needs the custom-sidebars flag AND a picked right-side sidebar
             // (right_sidebar set custom <name>); then the bar grows a Custom button.
-            return CmuxExtensionSidebarSelection.customSidebarsEnabled(defaults: defaults)
+            return BreeExtensionSidebarSelection.customSidebarsEnabled(defaults: defaults)
                 && FileExplorerState.persistedCustomSidebarName(defaults: defaults) != nil
         }
     }
@@ -51,7 +51,7 @@ extension RightSidebarMode {
 
     /// 1-based `ctrl+digit` position of `mode` among the visible tabs, or nil
     /// when the mode is hidden, unavailable, or past position 9. Single source
-    /// for the app's positional shortcut defaults and the CmuxSettings
+    /// for the app's positional shortcut defaults and the BreeSettings
     /// default-stroke override.
     nonisolated static func positionalDigit(
         for mode: RightSidebarMode,

@@ -7,7 +7,7 @@
 // Input goes through page.mouse / page.keyboard, which WebKit delivers as
 // trusted events.
 //
-// One browser serves several REPL sessions, as one cmux window does: each
+// One browser serves several REPL sessions, as one bree window does: each
 // session gets its own driver, and a session's detach closes the tabs it
 // opened unless they were kept (tab.keep), like the app's one-shot runs.
 import fs from "node:fs";
@@ -25,13 +25,13 @@ const require = createRequire(import.meta.url);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 export const runtimeDir = path.join(repoRoot, "Resources/browser-repl");
 
-const AGENT_KEY = 'Symbol.for("cmux.browserRepl.agent")';
-const NEEDS_AGENT = "__cmuxNeedsAgent__";
-const ERROR_KEY = "__cmuxError__";
-const JSON_KEY = "__cmuxJson__";
+const AGENT_KEY = 'Symbol.for("bree.browserRepl.agent")';
+const NEEDS_AGENT = "__breeNeedsAgent__";
+const ERROR_KEY = "__breeError__";
+const JSON_KEY = "__breeJson__";
 
 export function loadPlaywright() {
-  process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.join(process.env.HOME, ".cache/cmux-parity-browsers");
+  process.env.PLAYWRIGHT_BROWSERS_PATH ??= path.join(process.env.HOME, ".cache/bree-parity-browsers");
   // A node_modules directory with playwright: PARITY_PLAYWRIGHT_DIR, else the
   // copy bundled with reference B's runtime (lib/references.mjs), else the
   // usual resolution from here.
@@ -53,7 +53,7 @@ export function loadPlaywright() {
 export function agentInstallSource() {
   const injected = fs.readFileSync(path.join(runtimeDir, "vendor/playwright-injected.js"), "utf8");
   const agent = fs.readFileSync(path.join(runtimeDir, "page-agent.js"), "utf8");
-  return `(() => {\nconst module = {};\n${injected}\n;const __cmuxInjectedScriptFactory = module.exports.InjectedScript;\n${agent}\n})()`;
+  return `(() => {\nconst module = {};\n${injected}\n;const __breeInjectedScriptFactory = module.exports.InjectedScript;\n${agent}\n})()`;
 }
 
 // The app's page clipboard guard (BrowserReplPageClipboard): in a tab a
@@ -63,7 +63,7 @@ export function agentInstallSource() {
 // same page-clipboard.js replaces it in every document the page loads.
 export function pageClipboardInitScript() {
   const shim = fs.readFileSync(path.join(runtimeDir, "page-clipboard.js"), "utf8");
-  return `(${shim})(((post) => (message) => post ? post(message) : Promise.reject(new Error("the tab's clipboard is unavailable")))(globalThis.__cmuxReplClipboard));`;
+  return `(${shim})(((post) => (message) => post ? post(message) : Promise.reject(new Error("the tab's clipboard is unavailable")))(globalThis.__breeReplClipboard));`;
 }
 
 class DriverError extends Error {
@@ -195,7 +195,7 @@ export async function createDevBrowser({ headless = true, viewport = { width: 12
     page.on("dialog", (d) => {
       // A user's tab keeps its own UI for dialogs no session handles; this
       // driver stands in for the user: it lets the page leave on
-      // beforeunload, as cmux does with no session, and dismisses the rest.
+      // beforeunload, as bree does with no session, and dismisses the rest.
       if (!routesToSessions(tab, "dialog")) {
         (d.type() === "beforeunload" ? d.accept() : d.dismiss()).catch(() => {});
         return;
@@ -219,7 +219,7 @@ export async function createDevBrowser({ headless = true, viewport = { width: 12
       choosers.set(chooserId, c);
       const frame = c.element().ownerFrame ? await c.element().ownerFrame() : page.mainFrame();
       await ensureAgent(frame);
-      const element = await c.element().evaluate((el, key) => globalThis[Symbol.for(key)].handleFor(el), "cmux.browserRepl.agent");
+      const element = await c.element().evaluate((el, key) => globalThis[Symbol.for(key)].handleFor(el), "bree.browserRepl.agent");
       emit("filechooser.opened", { targetId, chooserId, frameId: frameId(tab, frame), element, multiple: c.isMultiple() });
     });
     page.on("download", (d) => {
@@ -252,7 +252,7 @@ export async function createDevBrowser({ headless = true, viewport = { width: 12
     page.on("domcontentloaded", () => emit("tab.loadState", { targetId, state: "domcontentloaded" }));
     page.on("load", () => {
       emit("tab.loadState", { targetId, state: "load" });
-      // Browser history, as cmux records it: http(s) main-frame loads.
+      // Browser history, as bree records it: http(s) main-frame loads.
       const url = page.url();
       if (/^https?:/.test(url)) page.title().then((title) => recordVisit(url, title), () => recordVisit(url, ""));
     });
@@ -271,7 +271,7 @@ export async function createDevBrowser({ headless = true, viewport = { width: 12
   async function guardPageClipboard(tab) {
     if (tab.pageClipboardGuarded) return;
     tab.pageClipboardGuarded = true;
-    await tab.page.exposeBinding("__cmuxReplClipboard", (_source, message) => {
+    await tab.page.exposeBinding("__breeReplClipboard", (_source, message) => {
       const items = message && Array.isArray(message.items) ? message.items : null;
       if (!items || items.some((i) => !i || typeof i.type !== "string" || typeof i.base64 !== "string")) {
         throw new Error("the clipboard write is not a list of typed items within the size limit");
@@ -400,7 +400,7 @@ export async function createDevBrowser({ headless = true, viewport = { width: 12
     if (!(tab.creator && drivers.has(tab.creator))) {
       throw new DriverError(
         "unsupported",
-        `${name} is refused in a user's tab (one no attached session opened): cmux ends the web content process of a tab whose page keeps a Copy, Cut or Paste running past its timeout, and it never does that to a user's tab. Use page.clipboard here, or open the page with tabs.open()`,
+        `${name} is refused in a user's tab (one no attached session opened): bree ends the web content process of a tab whose page keeps a Copy, Cut or Paste running past its timeout, and it never does that to a user's tab. Use page.clipboard here, or open the page with tabs.open()`,
       );
     }
     let timer;
@@ -413,7 +413,7 @@ export async function createDevBrowser({ headless = true, viewport = { width: 12
         emit("tab.crashed", { targetId: tab.targetId });
         throw new DriverError(
           "timeout",
-          `${name} did not finish within 5 s, so cmux ended the tab's web content process: nothing the page does later reaches the system clipboard. The tab's clipboard is unchanged; call page.reload() or page.goto() to load the page again`,
+          `${name} did not finish within 5 s, so bree ended the tab's web content process: nothing the page does later reaches the system clipboard. The tab's clipboard is unchanged; call page.reload() or page.goto() to load the page again`,
         );
       }
     } finally {
@@ -697,7 +697,7 @@ export async function createDevBrowser({ headless = true, viewport = { width: 12
       const tab = tabFor(targetId);
       const frame = frameFor(targetId, id);
       await ensureAgent(frame);
-      const handle = await frame.evaluateHandle(([key, h]) => globalThis[Symbol.for(key)].element(h), ["cmux.browserRepl.agent", element]);
+      const handle = await frame.evaluateHandle(([key, h]) => globalThis[Symbol.for(key)].element(h), ["bree.browserRepl.agent", element]);
       const el = handle.asElement();
       const child = el ? await el.contentFrame() : null;
       await handle.dispose();
@@ -766,7 +766,7 @@ export async function createDevBrowser({ headless = true, viewport = { width: 12
     },
     "input.setFiles": async ({ targetId, frameId: id, element, files }) => {
       const frame = frameFor(targetId, id);
-      const handle = await frame.evaluateHandle(([key, h]) => globalThis[Symbol.for(key)].element(h), ["cmux.browserRepl.agent", element]);
+      const handle = await frame.evaluateHandle(([key, h]) => globalThis[Symbol.for(key)].element(h), ["bree.browserRepl.agent", element]);
       try {
         await handle.asElement().setInputFiles(files.map((f) => ({ name: f.name, mimeType: f.mimeType, buffer: Buffer.from(f.base64, "base64") })));
       } finally {
@@ -880,7 +880,7 @@ export async function createDevBrowser({ headless = true, viewport = { width: 12
         })
         .filter((t) => t.values.length);
     const MASK = ([values, mode, token]) => {
-      const key = Symbol.for("cmux.dev.secretMask");
+      const key = Symbol.for("github.com/ecyx00/bree.secretMask");
       const state = (globalThis[key] ||= { counts: new Map(), captures: new Map() });
       const prop = "-webkit-text-security";
       if (mode === "off") {
@@ -1086,15 +1086,15 @@ export async function createDevDriver(options) {
 
 // Loads the runtime scripts into this Node process the way the app loads them
 // into JavaScriptCore: the `repl` list of manifest.json, as plain scripts that
-// attach to globalThis.CmuxBrowserRepl.
+// attach to globalThis.BreeBrowserRepl.
 export function loadRuntime() {
-  if (globalThis.CmuxBrowserRepl?.replHost) return globalThis.CmuxBrowserRepl;
+  if (globalThis.BreeBrowserRepl?.replHost) return globalThis.BreeBrowserRepl;
   const manifest = JSON.parse(fs.readFileSync(path.join(runtimeDir, "manifest.json"), "utf8"));
   for (const f of manifest.repl) {
     const file = path.join(runtimeDir, f);
     vm.runInThisContext(fs.readFileSync(file, "utf8"), { filename: file });
   }
-  return globalThis.CmuxBrowserRepl;
+  return globalThis.BreeBrowserRepl;
 }
 
 function fsError(code, message) {
@@ -1202,7 +1202,7 @@ export function createFsOp({ workDir, tmpdir, readable = new Set() }) {
       const to = check(a.to, true);
       // Copy next to the destination, then swap it in, so a failed copy
       // leaves an existing destination untouched.
-      const staging = path.join(path.dirname(to), `.${path.basename(to)}.cmux-copy-${crypto.randomUUID()}`);
+      const staging = path.join(path.dirname(to), `.${path.basename(to)}.bree-copy-${crypto.randomUUID()}`);
       try {
         fs.copyFileSync(from, staging);
         fs.renameSync(staging, to);
@@ -1241,9 +1241,9 @@ process.on("exit", () => {
 // host contract").
 export function createNodeHost({ workDir, sessionId = "dev", print, readable = new Set() }) {
   // As the app: the session's own private temporary directory,
-  // <tmp>/cmux-browser-repl/<session>-<random>-tmp, mode 0700.
+  // <tmp>/bree-browser-repl/<session>-<random>-tmp, mode 0700.
   const safeID = String(sessionId).slice(0, 64).replace(/[^A-Za-z0-9_-]/g, "_");
-  const tmpdir = makeTestDir(`${safeID}-`, { parent: path.join(os.tmpdir(), "cmux-browser-repl"), mode: 0o700 });
+  const tmpdir = makeTestDir(`${safeID}-`, { parent: path.join(os.tmpdir(), "bree-browser-repl"), mode: 0o700 });
   hostTemporaryDirectories.add(tmpdir);
   return {
     workDir,
@@ -1316,13 +1316,13 @@ export function createDevRepl({ host, driver }) {
   };
 }
 
-// Runs REPL cells the way `cmux browser repl` runs calls: every cell is a
+// Runs REPL cells the way `bree browser repl` runs calls: every cell is a
 // one-shot session unless it names a session, and one-shot sessions close
 // the tabs they opened unless kept. Returns each cell's printed output and
 // uncaught error.
 export async function runDevCells(cells, { workDir } = {}) {
   const ns = loadRuntime();
-  const dir = fs.realpathSync(workDir ?? makeTestDir("cmux-repl-"));
+  const dir = fs.realpathSync(workDir ?? makeTestDir("bree-repl-"));
   const browser = await createDevBrowser();
   const named = new Map();
   const readable = new Set();

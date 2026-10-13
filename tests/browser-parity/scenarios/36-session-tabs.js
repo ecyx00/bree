@@ -1,7 +1,7 @@
 // Where a session's behavior stops: what a tab the session opened inherits,
 // and what a tab it only drives keeps from the user.
-// oracle: skip (session and tab ownership are cmux-defined)
-// ---- cell session=store cmux-only
+// oracle: skip (session and tab ownership are bree-defined)
+// ---- cell session=store bree-only
 // A tab opened after session.configure({ proxy }) uses a private data store.
 // A link it opens in a new tab (Meta+click) must use that store too, so the
 // session's cookies follow and the user's profile stays out. The dev driver
@@ -28,18 +28,18 @@ for (let i = 0; i < 100 && !storeRow; i++) {
 }
 const storePopup = storeRow && (await tabs.get(storeRow.id));
 if (storePopup) await storePopup.waitForLoadState();
-emitCmux("popup-store-cookie", storePopup ? await storePopup.evaluate(() => document.cookie.split("; ").filter((c) => c.startsWith("brepl_store="))) : "no popup");
+emitBree("popup-store-cookie", storePopup ? await storePopup.evaluate(() => document.cookie.split("; ").filter((c) => c.startsWith("brepl_store="))) : "no popup");
 if (storePopup) await storePopup.close();
 await storeOpener.close();
 await session.configure({ proxy: null });
-// ---- cell cmux-only
+// ---- cell bree-only
 // A one-shot run opens and keeps a tab; once the run ends the tab is the
 // user's, and the next session only drives it.
 const keptForUser = await tabs.open(`${PRIMARY}/dialogs.html?user-owned`);
 await keptForUser.keep();
-// ---- cell session=agent cmux-only
+// ---- cell session=agent bree-only
 // A session driving a user's tab does not answer that tab's permission
-// requests from session.configure: notifications stay denied, as cmux
+// requests from session.configure: notifications stay denied, as bree
 // answers them for a tab no session drives. Events the agent registered a
 // handler for on that page (a dialog, a download) still reach the session.
 // Without a handler they go to the user's own UI, which a check cannot
@@ -47,17 +47,17 @@ await keptForUser.keep();
 const userRow = (await tabs.list()).find((t) => t.url.endsWith("?user-owned"));
 const userTab = await tabs.use(userRow.id);
 await session.configure({ permissions: ["notifications"] });
-emitCmux("user-tab-notifications", await userTab.evaluate(() => Notification.requestPermission()));
+emitBree("user-tab-notifications", await userTab.evaluate(() => Notification.requestPermission()));
 userTab.once("dialog", (d) => d.accept());
 await userTab.locator("#confirm").click();
-emitCmux("user-tab-dialog-listener", await userTab.locator("#r").textContent());
+emitBree("user-tab-dialog-listener", await userTab.locator("#r").textContent());
 await userTab.goto(`${PRIMARY}/files.html?user-owned`);
 const userDownload = userTab.waitForEvent("download");
 await userTab.locator("#dl").click();
-emitCmux("user-tab-download-listener", (await userDownload).suggestedFilename());
+emitBree("user-tab-download-listener", (await userDownload).suggestedFilename());
 await userTab.close();
 await session.configure({ permissions: null });
-// ---- cell cmux-only
+// ---- cell bree-only
 // A run that ends with a key or mouse button still pressed must release
 // them: the page gets keyup and mouseup, so it is not left mid-drag or with
 // Shift held for the user.
@@ -70,8 +70,8 @@ await heldTab.keyboard.down("KeyA");
 const heldBox = await heldTab.locator("h1").boundingBox();
 await heldTab.mouse.move(heldBox.x + 5, heldBox.y + 5);
 await heldTab.mouse.down();
-// ---- cell cmux-only
+// ---- cell bree-only
 const heldRow = (await tabs.list()).find((t) => t.url.endsWith("?held"));
 const heldAfter = await tabs.use(heldRow.id);
-emitCmux("released-on-session-end", await heldAfter.evaluate(() => window.__log.filter((e) => e.type === "keyup" || e.type === "mouseup").map((e) => `${e.type} ${e.type === "mouseup" ? e.button : e.key} ${e.trusted}`).sort()));
+emitBree("released-on-session-end", await heldAfter.evaluate(() => window.__log.filter((e) => e.type === "keyup" || e.type === "mouseup").map((e) => `${e.type} ${e.type === "mouseup" ? e.button : e.key} ${e.trusted}`).sort()));
 await heldAfter.close();

@@ -1,16 +1,16 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import Bonsplit
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Combine
-import CmuxAgentSessionStore
+import BreeAgentSessionStore
 import Darwin
 import Foundation
 import os
 import SQLite3
 
 nonisolated private let sessionIndexLogger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "com.cmuxterm.app",
+    subsystem: Bundle.main.bundleIdentifier ?? "com.bree.app",
     category: "SessionIndexStore"
 )
 
@@ -631,7 +631,7 @@ final class SessionIndexStore: ObservableObject {
 
     struct LoadedAgentOrder: Sendable {
         let agents: [SessionAgent]
-        let registry: CmuxVaultAgentRegistry
+        let registry: BreeVaultAgentRegistry
     }
 
     nonisolated static func defaultAgentOrder(workingDirectory: String?) async -> LoadedAgentOrder {
@@ -642,16 +642,16 @@ final class SessionIndexStore: ObservableObject {
 
     nonisolated private static func defaultAgentOrderSync(workingDirectory: String?) -> LoadedAgentOrder {
         let builtInIDs = Set(SessionAgent.builtInCases.map(\.rawValue))
-        let registry = CmuxVaultAgentRegistry.load(workingDirectory: workingDirectory)
+        let registry = BreeVaultAgentRegistry.load(workingDirectory: workingDirectory)
         let agents = SessionAgent.builtInCases + registry.registrations.compactMap {
             builtInIDs.contains($0.id) ? nil : .registered(RegisteredSessionAgent(registration: $0))
         }
         return LoadedAgentOrder(agents: agents, registry: registry)
     }
 
-    nonisolated static func vaultAgentRegistry(workingDirectory: String?) async -> CmuxVaultAgentRegistry {
+    nonisolated static func vaultAgentRegistry(workingDirectory: String?) async -> BreeVaultAgentRegistry {
         await Task.detached(priority: .utility) {
-            CmuxVaultAgentRegistry.load(workingDirectory: workingDirectory)
+            BreeVaultAgentRegistry.load(workingDirectory: workingDirectory)
         }.value
     }
 
@@ -693,7 +693,7 @@ final class SessionIndexStore: ObservableObject {
         let generation = directorySnapshotGeneration
         loadTask = Task { @MainActor [weak self] in
             #if DEBUG
-            cmuxDebugLog("session.index.reload.begin")
+            breeDebugLog("session.index.reload.begin")
             #endif
             let scanned = await snapshotLoader.load(
                 ampSessionRepository: ampSessionRepository,
@@ -706,12 +706,12 @@ final class SessionIndexStore: ObservableObject {
             )
             guard let self, !Task.isCancelled else {
                 #if DEBUG
-                cmuxDebugLog("session.index.reload.cancelled")
+                breeDebugLog("session.index.reload.cancelled")
                 #endif
                 return
             }
             #if DEBUG
-            cmuxDebugLog("session.index.reload.end entries=\(scanned.count)")
+            breeDebugLog("session.index.reload.end entries=\(scanned.count)")
             #endif
             self.entries = scanned
             self.isLoading = false
@@ -1054,7 +1054,7 @@ final class SessionIndexStore: ObservableObject {
 
     nonisolated private static func decodeClaudeProjectDir(_ raw: String) -> String? {
         // Claude encodes cwd by replacing "/" with "-" and prefixing "-"
-        // e.g. "-Users-example-fun-cmuxterm-hq" -> "/Users/example/fun/cmuxterm-hq".
+        // e.g. "-Users-example-fun-bree-hq" -> "/Users/example/fun/bree-hq".
         // The encoding is lossy: a real path segment containing "-"
         // (e.g. "my-cool-project") collapses to multiple segments
         // ("/my/cool/project") on decode, which is wrong. Only return the
@@ -1305,7 +1305,7 @@ final class SessionIndexStore: ObservableObject {
     /// schema) without requiring the helpers to throw across actor boundaries.
     final class ErrorBag: @unchecked Sendable {
         private static let logger = Logger(
-            subsystem: Bundle.main.bundleIdentifier ?? "com.cmuxterm.app",
+            subsystem: Bundle.main.bundleIdentifier ?? "com.bree.app",
             category: "SessionIndexSearch"
         )
         static let genericProviderFailure = String(
@@ -1364,7 +1364,7 @@ final class SessionIndexStore: ObservableObject {
         let totalStart = ProcessInfo.processInfo.systemUptime
         defer {
             let totalMs = (ProcessInfo.processInfo.systemUptime - totalStart) * 1000
-            cmuxDebugLog("session.search.total ms=\(String(format: "%.0f", totalMs)) needle=\"\(trimmed.prefix(20))\" offset=\(offset) limit=\(limit) errors=\(bag.snapshot().count)")
+            breeDebugLog("session.search.total ms=\(String(format: "%.0f", totalMs)) needle=\"\(trimmed.prefix(20))\" offset=\(offset) limit=\(limit) errors=\(bag.snapshot().count)")
         }
         #endif
         let safeOffset = max(0, offset)
@@ -1423,7 +1423,7 @@ final class SessionIndexStore: ObservableObject {
     ) async -> [SessionEntry] {
         switch scope {
         case .agent(let a):
-            let registry: CmuxVaultAgentRegistry
+            let registry: BreeVaultAgentRegistry
             let cwdFilter: String?
             if case .registered = a {
                 let scopedCwd = currentDirectory?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1437,7 +1437,7 @@ final class SessionIndexStore: ObservableObject {
                 )
             } else {
                 cwdFilter = nil
-                registry = CmuxVaultAgentRegistry(registrations: [])
+                registry = BreeVaultAgentRegistry(registrations: [])
             }
             return await Self.searchAgent(
                 needle: needle, agent: a, cwdFilter: cwdFilter,
@@ -1471,7 +1471,7 @@ final class SessionIndexStore: ObservableObject {
 
     nonisolated static func loadAgents(
         _ agents: [SessionAgent],
-        registry: CmuxVaultAgentRegistry,
+        registry: BreeVaultAgentRegistry,
         ampSessionRepository: any AmpHookSessionReading,
         needle: String,
         cwdFilter: String?,
@@ -1510,7 +1510,7 @@ final class SessionIndexStore: ObservableObject {
     nonisolated private static func timedAgent(
         needle: String, agent: SessionAgent, cwdFilter: String?,
         offset: Int, limit: Int, errorBag: ErrorBag,
-        registry: CmuxVaultAgentRegistry,
+        registry: BreeVaultAgentRegistry,
         ampSessionRepository: any AmpHookSessionReading
     ) async -> [SessionEntry] {
         #if DEBUG
@@ -1526,7 +1526,7 @@ final class SessionIndexStore: ObservableObject {
             ampSessionRepository: ampSessionRepository
         )
         let ms = (ProcessInfo.processInfo.systemUptime - start) * 1000
-        cmuxDebugLog("session.search.agent agent=\(agent.rawValue) ms=\(String(format: "%.0f", ms)) results=\(result.count) cwd=\(cwdFilter?.suffix(40) ?? "nil")")
+        breeDebugLog("session.search.agent agent=\(agent.rawValue) ms=\(String(format: "%.0f", ms)) results=\(result.count) cwd=\(cwdFilter?.suffix(40) ?? "nil")")
         return result
         #else
         return await searchAgent(
@@ -1550,7 +1550,7 @@ final class SessionIndexStore: ObservableObject {
     nonisolated static func searchAgent(
         needle: String, agent: SessionAgent, cwdFilter: String?,
         offset: Int, limit: Int, errorBag: ErrorBag,
-        registry: CmuxVaultAgentRegistry,
+        registry: BreeVaultAgentRegistry,
         ampSessionRepository: any AmpHookSessionReading
     ) async -> [SessionEntry] {
         switch agent {
@@ -1847,7 +1847,7 @@ final class SessionIndexStore: ObservableObject {
         let cachedCount = sorted.filter { $0.2 }.count
         let skippedCount = sorted.filter { $0.1 == nil && !$0.2 }.count + sorted.filter { $0.1 == nil && $0.2 }.count
         let totalMs = (ProcessInfo.processInfo.systemUptime - loopStart) * 1000
-        cmuxDebugLog("session.claude.detail target=\(target) workSize=\(workSize) matched=\(matched.count) cachedHits=\(cachedCount) skipped=\(skippedCount) parallelMs=\(Int(totalMs))")
+        breeDebugLog("session.claude.detail target=\(target) workSize=\(workSize) matched=\(matched.count) cachedHits=\(cachedCount) skipped=\(skippedCount) parallelMs=\(Int(totalMs))")
         #endif
         return Array(matched.prefix(target).dropFirst(offset).prefix(limit))
     }
@@ -1969,7 +1969,7 @@ final class SessionIndexStore: ObservableObject {
     ) -> [SessionEntry] {
         let snapshot: OpenCodeDatabaseSnapshot.Snapshot
         do {
-            guard let madeSnapshot = try OpenCodeDatabaseSnapshot.make(prefix: "cmux-opencode-search") else {
+            guard let madeSnapshot = try OpenCodeDatabaseSnapshot.make(prefix: "bree-opencode-search") else {
                 return []
             }
             snapshot = madeSnapshot

@@ -1,4 +1,4 @@
-import CmuxTerminal
+import BreeTerminal
 
 /// A prepared value returned by the shared terminal/composer paste pipeline.
 enum TerminalPastePreparationResult: Codable, Sendable {

@@ -1,10 +1,10 @@
-import CmuxSettings
+import BreeSettings
 
 struct SurfaceTabBarButtonConfiguration {
-    let buttons: [CmuxSurfaceTabBarButton]
+    let buttons: [BreeSurfaceTabBarButton]
     let sourcePath: String?
     let globalConfigPath: String
-    let settingPresets: [String: CmuxSettingValue]
+    let settingPresets: [String: BreeSettingValue]
     let terminalCommandSourcePaths: [String: String]
-    let workspaceCommands: [String: CmuxResolvedCommand]
+    let workspaceCommands: [String: BreeResolvedCommand]
 }

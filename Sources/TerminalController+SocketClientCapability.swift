@@ -1,5 +1,5 @@
-import CmuxControlSocket
-import CmuxSettings
+import BreeControlSocket
+import BreeSettings
 import Foundation
 
 extension TerminalController {
@@ -14,7 +14,7 @@ extension TerminalController {
         bundleIdentifier: String? = Bundle.main.bundleIdentifier
     ) -> SocketClientCapabilityAuthority {
         let audience = bundleIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
-            .nonEmpty ?? "com.cmuxterm.app"
+            .nonEmpty ?? "com.bree.app"
         let store = SocketClientCapabilitySecretStore(
             service: "\(audience).socket-client-capability"
         )
@@ -36,7 +36,7 @@ extension TerminalController {
     nonisolated func socketClientInitialReadLimits(
         peerProcessID: pid_t?
     ) -> ControlClientLineReadLimits? {
-        guard socketServer.accessMode == .cmuxOnly,
+        guard socketServer.accessMode == .breeOnly,
               !(peerProcessID.map(isDescendant) ?? false) else {
             return nil
         }

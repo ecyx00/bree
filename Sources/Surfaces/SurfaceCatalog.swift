@@ -1,5 +1,5 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 import Observation
 /// The single owner of surface identities and projections on this Mac.
@@ -25,7 +25,7 @@ final class SurfaceCatalog {
     /// while cancellation is unresolved. This prevents one unhealthy machine from blocking
     /// unrelated machines while also bounding repeated provider replacements.
     nonisolated static let defaultMaximumTrackedMaterializations = 16
-    static let didChangeNotification = Notification.Name("cmux.surfaces.didChange")
+    static let didChangeNotification = Notification.Name("bree.surfaces.didChange")
     private(set) var machines: [SurfaceMachineID: SurfaceMachineInfo] = [:]
     private(set) var resources: [SurfaceResourceID: SurfaceResource] = [:]
     private struct CloudProjectionKey: Hashable { let panelID: UUID; let workspaceID: UUID }
@@ -199,7 +199,7 @@ final class SurfaceCatalog {
         if machine.isLocal { return true }
         guard let registered = providers[machine] else {
 #if DEBUG
-            cmuxDebugLog("catalog.write.ignored machine=\(machine.rawValue) reason=unregistered")
+            breeDebugLog("catalog.write.ignored machine=\(machine.rawValue) reason=unregistered")
 #endif
             return false
         }
@@ -210,7 +210,7 @@ final class SurfaceCatalog {
         if let source,
            (source.machine != machine || ObjectIdentifier(registered) != ObjectIdentifier(source)) {
 #if DEBUG
-            cmuxDebugLog("catalog.write.ignored machine=\(machine.rawValue) reason=retired-provider")
+            breeDebugLog("catalog.write.ignored machine=\(machine.rawValue) reason=retired-provider")
 #endif
             return false
         }

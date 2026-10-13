@@ -1,6 +1,6 @@
 {
   "receipt": {
-    "schema_version": "cmux-verification/v1",
+    "schema_version": "bree-verification/v1",
     "authority": "evidence_only",
     "recipe": {
       "id": "tests/test_docs_deploy_auth_guard.py",

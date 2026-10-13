@@ -1,18 +1,18 @@
 import AppKit
-import CMUXAgentLaunch
-import CmuxAgentJournal
-import CmuxFoundation
+import BREEAgentLaunch
+import BreeAgentJournal
+import BreeFoundation
 import Foundation
 
-/// Recovers agent sessions that were running when cmux died.
+/// Recovers agent sessions that were running when bree died.
 ///
 /// The agent journal knows which sessions never ended, and the hook session
 /// stores know where each ran and how it was launched. When the app comes back
 /// after an unclean exit, the sessions that are neither running nor already
 /// restored into a panel are reopened, one workspace each. Each resumes
-/// through `cmux restore <kind> <id>`, the verb a normal restore types, from
+/// through `bree restore <kind> <id>`, the verb a normal restore types, from
 /// a panel that carries the session's restore record. A session started
-/// through an undeclared launcher that `cmux restore` cannot rebuild resumes
+/// through an undeclared launcher that `bree restore` cannot rebuild resumes
 /// through that launcher instead (see `AgentLauncherPrefix`).
 ///
 /// Only Claude is recovered: its `SessionEnd` hook marks sessions that ended
@@ -130,7 +130,7 @@ struct AgentSessionRecovery: Sendable {
 
     /// How a recovered session starts in its new terminal.
     enum Launch {
-        /// Type the `cmux restore` verb into a panel carrying `agent` as its
+        /// Type the `bree restore` verb into a panel carrying `agent` as its
         /// restore record, so the session resumes exactly as a normal restore
         /// would (routed launcher, wrapper authorization, permission mode).
         case restoreVerb(input: String, agent: SessionRestorableAgentSnapshot)
@@ -147,7 +147,7 @@ struct AgentSessionRecovery: Sendable {
         }
     }
 
-    /// The restorable-agent snapshot `cmux restore` reads for `candidate`.
+    /// The restorable-agent snapshot `bree restore` reads for `candidate`.
     static func restorableAgent(for candidate: AgentRecoveryCandidate) -> SessionRestorableAgentSnapshot? {
         guard let kind = RestorableAgentKind(rawValue: candidate.kind),
               kind.restoreMode == .resumeSession else { return nil }
@@ -161,7 +161,7 @@ struct AgentSessionRecovery: Sendable {
     }
 
     /// How `candidate` resumes: through its recorded launcher when only that
-    /// launcher can rebuild it, otherwise through `cmux restore`.
+    /// launcher can rebuild it, otherwise through `bree restore`.
     static func launch(for candidate: AgentRecoveryCandidate) -> Launch? {
         guard let agent = restorableAgent(for: candidate) else { return nil }
         if let arguments = candidate.launcherResumeArguments {
@@ -218,7 +218,7 @@ extension AgentSessionRecovery {
             let startupAgent: SessionRestorableAgentSnapshot?
             switch launch {
             case .restoreVerb(_, let agent):
-                // `cmux restore` takes the launch claim at its admission
+                // `bree restore` takes the launch claim at its admission
                 // boundary, so a concurrent restore cannot start the session
                 // twice. The panel carries the session, so a second recovery
                 // sees it as open, even before a deferred start.
@@ -345,7 +345,7 @@ extension AppDelegate {
         // scan, and restoreRecoveredAgentSessions repeats it before launching.
         // Without the dead run's start time the window would widen to the
         // planner's 48-hour limit and pull in sessions from earlier runs that
-        // exited cleanly; those stay reachable through `cmux session restore
+        // exited cleanly; those stay reachable through `bree session restore
         // --session <id>`.
         guard let activeSince = previousSessionLaunchStartedAt else { return }
         let openSessionIds = openAgentSessionIdsForRecovery()
@@ -387,7 +387,7 @@ extension AppDelegate {
 
 extension TerminalController {
     /// `session.agent_recovery.list`: agent sessions that were running when
-    /// cmux last died and are neither running nor open now. After a clean
+    /// bree last died and are neither running nor open now. After a clean
     /// exit nothing was lost, so the wider 48-hour window is listed for
     /// inspection only. Runs on the socket worker; only the app-state reads
     /// hop to the main actor.

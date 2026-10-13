@@ -7,9 +7,9 @@ RELOAD_ORIGINAL_ARGS=("$@")
 source "$SCRIPT_DIR/lib/mobile-attach.sh"
 
 
-APP_NAME="cmux DEV"
-BUNDLE_ID="com.cmuxterm.app.debug"
-BASE_APP_NAME="cmux DEV"
+APP_NAME="Bree Dev"
+BUNDLE_ID="com.bree.app.debug"
+BASE_APP_NAME="Bree Dev"
 DERIVED_DATA=""
 NAME_SET=0
 BUNDLE_SET=0
@@ -17,28 +17,28 @@ DERIVED_SET=0
 TAG=""
 LAUNCH=0
 BUILD_ONLY=0
-CMUX_DEBUG_LOG=""
-CMUX_DEV_PORT=""
-CMUX_DEV_PORT_END=""
-CMUX_DEV_PORT_RANGE=""
-CMUX_DEV_ORIGIN=""
-CMUX_DEV_API_BASE_URL_VALUE=""
-CMUX_AUTH_WWW_ORIGIN_VALUE=""
-CMUX_WWW_ORIGIN_VALUE=""
+BREE_DEBUG_LOG=""
+BREE_DEV_PORT=""
+BREE_DEV_PORT_END=""
+BREE_DEV_PORT_RANGE=""
+BREE_DEV_ORIGIN=""
+BREE_DEV_API_BASE_URL_VALUE=""
+BREE_AUTH_WWW_ORIGIN_VALUE=""
+BREE_WWW_ORIGIN_VALUE=""
 PROD_AUTH=0
 CLI_PATH=""
-NO_GLOBAL_CLI_LINKS="${CMUX_RELOAD_NO_GLOBAL_CLI_LINKS:-0}"
-# Matches CmuxStateDirectory (non-TCC ~/.local/state/cmux) where the app/CLI now
-# read the last-socket-path markers (https://github.com/manaflow-ai/cmux/issues/5146).
+NO_GLOBAL_CLI_LINKS="${BREE_RELOAD_NO_GLOBAL_CLI_LINKS:-0}"
+# Matches BreeStateDirectory (non-TCC ~/.local/state/bree) where the app/CLI now
+# read the last-socket-path markers (https://github.com/ecyx00/bree/issues/5146).
 # Resolve the real account home via getpwuid (the same syscall
 # homeDirectoryForCurrentUser uses) rather than $HOME, which a shell can override.
 # perl ships with macOS and returns the full home path even when it contains spaces;
 # `dscl ... | awk` mis-parses such paths because dscl wraps a value with spaces onto
 # a second line. `|| true` keeps the lookup from aborting the script under
 # `set -euo pipefail`; an empty result falls back to $HOME.
-_cmux_account_home="$(perl -e 'print((getpwuid($<))[7])' 2>/dev/null || true)"
-LAST_SOCKET_PATH_DIR="${_cmux_account_home:-$HOME}/.local/state/cmux"
-LEGACY_SOCKET_PATH_DIR="${_cmux_account_home:-$HOME}/Library/Application Support/cmux"
+_bree_account_home="$(perl -e 'print((getpwuid($<))[7])' 2>/dev/null || true)"
+LAST_SOCKET_PATH_DIR="${_bree_account_home:-$HOME}/.local/state/bree"
+LEGACY_SOCKET_PATH_DIR="${_bree_account_home:-$HOME}/Library/Application Support/bree"
 SWIFT_FRONTEND_WORKAROUND=0
 XCODEBUILD_STARTED=0
 XCODEBUILD_OUTPUT_VALID=0
@@ -212,7 +212,7 @@ reload_cleanup_tag_state_with_lock() {
         return 0;
       }
       my ($temporary_fh, $temporary_path) = eval {
-        tempfile(".cmux-discovery.XXXXXX", DIR => $directory, UNLINK => 0)
+        tempfile(".bree-discovery.XXXXXX", DIR => $directory, UNLINK => 0)
       };
       return 0 unless $temporary_fh && $temporary_path;
       my $ok = print {$temporary_fh} $value, "\n";
@@ -349,7 +349,7 @@ reload_cleanup_tag_state_with_lock() {
       close($fh);
       exit 1;
     }
-    my $cli_suffix = "/cmux DEV ${slug}.app/Contents/Resources/bin/bree";
+    my $cli_suffix = "/Bree Dev ${slug}.app/Contents/Resources/bin/bree";
     my $pointer_ok = length($publish_cli_path)
       ? write_discovery_file($pointer_path, $publish_cli_path)
       : clear_matching_discovery_file($pointer_path, $cli_suffix, 1);
@@ -386,73 +386,73 @@ derive_socket_marker_names() {
   local variant_slug=""
 
   # Keep this table in lockstep with SocketPathMarkerFiles.variant. In
-  # particular, an identifier that is not one of the known cmux flavors is
+  # particular, an identifier that is not one of the known bree flavors is
   # stable (rather than an implicitly-tagged dev build), and an empty suffix
   # uses the unscoped nightly/rc/staging/dev marker name.
   bundle_id="$(printf '%s' "$bundle_id" | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
-  CMUX_RELOAD_MARKER_NAME="last-socket-path"
-  CMUX_RELOAD_TMP_MARKER="/tmp/cmux-last-socket-path"
+  BREE_RELOAD_MARKER_NAME="last-socket-path"
+  BREE_RELOAD_TMP_MARKER="/tmp/bree-last-socket-path"
   case "$bundle_id" in
-    com.cmuxterm.app.nightly)
-      CMUX_RELOAD_MARKER_NAME="nightly-last-socket-path"
-      CMUX_RELOAD_TMP_MARKER="/tmp/cmux-nightly-last-socket-path"
+    com.bree.app.nightly)
+      BREE_RELOAD_MARKER_NAME="nightly-last-socket-path"
+      BREE_RELOAD_TMP_MARKER="/tmp/bree-nightly-last-socket-path"
       ;;
-    com.cmuxterm.app.nightly.*)
-      variant_slug="$(sanitize_path "${bundle_id#com.cmuxterm.app.nightly.}")"
+    com.bree.app.nightly.*)
+      variant_slug="$(sanitize_path "${bundle_id#com.bree.app.nightly.}")"
       if [[ -n "$variant_slug" ]]; then
-        CMUX_RELOAD_MARKER_NAME="nightly-${variant_slug}-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-nightly-${variant_slug}-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="nightly-${variant_slug}-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-nightly-${variant_slug}-last-socket-path"
       else
-        CMUX_RELOAD_MARKER_NAME="nightly-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-nightly-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="nightly-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-nightly-last-socket-path"
       fi
       ;;
-    com.cmuxterm.app.rc)
-      CMUX_RELOAD_MARKER_NAME="rc-last-socket-path"
-      CMUX_RELOAD_TMP_MARKER="/tmp/cmux-rc-last-socket-path"
+    com.bree.app.rc)
+      BREE_RELOAD_MARKER_NAME="rc-last-socket-path"
+      BREE_RELOAD_TMP_MARKER="/tmp/bree-rc-last-socket-path"
       ;;
-    com.cmuxterm.app.rc.*)
-      variant_slug="$(sanitize_path "${bundle_id#com.cmuxterm.app.rc.}")"
+    com.bree.app.rc.*)
+      variant_slug="$(sanitize_path "${bundle_id#com.bree.app.rc.}")"
       if [[ -n "$variant_slug" ]]; then
-        CMUX_RELOAD_MARKER_NAME="rc-${variant_slug}-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-rc-${variant_slug}-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="rc-${variant_slug}-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-rc-${variant_slug}-last-socket-path"
       else
-        CMUX_RELOAD_MARKER_NAME="rc-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-rc-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="rc-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-rc-last-socket-path"
       fi
       ;;
-    com.cmuxterm.app.staging)
-      CMUX_RELOAD_MARKER_NAME="staging-last-socket-path"
-      CMUX_RELOAD_TMP_MARKER="/tmp/cmux-staging-last-socket-path"
+    com.bree.app.staging)
+      BREE_RELOAD_MARKER_NAME="staging-last-socket-path"
+      BREE_RELOAD_TMP_MARKER="/tmp/bree-staging-last-socket-path"
       ;;
-    com.cmuxterm.app.staging.*)
-      variant_slug="$(sanitize_path "${bundle_id#com.cmuxterm.app.staging.}")"
+    com.bree.app.staging.*)
+      variant_slug="$(sanitize_path "${bundle_id#com.bree.app.staging.}")"
       if [[ -n "$variant_slug" ]]; then
-        CMUX_RELOAD_MARKER_NAME="staging-${variant_slug}-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-staging-${variant_slug}-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="staging-${variant_slug}-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-staging-${variant_slug}-last-socket-path"
       else
-        CMUX_RELOAD_MARKER_NAME="staging-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-staging-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="staging-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-staging-last-socket-path"
       fi
       ;;
-    com.cmuxterm.app.debug)
+    com.bree.app.debug)
       variant_slug="$(sanitize_path "$tag_slug")"
       if [[ -n "$variant_slug" ]]; then
-        CMUX_RELOAD_MARKER_NAME="dev-${variant_slug}-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-dev-${variant_slug}-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="dev-${variant_slug}-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-dev-${variant_slug}-last-socket-path"
       else
-        CMUX_RELOAD_MARKER_NAME="dev-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-dev-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="dev-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-dev-last-socket-path"
       fi
       ;;
-    com.cmuxterm.app.debug.*)
-      variant_slug="$(sanitize_path "${bundle_id#com.cmuxterm.app.debug.}")"
+    com.bree.app.debug.*)
+      variant_slug="$(sanitize_path "${bundle_id#com.bree.app.debug.}")"
       if [[ -n "$variant_slug" ]]; then
-        CMUX_RELOAD_MARKER_NAME="dev-${variant_slug}-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-dev-${variant_slug}-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="dev-${variant_slug}-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-dev-${variant_slug}-last-socket-path"
       else
-        CMUX_RELOAD_MARKER_NAME="dev-last-socket-path"
-        CMUX_RELOAD_TMP_MARKER="/tmp/cmux-dev-last-socket-path"
+        BREE_RELOAD_MARKER_NAME="dev-last-socket-path"
+        BREE_RELOAD_TMP_MARKER="/tmp/bree-dev-last-socket-path"
       fi
       ;;
   esac
@@ -460,17 +460,17 @@ derive_socket_marker_names() {
 
 cleanup_stale_tag_state() {
   local slug="$1"
-  local socket_path="${2:-/tmp/cmux-debug-${slug}.sock}"
+  local socket_path="${2:-/tmp/bree-debug-${slug}.sock}"
   local publish_socket_path="${3:-}"
   local publish_cli_path="${4:-}"
   derive_socket_marker_names "${BUNDLE_ID:-}" "$slug"
-  local marker_name="$CMUX_RELOAD_MARKER_NAME"
-  local tmp_marker="$CMUX_RELOAD_TMP_MARKER"
-  # The Bree dev build (CmuxIdentity .breeDev) owns its own state folders; it must
-  # never publish markers into cmux's ~/.local/state/cmux or Application Support/cmux.
-  if [[ "${BUNDLE_ID:-}" == "com.cmuxterm.app.debug.bree" ]]; then
-    LAST_SOCKET_PATH_DIR="${_cmux_account_home:-$HOME}/.local/state/bree-dev"
-    LEGACY_SOCKET_PATH_DIR="${_cmux_account_home:-$HOME}/Library/Application Support/Bree Dev"
+  local marker_name="$BREE_RELOAD_MARKER_NAME"
+  local tmp_marker="$BREE_RELOAD_TMP_MARKER"
+  # The Bree dev build (BreeIdentity .breeDev) owns its own state folders; it must
+  # never publish markers into bree's ~/.local/state/bree or Application Support/bree.
+  if [[ "${BUNDLE_ID:-}" == "com.bree.app.debug.bree" ]]; then
+    LAST_SOCKET_PATH_DIR="${_bree_account_home:-$HOME}/.local/state/bree-dev"
+    LEGACY_SOCKET_PATH_DIR="${_bree_account_home:-$HOME}/Library/Application Support/Bree Dev"
   fi
   local marker_path="${LAST_SOCKET_PATH_DIR}/${marker_name}"
   local legacy_marker_path="${LEGACY_SOCKET_PATH_DIR}/${marker_name}"
@@ -510,15 +510,15 @@ cleanup_stale_cli_pointer_target() {
   esac
   local app_name="${bundle_path##*/}"
   app_name="${app_name%.app}"
-  [[ "$app_name" == "cmux DEV "* ]] || return 0
-  local slug="${app_name#cmux DEV }"
+  [[ "$app_name" == "Bree Dev "* ]] || return 0
+  local slug="${app_name#Bree Dev }"
   [[ "$slug" =~ ^[A-Za-z0-9_-]+$ ]] || return 0
   local socket_path=""
   if [[ -x /usr/libexec/PlistBuddy && -f "$bundle_path/Contents/Info.plist" ]]; then
-    socket_path="$(/usr/libexec/PlistBuddy -c 'Print :LSEnvironment:CMUX_SOCKET_PATH' "$bundle_path/Contents/Info.plist" 2>/dev/null || true)"
+    socket_path="$(/usr/libexec/PlistBuddy -c 'Print :LSEnvironment:BREE_SOCKET_PATH' "$bundle_path/Contents/Info.plist" 2>/dev/null || true)"
   fi
   socket_path="$(printf '%s' "$socket_path" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
-  cleanup_stale_tag_state "$slug" "${socket_path:-/tmp/cmux-debug-${slug}.sock}"
+  cleanup_stale_tag_state "$slug" "${socket_path:-/tmp/bree-debug-${slug}.sock}"
 }
 
 wait_for_tag_socket_lock_release() {
@@ -564,7 +564,7 @@ wait_for_tag_socket_lock_release() {
 }
 
 should_skip_ghostty_cli_helper_zig_build() {
-  [[ "${CMUX_SKIP_ZIG_BUILD:-}" == "1" ]]
+  [[ "${BREE_SKIP_ZIG_BUILD:-}" == "1" ]]
 }
 
 write_dev_cli_shim() {
@@ -581,7 +581,7 @@ write_dev_cli_shim() {
   mkdir -p "$(dirname "$target")"
   cat > "$target" <<EOF
 #!/usr/bin/env bash
-# cmux dev shim (managed by scripts/reload.sh)
+# bree dev shim (managed by scripts/reload.sh)
 set -euo pipefail
 
 CLI_PATH_FILE=${cli_path_file_literal}
@@ -621,7 +621,7 @@ bundle_socket_path() {
   local bundle_path="\$1"
   local socket_path=""
   if [[ -x /usr/libexec/PlistBuddy ]]; then
-    socket_path="\$(/usr/libexec/PlistBuddy -c 'Print :LSEnvironment:CMUX_SOCKET_PATH' "\$bundle_path/Contents/Info.plist" 2>/dev/null || true)"
+    socket_path="\$(/usr/libexec/PlistBuddy -c 'Print :LSEnvironment:BREE_SOCKET_PATH' "\$bundle_path/Contents/Info.plist" 2>/dev/null || true)"
   fi
   if [[ -n "\$socket_path" ]]; then
     printf '%s\\n' "\$socket_path"
@@ -630,10 +630,10 @@ bundle_socket_path() {
 
   local app_name="\${bundle_path##*/}"
   app_name="\${app_name%.app}"
-  if [[ "\$app_name" == "cmux DEV "* ]]; then
-    local tag="\${app_name#cmux DEV }"
+  if [[ "\$app_name" == "Bree Dev "* ]]; then
+    local tag="\${app_name#Bree Dev }"
     [[ "\$tag" =~ ^[A-Za-z0-9_-]+\$ ]] || return 1
-    printf '/tmp/cmux-debug-%s.sock\\n' "\$tag"
+    printf '/tmp/bree-debug-%s.sock\\n' "\$tag"
     return 0
   fi
   return 1
@@ -650,19 +650,19 @@ live_cli_bundle() {
   printf '%s\\n' "\$bundle_path"
 }
 
-if [[ -n "\${CMUX_SOCKET_PATH:-}" || -n "\${CMUX_SOCKET:-}" ]]; then
+if [[ -n "\${BREE_SOCKET_PATH:-}" || -n "\${BREE_SOCKET:-}" ]]; then
   HAS_EXPLICIT_SOCKET=1
 fi
 if [[ -n "\$SOCKET_ARG" ]]; then
   SOCKET_NAME="\$(basename "\$SOCKET_ARG")"
-  if [[ "\$SOCKET_NAME" == cmux-debug-*.sock ]]; then
-    TAG="\${SOCKET_NAME#cmux-debug-}"
+  if [[ "\$SOCKET_NAME" == bree-debug-*.sock ]]; then
+    TAG="\${SOCKET_NAME#bree-debug-}"
     TAG="\${TAG%.sock}"
     if [[ "\$TAG" =~ ^[A-Za-z0-9_-]+$ ]]; then
-      # reload.sh links /tmp/cmux-<tag> to the DerivedData it built the tag into,
+      # reload.sh links /tmp/bree-<tag> to the DerivedData it built the tag into,
       # which is not the per-tag default when tags share one.
-      TAG_CLI_SUFFIX="Build/Products/Debug/cmux DEV \$TAG.app/Contents/Resources/bin/bree"
-      for TAG_CLI in "/tmp/cmux-\$TAG/\$TAG_CLI_SUFFIX" "\$HOME/Library/Developer/Xcode/DerivedData/cmux-\$TAG/\$TAG_CLI_SUFFIX"; do
+      TAG_CLI_SUFFIX="Build/Products/Debug/Bree Dev \$TAG.app/Contents/Resources/bin/bree"
+      for TAG_CLI in "/tmp/bree-\$TAG/\$TAG_CLI_SUFFIX" "\$HOME/Library/Developer/Xcode/DerivedData/bree-\$TAG/\$TAG_CLI_SUFFIX"; do
         # /tmp is shared, so only trust a CLI this user owns.
         [[ -O "\$TAG_CLI" ]] || continue
         if live_cli_bundle "\$TAG_CLI" >/dev/null; then
@@ -674,7 +674,7 @@ if [[ -n "\$SOCKET_ARG" ]]; then
     fi
   fi
 fi
-if [[ -n "\${CMUX_BUNDLED_CLI_PATH:-}" ]] && [[ -f "\$CMUX_BUNDLED_CLI_PATH" ]] && [[ -x "\$CMUX_BUNDLED_CLI_PATH" ]] && [[ "\$CMUX_BUNDLED_CLI_PATH" != "\$0" ]]; then
+if [[ -n "\${BREE_BUNDLED_CLI_PATH:-}" ]] && [[ -f "\$BREE_BUNDLED_CLI_PATH" ]] && [[ -x "\$BREE_BUNDLED_CLI_PATH" ]] && [[ "\$BREE_BUNDLED_CLI_PATH" != "\$0" ]]; then
   # Inherited terminal identity is authoritative when the caller explicitly
   # supplied a socket. For ambient calls, validate liveness only when the
   # bundle carries reload-managed socket metadata; ordinary installed bundles
@@ -682,16 +682,16 @@ if [[ -n "\${CMUX_BUNDLED_CLI_PATH:-}" ]] && [[ -f "\$CMUX_BUNDLED_CLI_PATH" ]] 
   BUNDLED_APP_PATH=""
   BUNDLED_SOCKET_PATH=""
   if [[ "\$HAS_EXPLICIT_SOCKET" == "1" ]]; then
-    exec "\$CMUX_BUNDLED_CLI_PATH" "\$@"
-  elif BUNDLED_APP_PATH="\$(cli_bundle_for_path "\$CMUX_BUNDLED_CLI_PATH" 2>/dev/null)" &&
+    exec "\$BREE_BUNDLED_CLI_PATH" "\$@"
+  elif BUNDLED_APP_PATH="\$(cli_bundle_for_path "\$BREE_BUNDLED_CLI_PATH" 2>/dev/null)" &&
        BUNDLED_SOCKET_PATH="\$(bundle_socket_path "\$BUNDLED_APP_PATH" 2>/dev/null)"; then
     if socket_is_live "\$BUNDLED_SOCKET_PATH"; then
-      exec "\$CMUX_BUNDLED_CLI_PATH" "\$@"
+      exec "\$BREE_BUNDLED_CLI_PATH" "\$@"
     fi
   else
     # Stable, nightly, staging, and other installed bundles need not carry the
     # reload-managed socket metadata. Preserve their inherited CLI identity.
-    exec "\$CMUX_BUNDLED_CLI_PATH" "\$@"
+    exec "\$BREE_BUNDLED_CLI_PATH" "\$@"
   fi
 fi
 
@@ -707,7 +707,7 @@ if [[ -x ${fallback_bin_literal} ]]; then
   exec ${fallback_bin_literal} "\$@"
 fi
 
-echo "error: no reload-selected dev cmux CLI found. Run ./scripts/reload.sh --tag <name> first." >&2
+echo "error: no reload-selected dev bree CLI found. Run ./scripts/reload.sh --tag <name> first." >&2
 exit 1
 EOF
   chmod +x "$target"
@@ -726,7 +726,7 @@ publish_reload_cli_links() {
 
   # Stable shim that always follows the last reload-selected dev CLI.
   DEV_CLI_SHIM="$HOME/.local/bin/bree-dev"
-  write_dev_cli_shim "$DEV_CLI_SHIM" "/Applications/cmux.app/Contents/Resources/bin/cmux"
+  write_dev_cli_shim "$DEV_CLI_SHIM" "/Applications/bree.app/Contents/Resources/bin/bree"
 }
 
 publish_reload_cli_path() {
@@ -787,7 +787,7 @@ reload_write_cli_pointer() {
 
     my $directory = dirname($target);
     my ($temporary_fh, $temporary_path) = tempfile(
-      ".cmux-discovery.XXXXXX",
+      ".bree-discovery.XXXXXX",
       DIR => $directory,
       UNLINK => 0,
     );
@@ -819,7 +819,7 @@ reload_write_discovery_file() {
     [[ "$owner" == "$(id -u)" ]] || return 1
   fi
   mkdir -p "$directory" || return 1
-  temporary="$(mktemp "$directory/.cmux-discovery.XXXXXX")" || return 1
+  temporary="$(mktemp "$directory/.bree-discovery.XXXXXX")" || return 1
   if ! (umask 077; printf '%s\n' "$value" > "$temporary"); then
     rm -f -- "$temporary"
     return 1
@@ -845,14 +845,14 @@ Options:
                          stopping the running tagged app, daemon, or tag state.
                          Cannot be combined with --launch.
   --prod-auth            Point this tagged Debug build at production Stack auth,
-                         cmux APIs, and the production Iroh broker.
+                         bree APIs, and the production Iroh broker.
                          Without it, tagged builds use the shared dev backend, which
-                         needs a cmuxterm-hq checkout. Outside one, set
-                         CMUX_DEV_BACKEND_MODE=local to use http://localhost:<port>.
+                         needs a bree-hq checkout. Outside one, set
+                         BREE_DEV_BACKEND_MODE=local to use http://localhost:<port>.
   --name <app name>      Override app display/bundle name.
   --bundle-id <id>       Override bundle identifier.
   --derived-data <path>  Override derived data path.
-                         Defaults to CMUX_DERIVED_DATA when set (an absolute
+                         Defaults to BREE_DERIVED_DATA when set (an absolute
                          path to a DerivedData kept warm for this checkout and
                          shared by its tags), else one directory per tag.
   --no-global-cli-links  Do not update /tmp/bree-cli, /tmp/bree-last-cli-path,
@@ -861,7 +861,7 @@ Options:
                          Work around Swift arm64 frontend spins for this reload
                          only by disabling batch mode, debug symbol emission,
                          and AArch64 GlobalISel. Also enabled by
-                         CMUX_SWIFT_FRONTEND_WORKAROUND=1.
+                         BREE_SWIFT_FRONTEND_WORKAROUND=1.
   --swift-disable-global-isel
                          Alias for --swift-frontend-workaround.
   -h, --help             Show this help.
@@ -869,11 +869,11 @@ EOF
 }
 
 sanitize_bundle() {
-  cmux_attach__bundle_seg "$1"
+  bree_attach__bundle_seg "$1"
 }
 
 sanitize_path() {
-  cmux_attach__slug_raw "$1"
+  bree_attach__slug_raw "$1"
 }
 
 is_valid_port() {
@@ -890,9 +890,9 @@ is_positive_integer() {
   (( numeric > 0 ))
 }
 
-choose_cmux_dev_port() {
-  if is_valid_port "${CMUX_PORT:-}"; then
-    echo "$CMUX_PORT"
+choose_bree_dev_port() {
+  if is_valid_port "${BREE_PORT:-}"; then
+    echo "$BREE_PORT"
     return 0
   fi
   if is_valid_port "${PORT:-}"; then
@@ -902,19 +902,19 @@ choose_cmux_dev_port() {
   echo "3777"
 }
 
-choose_cmux_dev_port_range() {
-  if is_positive_integer "${CMUX_PORT_RANGE:-}"; then
-    echo "$CMUX_PORT_RANGE"
+choose_bree_dev_port_range() {
+  if is_positive_integer "${BREE_PORT_RANGE:-}"; then
+    echo "$BREE_PORT_RANGE"
     return 0
   fi
   echo "1"
 }
 
-choose_cmux_dev_port_end() {
+choose_bree_dev_port_end() {
   local start="$1"
   local range="$2"
-  if is_valid_port "${CMUX_PORT_END:-}"; then
-    echo "$CMUX_PORT_END"
+  if is_valid_port "${BREE_PORT_END:-}"; then
+    echo "$BREE_PORT_END"
     return 0
   fi
   local start_num=$((10#$start))
@@ -943,29 +943,29 @@ set_plist_url_scheme() {
 
 tagged_derived_data_path() {
   local slug="$1"
-  echo "$HOME/Library/Developer/Xcode/DerivedData/cmux-${slug}"
+  echo "$HOME/Library/Developer/Xcode/DerivedData/bree-${slug}"
 }
 
 # A tag only changes the bundle id, names, socket and state files. None of those
 # are compiler inputs, so a new tag built into a DerivedData that is already warm
 # for this checkout recompiles nothing, while a fresh per-tag DerivedData is a full
-# cold build. CMUX_DERIVED_DATA lets whatever owns the checkout (a pool of reused
+# cold build. BREE_DERIVED_DATA lets whatever owns the checkout (a pool of reused
 # worktrees, a fleet lease) name that warm directory once, so callers do not have
 # to pass --derived-data on every reload. It must be absolute, and only one build
 # may use it at a time; that is the owner's lock to hold, not this script's.
 resolve_tagged_derived_data() {
-  # Precedence: --derived-data, then CMUX_DERIVED_DATA, then one directory per tag.
+  # Precedence: --derived-data, then BREE_DERIVED_DATA, then one directory per tag.
   local slug="$1" explicit_set="${2:-0}" explicit_path="${3:-}"
   if [[ "$explicit_set" -eq 1 ]]; then
     echo "$explicit_path"
     return 0
   fi
-  if [[ -n "${CMUX_DERIVED_DATA:-}" ]]; then
-    if [[ "$CMUX_DERIVED_DATA" != /* ]]; then
-      echo "error: CMUX_DERIVED_DATA must be an absolute path, got '$CMUX_DERIVED_DATA'" >&2
+  if [[ -n "${BREE_DERIVED_DATA:-}" ]]; then
+    if [[ "$BREE_DERIVED_DATA" != /* ]]; then
+      echo "error: BREE_DERIVED_DATA must be an absolute path, got '$BREE_DERIVED_DATA'" >&2
       return 1
     fi
-    echo "$CMUX_DERIVED_DATA"
+    echo "$BREE_DERIVED_DATA"
     return 0
   fi
   tagged_derived_data_path "$slug"
@@ -1029,13 +1029,13 @@ validate_app_bundle() {
 # that is not the tag's own may hold other tags, so only the tag's app is removed from it.
 tag_build_cleanup_paths() {
   local tag="$1" derived="${2:-}"
-  local own="" link="/tmp/cmux-${tag}"
+  local own="" link="/tmp/bree-${tag}"
   own="$(tagged_derived_data_path "$tag")"
   if [[ -z "$derived" && -L "$link" ]]; then
     derived="$(readlink "$link" 2>/dev/null || true)"
   fi
   if [[ -n "$derived" && "$derived" != "$own" && "$derived" != "$link" ]]; then
-    printf '%q ' "${derived%/}/Build/Products/Debug/cmux DEV ${tag}.app"
+    printf '%q ' "${derived%/}/Build/Products/Debug/Bree Dev ${tag}.app"
     [[ -d "$own" ]] || return 0
   fi
   printf '%q ' "$own"
@@ -1046,10 +1046,10 @@ tag_build_cleanup_paths() {
 # argument is escaped with %q instead of being wrapped in quotes.
 print_tag_cleanup_commands() {
   local tag="$1" derived="${2:-}"
-  printf '  pkill -f %q\n' "cmux DEV ${tag}.app/Contents/MacOS/cmux DEV"
-  printf '  rm -rf %s%q %q\n' "$(tag_build_cleanup_paths "$tag" "$derived")" "/tmp/cmux-${tag}" "/tmp/cmux-debug-${tag}.sock"
-  printf '  rm -f %q\n' "/tmp/cmux-debug-${tag}.log"
-  printf '  rm -f %q\n' "$HOME/Library/Application Support/cmux/cmuxd-dev-${tag}.sock"
+  printf '  pkill -f %q\n' "Bree Dev ${tag}.app/Contents/MacOS/Bree Dev"
+  printf '  rm -rf %s%q %q\n' "$(tag_build_cleanup_paths "$tag" "$derived")" "/tmp/bree-${tag}" "/tmp/bree-debug-${tag}.sock"
+  printf '  rm -f %q\n' "/tmp/bree-debug-${tag}.log"
+  printf '  rm -f %q\n' "$HOME/Library/Application Support/bree/breed-dev-${tag}.sock"
 }
 
 print_tag_cleanup_reminder() {
@@ -1061,10 +1061,10 @@ print_tag_cleanup_reminder() {
   local -a stale_tags=()
 
   while IFS= read -r -d '' path; do
-    if [[ "$path" == /tmp/cmux-* ]]; then
-      tag="${path#/tmp/cmux-}"
-    elif [[ "$path" == "$HOME/Library/Developer/Xcode/DerivedData/cmux-"* ]]; then
-      tag="${path#"$HOME"/Library/Developer/Xcode/DerivedData/cmux-}"
+    if [[ "$path" == /tmp/bree-* ]]; then
+      tag="${path#/tmp/bree-}"
+    elif [[ "$path" == "$HOME/Library/Developer/Xcode/DerivedData/bree-"* ]]; then
+      tag="${path#"$HOME"/Library/Developer/Xcode/DerivedData/bree-}"
     else
       continue
     fi
@@ -1086,8 +1086,8 @@ print_tag_cleanup_reminder() {
     stale_tags+=("$tag")
   done < <(
     # The trailing slash makes find descend when /tmp is itself a symlink.
-    find /tmp/ -maxdepth 1 -name 'cmux-*' -print0 2>/dev/null
-    find "$HOME/Library/Developer/Xcode/DerivedData" -maxdepth 1 -type d -name 'cmux-*' -print0 2>/dev/null
+    find /tmp/ -maxdepth 1 -name 'bree-*' -print0 2>/dev/null
+    find "$HOME/Library/Developer/Xcode/DerivedData" -maxdepth 1 -type d -name 'bree-*' -print0 2>/dev/null
   )
 
   echo
@@ -1136,8 +1136,8 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       BUNDLE_ID_LOWER="$(printf '%s' "$BUNDLE_ID" | tr '[:upper:]' '[:lower:]')"
-      if [[ "$BUNDLE_ID_LOWER" == "com.cmuxterm.app" || ( "$BUNDLE_ID_LOWER" == com.cmuxterm.app.* && "$BUNDLE_ID_LOWER" != com.cmuxterm.app.debug.* ) ]]; then
-        echo "error: --bundle-id $BUNDLE_ID is not a com.cmuxterm.app.debug.* id; reload.sh would quit a user's running cmux" >&2
+      if [[ "$BUNDLE_ID_LOWER" == "com.bree.app" || ( "$BUNDLE_ID_LOWER" == com.bree.app.* && "$BUNDLE_ID_LOWER" != com.bree.app.debug.* ) ]]; then
+        echo "error: --bundle-id $BUNDLE_ID is not a com.bree.app.debug.* id; reload.sh would quit a user's running bree" >&2
         exit 1
       fi
       BUNDLE_SET=1
@@ -1213,7 +1213,7 @@ if [[ "$BUILD_ONLY" -eq 1 && "$NAME_SET" -eq 1 && "$APP_NAME" == "$BASE_APP_NAME
 fi
 
 if [[ -n "$TAG" ]]; then
-  if ! cmux_attach_validate_dev_tag "$TAG"; then
+  if ! bree_attach_validate_dev_tag "$TAG"; then
     exit 1
   fi
   TAG_ID="$(sanitize_bundle "$TAG")"
@@ -1221,15 +1221,15 @@ if [[ -n "$TAG" ]]; then
   # Serialize the complete reload, including cleanup and log publication.
   # Xcode's database lock alone is too late: a losing reload's cleanup can
   # delete the active build's generated app before it finishes signing.
-  if [[ "${CMUX_RELOAD_TAG_LOCK_OWNER:-}" != "$PPID" ]]; then
+  if [[ "${BREE_RELOAD_TAG_LOCK_OWNER:-}" != "$PPID" ]]; then
     exec python3 "$SCRIPT_DIR/lib/tagged-reload-lock.py" \
       "$TAG_SLUG" "$0" "${RELOAD_ORIGINAL_ARGS[@]}"
   fi
   if [[ "$NAME_SET" -eq 0 ]]; then
-    APP_NAME="cmux DEV ${TAG_SLUG}"
+    APP_NAME="Bree Dev ${TAG_SLUG}"
   fi
   if [[ "$BUNDLE_SET" -eq 0 ]]; then
-    BUNDLE_ID="com.cmuxterm.app.debug.${TAG_ID}"
+    BUNDLE_ID="com.bree.app.debug.${TAG_ID}"
   fi
   DERIVED_DATA="$(resolve_tagged_derived_data "$TAG_SLUG" "$DERIVED_SET" "${DERIVED_DATA:-}")"
   if [[ "$BUILD_ONLY" -ne 1 ]]; then
@@ -1238,52 +1238,52 @@ if [[ -n "$TAG" ]]; then
   fi
 fi
 
-# Build the cmux-tui client from the in-repo crate before the dev backend, GhosttyKit
+# Build the bree-tui client from the in-repo crate before the dev backend, GhosttyKit
 # and xcodebuild, so a missing toolchain or a compile error fails early. Cargo's own
 # incremental no-op (~0.5 s) makes repeat reloads cheap. Nothing is downloaded from
-# cmux infrastructure. CMUX_TUI_CLIENT_LOCAL overrides the binary;
-# CMUX_SKIP_CMUX_TUI_CLIENT=1 keeps the copy already bundled.
-if [[ "${CMUX_SKIP_CMUX_TUI_CLIENT:-}" != "1" && -z "${CMUX_TUI_CLIENT_LOCAL:-}" ]]; then
+# bree infrastructure. BREE_TUI_CLIENT_LOCAL overrides the binary;
+# BREE_SKIP_BREE_TUI_CLIENT=1 keeps the copy already bundled.
+if [[ "${BREE_SKIP_BREE_TUI_CLIENT:-}" != "1" && -z "${BREE_TUI_CLIENT_LOCAL:-}" ]]; then
   if ! command -v cargo >/dev/null 2>&1; then
-    echo "error: cargo not found; cmux-tui is built locally. Append rustup to PATH:" >&2
+    echo "error: cargo not found; bree-tui is built locally. Append rustup to PATH:" >&2
     echo '       export PATH="$PATH:/opt/homebrew/opt/zig@0.16/bin:/opt/homebrew/opt/rustup/bin"' >&2
     exit 1
   fi
-  echo "Building cmux-tui client (cargo)..."
-  (cd "$PWD/cmux-tui" && cargo build -p cmux-tui --bin cmux-tui) >&2 \
-    || { echo "error: cargo build of cmux-tui failed" >&2; exit 1; }
-  CMUX_TUI_CLIENT_LOCAL="$PWD/cmux-tui/target/debug/cmux-tui"
+  echo "Building bree-tui client (cargo)..."
+  (cd "$PWD/bree-tui" && cargo build -p bree-tui --bin bree-tui) >&2 \
+    || { echo "error: cargo build of bree-tui failed" >&2; exit 1; }
+  BREE_TUI_CLIENT_LOCAL="$PWD/bree-tui/target/debug/bree-tui"
 fi
 
-CMUX_DEV_PORT="$(choose_cmux_dev_port)"
-CMUX_DEV_PORT_RANGE="$(choose_cmux_dev_port_range)"
-CMUX_DEV_PORT_END="$(choose_cmux_dev_port_end "$CMUX_DEV_PORT" "$CMUX_DEV_PORT_RANGE")"
-CMUX_DEV_ORIGIN="http://localhost:${CMUX_DEV_PORT}"
+BREE_DEV_PORT="$(choose_bree_dev_port)"
+BREE_DEV_PORT_RANGE="$(choose_bree_dev_port_range)"
+BREE_DEV_PORT_END="$(choose_bree_dev_port_end "$BREE_DEV_PORT" "$BREE_DEV_PORT_RANGE")"
+BREE_DEV_ORIGIN="http://localhost:${BREE_DEV_PORT}"
 if [[ -n "$TAG" && "$PROD_AUTH" -eq 0 ]]; then
   source "$PWD/scripts/lib/dev-backend-origin.sh"
-  CMUX_DEV_ORIGIN="$(cmux_resolve_tagged_backend "$TAG_SLUG" "$PWD" "$CMUX_DEV_ORIGIN")" || exit 1
+  BREE_DEV_ORIGIN="$(bree_resolve_tagged_backend "$TAG_SLUG" "$PWD" "$BREE_DEV_ORIGIN")" || exit 1
   # Local mode has no shared backend to bake into the app or the Iroh broker default.
-  if [[ "${CMUX_DEV_BACKEND_MODE:-remote}" != "local" ]]; then
-    export CMUX_DEV_BACKEND_URL="$CMUX_DEV_ORIGIN"
+  if [[ "${BREE_DEV_BACKEND_MODE:-remote}" != "local" ]]; then
+    export BREE_DEV_BACKEND_URL="$BREE_DEV_ORIGIN"
   fi
 fi
-CMUX_DEV_API_BASE_URL_VALUE="$(cmux_attach_resolve_dev_api_base_url "$CMUX_DEV_ORIGIN")"
-CMUX_AUTH_WWW_ORIGIN_VALUE="$CMUX_DEV_ORIGIN"
-CMUX_WWW_ORIGIN_VALUE="$CMUX_DEV_ORIGIN"
+BREE_DEV_API_BASE_URL_VALUE="$(bree_attach_resolve_dev_api_base_url "$BREE_DEV_ORIGIN")"
+BREE_AUTH_WWW_ORIGIN_VALUE="$BREE_DEV_ORIGIN"
+BREE_WWW_ORIGIN_VALUE="$BREE_DEV_ORIGIN"
 if [[ "$PROD_AUTH" -eq 1 ]]; then
-  if [[ -n "${CMUX_DEV_API_BASE_URL:-}" && "$CMUX_DEV_API_BASE_URL" != "https://cmux.com" ]]; then
-    echo "error: --prod-auth cannot use API origin '$CMUX_DEV_API_BASE_URL'; production builds must use https://cmux.com" >&2
+  if [[ -n "${BREE_DEV_API_BASE_URL:-}" && "$BREE_DEV_API_BASE_URL" != "https://github.com/ecyx00/bree" ]]; then
+    echo "error: --prod-auth cannot use API origin '$BREE_DEV_API_BASE_URL'; production builds must use https://github.com/ecyx00/bree" >&2
     exit 1
   fi
-  CMUX_DEV_API_BASE_URL_VALUE="https://cmux.com"
-  CMUX_AUTH_WWW_ORIGIN_VALUE="https://cmux.com"
-  CMUX_WWW_ORIGIN_VALUE="https://cmux.com"
+  BREE_DEV_API_BASE_URL_VALUE="https://github.com/ecyx00/bree"
+  BREE_AUTH_WWW_ORIGIN_VALUE="https://github.com/ecyx00/bree"
+  BREE_WWW_ORIGIN_VALUE="https://github.com/ecyx00/bree"
 fi
 
 # Quiet logging: capture all noisy build output (xcodebuild, zig, codesign,
 # plistbuddy, etc.) to a single log file. On success we print only a one-line
 # summary plus the App/CLI paths. On failure we dump the log.
-RELOAD_LOG="/tmp/cmux-reload-${TAG_SLUG}.log"
+RELOAD_LOG="/tmp/bree-reload-${TAG_SLUG}.log"
 RELOAD_START_TIME="$(date +%s)"
 : > "$RELOAD_LOG"
 
@@ -1337,15 +1337,15 @@ reload_finalize() {
     echo "App path:"
     echo "  $APP_PATH"
   fi
-  if [[ -n "${CMUX_DEV_ORIGIN:-}" ]]; then
+  if [[ -n "${BREE_DEV_ORIGIN:-}" ]]; then
     echo
     echo "Dev web origin:"
-    echo "  $CMUX_DEV_ORIGIN"
+    echo "  $BREE_DEV_ORIGIN"
     echo "Dev API origin:"
-    echo "  $CMUX_DEV_API_BASE_URL_VALUE"
+    echo "  $BREE_DEV_API_BASE_URL_VALUE"
     if [[ -n "${TAG_SLUG:-}" ]]; then
       echo "Dev web command:"
-      echo "  cd web && CMUX_PORT=$CMUX_DEV_PORT CMUX_PORT_RANGE=$CMUX_DEV_PORT_RANGE CMUX_PORT_END=$CMUX_DEV_PORT_END CMUX_AUTH_CALLBACK_SCHEME=cmux-dev-$TAG_SLUG bun dev"
+      echo "  cd web && BREE_PORT=$BREE_DEV_PORT BREE_PORT_RANGE=$BREE_DEV_PORT_RANGE BREE_PORT_END=$BREE_DEV_PORT_END BREE_AUTH_CALLBACK_SCHEME=bree-dev-$TAG_SLUG bun dev"
     fi
   fi
   if [[ "$BUILD_ONLY" -ne 1 && -x "${CLI_PATH:-}" ]]; then
@@ -1354,16 +1354,16 @@ reload_finalize() {
     echo "  $CLI_PATH"
     echo "CLI helpers:"
     if [[ "$NO_GLOBAL_CLI_LINKS" == "1" ]]; then
-      echo "  preserved existing global cmux CLI links (--no-global-cli-links)"
+      echo "  preserved existing global bree CLI links (--no-global-cli-links)"
     elif [[ "${CAN_PUBLISH_RELOAD_STATE:-1}" -ne 1 ]]; then
       echo "  not published: ${RELOAD_PUBLICATION_SKIP_REASON:-tag discovery ownership could not be verified}"
     else
       echo "  /tmp/bree-cli ..."
       echo "  $HOME/.local/bin/bree-dev ..."
-      if [[ -n "${CMUX_SHIM_TARGET:-}" ]]; then
-        echo "  $CMUX_SHIM_TARGET ..."
+      if [[ -n "${BREE_SHIM_TARGET:-}" ]]; then
+        echo "  $BREE_SHIM_TARGET ..."
       fi
-      echo "If your shell still resolves the old cmux, run: rehash"
+      echo "If your shell still resolves the old bree, run: rehash"
     fi
   fi
   if [[ "${SWIFT_FRONTEND_WORKAROUND_EFFECTIVE:-0}" -eq 1 ]]; then
@@ -1373,7 +1373,7 @@ reload_finalize() {
   fi
   if [[ "$BUILD_ONLY" -eq 1 ]]; then
     echo
-    echo "Build-only validation complete. The running tagged app, cmuxd, and tag state were left unchanged."
+    echo "Build-only validation complete. The running tagged app, breed, and tag state were left unchanged."
     if [[ -n "${TAG_APP_STAGING_PATH:-}" && -e "$TAG_APP_STAGING_PATH" ]]; then
       remove_app_bundle_output "$TAG_APP_STAGING_PATH"
       echo "==> removed temporary build-only artifact"
@@ -1391,10 +1391,10 @@ echo "==> reload starting (tag: ${TAG}, log: ${RELOAD_LOG})" >&3
 # Managed profiles already supply their own SourcePackages path. Warm that
 # exact path from local seeds before resolution; cache warming never downloads
 # on the reload path, and populated native state is never replaced.
-if [[ "${GITHUB_ACTIONS:-false}" != "true" && -n "${CMUX_SOURCE_PACKAGES_DIR:-}" && "${CMUX_LOCAL_CACHE_PREFLIGHT:-1}" == "1" ]]; then
+if [[ "${GITHUB_ACTIONS:-false}" != "true" && -n "${BREE_SOURCE_PACKAGES_DIR:-}" && "${BREE_LOCAL_CACHE_PREFLIGHT:-1}" == "1" ]]; then
   CACHE_PREFLIGHT_RECEIPT="${RELOAD_LOG}.cache.json"
   if python3 "$PWD/scripts/local-build-cache-preflight.py" \
-      --local-only --source-packages-dir "$CMUX_SOURCE_PACKAGES_DIR" --receipt "$CACHE_PREFLIGHT_RECEIPT"; then
+      --local-only --source-packages-dir "$BREE_SOURCE_PACKAGES_DIR" --receipt "$CACHE_PREFLIGHT_RECEIPT"; then
     if python3 - "$CACHE_PREFLIGHT_RECEIPT" <<'PY'
 import json
 import sys
@@ -1403,7 +1403,7 @@ with open(sys.argv[1]) as stream:
 raise SystemExit(0 if verified else 1)
 PY
     then
-      export CMUX_GHOSTTYKIT_PREPROVISIONED=1
+      export BREE_GHOSTTYKIT_PREPROVISIONED=1
     fi
   else
     echo "==> Build cache preflight unavailable; using normal dependency setup."
@@ -1412,9 +1412,9 @@ fi
 
 # CI can verify/download the xcframework before deciding whether Zig is needed.
 # Fail closed if that caller assertion is inconsistent with the checkout.
-if [[ "${CMUX_GHOSTTYKIT_PREPROVISIONED:-0}" == "1" ]]; then
+if [[ "${BREE_GHOSTTYKIT_PREPROVISIONED:-0}" == "1" ]]; then
   if [[ ! -d "$PWD/GhosttyKit.xcframework" ]]; then
-    echo "error: CMUX_GHOSTTYKIT_PREPROVISIONED=1 but GhosttyKit.xcframework is missing" >&2
+    echo "error: BREE_GHOSTTYKIT_PREPROVISIONED=1 but GhosttyKit.xcframework is missing" >&2
     exit 1
   fi
   echo "==> Reusing caller-provisioned GhosttyKit.xcframework"
@@ -1423,23 +1423,23 @@ else
 fi
 
 if should_skip_ghostty_cli_helper_zig_build; then
-  export CMUX_SKIP_ZIG_BUILD=1
+  export BREE_SKIP_ZIG_BUILD=1
 fi
 
 XCODEBUILD_ARGS=(
-  -project cmux.xcodeproj
-  -scheme cmux
+  -project bree.xcodeproj
+  -scheme bree
   -configuration Debug
   -destination 'platform=macOS'
 )
 if [[ -n "$DERIVED_DATA" ]]; then
   XCODEBUILD_ARGS+=(-derivedDataPath "$DERIVED_DATA")
 fi
-if [[ -n "${CMUX_SOURCE_PACKAGES_DIR:-}" ]]; then
-  mkdir -p "$CMUX_SOURCE_PACKAGES_DIR"
-  XCODEBUILD_ARGS+=(-clonedSourcePackagesDirPath "$CMUX_SOURCE_PACKAGES_DIR")
+if [[ -n "${BREE_SOURCE_PACKAGES_DIR:-}" ]]; then
+  mkdir -p "$BREE_SOURCE_PACKAGES_DIR"
+  XCODEBUILD_ARGS+=(-clonedSourcePackagesDirPath "$BREE_SOURCE_PACKAGES_DIR")
 fi
-if [[ "${CMUX_DISABLE_AUTOMATIC_PACKAGE_RESOLUTION:-}" == "1" ]]; then
+if [[ "${BREE_DISABLE_AUTOMATIC_PACKAGE_RESOLUTION:-}" == "1" ]]; then
   XCODEBUILD_ARGS+=(-disableAutomaticPackageResolution)
 fi
 if [[ -z "$TAG" ]]; then
@@ -1453,14 +1453,14 @@ XCODEBUILD_ARGS+=(PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID")
 # their tagged sample extensions) don't share one point. The host bundle declares
 # the point under Contents/Extensions, and Info.plist carries the same identifier.
 if [[ -n "$TAG" ]]; then
-  XCODEBUILD_ARGS+=(CMUX_SIDEBAR_EXTENSION_POINT_ID="${BUNDLE_ID}.cmux.sidebar")
+  XCODEBUILD_ARGS+=(BREE_SIDEBAR_EXTENSION_POINT_ID="${BUNDLE_ID}.bree.sidebar")
 fi
-# Forward explicit CMUX_SKIP_ZIG_BUILD to xcodebuild run script phases.
-if [[ "${CMUX_SKIP_ZIG_BUILD:-}" == "1" ]]; then
-  XCODEBUILD_ARGS+=(CMUX_SKIP_ZIG_BUILD=1)
+# Forward explicit BREE_SKIP_ZIG_BUILD to xcodebuild run script phases.
+if [[ "${BREE_SKIP_ZIG_BUILD:-}" == "1" ]]; then
+  XCODEBUILD_ARGS+=(BREE_SKIP_ZIG_BUILD=1)
 fi
 SWIFT_OTHER_FLAGS='$(inherited)'
-if [[ "$SWIFT_FRONTEND_WORKAROUND" -eq 1 || "${CMUX_SWIFT_FRONTEND_WORKAROUND:-}" == "1" || "${CMUX_SWIFT_DISABLE_GLOBAL_ISEL:-}" == "1" ]]; then
+if [[ "$SWIFT_FRONTEND_WORKAROUND" -eq 1 || "${BREE_SWIFT_FRONTEND_WORKAROUND:-}" == "1" || "${BREE_SWIFT_DISABLE_GLOBAL_ISEL:-}" == "1" ]]; then
   SWIFT_FRONTEND_WORKAROUND_EFFECTIVE=1
   echo "==> Swift frontend workaround enabled for this reload"
   XCODEBUILD_ARGS+=(SWIFT_ENABLE_BATCH_MODE=NO)
@@ -1470,7 +1470,7 @@ if [[ "$SWIFT_FRONTEND_WORKAROUND" -eq 1 || "${CMUX_SWIFT_FRONTEND_WORKAROUND:-}
 else
   SWIFT_FRONTEND_WORKAROUND_EFFECTIVE=0
 fi
-if [[ "${CMUX_SWIFT_INCREMENTAL_DIAGNOSTICS:-0}" == "1" ]]; then
+if [[ "${BREE_SWIFT_INCREMENTAL_DIAGNOSTICS:-0}" == "1" ]]; then
   SWIFT_INCREMENTAL_DIAGNOSTICS_EFFECTIVE=1
   echo "==> Swift incremental diagnostics enabled for this reload"
   # These Swift driver diagnostics report scheduling/rebuild decisions and job
@@ -1480,26 +1480,26 @@ if [[ "${CMUX_SWIFT_INCREMENTAL_DIAGNOSTICS:-0}" == "1" ]]; then
 else
   SWIFT_INCREMENTAL_DIAGNOSTICS_EFFECTIVE=0
 fi
-if [[ "${CMUX_RELOAD_APP_EMIT_MODULE:-0}" != "1" ]]; then
-  # A dev build runs the app; nothing imports its Swift module (only cmuxTests,
+if [[ "${BREE_RELOAD_APP_EMIT_MODULE:-0}" != "1" ]]; then
+  # A dev build runs the app; nothing imports its Swift module (only breeTests,
   # which reload never builds) and no Objective-C includes its generated header.
   # Xcode's integrated driver still emits the module in a separate job that
   # type-checks every declaration in the app. The standalone driver with
   # -no-emit-module-separately emits none, the same change #14364 made for
-  # cmuxTests; the app's Debug configuration generates no Objective-C header.
+  # breeTests; the app's Debug configuration generates no Objective-C header.
   # Settings are per target, so packages and the CLI are unchanged. App edits
   # rebuild ~13 s faster on a 12-core runner. lldb's po/expr in app frames need
-  # the module: set CMUX_RELOAD_APP_EMIT_MODULE=1 to emit it again.
+  # the module: set BREE_RELOAD_APP_EMIT_MODULE=1 to emit it again.
   # shellcheck disable=SC2016 # Xcode expands $(TARGET_NAME), not the shell
   XCODEBUILD_ARGS+=(
-    'SWIFT_USE_INTEGRATED_DRIVER=$(CMUX_RELOAD_INTEGRATED_DRIVER_$(TARGET_NAME):default=YES)'
-    CMUX_RELOAD_INTEGRATED_DRIVER_cmux=NO
-    'SWIFT_INSTALL_MODULE=$(CMUX_RELOAD_INSTALL_MODULE_$(TARGET_NAME):default=YES)'
-    CMUX_RELOAD_INSTALL_MODULE_cmux=NO
+    'SWIFT_USE_INTEGRATED_DRIVER=$(BREE_RELOAD_INTEGRATED_DRIVER_$(TARGET_NAME):default=YES)'
+    BREE_RELOAD_INTEGRATED_DRIVER_bree=NO
+    'SWIFT_INSTALL_MODULE=$(BREE_RELOAD_INSTALL_MODULE_$(TARGET_NAME):default=YES)'
+    BREE_RELOAD_INSTALL_MODULE_bree=NO
   )
   # shellcheck disable=SC2016
-  SWIFT_OTHER_FLAGS+=' $(CMUX_RELOAD_SWIFT_FLAGS_$(TARGET_NAME))'
-  XCODEBUILD_ARGS+=(CMUX_RELOAD_SWIFT_FLAGS_cmux=-no-emit-module-separately)
+  SWIFT_OTHER_FLAGS+=' $(BREE_RELOAD_SWIFT_FLAGS_$(TARGET_NAME))'
+  XCODEBUILD_ARGS+=(BREE_RELOAD_SWIFT_FLAGS_bree=-no-emit-module-separately)
 fi
 if [[ "$SWIFT_OTHER_FLAGS" != '$(inherited)' ]]; then
   XCODEBUILD_ARGS+=("OTHER_SWIFT_FLAGS=$SWIFT_OTHER_FLAGS")
@@ -1512,13 +1512,13 @@ if [[ -n "$BUILD_PRODUCTS_DEBUG_DIR" ]]; then
   XCODEBUILD_CLEANED_OUTPUTS=0
 fi
 
-XCODEBUILD_LOCK_DIR="${TMPDIR:-/tmp}/cmux-xcodebuild-$(id -u).locks"
-XCODEBUILD_LOCK_CONCURRENCY="${CMUX_XCODEBUILD_LOCK_CONCURRENCY:-5}"
+XCODEBUILD_LOCK_DIR="${TMPDIR:-/tmp}/bree-xcodebuild-$(id -u).locks"
+XCODEBUILD_LOCK_CONCURRENCY="${BREE_XCODEBUILD_LOCK_CONCURRENCY:-5}"
 if ! is_positive_integer "$XCODEBUILD_LOCK_CONCURRENCY"; then
   echo "error: xcodebuild lock concurrency must be a positive integer" >&2
   exit 1
 fi
-XCODEBUILD_LOCK_WAIT_SECONDS="${CMUX_XCODEBUILD_LOCK_WAIT_SECONDS:-1800}"
+XCODEBUILD_LOCK_WAIT_SECONDS="${BREE_XCODEBUILD_LOCK_WAIT_SECONDS:-1800}"
 if ! is_positive_integer "$XCODEBUILD_LOCK_WAIT_SECONDS"; then
   echo "error: xcodebuild lock wait timeout must be a positive integer" >&2
   exit 1
@@ -1728,7 +1728,7 @@ if [[ "${SWIFT_INCREMENTAL_DIAGNOSTICS_EFFECTIVE:-0}" -eq 1 ]]; then
 fi
 
 if [[ "$BUILD_ONLY" -ne 1 && -n "${TAG_SLUG:-}" ]]; then
-  TMP_COMPAT_DERIVED_LINK="/tmp/cmux-${TAG_SLUG}"
+  TMP_COMPAT_DERIVED_LINK="/tmp/bree-${TAG_SLUG}"
   if [[ "$DERIVED_DATA" != "$TMP_COMPAT_DERIVED_LINK" ]]; then
     ABS_DERIVED_DATA="$(cd "$DERIVED_DATA" && pwd)"
     rm -rf "$TMP_COMPAT_DERIVED_LINK"
@@ -1758,56 +1758,56 @@ if [[ -n "$TAG" && "$APP_NAME" != "$SEARCH_APP_NAME" ]]; then
     /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$INFO_PLIST" 2>/dev/null \
       || /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string $BUNDLE_ID" "$INFO_PLIST"
     if [[ -n "${TAG_SLUG:-}" ]]; then
-      APP_SUPPORT_DIR="$HOME/Library/Application Support/cmux"
-      if [[ "${BUNDLE_ID:-}" == "com.cmuxterm.app.debug.bree" ]]; then
+      APP_SUPPORT_DIR="$HOME/Library/Application Support/bree"
+      if [[ "${BUNDLE_ID:-}" == "com.bree.app.debug.bree" ]]; then
         APP_SUPPORT_DIR="$HOME/Library/Application Support/Bree Dev"
       fi
-      CMUXD_SOCKET="${APP_SUPPORT_DIR}/cmuxd-dev-${TAG_SLUG}.sock"
-      CMUX_SOCKET_PATH_VALUE="/tmp/cmux-debug-${TAG_SLUG}.sock"
-      CMUX_DEBUG_LOG="/tmp/cmux-debug-${TAG_SLUG}.log"
-      CMUX_AUTH_CALLBACK_SCHEME_VALUE="cmux-dev-${TAG_SLUG}"
+      BREED_SOCKET="${APP_SUPPORT_DIR}/breed-dev-${TAG_SLUG}.sock"
+      BREE_SOCKET_PATH_VALUE="/tmp/bree-debug-${TAG_SLUG}.sock"
+      BREE_DEBUG_LOG="/tmp/bree-debug-${TAG_SLUG}.log"
+      BREE_AUTH_CALLBACK_SCHEME_VALUE="bree-dev-${TAG_SLUG}"
       if [[ "$BUILD_ONLY" -ne 1 ]]; then
-        echo "$CMUX_DEBUG_LOG" > /tmp/cmux-last-debug-log-path || true
+        echo "$BREE_DEBUG_LOG" > /tmp/bree-last-debug-log-path || true
       fi
       /usr/libexec/PlistBuddy -c "Add :LSEnvironment dict" "$INFO_PLIST" 2>/dev/null || true
-      set_plist_url_scheme "$INFO_PLIST" "$CMUX_AUTH_CALLBACK_SCHEME_VALUE"
-      set_plist_env "$INFO_PLIST" CMUX_BUNDLE_ID "$BUNDLE_ID"
-      set_plist_env "$INFO_PLIST" CMUXD_UNIX_PATH "$CMUXD_SOCKET"
-      set_plist_env "$INFO_PLIST" CMUX_SOCKET_PATH "$CMUX_SOCKET_PATH_VALUE"
-      set_plist_env "$INFO_PLIST" CMUX_DEBUG_LOG "$CMUX_DEBUG_LOG"
-      set_plist_env "$INFO_PLIST" CMUX_TAG "$TAG_SLUG"
-      set_plist_env "$INFO_PLIST" CMUX_AUTH_CALLBACK_SCHEME "$CMUX_AUTH_CALLBACK_SCHEME_VALUE"
-      set_plist_env "$INFO_PLIST" CMUX_SOCKET_ENABLE "1"
-      set_plist_env "$INFO_PLIST" CMUX_SOCKET_MODE "allowAll"
-      set_plist_env "$INFO_PLIST" CMUX_REMOTE_DAEMON_ALLOW_LOCAL_BUILD "1"
-      set_plist_env "$INFO_PLIST" CMUXTERM_REPO_ROOT "$PWD"
+      set_plist_url_scheme "$INFO_PLIST" "$BREE_AUTH_CALLBACK_SCHEME_VALUE"
+      set_plist_env "$INFO_PLIST" BREE_BUNDLE_ID "$BUNDLE_ID"
+      set_plist_env "$INFO_PLIST" BREED_UNIX_PATH "$BREED_SOCKET"
+      set_plist_env "$INFO_PLIST" BREE_SOCKET_PATH "$BREE_SOCKET_PATH_VALUE"
+      set_plist_env "$INFO_PLIST" BREE_DEBUG_LOG "$BREE_DEBUG_LOG"
+      set_plist_env "$INFO_PLIST" BREE_TAG "$TAG_SLUG"
+      set_plist_env "$INFO_PLIST" BREE_AUTH_CALLBACK_SCHEME "$BREE_AUTH_CALLBACK_SCHEME_VALUE"
+      set_plist_env "$INFO_PLIST" BREE_SOCKET_ENABLE "1"
+      set_plist_env "$INFO_PLIST" BREE_SOCKET_MODE "allowAll"
+      set_plist_env "$INFO_PLIST" BREE_REMOTE_DAEMON_ALLOW_LOCAL_BUILD "1"
+      set_plist_env "$INFO_PLIST" BREE_REPO_ROOT "$PWD"
       BUNDLED_APP_PATH="$TAG_APP_FINAL_PATH"
       if [[ "$BUILD_ONLY" -eq 1 ]]; then
         BUNDLED_APP_PATH="$TAG_APP_STAGING_PATH"
       fi
-      set_plist_env "$INFO_PLIST" CMUX_BUNDLED_CLI_PATH "$BUNDLED_APP_PATH/Contents/Resources/bin/bree"
-      set_plist_env "$INFO_PLIST" CMUX_SHELL_INTEGRATION_DIR "$BUNDLED_APP_PATH/Contents/Resources/shell-integration"
-      set_plist_env "$INFO_PLIST" CMUX_PORT "$CMUX_DEV_PORT"
-      set_plist_env "$INFO_PLIST" CMUX_PORT_END "$CMUX_DEV_PORT_END"
-      set_plist_env "$INFO_PLIST" CMUX_PORT_RANGE "$CMUX_DEV_PORT_RANGE"
-      set_plist_env "$INFO_PLIST" PORT "$CMUX_DEV_PORT"
-      set_plist_env "$INFO_PLIST" CMUX_AUTH_WWW_ORIGIN "$CMUX_AUTH_WWW_ORIGIN_VALUE"
-      set_plist_env "$INFO_PLIST" CMUX_WWW_ORIGIN "$CMUX_WWW_ORIGIN_VALUE"
-      if [[ -n "${CMUX_DEV_BACKEND_URL:-}" ]]; then
-        set_plist_env "$INFO_PLIST" CMUX_DEV_BACKEND_URL "$CMUX_DEV_BACKEND_URL"
-        set_plist_env "$INFO_PLIST" CMUX_DEV_BACKEND_TRANSPORT direct
-        set_plist_env "$INFO_PLIST" CMUX_DEV_BACKEND_TAILSCALE_HOST cmux-dev-backend-1.tail137216.ts.net
+      set_plist_env "$INFO_PLIST" BREE_BUNDLED_CLI_PATH "$BUNDLED_APP_PATH/Contents/Resources/bin/bree"
+      set_plist_env "$INFO_PLIST" BREE_SHELL_INTEGRATION_DIR "$BUNDLED_APP_PATH/Contents/Resources/shell-integration"
+      set_plist_env "$INFO_PLIST" BREE_PORT "$BREE_DEV_PORT"
+      set_plist_env "$INFO_PLIST" BREE_PORT_END "$BREE_DEV_PORT_END"
+      set_plist_env "$INFO_PLIST" BREE_PORT_RANGE "$BREE_DEV_PORT_RANGE"
+      set_plist_env "$INFO_PLIST" PORT "$BREE_DEV_PORT"
+      set_plist_env "$INFO_PLIST" BREE_AUTH_WWW_ORIGIN "$BREE_AUTH_WWW_ORIGIN_VALUE"
+      set_plist_env "$INFO_PLIST" BREE_WWW_ORIGIN "$BREE_WWW_ORIGIN_VALUE"
+      if [[ -n "${BREE_DEV_BACKEND_URL:-}" ]]; then
+        set_plist_env "$INFO_PLIST" BREE_DEV_BACKEND_URL "$BREE_DEV_BACKEND_URL"
+        set_plist_env "$INFO_PLIST" BREE_DEV_BACKEND_TRANSPORT direct
+        set_plist_env "$INFO_PLIST" BREE_DEV_BACKEND_TAILSCALE_HOST bree-dev-backend-1.tail137216.ts.net
       fi
-      set_plist_env "$INFO_PLIST" CMUX_API_BASE_URL "$CMUX_DEV_API_BASE_URL_VALUE"
-      set_plist_env "$INFO_PLIST" CMUX_VM_API_BASE_URL "$CMUX_DEV_API_BASE_URL_VALUE"
+      set_plist_env "$INFO_PLIST" BREE_API_BASE_URL "$BREE_DEV_API_BASE_URL_VALUE"
+      set_plist_env "$INFO_PLIST" BREE_VM_API_BASE_URL "$BREE_DEV_API_BASE_URL_VALUE"
       if [[ "$PROD_AUTH" -eq 1 ]]; then
-        set_plist_env "$INFO_PLIST" CMUX_AUTH_ENVIRONMENT production
+        set_plist_env "$INFO_PLIST" BREE_AUTH_ENVIRONMENT production
       fi
-      if [[ "$BUILD_ONLY" -ne 1 && -S "$CMUXD_SOCKET" ]]; then
-        for PID in $(lsof -t "$CMUXD_SOCKET" 2>/dev/null); do
+      if [[ "$BUILD_ONLY" -ne 1 && -S "$BREED_SOCKET" ]]; then
+        for PID in $(lsof -t "$BREED_SOCKET" 2>/dev/null); do
           kill "$PID" 2>/dev/null || true
         done
-        rm -f "$CMUXD_SOCKET"
+        rm -f "$BREED_SOCKET"
       fi
     fi
   fi
@@ -1816,41 +1816,38 @@ fi
 
 CLI_PATH="$(dirname "$APP_PATH")/bree"
 
-# An incremental build keeps the pre-rename bundled CLI; `cmux` must never resolve to Bree inside a terminal.
-rm -f "$APP_PATH/Contents/Resources/bin/cmux"
-
-# Build cmuxd and ensure helper binaries are present (needed for both launch and no-launch).
-CMUXD_SRC="$PWD/cmuxd/zig-out/bin/cmuxd"
-if [[ -d "$PWD/cmuxd" ]]; then
-  (cd "$PWD/cmuxd" && zig build -Doptimize=ReleaseFast)
+# Build breed and ensure helper binaries are present (needed for both launch and no-launch).
+BREED_SRC="$PWD/breed/zig-out/bin/breed"
+if [[ -d "$PWD/breed" ]]; then
+  (cd "$PWD/breed" && zig build -Doptimize=ReleaseFast)
 fi
 if [[ -d "$PWD/ghostty" ]]; then
   BIN_DIR="$APP_PATH/Contents/Resources/bin"
   GHOSTTY_HELPER_DEST="$BIN_DIR/ghostty"
   if [[ -x "$GHOSTTY_HELPER_DEST" ]]; then
     echo "Preserving Xcode-built ghostty CLI helper at $GHOSTTY_HELPER_DEST"
-  elif [[ "${CMUX_SKIP_ZIG_BUILD:-}" == "1" ]]; then
-    echo "Skipping direct ghostty CLI helper zig build (CMUX_SKIP_ZIG_BUILD=1)"
+  elif [[ "${BREE_SKIP_ZIG_BUILD:-}" == "1" ]]; then
+    echo "Skipping direct ghostty CLI helper zig build (BREE_SKIP_ZIG_BUILD=1)"
   else
     mkdir -p "$BIN_DIR"
     "$PWD/scripts/build-ghostty-cli-helper.sh" --output "$GHOSTTY_HELPER_DEST"
   fi
 fi
 BIN_DIR="$APP_PATH/Contents/Resources/bin"
-if [[ -x "$CMUXD_SRC" ]]; then
+if [[ -x "$BREED_SRC" ]]; then
   BIN_DIR="$APP_PATH/Contents/Resources/bin"
   mkdir -p "$BIN_DIR"
-  cp "$CMUXD_SRC" "$BIN_DIR/cmuxd"
-  chmod +x "$BIN_DIR/cmuxd"
+  cp "$BREED_SRC" "$BIN_DIR/breed"
+  chmod +x "$BIN_DIR/breed"
 fi
-# The cmux-tui client the Machines panel uses for cloud sessions ships inside the
-# bundle like the Ghostty helper; it is the local cargo build (or CMUX_TUI_CLIENT_LOCAL).
-# CMUX_SKIP_CMUX_TUI_CLIENT=1 preserves an existing copy.
-if [[ "${CMUX_SKIP_CMUX_TUI_CLIENT:-}" == "1" && -x "$APP_PATH/Contents/Resources/bin/cmux-tui" ]]; then
-  echo "Preserving bundled cmux-tui client (CMUX_SKIP_CMUX_TUI_CLIENT=1)"
+# The bree-tui client the Machines panel uses for cloud sessions ships inside the
+# bundle like the Ghostty helper; it is the local cargo build (or BREE_TUI_CLIENT_LOCAL).
+# BREE_SKIP_BREE_TUI_CLIENT=1 preserves an existing copy.
+if [[ "${BREE_SKIP_BREE_TUI_CLIENT:-}" == "1" && -x "$APP_PATH/Contents/Resources/bin/bree-tui" ]]; then
+  echo "Preserving bundled bree-tui client (BREE_SKIP_BREE_TUI_CLIENT=1)"
 else
-  CMUX_TUI_CLIENT_LOCAL="${CMUX_TUI_CLIENT_LOCAL:-$PWD/cmux-tui/target/debug/cmux-tui}" \
-    "$PWD/scripts/install-cmux-tui-client.sh" "$APP_PATH" \
+  BREE_TUI_CLIENT_LOCAL="${BREE_TUI_CLIENT_LOCAL:-$PWD/bree-tui/target/debug/bree-tui}" \
+    "$PWD/scripts/install-bree-tui-client.sh" "$APP_PATH" \
     --require-capability wireguard-hub --require-capability browser-proxy
 fi
 if command -v xattr >/dev/null 2>&1; then
@@ -1858,8 +1855,8 @@ if command -v xattr >/dev/null 2>&1; then
 fi
 BREE_SIGN_IDENTITY="$("$PWD/scripts/bree-sign-identity.sh")"
 if ! /usr/bin/codesign --force --sign "$BREE_SIGN_IDENTITY" --timestamp=none --generate-entitlement-der "$APP_PATH" >/dev/null 2>&1; then
-  if [[ "${CMUX_ALLOW_UNSIGNED_DEV_APP:-}" == "1" ]]; then
-    echo "warning: codesign failed for $APP_PATH; continuing because CMUX_ALLOW_UNSIGNED_DEV_APP=1" >&2
+  if [[ "${BREE_ALLOW_UNSIGNED_DEV_APP:-}" == "1" ]]; then
+    echo "warning: codesign failed for $APP_PATH; continuing because BREE_ALLOW_UNSIGNED_DEV_APP=1" >&2
   else
     echo "error: codesign failed for $APP_PATH" >&2
     exit 1
@@ -1913,7 +1910,7 @@ CLI_PATH="$APP_PATH/Contents/Resources/bin/bree"
 if [[ "$BUILD_ONLY" -eq 1 ]]; then
   CAN_PUBLISH_RELOAD_STATE=0
   RELOAD_PUBLICATION_SKIP_REASON="build-only mode left the running tagged app and tag state unchanged"
-elif [[ -n "$TAG" ]] && ! wait_for_tag_socket_lock_release "/tmp/cmux-debug-${TAG_SLUG}.sock"; then
+elif [[ -n "$TAG" ]] && ! wait_for_tag_socket_lock_release "/tmp/bree-debug-${TAG_SLUG}.sock"; then
   CAN_PUBLISH_RELOAD_STATE=0
 fi
 if [[ "$CAN_PUBLISH_RELOAD_STATE" -eq 1 && -n "${TAG_SLUG:-}" ]]; then
@@ -1928,8 +1925,8 @@ if [[ "$CAN_PUBLISH_RELOAD_STATE" -eq 1 && -n "${TAG_SLUG:-}" ]]; then
   fi
   if ! cleanup_stale_tag_state \
       "$TAG_SLUG" \
-      "/tmp/cmux-debug-${TAG_SLUG}.sock" \
-      "/tmp/cmux-debug-${TAG_SLUG}.sock" \
+      "/tmp/bree-debug-${TAG_SLUG}.sock" \
+      "/tmp/bree-debug-${TAG_SLUG}.sock" \
       "$RELOAD_PUBLISH_CLI_PATH"; then
     # A replacement process may have reclaimed this tag while the old app was
     # terminating. Do not overwrite its discovery marker or ambient CLI pointer.
@@ -1956,67 +1953,67 @@ if [[ "$LAUNCH" -eq 1 ]]; then
     sleep 0.3
   fi
 
-  # Avoid inheriting cmux/ghostty environment variables from the terminal that
-  # runs this script (often inside another cmux instance), which can cause
+  # Avoid inheriting bree/ghostty environment variables from the terminal that
+  # runs this script (often inside another bree instance), which can cause
   # socket and resource-path conflicts.
   OPEN_CLEAN_ENV=(
     env
-    -u CMUX_SOCKET
-    -u CMUX_SOCKET_PASSWORD
-    -u CMUX_SOCKET_PATH
-    -u CMUX_WORKSPACE_ID
-    -u CMUX_SURFACE_ID
-    -u CMUX_TAB_ID
-    -u CMUX_PANEL_ID
-    -u CMUXD_UNIX_PATH
-    -u CMUX_TAG
-    -u CMUX_DEBUG_LOG
-    -u CMUX_BUNDLE_ID
-    -u CMUX_BUNDLED_CLI_PATH
-    -u CMUX_SHELL_INTEGRATION
-    -u CMUX_SHELL_INTEGRATION_DIR
-    -u CMUX_LOAD_GHOSTTY_ZSH_INTEGRATION
-    -u CMUX_AUTH_ENVIRONMENT
-    -u CMUX_STACK_PROJECT_ID
-    -u CMUX_STACK_PUBLISHABLE_CLIENT_KEY
+    -u BREE_SOCKET
+    -u BREE_SOCKET_PASSWORD
+    -u BREE_SOCKET_PATH
+    -u BREE_WORKSPACE_ID
+    -u BREE_SURFACE_ID
+    -u BREE_TAB_ID
+    -u BREE_PANEL_ID
+    -u BREED_UNIX_PATH
+    -u BREE_TAG
+    -u BREE_DEBUG_LOG
+    -u BREE_BUNDLE_ID
+    -u BREE_BUNDLED_CLI_PATH
+    -u BREE_SHELL_INTEGRATION
+    -u BREE_SHELL_INTEGRATION_DIR
+    -u BREE_LOAD_GHOSTTY_ZSH_INTEGRATION
+    -u BREE_AUTH_ENVIRONMENT
+    -u BREE_STACK_PROJECT_ID
+    -u BREE_STACK_PUBLISHABLE_CLIENT_KEY
     -u GHOSTTY_BIN_DIR
     -u GHOSTTY_RESOURCES_DIR
     -u GHOSTTY_SHELL_FEATURES
     -u GHOSTTY_SURFACE_ID
     # Dev shells (including CI/Codex) often force-disable paging by exporting these.
-    # Don't leak that into cmux, otherwise `git diff` won't page even with PAGER=less.
+    # Don't leak that into bree, otherwise `git diff` won't page even with PAGER=less.
     -u GIT_PAGER
     -u GH_PAGER
     -u TERMINFO
     -u XDG_DATA_DIRS
   )
 
-  LAUNCH_AUTH_CALLBACK_SCHEME="cmux-dev"
+  LAUNCH_AUTH_CALLBACK_SCHEME="bree-dev"
   if [[ -n "${TAG_SLUG:-}" ]]; then
-    LAUNCH_AUTH_CALLBACK_SCHEME="cmux-dev-${TAG_SLUG}"
+    LAUNCH_AUTH_CALLBACK_SCHEME="bree-dev-${TAG_SLUG}"
   fi
   TAG_LAUNCH_ENV=(
-    CMUX_TAG="${TAG_SLUG:-}"
-    CMUX_BUNDLE_ID="$BUNDLE_ID"
-    CMUX_AUTH_CALLBACK_SCHEME="$LAUNCH_AUTH_CALLBACK_SCHEME"
-    CMUX_SOCKET_ENABLE=1
-    CMUX_SOCKET_MODE=allowAll
-    CMUX_DEBUG_LOG="$CMUX_DEBUG_LOG"
-    CMUX_REMOTE_DAEMON_ALLOW_LOCAL_BUILD=1
-    CMUXTERM_REPO_ROOT="$PWD"
-    CMUX_BUNDLED_CLI_PATH="$CLI_PATH"
-    CMUX_SHELL_INTEGRATION_DIR="$APP_PATH/Contents/Resources/shell-integration"
-    CMUX_PORT="$CMUX_DEV_PORT"
-    CMUX_PORT_END="$CMUX_DEV_PORT_END"
-    CMUX_PORT_RANGE="$CMUX_DEV_PORT_RANGE"
-    PORT="$CMUX_DEV_PORT"
-    CMUX_AUTH_WWW_ORIGIN="$CMUX_AUTH_WWW_ORIGIN_VALUE"
-    CMUX_WWW_ORIGIN="$CMUX_WWW_ORIGIN_VALUE"
-    CMUX_API_BASE_URL="$CMUX_DEV_API_BASE_URL_VALUE"
-    CMUX_VM_API_BASE_URL="$CMUX_DEV_API_BASE_URL_VALUE"
+    BREE_TAG="${TAG_SLUG:-}"
+    BREE_BUNDLE_ID="$BUNDLE_ID"
+    BREE_AUTH_CALLBACK_SCHEME="$LAUNCH_AUTH_CALLBACK_SCHEME"
+    BREE_SOCKET_ENABLE=1
+    BREE_SOCKET_MODE=allowAll
+    BREE_DEBUG_LOG="$BREE_DEBUG_LOG"
+    BREE_REMOTE_DAEMON_ALLOW_LOCAL_BUILD=1
+    BREE_REPO_ROOT="$PWD"
+    BREE_BUNDLED_CLI_PATH="$CLI_PATH"
+    BREE_SHELL_INTEGRATION_DIR="$APP_PATH/Contents/Resources/shell-integration"
+    BREE_PORT="$BREE_DEV_PORT"
+    BREE_PORT_END="$BREE_DEV_PORT_END"
+    BREE_PORT_RANGE="$BREE_DEV_PORT_RANGE"
+    PORT="$BREE_DEV_PORT"
+    BREE_AUTH_WWW_ORIGIN="$BREE_AUTH_WWW_ORIGIN_VALUE"
+    BREE_WWW_ORIGIN="$BREE_WWW_ORIGIN_VALUE"
+    BREE_API_BASE_URL="$BREE_DEV_API_BASE_URL_VALUE"
+    BREE_VM_API_BASE_URL="$BREE_DEV_API_BASE_URL_VALUE"
   )
   if [[ "$PROD_AUTH" -eq 1 ]]; then
-    TAG_LAUNCH_ENV+=(CMUX_AUTH_ENVIRONMENT=production)
+    TAG_LAUNCH_ENV+=(BREE_AUTH_ENVIRONMENT=production)
   fi
 
   LAUNCH_CMD=()
@@ -2032,18 +2029,18 @@ if [[ "$LAUNCH" -eq 1 ]]; then
       echo "error: tagged app executable not found: $APP_EXECUTABLE" >&2
       exit 1
     fi
-    CMUX_TAG_LAUNCH_LOG_DIRECTORY="$(mktemp -d "${TMPDIR:-/tmp}/cmux-launch-${TAG_SLUG}.XXXXXX")"
-    chmod 0700 "$CMUX_TAG_LAUNCH_LOG_DIRECTORY"
-    TAG_LAUNCH_LOG="$CMUX_TAG_LAUNCH_LOG_DIRECTORY/launch.out"
+    BREE_TAG_LAUNCH_LOG_DIRECTORY="$(mktemp -d "${TMPDIR:-/tmp}/bree-launch-${TAG_SLUG}.XXXXXX")"
+    chmod 0700 "$BREE_TAG_LAUNCH_LOG_DIRECTORY"
+    TAG_LAUNCH_LOG="$BREE_TAG_LAUNCH_LOG_DIRECTORY/launch.out"
     (umask 077 && : > "$TAG_LAUNCH_LOG")
     chmod 0600 "$TAG_LAUNCH_LOG"
-    if [[ -n "${CMUX_SOCKET_PATH_VALUE:-}" ]]; then
+    if [[ -n "${BREE_SOCKET_PATH_VALUE:-}" ]]; then
       TAG_LAUNCH_ENV+=(
-        CMUX_SOCKET_PATH="$CMUX_SOCKET_PATH_VALUE"
-        CMUXD_UNIX_PATH="$CMUXD_SOCKET"
+        BREE_SOCKET_PATH="$BREE_SOCKET_PATH_VALUE"
+        BREED_UNIX_PATH="$BREED_SOCKET"
       )
     fi
-    TAG_LAUNCH_PLIST="$CMUX_TAG_LAUNCH_LOG_DIRECTORY/$TAG_LAUNCHD_LABEL.plist"
+    TAG_LAUNCH_PLIST="$BREE_TAG_LAUNCH_LOG_DIRECTORY/$TAG_LAUNCHD_LABEL.plist"
     /usr/bin/plutil -create xml1 "$TAG_LAUNCH_PLIST"
     /usr/bin/plutil -insert Label -string "$TAG_LAUNCHD_LABEL" "$TAG_LAUNCH_PLIST"
     # A launchd job inherits the GUI domain environment even when the plist has
@@ -2082,12 +2079,12 @@ if [[ "$LAUNCH" -eq 1 ]]; then
       exit 1
     fi
   else
-    echo "/tmp/cmux-debug.sock" > /tmp/cmux-last-socket-path || true
-    echo "/tmp/cmux-debug.log" > /tmp/cmux-last-debug-log-path || true
-    if [[ -n "${CMUX_SOCKET_PATH_VALUE:-}" ]]; then
-      # Ensure explicit socket paths win even if the caller has CMUX_* overrides.
-      LAUNCH_CMD=("${OPEN_CLEAN_ENV[@]}" "${TAG_LAUNCH_ENV[@]}" CMUX_SOCKET_PATH="$CMUX_SOCKET_PATH_VALUE" CMUXD_UNIX_PATH="$CMUXD_SOCKET" open -g "$APP_PATH")
-      LAUNCH_RETRY_CMD=("${OPEN_CLEAN_ENV[@]}" "${TAG_LAUNCH_ENV[@]}" CMUX_SOCKET_PATH="$CMUX_SOCKET_PATH_VALUE" CMUXD_UNIX_PATH="$CMUXD_SOCKET" open -n -g "$APP_PATH")
+    echo "/tmp/bree-debug.sock" > /tmp/bree-last-socket-path || true
+    echo "/tmp/bree-debug.log" > /tmp/bree-last-debug-log-path || true
+    if [[ -n "${BREE_SOCKET_PATH_VALUE:-}" ]]; then
+      # Ensure explicit socket paths win even if the caller has BREE_* overrides.
+      LAUNCH_CMD=("${OPEN_CLEAN_ENV[@]}" "${TAG_LAUNCH_ENV[@]}" BREE_SOCKET_PATH="$BREE_SOCKET_PATH_VALUE" BREED_UNIX_PATH="$BREED_SOCKET" open -g "$APP_PATH")
+      LAUNCH_RETRY_CMD=("${OPEN_CLEAN_ENV[@]}" "${TAG_LAUNCH_ENV[@]}" BREE_SOCKET_PATH="$BREE_SOCKET_PATH_VALUE" BREED_UNIX_PATH="$BREED_SOCKET" open -n -g "$APP_PATH")
     else
       LAUNCH_CMD=("${OPEN_CLEAN_ENV[@]}" "${TAG_LAUNCH_ENV[@]}" open -g "$APP_PATH")
       LAUNCH_RETRY_CMD=("${OPEN_CLEAN_ENV[@]}" "${TAG_LAUNCH_ENV[@]}" open -n -g "$APP_PATH")
@@ -2095,7 +2092,7 @@ if [[ "$LAUNCH" -eq 1 ]]; then
   fi
 
   # Crash watch: any DiagnosticReports .ips newer than this marker belongs to this launch.
-  CRASH_WATCH_MARKER="$(mktemp -t cmux-reload-crash-watch)"
+  CRASH_WATCH_MARKER="$(mktemp -t bree-reload-crash-watch)"
 
   if [[ "${#LAUNCH_CMD[@]}" -gt 0 ]] && ! "${LAUNCH_CMD[@]}"; then
     echo "warning: open -g failed; retrying launch with open -n -g" >&2
@@ -2131,10 +2128,10 @@ if [[ "$LAUNCH" -eq 1 ]]; then
       fi
     done
   fi
-  if [[ -n "${TAG_SLUG:-}" && -n "${CMUX_SOCKET_PATH_VALUE:-}" ]]; then
+  if [[ -n "${TAG_SLUG:-}" && -n "${BREE_SOCKET_PATH_VALUE:-}" ]]; then
     SOCKET_READY=0
     for _ in {1..80}; do
-      if [[ -S "$CMUX_SOCKET_PATH_VALUE" ]]; then
+      if [[ -S "$BREE_SOCKET_PATH_VALUE" ]]; then
         SOCKET_READY=1
         break
       fi
@@ -2144,7 +2141,7 @@ if [[ "$LAUNCH" -eq 1 ]]; then
       sleep 0.1
     done
     if [[ "$SOCKET_READY" -ne 1 ]]; then
-      echo "error: tagged app did not create socket: $CMUX_SOCKET_PATH_VALUE" >&2
+      echo "error: tagged app did not create socket: $BREE_SOCKET_PATH_VALUE" >&2
       if [[ -n "${TAG_LAUNCH_LOG:-}" && -f "$TAG_LAUNCH_LOG" ]]; then
         echo "Launch log: $TAG_LAUNCH_LOG" >&2
         tail -n 80 "$TAG_LAUNCH_LOG" >&2 || true
@@ -2155,13 +2152,13 @@ if [[ "$LAUNCH" -eq 1 ]]; then
 
   # Warn when the freshly launched app crashes shortly after launch, so a broken
   # build (for example stale incremental objects) is not mistaken for a source bug.
-  # CMUX_RELOAD_CRASH_WATCH_SECONDS=0 turns the watch off.
-  CRASH_WATCH_SECONDS="${CMUX_RELOAD_CRASH_WATCH_SECONDS:-20}"
+  # BREE_RELOAD_CRASH_WATCH_SECONDS=0 turns the watch off.
+  CRASH_WATCH_SECONDS="${BREE_RELOAD_CRASH_WATCH_SECONDS:-20}"
   CRASH_REPORT_DIR="$HOME/Library/Logs/DiagnosticReports"
   CRASH_REPORT=""
   if [[ "$CRASH_WATCH_SECONDS" -gt 0 && -d "$CRASH_REPORT_DIR" ]]; then
     for (( CRASH_WATCH_TICK = 0; CRASH_WATCH_TICK < CRASH_WATCH_SECONDS * 2; CRASH_WATCH_TICK++ )); do
-      CRASH_REPORT="$(find "$CRASH_REPORT_DIR" -maxdepth 1 -name 'cmux DEV*.ips' -newer "$CRASH_WATCH_MARKER" 2>/dev/null | head -n 1)"
+      CRASH_REPORT="$(find "$CRASH_REPORT_DIR" -maxdepth 1 -name 'Bree Dev*.ips' -newer "$CRASH_WATCH_MARKER" 2>/dev/null | head -n 1)"
       [[ -n "$CRASH_REPORT" ]] && break
       sleep 0.5
     done

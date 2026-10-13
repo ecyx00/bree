@@ -2,7 +2,7 @@
 """Measure bash watcher launches separately from the normal prompt lifecycle.
 
 The normal prompt lifecycle must not launch recurring external sleeps.
-All shells, sockets, and logs belong to this test, not to a running cmux app.
+All shells, sockets, and logs belong to this test, not to a running bree app.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-INTEGRATION = ROOT / "Resources/shell-integration/cmux-bash-integration.bash"
+INTEGRATION = ROOT / "Resources/shell-integration/bree-bash-integration.bash"
 
 
 def stop_shell(shell: subprocess.Popen) -> str:
@@ -35,13 +35,13 @@ def stop_shell(shell: subprocess.Popen) -> str:
 
 class BashWatcherChurnTests(unittest.TestCase):
     def measure(self, *, panes: int) -> tuple[list[int], list[str]]:
-        with tempfile.TemporaryDirectory(prefix="cmux15067-", dir="/tmp") as directory, ExitStack() as stack:
+        with tempfile.TemporaryDirectory(prefix="bree15067-", dir="/tmp") as directory, ExitStack() as stack:
             root = Path(directory)
             bindir = root / "bin"
             bindir.mkdir()
             # Count each actual external sleep invocation; retain its real delay.
             (bindir / "sleep").write_text(
-                '#!/bin/bash\nprintf "%s\\n" "$*" >> "$CMUX_TEST_SLEEP_LOG"\nexec /bin/sleep "$@"\n'
+                '#!/bin/bash\nprintf "%s\\n" "$*" >> "$BREE_TEST_SLEEP_LOG"\nexec /bin/sleep "$@"\n'
             )
             (bindir / "sleep").chmod(0o755)
             server = stack.enter_context(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM))
@@ -55,23 +55,23 @@ class BashWatcherChurnTests(unittest.TestCase):
                 env = {
                     "PATH": f"{bindir}:/usr/bin:/bin:/usr/sbin:/sbin",
                     "HOME": str(home), "TMPDIR": str(home), "TERM": "dumb", "LC_ALL": "C",
-                    "CMUX_SOCKET_PATH": str(root / "socket"),
-                    "CMUX_TAB_ID": f"tab-15067-{os.getpid()}",
-                    "CMUX_PANEL_ID": f"panel-15067-{os.getpid()}-{pane}",
-                    "CMUX_TEST_INTEGRATION": str(INTEGRATION),
-                    "CMUX_TEST_SLEEP_LOG": str(home / "sleeps"),
-                    "CMUX_TEST_SEND_LOG": str(home / "send"),
+                    "BREE_SOCKET_PATH": str(root / "socket"),
+                    "BREE_TAB_ID": f"tab-15067-{os.getpid()}",
+                    "BREE_PANEL_ID": f"panel-15067-{os.getpid()}-{pane}",
+                    "BREE_TEST_INTEGRATION": str(INTEGRATION),
+                    "BREE_TEST_SLEEP_LOG": str(home / "sleeps"),
+                    "BREE_TEST_SEND_LOG": str(home / "send"),
                 }
                 script = (
-                    'set -m\ncd "$HOME"\nsource "$CMUX_TEST_INTEGRATION"\n'
-                    '_cmux_send() { printf "%s\\n" "$1" >> "$CMUX_TEST_SEND_LOG"; }\n'
-                    '_CMUX_TTY_NAME=test; _CMUX_TTY_REPORTED=1\n'
-                    '_cmux_prompt_command\n'
+                    'set -m\ncd "$HOME"\nsource "$BREE_TEST_INTEGRATION"\n'
+                    '_bree_send() { printf "%s\\n" "$1" >> "$BREE_TEST_SEND_LOG"; }\n'
+                    '_BREE_TTY_NAME=test; _BREE_TTY_REPORTED=1\n'
+                    '_bree_prompt_command\n'
                 )
                 script += (
                     'printf "ref: refs/heads/feature/new\\n" > .git/HEAD\n'
-                    '_cmux_prompt_command\n'
-                    ':; _cmux_prompt_command\n'
+                    '_bree_prompt_command\n'
+                    ':; _bree_prompt_command\n'
                 )
                 script += 'printf "READY\\n"\nIFS= read -r stop\n'
                 shell = subprocess.Popen(

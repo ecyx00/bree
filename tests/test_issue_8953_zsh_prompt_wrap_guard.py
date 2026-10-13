@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Regression coverage for cmux issue #8953.
+"""Regression coverage for bree issue #8953.
 
-Drive the bundled cmux and Ghostty zsh integrations through a real interactive
+Drive the bundled bree and Ghostty zsh integrations through a real interactive
 PTY.  The prompt deliberately renders only the final path component while the
 working directory is long, matching the issue's config-independent reproducer.
-cmux must not infer prompt wrapping from ``PWD`` or write spacer rows into the
+bree must not infer prompt wrapping from ``PWD`` or write spacer rows into the
 PTY, and it must preserve Ghostty's zsh prompt markers rather than rewriting
 their redraw semantics.
 """
@@ -28,12 +28,12 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CMUX_INTEGRATION_DIR = REPO_ROOT / "Resources/shell-integration"
+BREE_INTEGRATION_DIR = REPO_ROOT / "Resources/shell-integration"
 GHOSTTY_RESOURCES_DIR = REPO_ROOT / "ghostty/src"
 
 PROMPT_END = b"\x1b]133;B\x07"
 GHOSTTY_FRESH_PROMPT = b"\x1b]133;A;cl=line\x07"
-CMUX_REDRAW_PROMPT = b"\x1b]133;A;redraw=last;cl=line\x07"
+BREE_REDRAW_PROMPT = b"\x1b]133;A;redraw=last;cl=line\x07"
 KEYBOARD_RESET = b"\x1b[>m\x1b[<8u"
 
 
@@ -53,7 +53,7 @@ class SessionResult:
 
 
 def _serve_socket(listener: socket.socket, stop: threading.Event) -> None:
-    """Drain cmux metadata messages so detached hook clients exit promptly."""
+    """Drain bree metadata messages so detached hook clients exit promptly."""
     while not stop.is_set():
         try:
             connection, _ = listener.accept()
@@ -130,18 +130,18 @@ def _wait_for_child(pid: int, master_fd: int, output: bytearray) -> int:
 
 
 def _capture_session(columns: int) -> SessionResult:
-    with tempfile.TemporaryDirectory(prefix=f"cmux-issue-8953-{columns}-", dir="/tmp") as tmp:
+    with tempfile.TemporaryDirectory(prefix=f"bree-issue-8953-{columns}-", dir="/tmp") as tmp:
         root = Path(tmp)
         home = root / "home"
         user_zdotdir = root / "minzdot"
-        cwd = home / "cmux-blank-repro/aaaaaaaaaa/bbbbbbbbbb/cccccccccc/dddddddddd"
+        cwd = home / "bree-blank-repro/aaaaaaaaaa/bbbbbbbbbb/cccccccccc/dddddddddd"
         user_zdotdir.mkdir(parents=True)
         cwd.mkdir(parents=True)
         (user_zdotdir / ".zshrc").write_text("PROMPT='%1~ '\n", encoding="utf-8")
 
         assert len(str(cwd)) >= 73, f"fixture cwd is not deep enough: {cwd}"
 
-        socket_path = root / "cmux.sock"
+        socket_path = root / "bree.sock"
         listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         listener.set_inheritable(False)
         listener.bind(str(socket_path))
@@ -151,23 +151,23 @@ def _capture_session(columns: int) -> SessionResult:
         env = {
             key: value
             for key, value in os.environ.items()
-            if not key.startswith(("CMUX_", "GHOSTTY_")) and key not in {"ZDOTDIR", "TMUX"}
+            if not key.startswith(("BREE_", "GHOSTTY_")) and key not in {"ZDOTDIR", "TMUX"}
         }
         env.update(
             {
                 "HOME": str(home),
                 "SHELL": "/bin/zsh",
                 "TERM": "xterm-256color",
-                "ZDOTDIR": str(CMUX_INTEGRATION_DIR),
-                "CMUX_ZSH_ZDOTDIR": str(user_zdotdir),
-                "CMUX_SHELL_INTEGRATION": "1",
-                "CMUX_SHELL_INTEGRATION_DIR": str(CMUX_INTEGRATION_DIR),
-                "CMUX_LOAD_GHOSTTY_ZSH_INTEGRATION": "1",
+                "ZDOTDIR": str(BREE_INTEGRATION_DIR),
+                "BREE_ZSH_ZDOTDIR": str(user_zdotdir),
+                "BREE_SHELL_INTEGRATION": "1",
+                "BREE_SHELL_INTEGRATION_DIR": str(BREE_INTEGRATION_DIR),
+                "BREE_LOAD_GHOSTTY_ZSH_INTEGRATION": "1",
                 "GHOSTTY_RESOURCES_DIR": str(GHOSTTY_RESOURCES_DIR),
-                "CMUX_SOCKET_PATH": str(socket_path),
-                "CMUX_TAB_ID": "tab-issue-8953",
-                "CMUX_PANEL_ID": "panel-issue-8953",
-                "CMUX_TEST_FORCE_KEYBOARD_RESET": "1",
+                "BREE_SOCKET_PATH": str(socket_path),
+                "BREE_TAB_ID": "tab-issue-8953",
+                "BREE_PANEL_ID": "panel-issue-8953",
+                "BREE_TEST_FORCE_KEYBOARD_RESET": "1",
                 # Keep command-start timestamps nonzero without waiting for the
                 # real shell clock to advance after startup.
                 "EPOCHSECONDS": "1234567890",
@@ -244,15 +244,15 @@ def main() -> int:
     for result in results:
         if result.prompt_count != 3:
             failures.append(
-                f"cols={result.columns}: expected 3 cmux prompt cycles, saw {result.prompt_count}"
+                f"cols={result.columns}: expected 3 bree prompt cycles, saw {result.prompt_count}"
             )
         if result.spacer_count != 0:
             failures.append(
-                f"cols={result.columns}: cmux wrote {result.spacer_count} spacer newline(s)"
+                f"cols={result.columns}: bree wrote {result.spacer_count} spacer newline(s)"
             )
-        if CMUX_REDRAW_PROMPT in result.output:
+        if BREE_REDRAW_PROMPT in result.output:
             failures.append(
-                f"cols={result.columns}: cmux rewrote Ghostty's zsh prompt marker to redraw=last"
+                f"cols={result.columns}: bree rewrote Ghostty's zsh prompt marker to redraw=last"
             )
         if result.output.count(GHOSTTY_FRESH_PROMPT) != 4:
             failures.append(

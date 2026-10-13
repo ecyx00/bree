@@ -283,10 +283,10 @@ test("streamed file diffs carry a patch fingerprint and patch size for viewed st
   });
 
   expect(items).toHaveLength(2);
-  const fingerprints = items.map((item) => item.fileDiff.cmuxPatchFingerprint);
+  const fingerprints = items.map((item) => item.fileDiff.breePatchFingerprint);
   expect(fingerprints[0]).toMatch(/^[0-9a-f]{8}$/);
   expect(fingerprints[1]).toMatch(/^[0-9a-f]{8}$/);
   expect(fingerprints[0]).not.toBe(fingerprints[1]);
-  expect(items[0].fileDiff.cmuxPatchByteLength).toBeGreaterThan(0);
-  expect(items[0].fileDiff.cmuxPatchByteLength).toBeLessThanOrEqual(fileA.length);
+  expect(items[0].fileDiff.breePatchByteLength).toBeGreaterThan(0);
+  expect(items[0].fileDiff.breePatchByteLength).toBeLessThanOrEqual(fileA.length);
 });

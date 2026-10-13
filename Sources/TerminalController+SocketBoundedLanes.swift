@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 /// A socket command's hop onto the main actor exceeded its deadline.
@@ -32,7 +32,7 @@ enum SocketCommandTaskPolicy {
 ///   Swift cooperative pool, so a main-actor stall can no longer exhaust the
 ///   cooperative pool and freeze every other task in the process.
 ///
-/// Both are the fix for <https://github.com/manaflow-ai/cmux/issues/13369>.
+/// Both are the fix for <https://github.com/ecyx00/bree/issues/13369>.
 extension TerminalController {
     /// Deadline for one socket command's main-actor hop (queue wait plus
     /// body). Above the hang detector's 8 s stall threshold so a hang sample
@@ -71,7 +71,7 @@ extension TerminalController {
     /// cooperative-pool thread. This is the sanctioned legacy blocking
     /// boundary, not general async work.
     private nonisolated static let socketBlockingWorkerQueue = DispatchQueue(
-        label: "com.cmux.socket.blocking-worker",
+        label: "com.bree.socket.blocking-worker",
         qos: .userInitiated,
         attributes: .concurrent
     )
@@ -118,13 +118,13 @@ extension TerminalController {
         _ body: @escaping @Sendable () -> T
     ) async -> T {
         let policyStack = SocketCommandTaskPolicy.focusAllowanceStack
-        let focusAllowed = CmuxAutomationInvocationContext.focusAllowed
-        let eventOrigin = CmuxAutomationInvocationContext.eventOrigin
+        let focusAllowed = BreeAutomationInvocationContext.focusAllowed
+        let eventOrigin = BreeAutomationInvocationContext.eventOrigin
         return await withCheckedContinuation { continuation in
             Self.socketBlockingWorkerQueue.async {
                 let value = Self.withSocketCommandPolicyStack(policyStack) {
-                    CmuxAutomationInvocationContext.$focusAllowed.withValue(focusAllowed) {
-                        CmuxAutomationInvocationContext.$eventOrigin.withValue(eventOrigin) {
+                    BreeAutomationInvocationContext.$focusAllowed.withValue(focusAllowed) {
+                        BreeAutomationInvocationContext.$eventOrigin.withValue(eventOrigin) {
                             body()
                         }
                     }

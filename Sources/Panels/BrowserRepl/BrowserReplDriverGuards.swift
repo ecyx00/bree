@@ -1,5 +1,5 @@
-import CmuxBrowser
-import CmuxSettings
+import BreeBrowser
+import BreeSettings
 import WebKit
 
 /// The driver's own content world. Agent code can run scripts in the agent
@@ -7,7 +7,7 @@ import WebKit
 /// world; neither can reach this one, so the checks and masks the driver
 /// runs here cannot be patched by them.
 enum BrowserReplDriverWorld {
-    @MainActor static let world = WKContentWorld.world(name: "cmux-driver")
+    @MainActor static let world = WKContentWorld.world(name: "bree-driver")
 }
 
 /// Cancels main-frame navigations the domain policy blocks in tabs a REPL

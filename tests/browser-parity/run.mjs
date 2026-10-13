@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 // Browser REPL scenario runner. See tests/browser-parity/README.md.
 //
-//   node tests/browser-parity/run.mjs check  --backend cmux-dev [--only 03] [-v]
-//   node tests/browser-parity/run.mjs record --backend oracle|cmux-dev [--only 03]
-//   node tests/browser-parity/run.mjs run    --backend cmux|cmux-dev|oracle [--only 03]
+//   node tests/browser-parity/run.mjs check  --backend bree-dev [--only 03] [-v]
+//   node tests/browser-parity/run.mjs record --backend oracle|bree-dev [--only 03]
+//   node tests/browser-parity/run.mjs run    --backend bree|bree-dev|oracle [--only 03]
 //
-// A scenario is REPL code in the one cmux API, split into cells by
+// A scenario is REPL code in the one bree API, split into cells by
 // `// ---- cell` lines. `emit(key, value)` records a behavior value that the
-// oracle (real Playwright on Chrome) owns; `emitCmux(key, value)` records a
-// value whose format cmux defines (snapshot text, printing). A scenario whose
-// header says `// oracle: skip (<reason>)` is cmux-owned throughout, and so is
-// a cell marked `// ---- cell cmux-only`, which the oracle does not run.
+// oracle (real Playwright on Chrome) owns; `emitBree(key, value)` records a
+// value whose format bree defines (snapshot text, printing). A scenario whose
+// header says `// oracle: skip (<reason>)` is bree-owned throughout, and so is
+// a cell marked `// ---- cell bree-only`, which the oracle does not run.
 import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -21,7 +21,7 @@ import { makeTestDir, removeTestDir } from "./lib/test-dirs.mjs";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const MARK = "@@PARITY@@";
-const BACKENDS = ["cmux", "cmux-dev", "oracle"];
+const BACKENDS = ["bree", "bree-dev", "oracle"];
 
 function parseArgs(argv) {
   const args = { mode: argv[0], backend: null, only: null, verbose: false };
@@ -35,7 +35,7 @@ function parseArgs(argv) {
   if (!["record", "check", "run"].includes(args.mode) || !BACKENDS.includes(args.backend)) {
     throw new Error(`usage: run.mjs record|check|run --backend ${BACKENDS.join("|")} [--only PREFIX] [-v]`);
   }
-  if (args.mode === "record" && args.backend === "cmux") throw new Error("record from oracle (behavior) or cmux-dev (cmux-owned format)");
+  if (args.mode === "record" && args.backend === "bree") throw new Error("record from oracle (behavior) or bree-dev (bree-owned format)");
   return args;
 }
 
@@ -50,7 +50,7 @@ export function loadScenario(file) {
     if (m) {
       cells.push(current);
       const session = /session=([\w-]+)/.exec(m[1]);
-      current = { session: session ? session[1] : null, capture: /\bcapture\b/.test(m[1]), cmuxOnly: /\bcmux-only\b/.test(m[1]), lines: [] };
+      current = { session: session ? session[1] : null, capture: /\bcapture\b/.test(m[1]), breeOnly: /\bbree-only\b/.test(m[1]), lines: [] };
       continue;
     }
     current.lines.push(line);
@@ -59,7 +59,7 @@ export function loadScenario(file) {
   return {
     name: path.basename(file, ".js"),
     oracleSkip: !!skip,
-    cells: cells.map((c) => ({ session: c.session, capture: c.capture, cmuxOnly: !!c.cmuxOnly, body: c.lines.join("\n") })).filter((c) => c.body.split("\n").some((l) => l.trim() && !l.trim().startsWith("//"))),
+    cells: cells.map((c) => ({ session: c.session, capture: c.capture, breeOnly: !!c.breeOnly, body: c.lines.join("\n") })).filter((c) => c.body.split("\n").some((l) => l.trim() && !l.trim().startsWith("//"))),
   };
 }
 
@@ -70,7 +70,7 @@ function prelude(origins) {
     `const PEER = ${JSON.stringify(origins.peer)};`,
     `const INSECURE = ${JSON.stringify(origins.insecure)};`,
     `const emit = (k, v) => console.log(${line("")});`,
-    `const emitCmux = (k, v) => console.log(${line(", c: 1")});`,
+    `const emitBree = (k, v) => console.log(${line(", c: 1")});`,
   ].join("\n");
 }
 
@@ -99,7 +99,7 @@ function exec(cmd, argv, { input, timeoutMs = 180_000, cwd } = {}) {
 const backends = {
   // The engine-neutral runtime (Resources/browser-repl) in this process on
   // Playwright WebKit through the dev driver. No app build needed.
-  async "cmux-dev"(cells) {
+  async "bree-dev"(cells) {
     const { runDevCells } = await import("./lib/dev-driver.mjs");
     return runDevCells(cells);
   },
@@ -108,16 +108,16 @@ const backends = {
     const { runOracleCells } = await import("./lib/oracle.mjs");
     return runOracleCells(cells);
   },
-  // The app. PARITY_CMUX_CLI selects a tagged build's CLI; CMUX_SOCKET_PATH
+  // The app. PARITY_BREE_CLI selects a tagged build's CLI; BREE_SOCKET_PATH
   // its socket. Each cell is one CLI call; a named session is reset after.
-  async cmux(cells, { scenario }) {
-    const cli = process.env.PARITY_CMUX_CLI ?? "cmux";
+  async bree(cells, { scenario }) {
+    const cli = process.env.PARITY_BREE_CLI ?? "bree";
     const suffix = Math.random().toString(36).slice(2, 8);
     const sessions = new Set();
     const outputs = [];
     // A new working directory for the scenario: the session's fs root, where
     // scenarios write and remove their files, never the checkout.
-    const workDir = makeTestDir("parity-cmux-");
+    const workDir = makeTestDir("parity-bree-");
     try {
       for (const cell of cells) {
         const argv = ["browser", "repl"];
@@ -151,7 +151,7 @@ function parseEmits(outputs, cells) {
         continue;
       }
       try {
-        emits.push({ ...JSON.parse(line.slice(at + MARK.length)), cmuxOnly: cells[i].cmuxOnly });
+        emits.push({ ...JSON.parse(line.slice(at + MARK.length)), breeOnly: cells[i].breeOnly });
       } catch {
         emits.push({ k: "__unparsed__", v: line });
       }
@@ -177,10 +177,10 @@ async function main() {
       const scenario = loadScenario(path.join(dir, file));
       if (args.backend === "oracle" && scenario.oracleSkip) continue;
       total++;
-      // `cmux-only` cells use APIs with no Playwright counterpart; all their
-      // values are cmux-owned and the oracle does not run them.
+      // `bree-only` cells use APIs with no Playwright counterpart; all their
+      // values are bree-owned and the oracle does not run them.
       const cells = scenario.cells
-        .filter((c) => !(c.cmuxOnly && args.backend === "oracle"))
+        .filter((c) => !(c.breeOnly && args.backend === "oracle"))
         .map((c) => ({ ...c, code: wrapCell(server.origins, c) }));
       let outputs;
       try {
@@ -191,7 +191,7 @@ async function main() {
       }
       const emits = parseEmits(outputs, cells).map((e) => ({ ...e, v: normalize(e.v, server.origins) }));
       // Behavior keys belong to the oracle unless the scenario skips it.
-      const owner = (e) => (e.c || e.cmuxOnly || scenario.oracleSkip ? "cmux" : "oracle");
+      const owner = (e) => (e.c || e.breeOnly || scenario.oracleSkip ? "bree" : "oracle");
       if (args.mode === "run") {
         console.log(scenario.name);
         for (const e of emits) console.log(`  [${owner(e)}] ${e.k} = ${JSON.stringify(e.v).slice(0, 300)}`);
@@ -200,8 +200,8 @@ async function main() {
       }
       if (args.mode === "record") {
         const errors = emits.filter((e) => e.k.startsWith("__"));
-        const want = args.backend === "oracle" ? "oracle" : "cmux";
-        const golden = readGolden(scenario.name) ?? { oracle: {}, cmux: {} };
+        const want = args.backend === "oracle" ? "oracle" : "bree";
+        const golden = readGolden(scenario.name) ?? { oracle: {}, bree: {} };
         golden[want] = {};
         for (const e of emits) if (!e.k.startsWith("__") && owner(e) === want) golden[want][e.k] = e.v;
         if (errors.length) {
@@ -220,7 +220,7 @@ async function main() {
         console.log(`FAIL ${scenario.name}: no golden`);
         continue;
       }
-      const expected = args.backend === "oracle" ? { ...golden.oracle } : { ...golden.oracle, ...golden.cmux };
+      const expected = args.backend === "oracle" ? { ...golden.oracle } : { ...golden.oracle, ...golden.bree };
       const actual = {};
       const problems = [];
       for (const e of emits) {

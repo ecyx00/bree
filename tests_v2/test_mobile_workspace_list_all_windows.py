@@ -24,13 +24,13 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
-def _mobile_workspaces(client: cmux, params=None) -> list:
+def _mobile_workspaces(client: bree, params=None) -> list:
     res = client._call("mobile.workspace.list", params or {}) or {}
     return list(res.get("workspaces") or [])
 
@@ -43,7 +43,7 @@ def _find(workspaces: list, workspace_id: str) -> dict:
 
 
 def main() -> int:
-    with cmux(SOCKET_PATH) as client:
+    with bree(SOCKET_PATH) as client:
         client.activate_app()
         time.sleep(0.2)
 
@@ -85,12 +85,12 @@ def main() -> int:
         workspaces = _mobile_workspaces(client)
         ids = {str(ws.get("id") or "").lower() for ws in workspaces}
         if workspace_a.lower() not in ids:
-            raise cmuxError(
+            raise breeError(
                 f"mobile.workspace.list missing window-A workspace {workspace_a}; "
                 f"got {sorted(ids)}"
             )
         if workspace_b.lower() not in ids:
-            raise cmuxError(
+            raise breeError(
                 f"mobile.workspace.list missing window-B (non-key) workspace "
                 f"{workspace_b}; got {sorted(ids)}. This is the bug: the phone "
                 f"only saw the key window's workspaces."
@@ -103,7 +103,7 @@ def main() -> int:
             if bool(ws.get("is_selected"))
         ]
         if selected != [workspace_a.lower()]:
-            raise cmuxError(
+            raise breeError(
                 f"expected exactly window-A workspace {workspace_a} to be "
                 f"is_selected; got selected={selected}"
             )
@@ -115,13 +115,13 @@ def main() -> int:
         scoped = _mobile_workspaces(client, {"workspace_id": workspace_b})
         scoped_b = _find(scoped, workspace_b)
         if not scoped_b:
-            raise cmuxError(
+            raise breeError(
                 f"scoped mobile.workspace.list(workspace_id={workspace_b}) did "
                 f"not resolve the non-key-window workspace; got {scoped}"
             )
         # Scoped to a single workspace, the result should be exactly that one.
         if len(scoped) != 1:
-            raise cmuxError(
+            raise breeError(
                 f"scoped mobile.workspace.list(workspace_id={workspace_b}) "
                 f"should return exactly one workspace; got {len(scoped)}: {scoped}"
             )

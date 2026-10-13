@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 import Observation
 import WebKit
@@ -9,7 +9,7 @@ import WebKit
 final class BrowserDesignModeController {
     typealias ClipboardWriter = @MainActor (String) -> Bool
 
-    static let contentWorld = WKContentWorld.world(name: "cmuxDesignMode")
+    static let contentWorld = WKContentWorld.world(name: "breeDesignMode")
     static let messageHandlerName = BrowserDesignModeMessageHandler.name
     private static let maximumRequestedChangeCharacters = 4_000
 
@@ -220,7 +220,7 @@ final class BrowserDesignModeController {
                 let value = try await evaluate(
                     """
                     \(source)
-                    return globalThis.__cmuxDesignMode.enable();
+                    return globalThis.__breeDesignMode.enable();
                     """,
                     in: webView
                 )
@@ -330,7 +330,7 @@ final class BrowserDesignModeController {
             errorMessage = nil
             guard let webView else { return }
             if let value = try? await evaluate(
-                "return globalThis.__cmuxDesignMode?.clearSelection();",
+                "return globalThis.__breeDesignMode?.clearSelection();",
                 arguments: [:],
                 in: webView
             ), let next = try? BrowserDesignModeSupport.decodeSnapshot(value) {
@@ -346,7 +346,7 @@ final class BrowserDesignModeController {
     func clearPageHover() async {
         guard phase.isEnabled, let webView else { return }
         _ = try? await evaluate(
-            "return globalThis.__cmuxDesignMode?.clearHover();",
+            "return globalThis.__breeDesignMode?.clearHover();",
             arguments: [:],
             in: webView
         )
@@ -373,7 +373,7 @@ final class BrowserDesignModeController {
         guard phase.isEnabled, let webView else { return }
         Task { @MainActor in
             _ = try? await self.evaluate(
-                "return globalThis.__cmuxDesignMode?.setComposerFrame(x, y, w, h);",
+                "return globalThis.__breeDesignMode?.setComposerFrame(x, y, w, h);",
                 arguments: [
                     "x": frame.origin.x,
                     "y": frame.origin.y,
@@ -392,7 +392,7 @@ final class BrowserDesignModeController {
               snapshot?.selections.indices.contains(index) == true,
               let webView else { return }
         _ = try? await evaluate(
-            "return globalThis.__cmuxDesignMode?.flashSelection(index);",
+            "return globalThis.__breeDesignMode?.flashSelection(index);",
             arguments: ["index": index],
             in: webView
         )
@@ -404,7 +404,7 @@ final class BrowserDesignModeController {
         if let identity,
            snapshot?.selections.contains(where: { $0.selector == identity }) != true { return }
         _ = try? await evaluate(
-            "return globalThis.__cmuxDesignMode?.setSelectionHover(identity);",
+            "return globalThis.__breeDesignMode?.setSelectionHover(identity);",
             arguments: ["identity": identity ?? NSNull()],
             in: webView
         )
@@ -421,7 +421,7 @@ final class BrowserDesignModeController {
         guard phase.isEnabled, mode != interactionMode, let webView else { return }
         do {
             let value = try await evaluate(
-                "return globalThis.__cmuxDesignMode?.setMode(mode);",
+                "return globalThis.__breeDesignMode?.setMode(mode);",
                 arguments: ["mode": mode.rawValue],
                 in: webView
             )
@@ -456,7 +456,7 @@ final class BrowserDesignModeController {
         let identity = selections[index].selector
         do {
             let value = try await evaluate(
-                "return globalThis.__cmuxDesignMode?.removeSelection(identity);",
+                "return globalThis.__breeDesignMode?.removeSelection(identity);",
                 arguments: ["identity": identity],
                 in: webView
             )
@@ -598,7 +598,7 @@ final class BrowserDesignModeController {
     }
 
     private func destroyRuntime(in webView: WKWebView) async throws {
-        _ = try await evaluate("return globalThis.__cmuxDesignMode?.destroy();", in: webView)
+        _ = try await evaluate("return globalThis.__breeDesignMode?.destroy();", in: webView)
     }
 
     func evaluate(
@@ -676,7 +676,7 @@ final class BrowserDesignModeController {
     }
 
     private func bestEffortRuntimeCleanup(
-        _ body: String = "return globalThis.__cmuxDesignMode?.destroy();",
+        _ body: String = "return globalThis.__breeDesignMode?.destroy();",
         in webView: WKWebView
     ) {
         Task { @MainActor [weak self, weak webView] in

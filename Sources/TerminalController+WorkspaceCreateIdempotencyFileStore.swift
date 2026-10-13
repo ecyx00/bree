@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 
@@ -89,14 +89,14 @@ extension TerminalController {
                 in: .userDomainMask
             ).first ?? FileManager.default.homeDirectoryForCurrentUser
                 .appendingPathComponent("Library/Application Support", isDirectory: true)
-            let rawBundleID = Bundle.main.bundleIdentifier ?? "com.cmuxterm.app"
+            let rawBundleID = Bundle.main.bundleIdentifier ?? "com.bree.app"
             let bundleID = rawBundleID.map { character in
                 character.isLetter || character.isNumber || character == "." || character == "-"
                     ? character
                     : "_"
             }
             return appSupport
-                .appendingPathComponent(CmuxIdentity.current.applicationSupportDirectoryName, isDirectory: true)
+                .appendingPathComponent(BreeIdentity.current.applicationSupportDirectoryName, isDirectory: true)
                 .appendingPathComponent(
                     "workspace-create-tombstones-\(String(bundleID))-v1.json",
                     isDirectory: false

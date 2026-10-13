@@ -1,6 +1,6 @@
-import CmuxTerminal
-import CmuxTerminalCore
-import CmuxWorkspaces
+import BreeTerminal
+import BreeTerminalCore
+import BreeWorkspaces
 import Foundation
 import os
 
@@ -67,7 +67,7 @@ final class TerminalPromptDetectionGateController {
                     if let surface, let pid = surface.foregroundProcessID() {
                         probedPID = pid
                         isAgent = await Task.detached(priority: .utility) {
-                            CmuxTopProcessSnapshot.promptAgentDefinition(foregroundPID: pid) != nil
+                            BreeTopProcessSnapshot.promptAgentDefinition(foregroundPID: pid) != nil
                         }.value
                     }
                     logGate(surfaceID, "probe step=\(step) pid=\(probedPID) agent=\(isAgent)")
@@ -88,7 +88,7 @@ final class TerminalPromptDetectionGateController {
 
     private func logGate(_ surfaceID: UUID, _ event: String) {
         #if DEBUG
-        cmuxDebugLog("promptGate surface=\(surfaceID.uuidString.prefix(5)) \(event)")
+        breeDebugLog("promptGate surface=\(surfaceID.uuidString.prefix(5)) \(event)")
         #endif
     }
 }

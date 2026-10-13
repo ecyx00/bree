@@ -1,4 +1,4 @@
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 import WebKit
 
@@ -73,7 +73,7 @@ final class BrowserScreenshotAnimationFrameWaiter {
         startFrame(script) { [weak self] error in
 #if DEBUG
             if let error {
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.screenshot.synchronize.failed error=\(error.localizedDescription)"
                 )
             }

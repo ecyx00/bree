@@ -1,4 +1,4 @@
-import CmuxAgentJournal
+import BreeAgentJournal
 import Foundation
 
 /// Journals the end of agent sessions whose terminal the user closed.
@@ -39,7 +39,7 @@ struct AgentSessionCloseJournal: Sendable {
                 sessionId: sessionID,
                 workspaceId: workspaceID.uuidString,
                 surfaceId: surfaceID.uuidString,
-                nativeEvent: "cmux_surface_closed",
+                nativeEvent: "bree_surface_closed",
                 detail: "terminal closed by the user"
             )
             guard draft.validationProblem() == nil else { continue }

@@ -1,11 +1,11 @@
 import AppKit
-import CmuxFoundation
-import CmuxSettingsUI
+import BreeFoundation
+import BreeSettingsUI
 import SwiftUI
 import os
 
 /// Builds the AppKit-owned Settings window
-/// (https://github.com/manaflow-ai/cmux/issues/7777).
+/// (https://github.com/ecyx00/bree/issues/7777).
 ///
 /// Construction is synchronous and infallible: unlike the previous SwiftUI
 /// `Window` scene + `openWindow(id:)` path, a call here always returns a real
@@ -13,7 +13,7 @@ import os
 /// ends with a visible window. SwiftUI is used only for the window's content.
 @MainActor
 enum SettingsWindowFactory {
-    private nonisolated static let log = Logger(subsystem: "com.cmuxterm.app", category: "Settings")
+    private nonisolated static let log = Logger(subsystem: "com.bree.app", category: "Settings")
 
     /// `onContentAppear` is invoked from the hosted content's `onAppear`, so
     /// the presenter that owns this window learns when the content's
@@ -22,10 +22,10 @@ enum SettingsWindowFactory {
     /// factory drain their own pending navigation).
     ///
     /// `initialNavigationTarget` is the section a targeted show is about to
-    /// navigate to (`cmux settings open <target>`, sidebar deep links), so
+    /// navigate to (`bree settings open <target>`, sidebar deep links), so
     /// the content can mount that section first instead of the last-viewed
     /// one and then re-mounting on delivery
-    /// (https://github.com/manaflow-ai/cmux/issues/12134).
+    /// (https://github.com/ecyx00/bree/issues/12134).
     static func makeSettingsWindow(
         initialNavigationTarget: SettingsNavigationTarget? = nil,
         onContentAppear: @escaping @MainActor () -> Void
@@ -81,10 +81,10 @@ enum SettingsWindowFactory {
 /// mutation path in ``SettingsWindowRoot``.
 @MainActor
 final class SettingsSidebarToolbarController: NSObject, NSToolbarDelegate {
-    static let toggleSidebarItemIdentifier = NSToolbarItem.Identifier("cmux.settings.toggleSidebar")
+    static let toggleSidebarItemIdentifier = NSToolbarItem.Identifier("bree.settings.toggleSidebar")
 
     func makeToolbar() -> NSToolbar {
-        let toolbar = NSToolbar(identifier: "cmux.settings.toolbar")
+        let toolbar = NSToolbar(identifier: "bree.settings.toolbar")
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly
         toolbar.allowsUserCustomization = false
@@ -174,8 +174,8 @@ struct SettingsWindowHostRoot: View {
 
     var body: some View {
         content
-            .cmuxFontMagnificationEnvironment()
-            .cmuxAppearanceColorScheme(appearanceMode, followsSurfaces: true)
+            .breeFontMagnificationEnvironment()
+            .breeAppearanceColorScheme(appearanceMode, followsSurfaces: true)
             .onAppear(perform: onContentAppear)
     }
 
@@ -186,7 +186,7 @@ struct SettingsWindowHostRoot: View {
                 .settingsRuntime(runtime)
         } else {
             // Unreachable in a normally-launched app (the runtime is created
-            // in cmuxApp.init before any UI); kept so a lifecycle regression
+            // in breeApp.init before any UI); kept so a lifecycle regression
             // surfaces as a visible message instead of a silent no-op.
             Text(String(
                 localized: "settings.window.runtimeUnavailable",

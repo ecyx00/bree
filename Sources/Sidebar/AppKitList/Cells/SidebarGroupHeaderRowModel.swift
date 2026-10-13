@@ -1,6 +1,6 @@
 import AppKit
 import CoreGraphics
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 import SwiftUI
 
@@ -43,18 +43,18 @@ struct SidebarGroupHeaderRowModel: Equatable, Hashable {
     let shortcutHintYOffset: Double
     let fontScale: CGFloat
     let globalFontMagnificationPercent: Int
-    let cwdContextMenuItems: [CmuxResolvedConfigContextMenuItem]
+    let cwdContextMenuItems: [BreeResolvedConfigContextMenuItem]
     let rowSpacing: CGFloat
     let isFirstRow: Bool
     let isBeingDragged: Bool
     let topDropIndicatorVisible: Bool
     let bottomDropIndicatorVisible: Bool
-    /// Resolved cmux scheme used by native group-header chrome.
+    /// Resolved bree scheme used by native group-header chrome.
     let colorSchemeIsDark: Bool
-    /// Notification Badge color setting; nil falls back to the cmux accent.
+    /// Notification Badge color setting; nil falls back to the bree accent.
     let notificationBadgeColorHex: String?
-    /// Resolved cmux accent for the badge fallback and drop indicators.
-    var accentColor = CmuxAccentColor()
+    /// Resolved bree accent for the badge fallback and drop indicators.
+    var accentColor = BreeAccentColor()
 }
 
 /// Behavior bundle for one group header row; recreated per apply and excluded
@@ -64,7 +64,7 @@ struct SidebarGroupHeaderRowActions {
     let onToggleCollapsed: () -> Void
     let onFocusAnchor: (NSEvent.ModifierFlags) -> Void
     let onTapPlus: () -> Void
-    let onRunResolvedItem: (CmuxResolvedConfigMenuAction) -> Void
+    let onRunResolvedItem: (BreeResolvedConfigMenuAction) -> Void
     let onRename: () -> Void
     let onTogglePinned: () -> Void
     let onMarkRead: () -> Void

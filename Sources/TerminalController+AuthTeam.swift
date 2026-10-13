@@ -1,10 +1,10 @@
-import CmuxAuthRuntime
-import CmuxCloud
-import CmuxControlSocket
+import BreeAuthRuntime
+import BreeCloud
+import BreeControlSocket
 import Foundation
 import OSLog
 
-private let authTeamLog = Logger(subsystem: "ai.manaflow.cmux", category: "auth-team")
+private let authTeamLog = Logger(subsystem: "ai.manaflow.bree", category: "auth-team")
 
 extension TerminalController {
     /// Every `auth.team.*` socket method. Mutations and roster reads run on

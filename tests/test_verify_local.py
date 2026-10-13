@@ -53,14 +53,14 @@ class PreflightTests(unittest.TestCase):
                 shutil.copy2(ROOT / "tests" / name, repo / "tests" / name)
             shutil.copytree(ROOT / "tests/fixtures/pbxproj-test-wiring",
                             repo / "tests/fixtures/pbxproj-test-wiring")
-            (repo / "cmuxTests").mkdir()
-            (repo / "cmuxTests/ExistingTests.swift").write_text("import Testing\n")
-            (repo / "cmux.xcodeproj").mkdir()
-            project = repo / "cmux.xcodeproj/project.pbxproj"
+            (repo / "breeTests").mkdir()
+            (repo / "breeTests/ExistingTests.swift").write_text("import Testing\n")
+            (repo / "bree.xcodeproj").mkdir()
+            project = repo / "bree.xcodeproj/project.pbxproj"
             shutil.copyfile(ROOT / "tests/fixtures/pbxproj-test-wiring/base.pbxproj", project)
             sync = [str(repo / "scripts/sync-test-wiring"), "--repo-root", str(repo)]
             subprocess.run(sync, check=True, capture_output=True, text=True)
-            (repo / "cmuxTests/UnwiredTests.swift").write_text("import Testing\n@Test func example() {}\n")
+            (repo / "breeTests/UnwiredTests.swift").write_text("import Testing\n@Test func example() {}\n")
             with tempfile.TemporaryDirectory() as receipts:
                 evidence = Path(receipts) / "receipt.json"
                 failed = cli(repo, "--only", "test-wiring", "--receipt", str(evidence))
@@ -382,8 +382,8 @@ class AffectedChecksTests(unittest.TestCase):
 
     def test_current_ci_schema_and_sync_inputs_select_their_checks(self):
         for path, expected in (
-            ("web/data/cmux.schema.json", "config-schema"),
-            ("Packages/macOS/CmuxFoundation/Sources/CmuxFoundation/ConfigValidation/CmuxConfigSchema.generated.swift", "config-schema"),
+            ("web/data/bree.schema.json", "config-schema"),
+            ("Packages/macOS/BreeFoundation/Sources/BreeFoundation/ConfigValidation/BreeConfigSchema.generated.swift", "config-schema"),
             ("scripts/sync-test-wiring", "test-wiring-sync"),
             ("scripts/sync_test_wiring.py", "test-wiring-sync"),
             ("tests/fixtures/pbxproj-test-wiring/new.pbxproj", "test-wiring-sync"),
@@ -402,7 +402,7 @@ class AffectedChecksTests(unittest.TestCase):
             (repo / "scripts/claude-launch-environment-policy.json").write_text("{}")
             selected, _ = verify.affected_checks(repo, "HEAD")
             self.assertEqual(selected, ["launch-policy", "feature-flags"])
-            output = repo / "Packages/macOS/CMUXAgentLaunch/Sources/CMUXAgentLaunch/ClaudeSessionEnvironmentPolicy+Generated.swift"
+            output = repo / "Packages/macOS/BREEAgentLaunch/Sources/BREEAgentLaunch/ClaudeSessionEnvironmentPolicy+Generated.swift"
             output.parent.mkdir(parents=True)
             output.write_text("// edited generated output")
             selected, _ = verify.affected_checks(repo, "HEAD")

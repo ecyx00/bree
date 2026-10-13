@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxTerminal
+import BreeTerminal
 
 /// Cross-container live-panel moves involving the Dock.
 ///

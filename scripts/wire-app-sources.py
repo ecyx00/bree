@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Wire Swift files into their Xcode target: Sources/** into cmux by default.
+"""Wire Swift files into their Xcode target: Sources/** into bree by default.
 
-`scripts/sync-test-wiring` reconciles cmuxTests only; app sources were added
+`scripts/sync-test-wiring` reconciles breeTests only; app sources were added
 by hand, and a merge that takes main's project.pbxproj silently drops a
 branch's new app files. This adds the four entries Xcode needs for each file
 (PBXBuildFile, PBXFileReference, group child, app Sources phase) and
@@ -10,17 +10,17 @@ normalizes the project.
     scripts/wire-app-sources.py                 # wire every unwired file
     scripts/wire-app-sources.py Sources/X.swift # wire these
     scripts/wire-app-sources.py --check         # exit 1 if any is unwired
-    scripts/wire-app-sources.py --target cmuxUITests --dir cmuxUITests
+    scripts/wire-app-sources.py --target breeUITests --dir breeUITests
 
 `--target`/`--dir` wire another target's directory the same way (UI tests:
-`cmuxUITests`); cmuxTests has its own `scripts/sync-test-wiring`.
+`breeUITests`); breeTests has its own `scripts/sync-test-wiring`.
 
 After a merge that took main's project.pbxproj, run it with no arguments.
 
 Paths are resolved through the real group tree from the `Sources` group, so
 a file lands in the deepest group that owns its directory (the Sources group
 itself for `Sidebar/X.swift`, the Cloud group for `Cloud/X.swift`), with a
-path relative to that group. Wired means a cmux Sources-phase build file
+path relative to that group. Wired means a bree Sources-phase build file
 refers to that resolved path; files in scripts/pbxproj-sources-wiring-
 allowlist.txt are left alone. IDs are derived from the path, so reruns and
 parallel branches agree.
@@ -38,7 +38,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PBXPROJ = Path("cmux.xcodeproj/project.pbxproj")
+PBXPROJ = Path("bree.xcodeproj/project.pbxproj")
 ALLOWLIST = Path("scripts/pbxproj-sources-wiring-allowlist.txt")
 
 FILE_REF = re.compile(
@@ -99,7 +99,7 @@ class Project:
         }
 
 
-def parse(text: str, directory: str = "Sources", target: str = "cmux") -> Project:
+def parse(text: str, directory: str = "Sources", target: str = "bree") -> Project:
     refs = {m.group("id"): m.group("body") for m in FILE_REF.finditer(text)}
     raw_groups = {}
     for match in GROUP.finditer(text):
@@ -157,7 +157,7 @@ def parse(text: str, directory: str = "Sources", target: str = "cmux") -> Projec
     return Project(text, groups, ref_paths, app_sources_phase(text, target))
 
 
-def app_sources_phase(text: str, target: str = "cmux") -> tuple[int, int]:
+def app_sources_phase(text: str, target: str = "bree") -> tuple[int, int]:
     """Span of `target`'s PBXSourcesBuildPhase `files = (...)` list."""
     native = re.search(
         r"/\* " + re.escape(target) + r" \*/ = \{\s*isa = PBXNativeTarget;.*?buildPhases = \((.*?)\);", text, re.S
@@ -187,10 +187,10 @@ def allowlisted(root: Path) -> set[str]:
     return entries
 
 
-def unwired_sources(root: Path, text: str, directory: str = "Sources", target: str = "cmux") -> list[str]:
+def unwired_sources(root: Path, text: str, directory: str = "Sources", target: str = "bree") -> list[str]:
     wired = parse(text, directory, target).wired_paths
-    # The allowlist lists app sources deliberately left out of cmux.
-    allow = allowlisted(root) if (directory, target) == ("Sources", "cmux") else set()
+    # The allowlist lists app sources deliberately left out of bree.
+    allow = allowlisted(root) if (directory, target) == ("Sources", "bree") else set()
     return [
         rel
         for rel in (path.relative_to(root).as_posix() for path in sorted((root / directory).rglob("*.swift")))
@@ -227,7 +227,7 @@ def fresh_id(text: str, seed: str) -> str:
     return candidate
 
 
-def wire(text: str, rel: str, directory: str = "Sources", target: str = "cmux") -> str:
+def wire(text: str, rel: str, directory: str = "Sources", target: str = "bree") -> str:
     """Adds whatever `rel` is missing: a file reference in its group, a build
     file, and membership in the app Sources phase. A surviving reference or
     orphaned build file (often only the phase line was lost) is reused."""
@@ -283,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("paths", nargs="*", help="files under --dir; default: every unwired one")
     parser.add_argument("--check", action="store_true", help="list unwired files and exit 1 if any")
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--target", default="cmux", help="Xcode target (default: cmux)")
+    parser.add_argument("--target", default="bree", help="Xcode target (default: bree)")
     parser.add_argument("--dir", default="Sources", help="repo directory whose group it owns (default: Sources)")
     args = parser.parse_args(argv)
 

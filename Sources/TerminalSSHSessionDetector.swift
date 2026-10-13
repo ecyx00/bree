@@ -1,7 +1,7 @@
-import CmuxCloud
-import CmuxFoundation
-import CmuxSettings
-import CmuxRemoteSession
+import BreeCloud
+import BreeFoundation
+import BreeSettings
+import BreeRemoteSession
 import Foundation
 import Darwin
 
@@ -132,7 +132,7 @@ struct DetectedSSHSession: Equatable, Sendable {
         operation: TerminalImageTransferOperation,
         managedDevicePolicy: ManagedDevicePolicy = ManagedDevicePolicy()
     ) throws -> [String] {
-        // `DisableFileTransfer` (MDM): the detected-SSH transfer is cmux
+        // `DisableFileTransfer` (MDM): the detected-SSH transfer is bree
         // mediating an upload, so it fails closed. A user's own `scp` typed
         // into the same terminal is deliberately out of scope.
         guard !managedDevicePolicy.isEnforced(.disableFileTransfer) else {
@@ -148,7 +148,7 @@ struct DetectedSSHSession: Equatable, Sendable {
                 try operation.throwIfCancelled()
                 let normalizedLocalURL = localURL.standardizedFileURL
                 guard normalizedLocalURL.isFileURL else {
-                    throw NSError(domain: "cmux.detected-ssh.drop", code: 1, userInfo: [
+                    throw NSError(domain: "bree.detected-ssh.drop", code: 1, userInfo: [
                         NSLocalizedDescriptionKey: String(
                             localized: "detectedSSH.fileDrop.error.notFileURL",
                             defaultValue: "Couldn't upload the dropped item because it isn't a local file. Drop a file from Finder, then try again."
@@ -187,7 +187,7 @@ struct DetectedSSHSession: Equatable, Sendable {
                             detail
                         )
                     }
-                    throw NSError(domain: "cmux.detected-ssh.drop", code: 2, userInfo: [
+                    throw NSError(domain: "bree.detected-ssh.drop", code: 2, userInfo: [
                         NSLocalizedDescriptionKey: message,
                     ])
                 }
@@ -222,7 +222,7 @@ struct DetectedSSHSession: Equatable, Sendable {
                     ),
                     detail
                 )
-            throw NSError(domain: "cmux.detected-ssh.drop", code: 3, userInfo: [
+            throw NSError(domain: "bree.detected-ssh.drop", code: 3, userInfo: [
                 NSLocalizedDescriptionKey: message,
             ])
         }
@@ -248,7 +248,7 @@ struct DetectedSSHSession: Equatable, Sendable {
                     ),
                     detail
                 )
-            throw NSError(domain: "cmux.detected-ssh.drop", code: 4, userInfo: [
+            throw NSError(domain: "bree.detected-ssh.drop", code: 4, userInfo: [
                 NSLocalizedDescriptionKey: message,
             ])
         }
@@ -434,7 +434,7 @@ struct DetectedSSHSession: Equatable, Sendable {
                 throw TerminalImageTransferExecutionError.cancelled
             }
             terminateProcessAndWait()
-            throw NSError(domain: "cmux.detected-ssh.drop", code: 3, userInfo: [
+            throw NSError(domain: "bree.detected-ssh.drop", code: 3, userInfo: [
                 NSLocalizedDescriptionKey: String(
                     localized: "detectedSSH.fileDrop.error.scpTimedOut",
                     defaultValue: "File transfer timed out. Check the remote host and network connection, then try again."
@@ -582,7 +582,7 @@ enum TerminalSSHSessionDetector {
     }
 
     /// Builds a restore binding for a foreground, interactive plain-SSH
-    /// process. Managed `cmux ssh` wrappers are excluded because their stable
+    /// process. Managed `bree ssh` wrappers are excluded because their stable
     /// remote PTY binding is authoritative; this path is only the muscle-memory
     /// `ssh host` command typed into a local pane.
     static func resumeBinding(
@@ -618,7 +618,7 @@ enum TerminalSSHSessionDetector {
         guard SurfaceResumeCommandCanonicalizer.isShellExpansionSafeCommand(command) else {
             return nil
         }
-        let cwd = environment["CMUX_AGENT_LAUNCH_CWD"] ?? environment["PWD"]
+        let cwd = environment["BREE_AGENT_LAUNCH_CWD"] ?? environment["PWD"]
         return SurfaceResumeBindingSnapshot(
             name: "ssh \(session.destination)",
             kind: "ssh",
@@ -658,10 +658,10 @@ enum TerminalSSHSessionDetector {
 
     private static func isManagedSSHWrapper(environment: [String: String]) -> Bool {
         [
-            "CMUX_SSH_PTY_SESSION_ID",
-            "CMUX_REMOTE_PTY_SESSION_ID",
-            "CMUX_SSH_ATTEMPT_ID",
-            "CMUX_SSH_STARTUP_PID",
+            "BREE_SSH_PTY_SESSION_ID",
+            "BREE_REMOTE_PTY_SESSION_ID",
+            "BREE_SSH_ATTEMPT_ID",
+            "BREE_SSH_STARTUP_PID",
         ].contains { key in
             guard let value = environment[key] else { return false }
             return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

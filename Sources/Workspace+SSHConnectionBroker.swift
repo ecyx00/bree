@@ -1,4 +1,4 @@
-import CmuxCore
+import BreeCore
 
 @MainActor
 extension Workspace {

@@ -1,6 +1,6 @@
 import AppKit
-import CmuxTerminal
-import CmuxWorkspaces
+import BreeTerminal
+import BreeWorkspaces
 import Foundation
 
 // Stored state lives on TerminalPanel (see the hook patch):
@@ -55,7 +55,7 @@ extension TerminalPanel: ShellEditorHost {
         let snapshot = "setting=\(policy.settingEnabled) state=\(policy.shellState.rawValue) alt=\(policy.alternateScreen) raw=\(policy.rawMode) textBox=\(policy.textBoxActive) local=\(policy.isLocal) awaiting=\(policy.awaitingPrompt) -> active=\(next)"
         if snapshot != shellEditorLastPolicyLog {
             shellEditorLastPolicyLog = snapshot
-            cmuxDebugLog("shellEditor.policy panel=\(id.uuidString.prefix(8)) \(snapshot)")
+            breeDebugLog("shellEditor.policy panel=\(id.uuidString.prefix(8)) \(snapshot)")
         }
 #endif
         guard next != shellEditorActive else { return }
@@ -101,7 +101,7 @@ extension TerminalPanel: ShellEditorHost {
     func shellEditorFocusEditor(requester: String) -> Bool {
         guard shellEditorActive, let textView = shellEditorTextView, let window = textView.window else {
 #if DEBUG
-            cmuxDebugLog("shellEditor.focus requester=\(requester) result=unmounted active=\(shellEditorActive)")
+            breeDebugLog("shellEditor.focus requester=\(requester) result=unmounted active=\(shellEditorActive)")
 #endif
             return false
         }
@@ -112,7 +112,7 @@ extension TerminalPanel: ShellEditorHost {
             hostedView.setActive(false)
         }
 #if DEBUG
-        cmuxDebugLog("shellEditor.focus requester=\(requester) result=\(ok) firstResponder=\(String(describing: window.firstResponder))")
+        breeDebugLog("shellEditor.focus requester=\(requester) result=\(ok) firstResponder=\(String(describing: window.firstResponder))")
 #endif
         return ok
     }
@@ -132,12 +132,12 @@ extension TerminalPanel: ShellEditorHost {
         guard shellEditorWantsFocus, !shellEditorHoldsFocusIntent else { return }
         if shellEditorPointerRedirect {
 #if DEBUG
-            cmuxDebugLog("shellEditor.focus requester=terminalDidBecomeFocused result=keptEditor reason=pointerRedirect")
+            breeDebugLog("shellEditor.focus requester=terminalDidBecomeFocused result=keptEditor reason=pointerRedirect")
 #endif
             return
         }
 #if DEBUG
-        cmuxDebugLog("shellEditor.focus requester=terminalDidBecomeFocused result=editorReleased active=\(shellEditorActive)")
+        breeDebugLog("shellEditor.focus requester=terminalDidBecomeFocused result=editorReleased active=\(shellEditorActive)")
 #endif
         shellEditorWantsFocus = false
     }
@@ -181,7 +181,7 @@ extension TerminalPanel: ShellEditorHost {
             let sequence = raw ? "\u{1B}[?25h" : "\u{1B}[?25l"
             let ok = ShellEditorProcessProbe.writeOutput(sequence, device: device)
 #if DEBUG
-            cmuxDebugLog("shellEditor.rawCursor raw=\(raw) written=\(ok) emu=\(surface.debugCursorState())")
+            breeDebugLog("shellEditor.rawCursor raw=\(raw) written=\(ok) emu=\(surface.debugCursorState())")
 #endif
             // The editor strip leaving (or returning) resizes the grid, and the shell redraws
             // its prompt on SIGWINCH; anything in that redraw that touches cursor visibility
@@ -191,7 +191,7 @@ extension TerminalPanel: ShellEditorHost {
                       self.shellActivity.state == .promptIdle else { return }
                 let again = ShellEditorProcessProbe.writeOutput(sequence, device: device)
 #if DEBUG
-                cmuxDebugLog("shellEditor.rawCursor.settle raw=\(raw) written=\(again) emu=\(self.surface.debugCursorState())")
+                breeDebugLog("shellEditor.rawCursor.settle raw=\(raw) written=\(again) emu=\(self.surface.debugCursorState())")
 #endif
             }
         }
@@ -296,7 +296,7 @@ extension TerminalPanel: ShellEditorHost {
     private func shellEditorProbeTTY() async {
         guard let device = surface.controllingTTYDeviceIdentifier else {
 #if DEBUG
-            cmuxDebugLog("shellEditor.probe device=nil")
+            breeDebugLog("shellEditor.probe device=nil")
 #endif
             return
         }
@@ -385,7 +385,7 @@ enum ShellEditorProcessProbe {
         var buffer = [CChar](repeating: 0, count: 64)
         guard let name = devname_r(dev_t(device), S_IFCHR, &buffer, Int32(buffer.count)) else {
 #if DEBUG
-            cmuxDebugLog("shellEditor.probe devname_r failed dev=\(device)")
+            breeDebugLog("shellEditor.probe devname_r failed dev=\(device)")
 #endif
             return Result()
         }
@@ -393,7 +393,7 @@ enum ShellEditorProcessProbe {
         let fd = open("/dev/" + String(cString: name), O_RDONLY | O_NONBLOCK | O_NOCTTY)
         guard fd >= 0 else {
 #if DEBUG
-            cmuxDebugLog("shellEditor.probe open failed errno=\(errno)")
+            breeDebugLog("shellEditor.probe open failed errno=\(errno)")
 #endif
             return Result()
         }
@@ -414,7 +414,7 @@ enum ShellEditorProcessProbe {
             let found = names(ofGroup: group)
             result.agent = isAgent(names: found)
 #if DEBUG
-            cmuxDebugLog("shellEditor.probe pgid=\(group) agent=\(result.agent) names=\(found)")
+            breeDebugLog("shellEditor.probe pgid=\(group) agent=\(result.agent) names=\(found)")
 #endif
         }
         return result
@@ -475,7 +475,7 @@ extension GhosttyNSView {
               panel.shellEditorFocusEditor(requester: "gridKeyDown"),
               let editor = panel.shellEditorTextView else { return false }
 #if DEBUG
-        cmuxDebugLog("shellEditor.focus redirect=keyDown code=\(event.keyCode)")
+        breeDebugLog("shellEditor.focus redirect=keyDown code=\(event.keyCode)")
 #endif
         editor.keyDown(with: event)
         return true

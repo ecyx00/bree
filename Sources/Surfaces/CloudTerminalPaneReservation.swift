@@ -1,8 +1,8 @@
 import os
-import CmuxCloud
-import CmuxCloudTui
-import CmuxSurfaceCatalogModel
-import CmuxTerminal
+import BreeCloud
+import BreeCloudTui
+import BreeSurfaceCatalogModel
+import BreeTerminal
 import Foundation
 
 /// Input typed into an optimistic Cloud pane before its native mirror is ready.
@@ -456,7 +456,7 @@ struct CloudTerminalReservationKey: Hashable {
 /// the machine creates the terminal behind it.
 ///
 /// One reservation is one UI intent. The attachment adopts the pane when the
-/// remote terminal resolves (`CmuxTuiSurfaceProvider.materialize(…, adopting:)`),
+/// remote terminal resolves (`BreeTuiSurfaceProvider.materialize(…, adopting:)`),
 /// a failure is shown inside the pane, and the request is cancelled when the
 /// user closes the pane first. While it waits the pane shows nothing but its
 /// tab-strip spinner: no progress card, no placeholder text.

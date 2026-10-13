@@ -1,7 +1,7 @@
-import CMUXAgentLaunch
-import CmuxAgentChat
-import CmuxSettings
-import CmuxSidebar
+import BREEAgentLaunch
+import BreeAgentChat
+import BreeSettings
+import BreeSidebar
 import Foundation
 
 /// Keeps the opt-in sidebar agent usage (`sidebar.showAgentUsage`) current.

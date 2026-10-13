@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Executable contract for the supported zsh/bash CMUX_NO_GIT_WATCH opt-out.
+"""Executable contract for the supported zsh/bash BREE_NO_GIT_WATCH opt-out.
 
 Uses the shipped integrations with an isolated HOME and socket. Only message
 delivery and watcher parent-identity capture are replaced: no app, or long-lived watcher is needed to check the public shell behavior.
@@ -22,7 +22,7 @@ SHELLS = ("zsh", "bash")
 
 class NoGitWatchContract(unittest.TestCase):
     def run_shell(self, shell: str, body: str, value: str | None = "1") -> str:
-        with tempfile.TemporaryDirectory(prefix="cmux-no-git-", dir="/tmp") as tmp:
+        with tempfile.TemporaryDirectory(prefix="bree-no-git-", dir="/tmp") as tmp:
             directory = Path(tmp)
             repo = directory / "repo"
             (repo / ".git").mkdir(parents=True)
@@ -33,25 +33,25 @@ class NoGitWatchContract(unittest.TestCase):
                 "TMPDIR": tmp,
                 "PATH": "/usr/bin:/bin",
                 "TERM": "xterm-256color",
-                "CMUX_SOCKET_PATH": str(directory / "socket"),
-                "CMUX_TAB_ID": str(uuid.uuid4()),
-                "CMUX_PANEL_ID": panel,
-                "CMUX_TEST_SCRIPT": str(INTEGRATION_DIR / f"cmux-{shell}-integration.{shell if shell == 'zsh' else 'bash'}"),
-                "CMUX_TEST_LOG": str(directory / "messages"),
-                "CMUX_TEST_FORCE_KEYBOARD_RESET": "1",
+                "BREE_SOCKET_PATH": str(directory / "socket"),
+                "BREE_TAB_ID": str(uuid.uuid4()),
+                "BREE_PANEL_ID": panel,
+                "BREE_TEST_SCRIPT": str(INTEGRATION_DIR / f"bree-{shell}-integration.{shell if shell == 'zsh' else 'bash'}"),
+                "BREE_TEST_LOG": str(directory / "messages"),
+                "BREE_TEST_FORCE_KEYBOARD_RESET": "1",
             }
             if value is not None:
-                env["CMUX_NO_GIT_WATCH"] = value
-            prompt = "_cmux_precmd" if shell == "zsh" else "_cmux_prompt_command"
-            preexec = "_cmux_preexec" if shell == "zsh" else "_cmux_preexec_command"
+                env["BREE_NO_GIT_WATCH"] = value
+            prompt = "_bree_precmd" if shell == "zsh" else "_bree_prompt_command"
+            preexec = "_bree_preexec" if shell == "zsh" else "_bree_preexec_command"
             script = r'''
-source "$CMUX_TEST_SCRIPT"
-_cmux_send() { printf '%s\n' "$@" >> "$CMUX_TEST_LOG"; }
-_cmux_send_bg() { _cmux_send "$@"; }
+source "$BREE_TEST_SCRIPT"
+_bree_send() { printf '%s\n' "$@" >> "$BREE_TEST_LOG"; }
+_bree_send_bg() { _bree_send "$@"; }
 # Stop at the process-creation boundary even if a startup guard regresses.
-_cmux_capture_shell_start_time() { _cmux_send WATCHER_START; return 1; }
-_CMUX_TTY_NAME=ttys-contract
-_CMUX_PORTS_LAST_RUN=-100
+_bree_capture_shell_start_time() { _bree_send WATCHER_START; return 1; }
+_BREE_TTY_NAME=ttys-contract
+_BREE_PORTS_LAST_RUN=-100
 '''
             script += f'_test_prompt() {{ {prompt}; }}\n'
             script += f'_test_preexec() {{ {preexec} "$1"; }}\n'
@@ -62,14 +62,14 @@ _CMUX_PORTS_LAST_RUN=-100
             args = ["-f", "-c"] if shell == "zsh" else ["--noprofile", "--norc", "-c"]
             try:
                 with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
-                    listener.bind(env["CMUX_SOCKET_PATH"])
+                    listener.bind(env["BREE_SOCKET_PATH"])
                     result = subprocess.run(
                         [f"/bin/{shell}", *args, script], cwd=repo, env=env,
                         capture_output=True, text=True, timeout=15,
                     )
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn("CONTRACT_FINISHED", result.stdout)
-                messages = Path(env["CMUX_TEST_LOG"])
+                messages = Path(env["BREE_TEST_LOG"])
                 return result.stdout + (messages.read_text() if messages.exists() else "")
             finally:
                 pass
@@ -82,13 +82,13 @@ _test_prompt
 _test_preexec 'sleep 1'
 printf 'ref: refs/heads/contract-after\n' > .git/HEAD
 _test_prompt
-_cmux_report_git_branch_for_path "$PWD"
+_bree_report_git_branch_for_path "$PWD"
 cd "$HOME"
 _test_prompt
-_cmux_report_git_branch_for_path "$PWD"
-[[ -n "$_CMUX_GIT_ACTIVE_PWD_FILE" ]] && _cmux_send ACTIVE_PWD_CREATED
-[[ -n "$_CMUX_GIT_JOB_PID" ]] && _cmux_send GIT_JOB_STARTED
-[[ -n "$_CMUX_GIT_HEAD_PATH$_CMUX_GIT_HEAD_SIGNATURE" ]] && _cmux_send HEAD_TRACKED
+_bree_report_git_branch_for_path "$PWD"
+[[ -n "$_BREE_GIT_ACTIVE_PWD_FILE" ]] && _bree_send ACTIVE_PWD_CREATED
+[[ -n "$_BREE_GIT_JOB_PID" ]] && _bree_send GIT_JOB_STARTED
+[[ -n "$_BREE_GIT_HEAD_PATH$_BREE_GIT_HEAD_SIGNATURE" ]] && _bree_send HEAD_TRACKED
 ''')
                 for forbidden in (
                     "report_git_branch", "clear_git_branch", "WATCHER_START",
@@ -109,8 +109,8 @@ _cmux_report_git_branch_for_path "$PWD"
                 output = self.run_shell(shell, r'''
 # Retained legacy helpers may be removed by #2924. When present, they must
 # honor the opt-out even if a future caller reintroduces them.
-if typeset -f _cmux_start_git_head_watch >/dev/null; then
-    _cmux_start_git_head_watch
+if typeset -f _bree_start_git_head_watch >/dev/null; then
+    _bree_start_git_head_watch
 fi
 ''')
                 self.assertNotIn("WATCHER_START", output)
@@ -120,9 +120,9 @@ fi
             for value in (None, "", "0", "true"):
                 with self.subTest(shell=shell, value=value):
                     output = self.run_shell(shell, r'''
-_cmux_report_git_branch_for_path "$PWD"
+_bree_report_git_branch_for_path "$PWD"
 cd "$HOME"
-_cmux_report_git_branch_for_path "$PWD"
+_bree_report_git_branch_for_path "$PWD"
 ''', value=value)
                     self.assertIn("report_git_branch contract-before --status=unknown", output)
                     self.assertIn("clear_git_branch ", output)
@@ -132,9 +132,9 @@ _cmux_report_git_branch_for_path "$PWD"
             with self.subTest(shell=shell):
                 output = self.run_shell(shell, r'''
 _test_prompt
-unset CMUX_NO_GIT_WATCH
+unset BREE_NO_GIT_WATCH
 _test_prompt
-_cmux_report_git_branch_for_path "$PWD"
+_bree_report_git_branch_for_path "$PWD"
 ''')
                 self.assertIn("report_git_branch contract-before", output)
 
@@ -145,17 +145,17 @@ _cmux_report_git_branch_for_path "$PWD"
                 # group so a group kill cannot touch the test runner.
                 jobs = {}
                 try:
-                    names = ["_CMUX_GIT_JOB_PID"]
+                    names = ["_BREE_GIT_JOB_PID"]
                     if shell == "zsh":
                         # Bash has no HEAD watcher.
-                        names += ["_CMUX_GIT_HEAD_WATCH_PID"]
+                        names += ["_BREE_GIT_HEAD_WATCH_PID"]
                     for name in names:
                         jobs[name] = subprocess.Popen(["/bin/sleep", "60"], start_new_session=True)
                     # Observe only prompt-time shutdown. zsh's normal exit hook
                     # could otherwise stop these jobs after a broken prompt.
-                    body = "add-zsh-hook -d zshexit _cmux_zshexit\n" if shell == "zsh" else ""
+                    body = "add-zsh-hook -d zshexit _bree_zshexit\n" if shell == "zsh" else ""
                     body += "\n".join(f"{name}={job.pid}" for name, job in jobs.items())
-                    body += "\nexport CMUX_NO_GIT_WATCH=1\n_test_prompt\n"
+                    body += "\nexport BREE_NO_GIT_WATCH=1\n_test_prompt\n"
                     self.run_shell(shell, body, value=None)
                     for name, job in jobs.items():
                         self.assertLess(job.wait(timeout=3), 0, f"{shell}: {name} was not stopped")

@@ -3,8 +3,8 @@
 // minutes, a state glyph, and a tiny progress meter; the header graphs how
 // many workspaces are busy right now. Click a row to jump to the workspace,
 // drag to reorder, click the ALL/BUSY chip to hide quiet workspaces.
-//   cp Examples/CustomSidebars/btop-agents.js ~/.config/cmux/sidebars/
-//   cmux sidebar select btop-agents          (or: cmux sidebar open btop-agents)
+//   cp Examples/CustomSidebars/btop-agents.js ~/.config/bree/sidebars/
+//   bree sidebar select btop-agents          (or: bree sidebar open btop-agents)
 //
 // History lives in this sidebar, sampled once per clock tick, so graphs start
 // when the sidebar loads. Sessions that are already working backfill from
@@ -285,7 +285,7 @@ function move(id, index) {
       ? all.indexOf(visible[index])
       : all.indexOf(visible[visible.length - 1]) + 1;
   }
-  cmux("workspace.reorder", { workspace_id: id, index: Math.max(0, target) });
+  bree("workspace.reorder", { workspace_id: id, index: Math.max(0, target) });
 }
 
 // ---------------------------------------------------------------------------
@@ -373,12 +373,12 @@ function row(r) {
     .background(() => (r().selected ? "#7f7f7f1f" : "clear"))
     .hoverBackground("#7f7f7f26")
     .frame({ maxWidth: "infinity" })
-    .onTap(() => cmux("workspace.select", { workspace_id: r().id }))
+    .onTap(() => bree("workspace.select", { workspace_id: r().id }))
     .contextMenu([
       Button(() => (r().prLabel ? "Open PR " + r().prLabel : "No PR"), () => {
         if (r().prURL) openURL(r().prURL);
       }),
-      Button("Mark Read", () => cmux("workspace.action", { workspace_id: r().id, action: "mark_read" })),
+      Button("Mark Read", () => bree("workspace.action", { workspace_id: r().id, action: "mark_read" })),
     ]);
 }
 

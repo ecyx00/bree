@@ -1,6 +1,6 @@
 import Foundation
 
-/// Where a local persistent session's cmux client surface should attach.
+/// Where a local persistent session's bree client surface should attach.
 struct LocalSessionAttachRequest {
     var workspace: String?
     var surface: String?
@@ -14,8 +14,8 @@ struct LocalSessionAttachRequest {
     }
 }
 
-/// What differs between the multiplexers behind cmux's local persistent
-/// session profiles when a cmux surface attaches as a client.
+/// What differs between the multiplexers behind bree's local persistent
+/// session profiles when a bree surface attaches as a client.
 struct LocalSessionAttachProfile {
     enum Target {
         case pane

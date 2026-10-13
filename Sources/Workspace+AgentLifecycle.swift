@@ -1,5 +1,5 @@
-import CMUXAgentLaunch
-import CmuxWorkspaces
+import BREEAgentLaunch
+import BreeWorkspaces
 import Foundation
 
 extension Workspace {
@@ -21,7 +21,7 @@ extension Workspace {
     /// `wasAgentRunning` or binding compatibility.
     ///
     /// A failed launch is immediately re-saved as not running, so waiting until
-    /// `cmux restore` executes leaves the pane permanently unable to reach the
+    /// `bree restore` executes leaves the pane permanently unable to reach the
     /// CLI's record repair on later launches. Workspace and dock restore both
     /// call this shared projection before making any launch decision.
     nonisolated static func repairedLegacyHermesSessionPanelSnapshot(
@@ -102,7 +102,7 @@ extension Workspace {
                 ?? existingAgent?.launchCommand
                 ?? sourceBinding.launchCommand
             recoveredAgent.registration = existingAgent?.registration
-                ?? CmuxVaultAgentRegistration.builtInHermes
+                ?? BreeVaultAgentRegistration.builtInHermes
             recoveredAgent.permissionMode = existingAgent?.permissionMode
 
             var repairedBinding = sourceBinding
@@ -131,7 +131,7 @@ extension Workspace {
             let event = requiresIdentityChange
                 ? "session.restore.hermesIdentityRepair"
                 : "session.restore.hermesLegacyRestoreRearmed"
-            cmuxDebugLog(
+            breeDebugLog(
                 "\(event) panel=\(snapshot.id.uuidString.prefix(5)) " +
                     "session=\(recoveredAgent.sessionId.prefix(12))"
             )
@@ -169,7 +169,7 @@ extension Workspace {
             var repaired = snapshot
             repaired.terminal = terminal
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "session.restore.hermesMissingCheckpoint panel=\(snapshot.id.uuidString.prefix(5)) " +
                     "session=\(corruptSessionId.prefix(12))"
             )
@@ -215,7 +215,7 @@ extension Workspace {
                 sessionId: recovered.sessionID,
                 workingDirectory: nil,
                 launchCommand: recovered.launchCommand,
-                registration: CmuxVaultAgentRegistration.builtInHermes
+                registration: BreeVaultAgentRegistration.builtInHermes
             ))
         case .missing:
             return .missing
@@ -227,7 +227,7 @@ extension Workspace {
                 sessionId: recovered.sessionID,
                 workingDirectory: nil,
                 launchCommand: recovered.launchCommand,
-                registration: CmuxVaultAgentRegistration.builtInHermes
+                registration: BreeVaultAgentRegistration.builtInHermes
             ))
         }
     }
@@ -374,14 +374,14 @@ extension Workspace {
         retireAgentHookResumeBinding(panelId: panelId, matching: restoredAgent)
         clearRestoredAgentSnapshot(panelId: panelId)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "session.restore.agent.invalidate panel=\(panelId.uuidString.prefix(5)) " +
             "kind=\(restoredAgent.kind.rawValue) session=\(restoredAgent.sessionId.prefix(8))"
         )
 #endif
     }
 
-    /// Keep the checkpoint available to an explicit `cmux restore`, while
+    /// Keep the checkpoint available to an explicit `bree restore`, while
     /// preventing an exited or superseded agent from replaying automatically.
     func retireAgentHookResumeBinding(
         panelId: UUID,

@@ -1,7 +1,7 @@
 // agents-board: subagents grouped by STATUS, attention first. The question
 // this layout answers is "what needs me right now" - needs-input sessions
 // get the loudest section at the top, everything else stays quiet.
-//   cmux sidebar open agents-board
+//   bree sidebar open agents-board
 
 const STATUS_META = {
   needs_input: { label: "NEEDS YOU", color: "#FF9F0A", strong: true },
@@ -36,8 +36,8 @@ const allAgents = computed(() => {
 const byStatus = (status) => () => allAgents().filter((e) => e.a.status === status);
 
 function jump(e) {
-  cmux("workspace.select", { workspace_id: e.ws.id });
-  if (e.a.surfaceId) cmux("surface.focus", { surface_id: e.a.surfaceId });
+  bree("workspace.select", { workspace_id: e.ws.id });
+  if (e.a.surfaceId) bree("surface.focus", { surface_id: e.a.surfaceId });
 }
 
 function row(e, strong) {

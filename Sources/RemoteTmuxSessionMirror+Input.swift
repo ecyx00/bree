@@ -1,5 +1,5 @@
-import CmuxRemoteSession
-import CmuxTerminal
+import BreeRemoteSession
+import BreeTerminal
 import Foundation
 
 @MainActor
@@ -12,7 +12,7 @@ extension RemoteTmuxSessionMirror {
         case .namedKey(let name):
             guard let key = RemoteTmuxKeyName(rawName: name) else {
                 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "remote.input.namedKey.unresolved pane=\(tmuxPaneID) name=\(name)"
                 )
                 #endif

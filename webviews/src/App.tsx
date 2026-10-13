@@ -232,11 +232,11 @@ function prepareAppendedItem(item: DiffItem, state: AppState, generatedPaths: Re
   const reason = deferredDiffReason({
     path: fileName(diff, ""),
     changedLines: stats.added + stats.deleted,
-    patchBytes: typeof diff.cmuxPatchByteLength === "number" ? diff.cmuxPatchByteLength : 0,
+    patchBytes: typeof diff.breePatchByteLength === "number" ? diff.breePatchByteLength : 0,
     generatedPaths,
   });
   if (reason != null) {
-    diff.cmuxDeferredReason = reason;
+    diff.breeDeferredReason = reason;
   }
   const viewed = viewedStateOfItem(item, state.viewedByPath) === "viewed";
   return state.options.collapsed || reason != null || viewed ? { ...item, collapsed: true } : item;
@@ -793,7 +793,7 @@ export function App({ config, initialStatus }: ConfigProps) {
         state={state}
         visibleItems={visibleItems}
       />
-      <section id="content" style={{ "--cmux-diff-files-width": `${state.filesWidth}px` } as React.CSSProperties}>
+      <section id="content" style={{ "--bree-diff-files-width": `${state.filesWidth}px` } as React.CSSProperties}>
         <FilesSidebarBackdrop
           label={label}
           onClose={() => closeFileSearch(dispatch)}
@@ -953,7 +953,7 @@ function useDiffComments({
         dispatch({ type: "upsert-comment", comment: saved });
         dispatch({ type: "set-draft", draft: null });
       })
-      .catch((error) => console.warn("cmux diff comment save failed", error));
+      .catch((error) => console.warn("bree diff comment save failed", error));
   };
 
   const editMessage = (
@@ -975,14 +975,14 @@ function useDiffComments({
           dispatch({ type: "upsert-comment", comment: saved });
         }
       })
-      .catch((error) => console.warn("cmux diff comment edit failed", error));
+      .catch((error) => console.warn("bree diff comment edit failed", error));
   };
 
   const remove = (comment: DiffCommentRecord) => {
     const targetRepoRoot = repoRoot;
     if (bridgeAvailable && repoRoot != null) {
       bridgeDeleteComment(repoRoot, comment.id)
-        .catch((error) => console.warn("cmux diff comment delete failed", error));
+        .catch((error) => console.warn("bree diff comment delete failed", error));
     }
     if (activeRepoRoot.current === targetRepoRoot) {
       dispatch({ type: "remove-comment", id: comment.id });
@@ -1005,7 +1005,7 @@ function initialDiffViewerLayout(payload: Record<string, any>): DiffViewerLayout
     return payloadLayout;
   }
   // The CLI bakes the globally persisted layout into the payload at generation
-  // time; local storage only matters for pages opened outside cmux. The
+  // time; local storage only matters for pages opened outside bree. The
   // viewerPrefs bridge re-syncs the live value right after boot.
   return readLocalViewerPrefs().layout ?? payloadLayout ?? "unified";
 }
@@ -1059,7 +1059,7 @@ function useViewedFilesBootstrap(scope: ViewedScope | null, dispatch: React.Disp
       })
       .catch((error) => {
         if (active) {
-          console.warn("cmux diff viewed state load failed", error);
+          console.warn("bree diff viewed state load failed", error);
         }
       });
     return () => {
@@ -1089,7 +1089,7 @@ function FileReviewControls({
   onToggleViewed: () => void;
   viewedState: ViewedFileState;
 }) {
-  const reason = item.fileDiff?.cmuxDeferredReason as DeferredDiffReason | undefined;
+  const reason = item.fileDiff?.breeDeferredReason as DeferredDiffReason | undefined;
   const viewed = viewedState === "viewed";
   return (
     <span className="file-review-controls" data-viewed-state={viewedState}>
@@ -1509,7 +1509,7 @@ function BaseControl({
   );
 }
 
-// Reads the FROZEN CONTRACT `branchPicker` object. In dev, a `?cmuxBranchPickerMock=1`
+// Reads the FROZEN CONTRACT `branchPicker` object. In dev, a `?breeBranchPickerMock=1`
 // query flag injects a local sample so the popover can be exercised without a
 // wired backend. Production behavior is unchanged when the flag is absent.
 function resolveBranchPicker(payload: any): BranchPickerPayload | null {
@@ -1541,7 +1541,7 @@ function isValidBranchPickerPayload(value: any): value is BranchPickerPayload {
 
 function devBranchPickerMockEnabled(): boolean {
   try {
-    return new URLSearchParams(window.location.search).get("cmuxBranchPickerMock") === "1";
+    return new URLSearchParams(window.location.search).get("breeBranchPickerMock") === "1";
   } catch {
     return false;
   }
@@ -2007,7 +2007,7 @@ function PierreFileTree({
   const [initialPreparedInput] = useState(() => preparePresortedFileTreeInput(source.paths));
   const { model } = useFileTree({
     flattenEmptyDirectories: false,
-    id: "cmux-diff-file-tree",
+    id: "bree-diff-file-tree",
     initialExpansion: "open",
     initialSelectedPaths: selectedPath ? [selectedPath] : [],
     initialVisibleRowCount: getInitialFileTreeRowCount(),
@@ -2083,9 +2083,9 @@ function LoadingFileList() {
     <div className="diff-loading-placeholder" aria-hidden="true">
       {fileSkeletonWidths.map((width, index) => (
         <div key={`${width}-${index}`} className="grid h-6 grid-cols-[16px_minmax(0,1fr)_44px] items-center gap-2 rounded-[5px] px-[7px]">
-          <span className="size-4 rounded-[5px] border border-[color-mix(in_lab,var(--cmux-diff-fg)_18%,transparent)]" />
-          <span className="h-[11px] rounded bg-[var(--cmux-diff-muted-bg)]" style={{ width }} />
-          <span className="h-[11px] justify-self-end rounded bg-[var(--cmux-diff-muted-bg)] opacity-70" style={{ width: index % 2 === 0 ? "34px" : "24px" }} />
+          <span className="size-4 rounded-[5px] border border-[color-mix(in_lab,var(--bree-diff-fg)_18%,transparent)]" />
+          <span className="h-[11px] rounded bg-[var(--bree-diff-muted-bg)]" style={{ width }} />
+          <span className="h-[11px] justify-self-end rounded bg-[var(--bree-diff-muted-bg)] opacity-70" style={{ width: index % 2 === 0 ? "34px" : "24px" }} />
         </div>
       ))}
     </div>
@@ -2094,17 +2094,17 @@ function LoadingFileList() {
 
 function LoadingDiffSkeleton() {
   return (
-    <div className="diff-loading-placeholder mx-3.5 mt-3.5 border-t border-[var(--cmux-diff-border)] pt-3" aria-hidden="true">
-      <div className="mb-3 grid h-9 grid-cols-[72px_minmax(0,1fr)_96px] items-center gap-3 rounded-md bg-[color-mix(in_lab,var(--cmux-diff-fg)_5%,transparent)] px-3">
-        <span className="h-3 rounded bg-[var(--cmux-diff-muted-bg)]" />
-        <span className="h-3 w-2/5 rounded bg-[var(--cmux-diff-muted-bg)]" />
-        <span className="h-3 rounded bg-[var(--cmux-diff-muted-bg)] opacity-70" />
+    <div className="diff-loading-placeholder mx-3.5 mt-3.5 border-t border-[var(--bree-diff-border)] pt-3" aria-hidden="true">
+      <div className="mb-3 grid h-9 grid-cols-[72px_minmax(0,1fr)_96px] items-center gap-3 rounded-md bg-[color-mix(in_lab,var(--bree-diff-fg)_5%,transparent)] px-3">
+        <span className="h-3 rounded bg-[var(--bree-diff-muted-bg)]" />
+        <span className="h-3 w-2/5 rounded bg-[var(--bree-diff-muted-bg)]" />
+        <span className="h-3 rounded bg-[var(--bree-diff-muted-bg)] opacity-70" />
       </div>
       <div className="space-y-[13px] px-3 py-1">
         {diffSkeletonWidths.map((width, index) => (
           <div key={`${width}-${index}`} className="grid grid-cols-[42px_minmax(0,1fr)] items-center gap-4">
-            <span className="h-px bg-[color-mix(in_lab,var(--cmux-diff-fg)_10%,transparent)]" />
-            <span className="h-3 rounded bg-[var(--cmux-diff-muted-bg)]" style={{ width }} />
+            <span className="h-px bg-[color-mix(in_lab,var(--bree-diff-fg)_10%,transparent)]" />
+            <span className="h-3 rounded bg-[var(--bree-diff-muted-bg)]" style={{ width }} />
           </div>
         ))}
       </div>
@@ -2153,7 +2153,7 @@ function useWorkerRenderOptionsSync(
           codeViewRef.current?.getInstance()?.render(true);
         }
       })
-      .catch((error: unknown) => console.warn("cmux diff worker render options update failed", error));
+      .catch((error: unknown) => console.warn("bree diff worker render options update failed", error));
     return () => {
       active = false;
     };
@@ -2344,7 +2344,7 @@ function useRenderDiff(
               return resolveDiffPreloadLanguages(fileName(diff, ""), diff.lang, diff, getFiletypeFromFileName);
             })));
             preloadHighlighter({ themes, langs: langs.length > 0 ? langs : ["text"] })
-              .catch((error) => console.warn("cmux diff highlighter preload failed", error));
+              .catch((error) => console.warn("bree diff highlighter preload failed", error));
           },
           onMetrics: (metrics) => {
             if (!cancelled) dispatch({ type: "set-metrics", metrics });
@@ -2368,7 +2368,7 @@ function useRenderDiff(
           // Error objects JSON.stringify to {} in the native console mirror,
           // so serialize the message and stack explicitly.
           console.error(
-            "cmux diff viewer render failed",
+            "bree diff viewer render failed",
             String((error as any)?.stack ?? (error as any)?.message ?? error),
           );
         }
@@ -2524,23 +2524,23 @@ function usePendingReplacement(
       // The native host replaces the file and navigates this surface when Git
       // generation completes. Custom-scheme resources never use an HTTP wait
       // endpoint, so keep the loading state until that navigation arrives.
-      if (window.location.protocol === "cmux-diff-viewer:") {
+      if (window.location.protocol === "bree-diff-viewer:") {
         return;
       }
-      fetch("/__cmux_diff_viewer_wait" + window.location.pathname, { cache: "no-store" })
+      fetch("/__bree_diff_viewer_wait" + window.location.pathname, { cache: "no-store" })
         .then(async (response) => {
           if (!response.ok) {
             throw new Error("replacement failed");
           }
           const text = await response.text();
-          if (!text.includes("data-cmux-diff-pending=\"true\"")) {
+          if (!text.includes("data-bree-diff-pending=\"true\"")) {
             window.location.reload();
           }
         })
         .catch((error) => {
-          document.documentElement.dataset.cmuxDiffWait = "failed";
+          document.documentElement.dataset.breeDiffWait = "failed";
           dispatch({ type: "set-status", status: createDiffViewerStatus(label("renderFailed"), { error: true, loading: false, statusOnly: true }) });
-          console.warn("cmux diff viewer deferred load failed", error);
+          console.warn("bree diff viewer deferred load failed", error);
         });
       return;
     }
@@ -2588,9 +2588,9 @@ function useNativeViewerNavigation(
   findBridgeRef: React.MutableRefObject<{ open: boolean; controller: DiffFindController }>,
 ) {
   useEffect(() => {
-    window.__cmuxPerformDiffViewerNavigationAction = (action: string) => {
+    window.__breePerformDiffViewerNavigationAction = (action: string) => {
       const viewer = viewerRef.current;
-      if (viewer && CmuxViewerNavigation.performAction(action, viewer)) {
+      if (viewer && BreeViewerNavigation.performAction(action, viewer)) {
         return true;
       }
       const findBridge = findBridgeRef.current;
@@ -2599,19 +2599,19 @@ function useNativeViewerNavigation(
           dispatch({ type: "request-file-search" });
           return true;
         case "diffViewerNextFile":
-          if (viewer) CmuxViewerNavigation.resetSmoothTarget(viewer);
+          if (viewer) BreeViewerNavigation.resetSmoothTarget(viewer);
           onJumpAdjacentFile(1);
           return true;
         case "diffViewerPreviousFile":
-          if (viewer) CmuxViewerNavigation.resetSmoothTarget(viewer);
+          if (viewer) BreeViewerNavigation.resetSmoothTarget(viewer);
           onJumpAdjacentFile(-1);
           return true;
         case "diffViewerNextHunk":
-          if (viewer) CmuxViewerNavigation.resetSmoothTarget(viewer);
+          if (viewer) BreeViewerNavigation.resetSmoothTarget(viewer);
           onJumpAdjacentHunk(1);
           return true;
         case "diffViewerPreviousHunk":
-          if (viewer) CmuxViewerNavigation.resetSmoothTarget(viewer);
+          if (viewer) BreeViewerNavigation.resetSmoothTarget(viewer);
           onJumpAdjacentHunk(-1);
           return true;
         case "diffViewerToggleViewed":
@@ -2635,16 +2635,16 @@ function useNativeViewerNavigation(
       }
       return false;
     };
-    document.documentElement.dataset.cmuxViewerNavigationReady = "true";
-    document.dispatchEvent(new window.Event("cmux-diff-viewer-navigation-readiness-change"));
-    const disposeManualInputReset = CmuxViewerNavigation.installManualInputReset({
+    document.documentElement.dataset.breeViewerNavigationReady = "true";
+    document.dispatchEvent(new window.Event("bree-diff-viewer-navigation-readiness-change"));
+    const disposeManualInputReset = BreeViewerNavigation.installManualInputReset({
       target: document,
       getScroller: () => viewerRef.current!,
     });
     return () => {
-      delete window.__cmuxPerformDiffViewerNavigationAction;
-      delete document.documentElement.dataset.cmuxViewerNavigationReady;
-      document.dispatchEvent(new window.Event("cmux-diff-viewer-navigation-readiness-change"));
+      delete window.__breePerformDiffViewerNavigationAction;
+      delete document.documentElement.dataset.breeViewerNavigationReady;
+      document.dispatchEvent(new window.Event("bree-diff-viewer-navigation-readiness-change"));
       disposeManualInputReset();
     };
   }, [dispatch, findBridgeRef, onJumpAdjacentFile, onJumpAdjacentHunk, onToggleViewed, viewerRef]);

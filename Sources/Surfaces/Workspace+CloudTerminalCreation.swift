@@ -1,12 +1,12 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
 import Bonsplit
-import CmuxSurfaceCatalogModel
-import CmuxWorkspaces
+import BreeSurfaceCatalogModel
+import BreeWorkspaces
 import Foundation
 
 /// Cmd+D / Cmd+T from a pane that projects a cloud resource create the new terminal ON
-/// that machine — in the same cmux-tui workspace — instead of a local shell. Same rule
+/// that machine — in the same bree-tui workspace — instead of a local shell. Same rule
 /// as the remote tmux mirror: a "split" next to a remote pane means "another terminal
 /// where that pane lives". The new terminal is created through the machine's provider
 /// (`workspace <ws> run`) and projected back into this workspace at the requested spot,
@@ -346,7 +346,7 @@ extension Workspace {
             // The stable terminal id is available before surface attachment.
             // Route reservation input into that PTY immediately so remote shell
             // startup owns echo and line discipline just like a local shell.
-            if let cloudProvider = catalog.provider(for: created.machine) as? CmuxTuiSurfaceProvider {
+            if let cloudProvider = catalog.provider(for: created.machine) as? BreeTuiSurfaceProvider {
                 _ = try await cloudProvider.bindOptimisticTerminalInput(
                     reservation.inputRelay,
                     terminalID: created.id.key
@@ -426,7 +426,7 @@ extension Workspace {
     @MainActor
     func presentCloudPaneCreationFailure(machine: SurfaceMachineID, error: Error, requestID: UUID, context: CloudOperationContext? = nil, sourcePanelID: UUID? = nil) {
         #if DEBUG
-        cmuxDebugLog("cloud.pane.createFailed machine=\(machine.rawValue) error=\(String(reflecting: error))")
+        breeDebugLog("cloud.pane.createFailed machine=\(machine.rawValue) error=\(String(reflecting: error))")
         #endif
         cloudPaneCreationFailureStore.present(machine: machine, error: error, requestID: requestID, context: context, sourcePanelID: sourcePanelID ?? focusedPanelId)
     }

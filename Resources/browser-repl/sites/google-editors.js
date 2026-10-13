@@ -3,7 +3,7 @@
 // the editors' own export endpoints in the signed-in session; xlsx and pptx
 // exports are unzipped in a docs.google.com page with the browser's
 // DecompressionStream. Writes drive the editor in a background tab with real
-// input: the Sheets name box and a paste from cmux's per-tab clipboard, the
+// input: the Sheets name box and a paste from bree's per-tab clipboard, the
 // Docs and Slides Find and replace dialog, typing at the end of a document.
 //
 // Rule for writes: a file whose Share button says "Private to only me" is
@@ -12,7 +12,7 @@
 // taxonomy, [9]: edits others can see).
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
 
   // Runs in a blank page (for DecompressionStream): unzips base64 bytes and

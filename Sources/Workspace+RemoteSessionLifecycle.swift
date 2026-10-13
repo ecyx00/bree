@@ -1,8 +1,8 @@
-import CmuxCloud
-import CmuxCore
-import CmuxRemoteDaemon
-import CmuxRemoteSession
-import CmuxRemoteWorkspace
+import BreeCloud
+import BreeCore
+import BreeRemoteDaemon
+import BreeRemoteSession
+import BreeRemoteWorkspace
 import Foundation
 
 @MainActor
@@ -233,7 +233,7 @@ extension Workspace {
         // An optimistic pane whose creation failed replays its own request.
         if retryReservedCloudTerminalPane(surfaceId: surfaceId) { return true }
         if let resource = cloudProjectedResource(forPanel: surfaceId),
-           let provider = SurfaceCatalog.shared.provider(for: resource.id.machine) as? CmuxTuiSurfaceProvider {
+           let provider = SurfaceCatalog.shared.provider(for: resource.id.machine) as? BreeTuiSurfaceProvider {
             guard let session = provider.manualMirrorSessions[surfaceId] else {
                 clearCloudMaterializationFailure(surfaceID: surfaceId)
                 provider.scheduleRefresh()

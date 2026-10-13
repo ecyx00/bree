@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 
 /// Visible keyboard selection ring drawn over one workspace row while the left
 /// sidebar has keyboard focus. It never takes hit-tests, and it draws two

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: `cmux claude-teams` injects the tmux-style auto-mode env.
+Regression test: `bree claude-teams` injects the tmux-style auto-mode env.
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from claude_teams_test_utils import (
     FOCUSED_WINDOW_ID,
     FOCUSED_WORKSPACE_ID,
     canonical_managed_claude_shim_root,
-    focused_cmux_server,
-    resolve_cmux_cli,
+    focused_bree_server,
+    resolve_bree_cli,
     stable_tmux_numeric_id,
 )
 from node_runtime import ensure_node_on_path
@@ -44,7 +44,7 @@ def run_claude_teams(
     unexpected_path_entries: tuple[str, ...] = (),
 ) -> tuple[subprocess.CompletedProcess[str], str, str, str]:
     with (
-        tempfile.TemporaryDirectory(prefix="cmux-claude-teams-env-") as td,
+        tempfile.TemporaryDirectory(prefix="bree-claude-teams-env-") as td,
         canonical_managed_claude_shim_root() as (surface_id, wrapper_shim_bin),
     ):
         tmp = Path(td)
@@ -57,7 +57,7 @@ def run_claude_teams(
         respawn_environment_log = tmp / "respawn-environment.log"
         tmux_log = tmp / "tmux-path.log"
         tmux_shim_log = tmp / "tmux-shim.log"
-        cmux_bin_log = tmp / "cmux-bin.log"
+        bree_bin_log = tmp / "bree-bin.log"
         argv_log = tmp / "argv.log"
         tmux_env_log = tmp / "tmux-env.log"
         tmux_pane_log = tmp / "tmux-pane.log"
@@ -73,9 +73,9 @@ def run_claude_teams(
         if block_preload_directory:
             # A regular file where the restore preload's directory belongs
             # makes creating the preload fail without touching the tmux shim.
-            cmuxterm = fake_home / ".cmuxterm"
-            cmuxterm.mkdir(parents=True, exist_ok=True)
-            (cmuxterm / "cmux-claude-node-options").write_text("occupied", encoding="utf-8")
+            bree = fake_home / ".bree"
+            bree.mkdir(parents=True, exist_ok=True)
+            (bree / "bree-claude-node-options").write_text("occupied", encoding="utf-8")
 
         make_executable(
             wrapper_shim_bin / "claude",
@@ -88,22 +88,22 @@ def run_claude_teams(
 set -euo pipefail
 printf '%s\\n' "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS-__UNSET__}" > "$FAKE_AGENT_TEAMS_LOG"
 printf '%s\\n' "${CLAUDE_CODE_SANDBOXED-__UNSET__}" > "$FAKE_SANDBOXED_LOG"
-printf '%s\\n' "${CMUX_CLAUDE_TEAMS_SANDBOXED-__UNSET__}" > "$FAKE_SANDBOXED_MARKER_LOG"
-printf '%s\\n' "${CMUX_CLAUDE_TEAMS_RESPAWN_ENV_B64-__UNSET__}" > "$FAKE_RESPAWN_ENVIRONMENT_LOG"
+printf '%s\\n' "${BREE_CLAUDE_TEAMS_SANDBOXED-__UNSET__}" > "$FAKE_SANDBOXED_MARKER_LOG"
+printf '%s\\n' "${BREE_CLAUDE_TEAMS_RESPAWN_ENV_B64-__UNSET__}" > "$FAKE_RESPAWN_ENVIRONMENT_LOG"
 # Claude Code restores a shell snapshot before invoking tmux. The snapshot's
 # full PATH assignment can discard the launcher-only claude-teams-bin entry,
-# while cmux's managed per-surface wrapper root remains available.
+# while bree's managed per-surface wrapper root remains available.
 export PATH="$FAKE_SHELL_SNAPSHOT_PATH"
 command -v tmux > "$FAKE_TMUX_PATH_LOG"
-printf '%s\\n' "${CMUX_CLAUDE_TEAMS_TMUX_SHIM-__UNSET__}" > "$FAKE_TMUX_SHIM_LOG"
-printf '%s\\n' "${CMUX_CLAUDE_TEAMS_CMUX_BIN-__UNSET__}" > "$FAKE_CMUX_BIN_LOG"
+printf '%s\\n' "${BREE_CLAUDE_TEAMS_TMUX_SHIM-__UNSET__}" > "$FAKE_TMUX_SHIM_LOG"
+printf '%s\\n' "${BREE_CLAUDE_TEAMS_BREE_BIN-__UNSET__}" > "$FAKE_BREE_BIN_LOG"
 printf '%s\\n' "$@" > "$FAKE_ARGV_LOG"
 printf '%s\\n' "${TMUX-__UNSET__}" > "$FAKE_TMUX_ENV_LOG"
 printf '%s\\n' "${TMUX_PANE-__UNSET__}" > "$FAKE_TMUX_PANE_LOG"
 printf '%s\\n' "${TERM-__UNSET__}" > "$FAKE_TERM_LOG"
 printf '%s\\n' "${TERM_PROGRAM-__UNSET__}" > "$FAKE_TERM_PROGRAM_LOG"
-printf '%s\\n' "${CMUX_SOCKET_PATH-__UNSET__}" > "$FAKE_SOCKET_PATH_LOG"
-printf '%s\\n' "${CMUX_SOCKET_PASSWORD-__UNSET__}" > "$FAKE_SOCKET_PASSWORD_LOG"
+printf '%s\\n' "${BREE_SOCKET_PATH-__UNSET__}" > "$FAKE_SOCKET_PATH_LOG"
+printf '%s\\n' "${BREE_SOCKET_PASSWORD-__UNSET__}" > "$FAKE_SOCKET_PASSWORD_LOG"
 printf '%s\\n' "${NODE_OPTIONS-__UNSET__}" > "$FAKE_NODE_OPTIONS_LOG"
 exec node "$FAKE_REAL_NODE_SCRIPT" "$@"
 """,
@@ -160,7 +160,7 @@ fs.writeFileSync(
         env["FAKE_RESPAWN_ENVIRONMENT_LOG"] = str(respawn_environment_log)
         env["FAKE_TMUX_PATH_LOG"] = str(tmux_log)
         env["FAKE_TMUX_SHIM_LOG"] = str(tmux_shim_log)
-        env["FAKE_CMUX_BIN_LOG"] = str(cmux_bin_log)
+        env["FAKE_BREE_BIN_LOG"] = str(bree_bin_log)
         env["FAKE_ARGV_LOG"] = str(argv_log)
         env["FAKE_TMUX_ENV_LOG"] = str(tmux_env_log)
         env["FAKE_TMUX_PANE_LOG"] = str(tmux_pane_log)
@@ -173,10 +173,10 @@ fs.writeFileSync(
         env["FAKE_CHILD_NODE_OPTIONS_LOG"] = str(child_node_options_log)
         env["FAKE_REAL_NODE_SCRIPT"] = str(real_bin / "claude-real.js")
         env["FAKE_SHELL_SNAPSHOT_PATH"] = f"{wrapper_shim_bin}:{env['PATH']}"
-        env["CMUX_CLAUDE_WRAPPER_SHIM"] = str(wrapper_shim_bin / "claude")
-        env["CMUX_CLAUDE_WRAPPER_SHIM_ROOT"] = str(wrapper_shim_bin)
-        env["CMUX_WORKSPACE_ID"] = FOCUSED_WORKSPACE_ID
-        env["CMUX_SURFACE_ID"] = surface_id
+        env["BREE_CLAUDE_WRAPPER_SHIM"] = str(wrapper_shim_bin / "claude")
+        env["BREE_CLAUDE_WRAPPER_SHIM_ROOT"] = str(wrapper_shim_bin)
+        env["BREE_WORKSPACE_ID"] = FOCUSED_WORKSPACE_ID
+        env["BREE_SURFACE_ID"] = surface_id
         env["TMUX"] = "__HOST_TMUX__"
         env["TMUX_PANE"] = "%999"
         env["TERM"] = "xterm-256color"
@@ -186,10 +186,10 @@ fs.writeFileSync(
         env["ANTHROPIC_API_KEY"] = "sk-ant-must-not-cross-respawn-transport"
         expect_managed_tmux_shim = True
         env["TMPDIR"] = str(tmp) if tmpdir is None else tmpdir
-        explicit_socket_path_hint = tmp / "explicit-cmux.sock"
+        explicit_socket_path_hint = tmp / "explicit-bree.sock"
         explicit_socket_password = "topsecret"
 
-        with focused_cmux_server(
+        with focused_bree_server(
             explicit_socket_path_hint,
             surface_id=surface_id,
             identified_workspace_id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -241,12 +241,12 @@ fs.writeFileSync(
             print(f"FAIL: expected CLAUDE_CODE_SANDBOXED=1 to skip the trust gate, got {sandboxed_value!r}")
             raise SystemExit(1)
 
-        # The launcher records the opt-in in CMUX_CLAUDE_TEAMS_SANDBOXED so teammate
+        # The launcher records the opt-in in BREE_CLAUDE_TEAMS_SANDBOXED so teammate
         # respawns re-apply the same trust decision without re-deriving it from
         # untrusted command text.
         marker_value = read_text(marker_log)
         if marker_value != "1":
-            print(f"FAIL: expected CMUX_CLAUDE_TEAMS_SANDBOXED=1 opt-in marker, got {marker_value!r}")
+            print(f"FAIL: expected BREE_CLAUDE_TEAMS_SANDBOXED=1 opt-in marker, got {marker_value!r}")
             raise SystemExit(1)
 
         encoded_respawn_environment = read_text(respawn_environment_log)
@@ -256,7 +256,7 @@ fs.writeFileSync(
             )
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             print(
-                "FAIL: expected CMUX_CLAUDE_TEAMS_RESPAWN_ENV_B64 to contain a base64 JSON object, "
+                "FAIL: expected BREE_CLAUDE_TEAMS_RESPAWN_ENV_B64 to contain a base64 JSON object, "
                 f"got {encoded_respawn_environment!r}: {exc}"
             )
             raise SystemExit(1) from exc
@@ -332,24 +332,24 @@ fs.writeFileSync(
                 raise SystemExit(1)
 
             if tmux_path.startswith(str(real_bin)):
-                print(f"FAIL: expected cmux tmux shim to shadow PATH, got {tmux_path!r}")
+                print(f"FAIL: expected bree tmux shim to shadow PATH, got {tmux_path!r}")
                 raise SystemExit(1)
 
             tmux_shim_value = read_text(tmux_shim_log)
             if tmux_shim_value != expected_tmux_path:
                 print(
-                    f"FAIL: expected CMUX_CLAUDE_TEAMS_TMUX_SHIM={expected_tmux_path!r}, "
+                    f"FAIL: expected BREE_CLAUDE_TEAMS_TMUX_SHIM={expected_tmux_path!r}, "
                     f"got {tmux_shim_value!r}"
                 )
                 raise SystemExit(1)
 
-        cmux_bin_value = read_text(cmux_bin_log)
-        if not cmux_bin_value or cmux_bin_value == "__UNSET__":
-            print("FAIL: missing CMUX_CLAUDE_TEAMS_CMUX_BIN")
+        bree_bin_value = read_text(bree_bin_log)
+        if not bree_bin_value or bree_bin_value == "__UNSET__":
+            print("FAIL: missing BREE_CLAUDE_TEAMS_BREE_BIN")
             raise SystemExit(1)
 
-        if not os.path.exists(cmux_bin_value):
-            print(f"FAIL: CMUX_CLAUDE_TEAMS_CMUX_BIN does not exist: {cmux_bin_value!r}")
+        if not os.path.exists(bree_bin_value):
+            print(f"FAIL: BREE_CLAUDE_TEAMS_BREE_BIN does not exist: {bree_bin_value!r}")
             raise SystemExit(1)
 
         argv_lines = argv_log.read_text(encoding="utf-8").splitlines()
@@ -357,7 +357,7 @@ fs.writeFileSync(
             print(f"FAIL: expected launcher to prepend --teammate-mode auto, got {argv_lines!r}")
             raise SystemExit(1)
 
-        # #6447: so a plain `cmux claude-teams "make a demo team"` actually opens
+        # #6447: so a plain `bree claude-teams "make a demo team"` actually opens
         # split panes, the lead is nudged (via an appended system prompt) toward
         # named split-pane teammates instead of nameless in-process subagents.
         if "--append-system-prompt" not in argv_lines:
@@ -376,7 +376,7 @@ fs.writeFileSync(
         tmux_env_value = read_text(tmux_env_log)
         expected_pane_token = stable_tmux_numeric_id(FOCUSED_PANE_ID)
         expected_tmux = (
-            f"/tmp/cmux-claude-teams/{FOCUSED_WORKSPACE_ID},"
+            f"/tmp/bree-claude-teams/{FOCUSED_WORKSPACE_ID},"
             f"{FOCUSED_WINDOW_ID},{expected_pane_token}"
         )
         if tmux_env_value != expected_tmux:
@@ -401,13 +401,13 @@ fs.writeFileSync(
 
         socket_path_value = read_text(socket_path_log)
         if socket_path_value != explicit_socket_path:
-            print(f"FAIL: expected CMUX_SOCKET_PATH={explicit_socket_path!r}, got {socket_path_value!r}")
+            print(f"FAIL: expected BREE_SOCKET_PATH={explicit_socket_path!r}, got {socket_path_value!r}")
             raise SystemExit(1)
 
         socket_password_value = read_text(socket_password_log)
         if socket_password_value != explicit_socket_password:
             print(
-                "FAIL: expected CMUX_SOCKET_PASSWORD to preserve the explicit CLI override, "
+                "FAIL: expected BREE_SOCKET_PASSWORD to preserve the explicit CLI override, "
                 f"got {socket_password_value!r}"
             )
             raise SystemExit(1)
@@ -421,7 +421,7 @@ def main() -> int:
         print("SKIP: node runtime not found; fake claude execs node")
         return 0
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
@@ -438,12 +438,12 @@ def main() -> int:
         base_env,
         "--trace-warnings",
         unexpected_path_entries=(
-            "\ncmux-10221-garbage-dir\n",
-            "\ncmux-10221-garbage-dir/..\n",
+            "\nbree-10221-garbage-dir\n",
+            "\nbree-10221-garbage-dir/..\n",
         ),
     )
     if proc.returncode != 0:
-        print("FAIL: `cmux claude-teams --version` exited non-zero")
+        print("FAIL: `bree claude-teams --version` exited non-zero")
         print(f"exit={proc.returncode}")
         print(f"stdout={proc.stdout.strip()}")
         print(f"stderr={proc.stderr.strip()}")
@@ -484,7 +484,7 @@ def main() -> int:
         "--max-old-space-size 2048 --trace-warnings",
     )
     if proc.returncode != 0:
-        print("FAIL: `cmux claude-teams --version` with existing heap flag exited non-zero")
+        print("FAIL: `bree claude-teams --version` with existing heap flag exited non-zero")
         print(f"exit={proc.returncode}")
         print(f"stdout={proc.stdout.strip()}")
         print(f"stderr={proc.stderr.strip()}")
@@ -519,9 +519,9 @@ def main() -> int:
         )
         return 1
 
-    # The restore preload lives in ~/.cmuxterm, not $TMPDIR (#14814), so an
+    # The restore preload lives in ~/.bree, not $TMPDIR (#14814), so an
     # unusable TMPDIR must not cost the session its NODE_OPTIONS restore.
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-teams-bad-tmp-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-teams-bad-tmp-") as td:
         bad_tmpdir = Path(td) / "not-a-directory"
         bad_tmpdir.write_text("occupied", encoding="utf-8")
         proc, node_options_value, runtime_node_options_value, child_node_options_value = run_claude_teams(
@@ -531,7 +531,7 @@ def main() -> int:
             tmpdir=str(bad_tmpdir),
         )
     if proc.returncode != 0:
-        print("FAIL: `cmux claude-teams --version` should still succeed when TMPDIR is unusable")
+        print("FAIL: `bree claude-teams --version` should still succeed when TMPDIR is unusable")
         print(f"exit={proc.returncode}")
         print(f"stdout={proc.stdout.strip()}")
         print(f"stderr={proc.stderr.strip()}")
@@ -540,11 +540,11 @@ def main() -> int:
     require_flag, _, remaining_flags = node_options_value.partition(" ")
     if (
         not require_flag.startswith("--require=")
-        or "/.cmuxterm/cmux-claude-node-options/" not in require_flag
+        or "/.bree/bree-claude-node-options/" not in require_flag
         or str(bad_tmpdir) in require_flag
     ):
         print(
-            "FAIL: expected claude-teams to inject the ~/.cmuxterm restore preload when TMPDIR is unusable, "
+            "FAIL: expected claude-teams to inject the ~/.bree restore preload when TMPDIR is unusable, "
             f"got {node_options_value!r}"
         )
         return 1
@@ -579,7 +579,7 @@ def main() -> int:
         block_preload_directory=True,
     )
     if proc.returncode != 0:
-        print("FAIL: `cmux claude-teams --version` should still succeed when the restore preload cannot be written")
+        print("FAIL: `bree claude-teams --version` should still succeed when the restore preload cannot be written")
         print(f"exit={proc.returncode}")
         print(f"stdout={proc.stdout.strip()}")
         print(f"stderr={proc.stderr.strip()}")
@@ -606,7 +606,7 @@ def main() -> int:
         )
         return 1
 
-    print("PASS: cmux claude-teams restores child NODE_OPTIONS while injecting the auto-mode tmux env")
+    print("PASS: bree claude-teams restores child NODE_OPTIONS while injecting the auto-mode tmux env")
     return 0
 
 

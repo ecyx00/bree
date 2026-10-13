@@ -1,10 +1,10 @@
 import WebKit
-import CmuxBrowser
+import BreeBrowser
 
 @MainActor
 final class DiffViewerEditableFocusMessageHandler: NSObject, WKScriptMessageHandler {
-    static let name = "cmuxDiffViewerEditableFocus"
-    static let contentWorld = WKContentWorld.world(name: "cmuxDiffViewerNavigation")
+    static let name = "breeDiffViewerEditableFocus"
+    static let contentWorld = WKContentWorld.world(name: "breeDiffViewerNavigation")
     static let shared = DiffViewerEditableFocusMessageHandler()
 
     func userContentController(
@@ -12,7 +12,7 @@ final class DiffViewerEditableFocusMessageHandler: NSObject, WKScriptMessageHand
         didReceive message: WKScriptMessage
     ) {
         guard DiffCommentsBridge.isTrustedDiffViewerFrame(message.frameInfo),
-              let webView = message.webView as? CmuxWebView,
+              let webView = message.webView as? BreeWebView,
               let body = message.body as? [String: Any],
               let viewer = body["viewer"] as? Bool,
               let editable = body["editable"] as? Bool,

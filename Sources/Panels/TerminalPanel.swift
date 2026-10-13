@@ -1,11 +1,11 @@
-import CmuxCloud
+import BreeCloud
 import Foundation
-import CmuxTerminalCore
+import BreeTerminalCore
 import Combine
 import AppKit
 import Bonsplit
-import CmuxTerminal
-import CmuxWorkspaces
+import BreeTerminal
+import BreeWorkspaces
 import GhosttyKit
 
 /// TerminalPanel wraps an existing TerminalSurface and conforms to the Panel protocol.
@@ -219,7 +219,7 @@ final class TerminalPanel: Panel, ObservableObject {
         id: UUID = UUID(),
         workspaceId: UUID,
         context: ghostty_surface_context_e = GHOSTTY_SURFACE_CONTEXT_SPLIT,
-        configTemplate: CmuxSurfaceConfigTemplate? = nil,
+        configTemplate: BreeSurfaceConfigTemplate? = nil,
         workingDirectory: String? = nil,
         portOrdinal: Int = 0,
         initialCommand: String? = nil,
@@ -277,7 +277,7 @@ final class TerminalPanel: Panel, ObservableObject {
     }
 
     private static func startsAtOwnedPrompt(
-        configTemplate: CmuxSurfaceConfigTemplate?,
+        configTemplate: BreeSurfaceConfigTemplate?,
         initialCommand: String?,
         tmuxStartCommand: String?,
         initialInput: String?
@@ -750,7 +750,7 @@ final class TerminalPanel: Panel, ObservableObject {
 #if DEBUG
         let frame = String(format: "%.1fx%.1f", hostedView.frame.width, hostedView.frame.height)
         let bounds = String(format: "%.1fx%.1f", hostedView.bounds.width, hostedView.bounds.height)
-        cmuxDebugLog(
+        breeDebugLog(
             "surface.panel.close.begin panel=\(id.uuidString.prefix(5)) " +
             "workspace=\(workspaceId.uuidString.prefix(5)) runtimeSurface=\(surface.surface != nil ? 1 : 0) " +
             "inWindow=\(surface.isViewInWindow ? 1 : 0) hasSuperview=\(hostedView.superview != nil ? 1 : 0) " +
@@ -761,7 +761,7 @@ final class TerminalPanel: Panel, ObservableObject {
         hostedView.setVisibleInUI(false)
         TerminalWindowPortalRegistry.detach(hostedView: hostedView)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "surface.panel.close.end panel=\(id.uuidString.prefix(5)) " +
             "inWindow=\(surface.isViewInWindow ? 1 : 0) hasSuperview=\(hostedView.superview != nil ? 1 : 0) " +
             "hidden=\(hostedView.isHidden ? 1 : 0)"

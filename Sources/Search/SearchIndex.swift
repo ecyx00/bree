@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 import SQLite3
 
@@ -113,14 +113,14 @@ actor SearchIndex {
 
     private var database: OpaquePointer?
 
-    nonisolated static func open(databaseURL: URL = .cmuxSearchDatabaseURL) async throws -> SearchIndex {
+    nonisolated static func open(databaseURL: URL = .breeSearchDatabaseURL) async throws -> SearchIndex {
         // Actor initializers run on the caller executor, so open SQLite off the MainActor.
         try await Task.detached(priority: .utility) {
             try SearchIndex(databaseURL: databaseURL)
         }.value
     }
 
-    init(databaseURL: URL = .cmuxSearchDatabaseURL) throws {
+    init(databaseURL: URL = .breeSearchDatabaseURL) throws {
         try Self.ensureParentDirectoryExists(for: databaseURL)
 
         var openedDatabase: OpaquePointer?
@@ -483,9 +483,9 @@ actor SearchIndex {
 }
 
 extension URL {
-    static var cmuxSearchDatabaseURL: URL {
+    static var breeSearchDatabaseURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent(CmuxIdentity.current.applicationSupportDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.applicationSupportDirectoryName, isDirectory: true)
             .appendingPathComponent("search.db", isDirectory: false)
     }
 }

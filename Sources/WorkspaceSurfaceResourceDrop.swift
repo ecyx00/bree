@@ -1,5 +1,5 @@
 import Bonsplit
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension SurfaceDestination {
@@ -48,7 +48,7 @@ extension Workspace {
               catalog.ownershipRejection(for: group.resources, policy: surfaceOwnershipPolicy) == nil else { return false }
         let target = SurfaceDestination.dropDestination(workspaceID: self.id, destination: destination)
 #if DEBUG
-        cmuxDebugLog("surfaces.drop workspace=\(self.id.uuidString.prefix(5)) group=\(group.title) count=\(group.resources.count) target=\(target)")
+        breeDebugLog("surfaces.drop workspace=\(self.id.uuidString.prefix(5)) group=\(group.title) count=\(group.resources.count) target=\(target)")
 #endif
         Task { @MainActor in
             do {
@@ -62,7 +62,7 @@ extension Workspace {
                 }
             } catch {
 #if DEBUG
-                cmuxDebugLog("surfaces.drop.failed group=\(group.title) error=\(error)")
+                breeDebugLog("surfaces.drop.failed group=\(group.title) error=\(error)")
 #endif
             }
         }

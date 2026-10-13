@@ -1,6 +1,6 @@
 import AppKit
-import CmuxSettings
-import CmuxWorkspaces
+import BreeSettings
+import BreeWorkspaces
 
 /// Perform the configured action for opening a local file from the file explorer.
 /// `onOpenFilePreview` handles the `.preview` action (the explorer passes its persistent-tab opener).

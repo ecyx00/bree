@@ -1,6 +1,6 @@
 import AppKit
-import CmuxBrowser
-import CMUXMobileCore
+import BreeBrowser
+import BREEMobileCore
 import Foundation
 import WebKit
 

@@ -62,7 +62,7 @@ class Recorder(BaseHTTPRequestHandler):
             temporary = root / "requests.tmp"
             temporary.write_text(json.dumps(requests, indent=2))
             temporary.replace(root / "requests.json")
-        if args.provider == "cursor" and self.path.startswith("/aiserver.") and "cmux-reply-" not in body:
+        if args.provider == "cursor" and self.path.startswith("/aiserver.") and "bree-reply-" not in body:
             # Cursor's published protobuf schema: GetUsableModels.models (1)
             # contains ModelDetails.model_id (1) and display strings (3,4,5).
             model = b"\x0a\x04auto\x1a\x04auto\x22\x04Auto\x2a\x04Auto"
@@ -84,7 +84,7 @@ class Recorder(BaseHTTPRequestHandler):
             response = {"totalTokens": 1}
             self.send_response(200)
         else:
-            response = {"error": {"message": "Submission captured by cmux verification", "code": 400, "status": "INVALID_ARGUMENT"}}
+            response = {"error": {"message": "Submission captured by bree verification", "code": 400, "status": "INVALID_ARGUMENT"}}
             self.send_response(400)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
@@ -197,9 +197,9 @@ default = "fixture"
     command = [str(base / "grok"), "--cwd", str(project), "--model", "fixture"]
     ready = "Grok"
 
-socket = os.environ["CMUX_SOCKET_PATH"]
+socket = os.environ["BREE_SOCKET_PATH"]
 identity = call(socket, "system.identify")
-assert identity["socket_path"] == socket and socket.startswith("/tmp/cmux-debug-")
+assert identity["socket_path"] == socket and socket.startswith("/tmp/bree-debug-")
 launch = shlex.join(["env", "-i", *[f"{k}={v}" for k, v in env.items()], *command])
 launch = shlex.join(["/bin/sh", "-c", launch + "; sleep 120"])
 workspace = call(socket, "workspace.create", {"initial_command": launch, "working_directory": str(project)})["workspace_id"]
@@ -214,7 +214,7 @@ try:
         time.sleep(0.5)
     else:
         raise AssertionError(f"{args.provider} did not reach its prompt; see {root}/startup.json")
-    text = "cmux-reply-" + str(uuid.uuid4())
+    text = "bree-reply-" + str(uuid.uuid4())
     if args.multiline:
         text += "\nSecond line 🧪"
     result = call(socket, "mobile.terminal.paste", {

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Regression coverage for https://github.com/manaflow-ai/cmux/issues/11257.
+Regression coverage for https://github.com/ecyx00/bree/issues/11257.
 
-cmux injects ``cmux-bash-bootstrap.bash`` as an environment-backed
-``PROMPT_COMMAND``.  Ghostty's bash-preexec integration and cmux's own
+bree injects ``bree-bash-bootstrap.bash`` as an environment-backed
+``PROMPT_COMMAND``.  Ghostty's bash-preexec integration and bree's own
 integration then replace that value with names of shell functions.  Bash keeps
 the export attribute across those assignments, so a child bash that does not
-load cmux's integration tries to run functions that do not exist.
+load bree's integration tries to run functions that do not exist.
 
 This test runs the real bootstrap and both real integrations in an interactive
-shell, verifies the first shell still has cmux's prompt hook without the export
+shell, verifies the first shell still has bree's prompt hook without the export
 attribute, and starts a nested interactive bash from that shell.  The nested
 shell is started with no profile/rc files so any ``command not found`` output
 can only come from an inherited ``PROMPT_COMMAND``.
@@ -26,7 +26,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-BOOTSTRAP = REPO_ROOT / "Resources" / "shell-integration" / "cmux-bash-bootstrap.bash"
+BOOTSTRAP = REPO_ROOT / "Resources" / "shell-integration" / "bree-bash-bootstrap.bash"
 INTEGRATION_DIR = REPO_ROOT / "Resources" / "shell-integration"
 GHOSTTY_RESOURCES_DIR = REPO_ROOT / "ghostty" / "src"
 
@@ -49,7 +49,7 @@ def _lean_bootstrap(text: str) -> str:
 DRIVER = r"""
 set +e
 
-_cmux_test_run_prompt_commands() {
+_bree_test_run_prompt_commands() {
     if [[ "$(declare -p PROMPT_COMMAND 2>/dev/null)" == "declare -a"* ]]; then
         local command
         for command in "${PROMPT_COMMAND[@]}"; do
@@ -63,16 +63,16 @@ _cmux_test_run_prompt_commands() {
 # Depending on whether Bash evaluates PROMPT_COMMAND before a -c command, one
 # or more of these cycles executes the injected bootstrap. Three covers both
 # that startup behavior and bash-preexec's delayed first-prompt installation.
-for _cmux_test_cycle in 1 2 3; do
-    _cmux_test_run_prompt_commands
+for _bree_test_cycle in 1 2 3; do
+    _bree_test_run_prompt_commands
 done
 
-_cmux_test_decl="$(declare -p PROMPT_COMMAND 2>/dev/null || true)"
-_cmux_test_decl="${_cmux_test_decl//$'\n'/<NL>}"
-printf '__CMUX_DECL_BEGIN__%s__CMUX_DECL_END__\n' "$_cmux_test_decl"
+_bree_test_decl="$(declare -p PROMPT_COMMAND 2>/dev/null || true)"
+_bree_test_decl="${_bree_test_decl//$'\n'/<NL>}"
+printf '__BREE_DECL_BEGIN__%s__BREE_DECL_END__\n' "$_bree_test_decl"
 
-_cmux_test_child="$(printf 'exit\n' | "$CMUX_BASH_BIN" --noprofile --norc -li 2>&1)"
-printf '__CMUX_CHILD_BEGIN__\n%s\n__CMUX_CHILD_END__\n' "$_cmux_test_child"
+_bree_test_child="$(printf 'exit\n' | "$BREE_BASH_BIN" --noprofile --norc -li 2>&1)"
+printf '__BREE_CHILD_BEGIN__\n%s\n__BREE_CHILD_END__\n' "$_bree_test_child"
 """
 
 
@@ -106,11 +106,11 @@ def _bash_candidates() -> list[tuple[str, Path, tuple[int, int, int]]]:
     system path and common Homebrew locations.
     """
 
-    configured_legacy = os.environ.get("CMUX_BASH_32_BIN")
-    configured_modern = os.environ.get("CMUX_BASH_NEW_BIN")
+    configured_legacy = os.environ.get("BREE_BASH_32_BIN")
+    configured_modern = os.environ.get("BREE_BASH_NEW_BIN")
     if (configured_legacy is None) != (configured_modern is None):
         raise AssertionError(
-            "CMUX_BASH_32_BIN and CMUX_BASH_NEW_BIN must be provided together"
+            "BREE_BASH_32_BIN and BREE_BASH_NEW_BIN must be provided together"
         )
 
     if configured_legacy is not None and configured_modern is not None:
@@ -155,7 +155,7 @@ def _bash_candidates() -> list[tuple[str, Path, tuple[int, int, int]]]:
             return []
         raise AssertionError(
             "the regression requires distinct Bash 3.2 and newer Bash executables; "
-            f"found {versions}. Set CMUX_BASH_32_BIN and CMUX_BASH_NEW_BIN explicitly."
+            f"found {versions}. Set BREE_BASH_32_BIN and BREE_BASH_NEW_BIN explicitly."
         )
 
     return [
@@ -170,7 +170,7 @@ def _run_driver(bash_bin: Path) -> subprocess.CompletedProcess[str]:
     env = {
         key: value
         for key, value in os.environ.items()
-        if not key.startswith("CMUX")
+        if not key.startswith("BREE")
         and key
         not in {
             "PROMPT_COMMAND",
@@ -179,7 +179,7 @@ def _run_driver(bash_bin: Path) -> subprocess.CompletedProcess[str]:
             "GHOSTTY_BASH_INJECT",
         }
     }
-    with tempfile.TemporaryDirectory(prefix="cmux-11257-") as home:
+    with tempfile.TemporaryDirectory(prefix="bree-11257-") as home:
         env.update(
             {
                 "HOME": home,
@@ -195,18 +195,18 @@ def _run_driver(bash_bin: Path) -> subprocess.CompletedProcess[str]:
                 "PROMPT_COMMAND": _lean_bootstrap(
                     BOOTSTRAP.read_text(encoding="utf-8")
                 ),
-                "CMUX_SHELL_INTEGRATION": "1",
-                "CMUX_SHELL_INTEGRATION_DIR": str(INTEGRATION_DIR),
-                "CMUX_LOAD_GHOSTTY_BASH_INTEGRATION": "1",
+                "BREE_SHELL_INTEGRATION": "1",
+                "BREE_SHELL_INTEGRATION_DIR": str(INTEGRATION_DIR),
+                "BREE_LOAD_GHOSTTY_BASH_INTEGRATION": "1",
                 "GHOSTTY_RESOURCES_DIR": str(GHOSTTY_RESOURCES_DIR),
-                "CMUX_TAB_ID": "tab-test",
-                "CMUX_PANEL_ID": "panel-test",
+                "BREE_TAB_ID": "tab-test",
+                "BREE_PANEL_ID": "panel-test",
                 # Avoid socket, git, and port side effects; prompt function
                 # installation itself remains active.
-                "CMUX_SOCKET_PATH": "",
-                "CMUX_NO_GIT_WATCH": "1",
-                "CMUX_NO_PORTS": "1",
-                "CMUX_BASH_BIN": str(bash_bin),
+                "BREE_SOCKET_PATH": "",
+                "BREE_NO_GIT_WATCH": "1",
+                "BREE_NO_PORTS": "1",
+                "BREE_BASH_BIN": str(bash_bin),
             }
         )
         return subprocess.run(
@@ -234,7 +234,7 @@ def test_prompt_command_is_not_exported_to_nested_bash() -> None:
     """Verify the bootstrap stays functional without exporting prompt hooks."""
 
     assert BOOTSTRAP.exists(), f"missing bootstrap file: {BOOTSTRAP}"
-    assert (INTEGRATION_DIR / "cmux-bash-integration.bash").exists()
+    assert (INTEGRATION_DIR / "bree-bash-integration.bash").exists()
     assert (GHOSTTY_RESOURCES_DIR / "shell-integration" / "bash" / "ghostty.bash").exists()
 
     bash_bins = _bash_candidates()
@@ -254,8 +254,8 @@ def test_prompt_command_is_not_exported_to_nested_bash() -> None:
 
         declaration = _between(
             proc.stdout,
-            "__CMUX_DECL_BEGIN__",
-            "__CMUX_DECL_END__",
+            "__BREE_DECL_BEGIN__",
+            "__BREE_DECL_END__",
         )
         exported_declaration = re.match(
             r"^declare -[A-Za-z]*x[A-Za-z]*\s+PROMPT_COMMAND(?:=|\s|$)",
@@ -266,15 +266,15 @@ def test_prompt_command_is_not_exported_to_nested_bash() -> None:
             f"shell would leak its function names to children: {declaration!r}"
             + debug
         )
-        assert "_cmux_prompt_command" in declaration, (
-            "cmux prompt integration was not installed in the first shell: "
+        assert "_bree_prompt_command" in declaration, (
+            "bree prompt integration was not installed in the first shell: "
             f"{declaration!r}" + debug
         )
 
         child_output = _between(
             proc.stdout,
-            "__CMUX_CHILD_BEGIN__\n",
-            "\n__CMUX_CHILD_END__",
+            "__BREE_CHILD_BEGIN__\n",
+            "\n__BREE_CHILD_END__",
         )
         assert "command not found" not in child_output.lower(), (
             "nested bash inherited function names through PROMPT_COMMAND and "
@@ -284,4 +284,4 @@ def test_prompt_command_is_not_exported_to_nested_bash() -> None:
 
 if __name__ == "__main__":
     test_prompt_command_is_not_exported_to_nested_bash()
-    print("PASS: PROMPT_COMMAND is private to the cmux bash shell")
+    print("PASS: PROMPT_COMMAND is private to the bree bash shell")

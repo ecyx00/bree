@@ -20,7 +20,7 @@ PAYLOAD = (
     "--tab=11111111-1111-1111-1111-111111111111 "
     "--panel=22222222-2222-2222-2222-222222222222"
 )
-EXPECTED_WIRE_LINE = f"_cmux_capability_v1 {CAPABILITY} {PAYLOAD}"
+EXPECTED_WIRE_LINE = f"_bree_capability_v1 {CAPABILITY} {PAYLOAD}"
 
 
 class UnixLineListener:
@@ -75,12 +75,12 @@ def shell_cases() -> list[tuple[str, Path, list[str]]]:
     cases = [
         (
             "bash",
-            ROOT / "Resources/shell-integration/cmux-bash-integration.bash",
+            ROOT / "Resources/shell-integration/bree-bash-integration.bash",
             ["/bin/bash", "--noprofile", "--norc", "-c"],
         ),
         (
             "zsh",
-            ROOT / "Resources/shell-integration/cmux-zsh-integration.zsh",
+            ROOT / "Resources/shell-integration/bree-zsh-integration.zsh",
             ["/bin/zsh", "-f", "-c"],
         ),
     ]
@@ -109,41 +109,41 @@ def base_environment(
     socket_path: Optional[Path] = None,
 ) -> dict[str, str]:
     environment = {
-        "CMUX_FISH_USER_CONFIG_ALREADY_LOADED": "1",
-        "CMUX_NO_GIT_WATCH": "1",
-        "CMUX_SHELL_INTEGRATION": "1",
-        "CMUX_SOCKET_CAPABILITY": CAPABILITY,
-        "CMUX_TEST_INTEGRATION": str(integration),
-        "CMUX_TEST_PAYLOAD": PAYLOAD,
+        "BREE_FISH_USER_CONFIG_ALREADY_LOADED": "1",
+        "BREE_NO_GIT_WATCH": "1",
+        "BREE_SHELL_INTEGRATION": "1",
+        "BREE_SOCKET_CAPABILITY": CAPABILITY,
+        "BREE_TEST_INTEGRATION": str(integration),
+        "BREE_TEST_PAYLOAD": PAYLOAD,
         "HOME": str(directory),
         "PATH": "/usr/bin:/bin",
         "TERM": "xterm-256color",
     }
     if socket_path is not None:
-        environment["CMUX_SOCKET_PATH"] = str(socket_path)
+        environment["BREE_SOCKET_PATH"] = str(socket_path)
     return environment
 
 
 def send_command() -> str:
     return (
-        'source "$CMUX_TEST_INTEGRATION"; '
-        '_cmux_send_bg "$CMUX_TEST_PAYLOAD"'
+        'source "$BREE_TEST_INTEGRATION"; '
+        '_bree_send_bg "$BREE_TEST_PAYLOAD"'
     )
 
 
 def tmux_publish_command(shell_name: str) -> str:
     if shell_name == "fish":
         return """
-source "$CMUX_TEST_INTEGRATION"
+source "$BREE_TEST_INTEGRATION"
 function tmux
-    string join ' ' -- $argv >> "$CMUX_TEST_TMUX_LOG"
+    string join ' ' -- $argv >> "$BREE_TEST_TMUX_LOG"
 end
-_cmux_tmux_publish_cmux_environment
+_bree_tmux_publish_bree_environment
 """
     return """
-source "$CMUX_TEST_INTEGRATION"
-tmux() { printf '%s\n' "$*" >> "$CMUX_TEST_TMUX_LOG"; }
-_cmux_tmux_publish_cmux_environment
+source "$BREE_TEST_INTEGRATION"
+tmux() { printf '%s\n' "$*" >> "$BREE_TEST_TMUX_LOG"; }
+_bree_tmux_publish_bree_environment
 """
 
 
@@ -153,13 +153,13 @@ NO_SERVER_ERROR = "no server running on /tmp/tmux-501/default"
 def failing_tmux_publish_command(
     shell_name: str, attempts: int, error: str = NO_SERVER_ERROR
 ) -> str:
-    publish = "\n_cmux_tmux_publish_cmux_environment" * attempts
+    publish = "\n_bree_tmux_publish_bree_environment" * attempts
     if shell_name == "fish":
         return (
             f"""
-source "$CMUX_TEST_INTEGRATION"
+source "$BREE_TEST_INTEGRATION"
 function tmux
-    string join ' ' -- $argv >> "$CMUX_TEST_TMUX_LOG"
+    string join ' ' -- $argv >> "$BREE_TEST_TMUX_LOG"
     echo '{error}' >&2
     return 1
 end"""
@@ -168,8 +168,8 @@ end"""
         )
     return (
         f"""
-source "$CMUX_TEST_INTEGRATION"
-tmux() {{ printf '%s\\n' "$*" >> "$CMUX_TEST_TMUX_LOG"; echo '{error}' >&2; return 1; }}"""
+source "$BREE_TEST_INTEGRATION"
+tmux() {{ printf '%s\\n' "$*" >> "$BREE_TEST_TMUX_LOG"; echo '{error}' >&2; return 1; }}"""
         + publish
         + "\n"
     )
@@ -233,7 +233,7 @@ def tmux_environment(
         server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         server.bind(str(socket_directory / "default"))
     environment = base_environment(integration, directory)
-    environment["CMUX_TEST_TMUX_LOG"] = str(log_path)
+    environment["BREE_TEST_TMUX_LOG"] = str(log_path)
     environment["TMUX_TMPDIR"] = str(tmux_tmpdir)
     return environment, log_path, server
 
@@ -343,15 +343,15 @@ def assert_tmux_does_not_publish_capability(
         if server is not None:
             server.close()
     output = log_path.read_text(encoding="utf-8")
-    forbidden = "set-environment -g CMUX_SOCKET_CAPABILITY "
+    forbidden = "set-environment -g BREE_SOCKET_CAPABILITY "
     if forbidden in output:
         raise AssertionError(
             f"{shell_name} published the socket capability to tmux:\n{output}"
         )
-    expected = "set-environment -g CMUX_SHELL_INTEGRATION 1"
+    expected = "set-environment -g BREE_SHELL_INTEGRATION 1"
     if expected not in output:
         raise AssertionError(
-            f"{shell_name} did not publish ordinary cmux state to tmux:\n{output}"
+            f"{shell_name} did not publish ordinary bree state to tmux:\n{output}"
         )
 
 
@@ -360,7 +360,7 @@ def main() -> int:
         print("SKIP: macOS /usr/bin/nc is required")
         return 0
 
-    with tempfile.TemporaryDirectory(prefix="cmux-9075-", dir="/tmp") as temp:
+    with tempfile.TemporaryDirectory(prefix="bree-9075-", dir="/tmp") as temp:
         directory = Path(temp)
         cases = shell_cases()
         for shell_name, integration, argv_prefix in cases:

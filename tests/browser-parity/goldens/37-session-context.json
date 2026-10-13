@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "user-tab-keeps-its-user-agent": true,
     "created-tab-gets-the-user-agent": true,
     "owner-options-survive-another-session": true

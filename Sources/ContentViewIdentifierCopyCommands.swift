@@ -1,4 +1,4 @@
-import CmuxCommandPalette
+import BreeCommandPalette
 import AppKit
 import Foundation
 

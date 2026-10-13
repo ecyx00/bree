@@ -36,7 +36,7 @@ test("googleSheets.write to a shared sheet is a draft; the confirmed draft paste
 });
 
 test("googleSheets.write types the cells when the editor drops the paste", async () => {
-  const f = await s.value('sites.googleDrive.create("spreadsheets", "cmux REPL paste fallback")');
+  const f = await s.value('sites.googleDrive.create("spreadsheets", "bree REPL paste fallback")');
   files.get(f.id).ignorePaste = true;
   assert.deepEqual(await s.value(`sites.googleSheets.write(${JSON.stringify(f.url)}, "A1", [["a", "b"]])`), { status: "written", range: "A1:B1", verified: true });
   assert.deepEqual(files.get(f.id).edits, ["typed", "typed"]);
@@ -44,10 +44,10 @@ test("googleSheets.write types the cells when the editor drops the paste", async
 });
 
 test("googleSheets.append, write and clear on a private sheet run at once and verify", async () => {
-  const f = await s.value('sites.googleDrive.create("spreadsheets", "cmux REPL test")');
+  const f = await s.value('sites.googleDrive.create("spreadsheets", "bree REPL test")');
   assert.match(f.url, /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[\w-]+\/edit$/);
-  assert.equal(f.title, "cmux REPL test");
-  assert.equal(files.get(f.id).title, "cmux REPL test", "the rename reached the file");
+  assert.equal(f.title, "bree REPL test");
+  assert.equal(files.get(f.id).title, "bree REPL test", "the rename reached the file");
   assert.deepEqual(await s.value(`sites.googleSheets.write(${JSON.stringify(f.url)}, "A1", [["a", "b"], ["1", "=SUM(A2:A2)"]])`), { status: "written", range: "A1:B2", verified: true });
   assert.deepEqual(await s.value(`sites.googleSheets.append(${JSON.stringify(f.url)}, [["2", "x"]])`), { status: "written", range: "A3:B3", verified: true });
   assert.deepEqual((await s.value(`sites.googleSheets.read(${JSON.stringify(f.url)})`)).rows, [["a", "b"], ["1", "1"], ["2", "x"]]);

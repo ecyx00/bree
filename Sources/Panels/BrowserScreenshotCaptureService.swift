@@ -1,6 +1,6 @@
 import AppKit
-import CmuxBrowser
-import CmuxFoundation
+import BreeBrowser
+import BreeFoundation
 import WebKit
 
 /// Owns synchronized, DOM-attested capture of one browser viewport.
@@ -111,7 +111,7 @@ struct BrowserScreenshotCaptureService {
             case .mismatch(let probe, let count):
                 guard attempt == maximumAttempts else {
 #if DEBUG
-                    cmuxDebugLog(
+                    breeDebugLog(
                         "browser.screenshot.verify.retry attempt=\(attempt) " +
                         "probe=\(probe.identifier) mismatches=\(count)"
                     )

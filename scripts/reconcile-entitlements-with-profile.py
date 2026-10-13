@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Reconcile a cmux entitlements file with the provisioning profile it ships with.
+"""Reconcile a bree entitlements file with the provisioning profile it ships with.
 
 macOS refuses to launch a Developer ID app whose signature claims a restricted
 entitlement (`com.apple.developer.*`) that its embedded provisioning profile
-does not grant. The cmux entitlement files declare the *desired* state — today
+does not grant. The bree entitlement files declare the *desired* state — today
 that includes the Cloud tunnel capability
 (`com.apple.developer.networking.networkextension` with
 `packet-tunnel-provider-systemextension` plus
@@ -15,8 +15,8 @@ rejects in a container app carrying a packet-tunnel system extension are
 removed from the app signature.
 
 Usage:
-  reconcile-entitlements-with-profile.py --entitlements cmux.release.entitlements \
-      --profile "cmux.app/Contents/embedded.provisionprofile" --output /tmp/effective.plist [--json]
+  reconcile-entitlements-with-profile.py --entitlements bree.release.entitlements \
+      --profile "bree.app/Contents/embedded.provisionprofile" --output /tmp/effective.plist [--json]
 
 `--profile` accepts either the CMS-wrapped `.provisionprofile` (decoded with
 `security cms -D`) or an already-decoded XML plist. `--no-profile` produces the

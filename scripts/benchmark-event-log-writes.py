@@ -23,7 +23,7 @@ def main():
         parser.error('--samples must be between 1 and 100')
     root = pathlib.Path(__file__).resolve().parents[1]
     baseline = subprocess.check_output(['git', 'rev-parse', '--verify', f'{args.baseline}^{{commit}}'], cwd=root, text=True).strip()
-    writer = 'Sources/CmuxEventLogWriter.swift'
+    writer = 'Sources/BreeEventLogWriter.swift'
     report = {
         'baseline': baseline,
         'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
@@ -32,7 +32,7 @@ def main():
         'scope': 'Warm runtime; fresh synthetic files; kernel-buffered FileHandle writes; no fsync.',
         'variants': {},
     }
-    with tempfile.TemporaryDirectory(prefix='cmux-event-log-benchmark-') as directory:
+    with tempfile.TemporaryDirectory(prefix='bree-event-log-benchmark-') as directory:
         temp = pathlib.Path(directory)
         for variant in ('before', 'after'):
             source = temp / f'{variant}.swift'
@@ -41,7 +41,7 @@ def main():
             executable = temp / variant
             subprocess.run([
                 'swiftc', '-swift-version', '6', '-DDEBUG', '-O', '-warnings-as-errors', str(source),
-                str(root / 'cmuxTests/CmuxEventLogWriteSpy.swift'),
+                str(root / 'breeTests/BreeEventLogWriteSpy.swift'),
                 str(root / 'scripts/benchmarks/EventLogWriteBenchmark.swift'), '-o', str(executable)
             ], check=True, cwd=root)
             output = subprocess.check_output([str(executable), str(args.samples)], text=True)

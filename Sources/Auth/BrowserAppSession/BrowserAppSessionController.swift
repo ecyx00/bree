@@ -1,5 +1,5 @@
-import CmuxAuthRuntime
-import CmuxBrowser
+import BreeAuthRuntime
+import BreeBrowser
 import Foundation
 import WebKit
 
@@ -50,9 +50,9 @@ final class BrowserAppSessionController {
         self.environment = environment
         storeRegistry = registryOverride ?? BrowserAppSessionStoreRegistry(
             defaults: defaults,
-            defaultsKey: "cmux.auth.browserAppSessionStores.v2",
+            defaultsKey: "bree.auth.browserAppSessionStores.v2",
             environment: environment,
-            legacyDefaultsKeyPrefix: "cmux.auth.browserAppSessionStores."
+            legacyDefaultsKeyPrefix: "bree.auth.browserAppSessionStores."
         )
         self.clearWebsiteDataStore = clearWebsiteDataStore ?? { store in
             await Self.removeAppSessionWebsiteData(from: store)
@@ -167,7 +167,7 @@ final class BrowserAppSessionController {
 
     /// Joins cancelled exchanges before deleting the exact stores that received
     /// app-session cookies. No unrelated browser profile is swept.
-    func clearCmuxWebSession() async {
+    func clearBreeWebSession() async {
         beginAuthTransition()
         _ = await awaitPendingCleanup()
         // A failed physical deletion does not keep the user signed in: live

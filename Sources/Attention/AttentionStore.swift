@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import Combine
 import Foundation
@@ -153,6 +153,7 @@ final class AttentionStore: ObservableObject {
         lastOutputByPanel: [UUID: String] = [:],
         pendingToolByPanel: [UUID: AttentionPendingTool] = [:],
         showSnoozed: Bool = false,
+        includeSeenDone: Bool = false,
         nowMs: Int64 = AttentionStore.nowMs()
     ) -> (items: [AttentionItem], snoozedCount: Int) {
         let managers = AppDelegate.shared?.allMainWindowTabManagersForDebug() ?? []
@@ -173,7 +174,8 @@ final class AttentionStore: ObservableObject {
                             for: record,
                             workspace: workspace,
                             agentKey: agentKey,
-                            isSelected: isSelected
+                            isSelected: isSelected,
+                            includeSeenDone: includeSeenDone
                         ) else { continue }
                         if best == nil || state < best!.state {
                             best = (state, record.sinceMs, agentKey)
@@ -245,7 +247,8 @@ final class AttentionStore: ObservableObject {
         for record: Record,
         workspace: Workspace,
         agentKey: String,
-        isSelected: Bool
+        isSelected: Bool,
+        includeSeenDone: Bool
     ) -> AttentionState? {
         switch record.lifecycle {
         case .needsInput:
@@ -255,7 +258,9 @@ final class AttentionStore: ObservableObject {
             return .running
         case .idle:
             let seenAt = seenAtMs[workspace.id] ?? launchMs
-            return AttentionRanking.isUnseenDone(sinceMs: record.sinceMs, seenAtMs: seenAt, isSelected: isSelected)
+            // The Board lists every recent finish, seen or not.
+            return includeSeenDone
+                || AttentionRanking.isUnseenDone(sinceMs: record.sinceMs, seenAtMs: seenAt, isSelected: isSelected)
                 ? .done : nil
         case .unknown:
             return nil
@@ -413,7 +418,7 @@ final class AttentionStore: ObservableObject {
         revision &+= 1
     }
 
-    /// Attention agent keys can carry the feed prefix ("cmux.feed.attention:claude code"); show the plain name.
+    /// Attention agent keys can carry the feed prefix ("bree.feed.attention:claude code"); show the plain name.
     static func plainAgentName(_ key: String) -> String {
         let prefix = FeedCoordinator.attentionStatusKeyPrefix
         let plain = key.hasPrefix(prefix) ? String(key.dropFirst(prefix.count)) : key

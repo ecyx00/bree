@@ -1,8 +1,8 @@
 import AppKit
-import CmuxFoundation
-import CmuxSettings
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeFoundation
+import BreeSettings
+import BreeTerminal
+import BreeTerminalCore
 import SwiftUI
 
 @MainActor
@@ -54,7 +54,7 @@ final class TerminalCopyConfirmationView: NSView {
     private static let fadeInDuration: TimeInterval = 0.12
     private static let fadeOutDuration: TimeInterval = 0.3
 
-    private let hostingView = NSHostingView(rootView: CopyConfirmationCapsule(accent: .accentColor))
+    private let hostingView = NSHostingView(rootView: CopyConfirmationCapsule(accent: BreeChromePalette.currentSnapshot.accentFill))
     private var bottomConstraint: NSLayoutConstraint?
     private var hideTask: Task<Void, Never>?
 

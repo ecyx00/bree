@@ -68,7 +68,7 @@ extension RemoteTmuxControlConnection {
 
     /// Sizes the tmux control client to `columns`×`rows` cells (tmux
     /// `refresh-client -C`) so the remote windows/panes reflow to the rendered
-    /// cmux grid. Without this a freshly attached session stays at ssh's default
+    /// bree grid. Without this a freshly attached session stays at ssh's default
     /// 80×24 and TUIs (claude, claude agents) render mangled. Always records the grid
     /// (re-applied by ``reseedAfterReconnect()``); sends the live `refresh-client`
     /// only while `.connected`. No-ops for a degenerate grid.
@@ -162,7 +162,7 @@ extension RemoteTmuxControlConnection {
             return
         }
         #if DEBUG
-        cmuxDebugLog("remote.rects.claim @\(windowId) \(columns)x\(rows)")
+        breeDebugLog("remote.rects.claim @\(windowId) \(columns)x\(rows)")
         #endif
         lastSizingSendAt = .now
         guard connectionState == .connected else { return }
@@ -249,7 +249,7 @@ extension RemoteTmuxControlConnection {
         windowClaimParityRearmsSpent[windowId] = spent + 1
         sentWindowSizes.removeValue(forKey: windowId)
         #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "remote.rects.claim.rearm @\(windowId) desired=\(desired.0)x\(desired.1) " +
             "layout=\(layoutColumns)x\(layoutRows) spent=\(spent + 1)"
         )
@@ -303,7 +303,7 @@ extension RemoteTmuxControlConnection {
     /// get a clean current-width frame is the app's own repaint — which apps do on
     /// SIGWINCH. A real-terminal attach virtually always delivers that SIGWINCH
     /// because its size differs from the detached window's size. The mirror's attach
-    /// usually does NOT: the window still has the size cmux itself left behind, so
+    /// usually does NOT: the window still has the size bree itself left behind, so
     /// `refresh-client -C` matches it exactly, no pane resize happens, and the stale
     /// frame stays until the user manually resizes. This kick closes that one gap by
     /// sending the same signal a real attach sends: a genuine size change (rows-1),
@@ -356,7 +356,7 @@ extension RemoteTmuxControlConnection {
                 }
                 if !windowAlreadyAtTarget {
                     #if DEBUG
-                    cmuxDebugLog("remote.size.kick skip=windowSizeDiffers target=\(size.columns)x\(size.rows)")
+                    breeDebugLog("remote.size.kick skip=windowSizeDiffers target=\(size.columns)x\(size.rows)")
                     #endif
                     pendingAttachRedrawKick = false
                     return
@@ -388,7 +388,7 @@ extension RemoteTmuxControlConnection {
     /// grow, which is what looped (see repaintPaneVisibleScreen).
     private func sendSessionRedrawKick(size: (columns: Int, rows: Int)) {
         #if DEBUG
-        cmuxDebugLog("remote.size.kick shrink to \(size.columns)x\(size.rows - 1)")
+        breeDebugLog("remote.size.kick shrink to \(size.columns)x\(size.rows - 1)")
         #endif
         attachRedrawKickTask?.cancel()
         attachRedrawKickTask = Task { @MainActor [weak self] in
@@ -408,7 +408,7 @@ extension RemoteTmuxControlConnection {
             // Restore the CURRENT size (the user may have resized during the gap).
             let restore = self.lastClientSize ?? size
             #if DEBUG
-            cmuxDebugLog("remote.size.kick restore to \(restore.columns)x\(restore.rows)")
+            breeDebugLog("remote.size.kick restore to \(restore.columns)x\(restore.rows)")
             #endif
             self.send("refresh-client -C \(restore.columns)x\(restore.rows)")
         }
@@ -422,7 +422,7 @@ extension RemoteTmuxControlConnection {
     private func sendPerWindowRedrawKick(kicks: [(windowId: Int, columns: Int, rows: Int)]) {
         #if DEBUG
         let kickList = kicks.map { "@\($0.windowId)" }.joined(separator: ",")
-        cmuxDebugLog("remote.size.kick windows=\(kickList)")
+        breeDebugLog("remote.size.kick windows=\(kickList)")
         #endif
         for kick in kicks {
             perWindowRedrawKickTasks[kick.windowId]?.cancel()
@@ -433,7 +433,7 @@ extension RemoteTmuxControlConnection {
                 guard self.lastWindowSizes[kick.windowId].map({ $0 == (kick.columns, kick.rows) }) == true
                 else { return }
                 #if DEBUG
-                cmuxDebugLog("remote.size.kick @\(kick.windowId) shrink to \(kick.columns)x\(kick.rows - 1)")
+                breeDebugLog("remote.size.kick @\(kick.windowId) shrink to \(kick.columns)x\(kick.rows - 1)")
                 #endif
                 self.sendPerWindowSize(windowId: kick.windowId, columns: kick.columns, rows: kick.rows - 1)
                 do {
@@ -444,7 +444,7 @@ extension RemoteTmuxControlConnection {
                 guard self.connectionState == .connected,
                       let restore = self.lastWindowSizes[kick.windowId] else { return }
                 #if DEBUG
-                cmuxDebugLog("remote.size.kick @\(kick.windowId) restore to \(restore.0)x\(restore.1)")
+                breeDebugLog("remote.size.kick @\(kick.windowId) restore to \(restore.0)x\(restore.1)")
                 #endif
                 self.sendPerWindowSize(windowId: kick.windowId, columns: restore.0, rows: restore.1)
             }

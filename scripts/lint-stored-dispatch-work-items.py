@@ -131,7 +131,7 @@ ALLOWANCES = (
         "fixed-size append-only startup scan fanout",
     ),
     Allowance(
-        "Packages/macOS/CmuxRemoteDaemon/Sources/CmuxRemoteDaemon/Client/RemoteDaemonRPCClient.swift",
+        "Packages/macOS/BreeRemoteDaemon/Sources/BreeRemoteDaemon/Client/RemoteDaemonRPCClient.swift",
         "webSocketKeepaliveTimeoutWorkItem",
         "DispatchWorkItem?",
         "member:RemoteDaemonRPCClient",
@@ -139,7 +139,7 @@ ALLOWANCES = (
         "state-queue-owned watchdog whose queued closure weakly captures the client",
     ),
     Allowance(
-        "Packages/macOS/CmuxRemoteDaemon/Sources/CmuxRemoteDaemon/Client/RemoteDaemonRPCClient.swift",
+        "Packages/macOS/BreeRemoteDaemon/Sources/BreeRemoteDaemon/Client/RemoteDaemonRPCClient.swift",
         "transportKeepaliveTimeoutWorkItem",
         "DispatchWorkItem?",
         "member:RemoteDaemonRPCClient",
@@ -147,10 +147,10 @@ ALLOWANCES = (
         "state-queue-owned watchdog whose queued closure weakly captures the client",
     ),
     Allowance(
-        "CLI/cmux.swift",
+        "CLI/bree.swift",
         "keepaliveTimeoutWorkItem",
         "DispatchWorkItem?",
-        "member:CMUXCLI.VMPtyWebSocketBridge",
+        "member:BREECLI.VMPtyWebSocketBridge",
         1,
         "send-queue-owned watchdog whose queued closure weakly captures the bridge",
     ),

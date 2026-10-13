@@ -1,5 +1,5 @@
 import Foundation
-import CmuxTerminal
+import BreeTerminal
 
 @MainActor
 extension TerminalPanel {

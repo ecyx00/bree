@@ -12,7 +12,7 @@ struct LocalTmuxProcessResult: Sendable {
     var outputWasTruncated: Bool { stdoutWasTruncated || stderrWasTruncated }
 }
 
-/// Runs short-lived tmux control commands without inheriting cmux socket secrets.
+/// Runs short-lived tmux control commands without inheriting bree socket secrets.
 /// local-zellij runs zellij through it with its own failure messages.
 struct LocalTmuxProcessRunner {
     let executablePath: String
@@ -38,13 +38,13 @@ struct LocalTmuxProcessRunner {
         self.timedOutMessage = timedOutMessage
         var sanitized = environment
         sanitized.removeValue(forKey: "TMUX")
-        sanitized.removeValue(forKey: "CMUX_SOCKET_PASSWORD")
-        sanitized.removeValue(forKey: "CMUX_SOCKET")
-        sanitized.removeValue(forKey: "CMUX_SOCKET_PATH")
-        sanitized.removeValue(forKey: "CMUX_SOCKET_PASSWORD_FILE")
+        sanitized.removeValue(forKey: "BREE_SOCKET_PASSWORD")
+        sanitized.removeValue(forKey: "BREE_SOCKET")
+        sanitized.removeValue(forKey: "BREE_SOCKET_PATH")
+        sanitized.removeValue(forKey: "BREE_SOCKET_PASSWORD_FILE")
         // A detached owner must not retain a stale workspace/surface identity
         // or a socket credential from the GUI that launched it.
-        sanitized = sanitized.filter { !$0.key.hasPrefix("CMUX_") && !$0.key.hasPrefix("CMUXD_") }
+        sanitized = sanitized.filter { !$0.key.hasPrefix("BREE_") && !$0.key.hasPrefix("BREED_") }
         self.environment = sanitized
     }
 

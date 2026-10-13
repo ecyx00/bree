@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evidence-only adapter for one existing CMUX unittest recipe. No build/merge authority."""
+"""Evidence-only adapter for one existing BREE unittest recipe. No build/merge authority."""
 import argparse
 import hashlib
 import json
@@ -22,7 +22,7 @@ def digest(data):
 
 def envelope():
     return {
-        "schema_version": "cmux-verification/v1",
+        "schema_version": "bree-verification/v1",
         "authority": "evidence_only",
         "recipe": {"id": RECIPE, "revision": None, "claim_class": "python-workflow-guard-tests",
                    "argv": ["python3", RECIPE]},
@@ -65,7 +65,7 @@ def unittest_summary(log):
 
 def assess(result):
     """Conservative derived qualifications, never a replacement for provider conclusions."""
-    if result.get("schema_version") != "cmux-verification/v1":
+    if result.get("schema_version") != "bree-verification/v1":
         raise ValueError("unsupported receipt schema_version")
     reasons = []
     for c in result["checks"]:
@@ -120,7 +120,7 @@ def observe(repo):
 
 def local(repo):
     r = envelope()
-    r["source"]["repository"] = "cmux (caller-supplied checkout)"
+    r["source"]["repository"] = "bree (caller-supplied checkout)"
     r["source"]["before"] = observe(repo)
     r["source"]["head_sha"] = r["source"]["before"]["commit"]
     r["source"]["checkout_sha"] = r["source"]["before"]["commit"]
@@ -223,7 +223,7 @@ def main():
     sub = p.add_subparsers(dest="mode", required=True)
     loc = sub.add_parser("local")
     loc.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1],
-                     help="CMUX checkout (defaults to this script’s repository)")
+                     help="BREE checkout (defaults to this script’s repository)")
     imp = sub.add_parser("ci")
     for name in ("run", "job", "log"):
         imp.add_argument("--" + name, type=Path, required=True)

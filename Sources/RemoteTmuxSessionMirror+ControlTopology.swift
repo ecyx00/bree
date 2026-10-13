@@ -1,5 +1,5 @@
 import Bonsplit
-import CmuxRemoteSession
+import BreeRemoteSession
 import Foundation
 
 @MainActor

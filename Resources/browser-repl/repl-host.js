@@ -6,7 +6,7 @@
 // cells (and closures from earlier cells) see the same bindings.
 (function (root) {
   "use strict";
-  const ns = (root.CmuxBrowserRepl = root.CmuxBrowserRepl || {});
+  const ns = (root.BreeBrowserRepl = root.BreeBrowserRepl || {});
 
   function acornApi() {
     const acorn = root.acorn || (ns.vendor && ns.vendor.acorn);
@@ -66,7 +66,7 @@
     if (imports.length) {
       // Replace the `import` keyword (6 chars) from the end so offsets stay valid.
       for (const node of imports.sort((a, b) => b.start - a.start)) {
-        code = code.slice(0, node.start) + "__cmuxImport" + code.slice(node.start + 6);
+        code = code.slice(0, node.start) + "__breeImport" + code.slice(node.start + 6);
       }
       return rewriteTopLevel(code);
     }
@@ -97,7 +97,7 @@
         out += `;${stmt.id.name} = ${text};`;
       } else if (index === body.length - 1 && stmt.type === "ExpressionStatement") {
         const expr = code.slice(stmt.expression.start, stmt.expression.end);
-        out += `;__cmuxLast = (${expr});`;
+        out += `;__breeLast = (${expr});`;
       } else {
         out += text;
       }
@@ -129,7 +129,7 @@
     // resumes) is dropped, so it never lands in another cell. A function
     // the cancelled cell defined still prints when the running cell calls
     // it: the running cell's body is then on the stack. Each cell body runs
-    // as a function named __cmuxCell<seq>, which the stack names in every
+    // as a function named __breeCell<seq>, which the stack names in every
     // engine, also after an await resumes it.
     let cellSeq = 0;
     function cellConsole(cell) {
@@ -138,7 +138,7 @@
       const prints = () => {
         if (!cell.cancelled) return true;
         if (!running || running === cell || running.seq === undefined) return false;
-        return String(new Error().stack || "").includes(`__cmuxCell${running.seq}`);
+        return String(new Error().stack || "").includes(`__breeCell${running.seq}`);
       };
       return new Proxy(base, {
         get(target, key) {
@@ -171,7 +171,7 @@
         // else resolves through the scope.
         const owner = cell || {};
         owner.seq = ++cellSeq;
-        fn = new Function("__cmuxScope", "__cmuxConsole", `return async function () { let __cmuxLast; with (__cmuxScope) { await (async function __cmuxCell${owner.seq}(console) {\n${rewritten.source}\n})(__cmuxConsole); } return __cmuxLast; };`)(scope, cellConsole(owner));
+        fn = new Function("__breeScope", "__breeConsole", `return async function () { let __breeLast; with (__breeScope) { await (async function __breeCell${owner.seq}(console) {\n${rewritten.source}\n})(__breeConsole); } return __breeLast; };`)(scope, cellConsole(owner));
       } catch (e) {
         return { ok: false, error: `SyntaxError: ${e.message}`, ms: 0 };
       }
@@ -262,7 +262,7 @@
       },
       queueMicrotask: (fn) => Promise.resolve().then(fn),
       // import("node:fs") and friends return the same modules as the globals.
-      __cmuxImport: (specifier) => Promise.resolve().then(() => importModule(specifier)),
+      __breeImport: (specifier) => Promise.resolve().then(() => importModule(specifier)),
     };
   }
 
@@ -418,16 +418,16 @@
     return n >= MAX_TIMER_DELAY ? MAX_TIMER_DELAY : Math.floor(n);
   }
 
-  // Adapts the app's `__cmuxNative` object (driver-protocol.md, "Native host
+  // Adapts the app's `__breeNative` object (driver-protocol.md, "Native host
   // contract") to the `host` and `driver` objects the runtime uses, and
   // defines the entry points the app calls.
   function installNativeHost() {
-    const native = root.__cmuxNative;
-    if (!native || root.__cmuxReplEval) return;
+    const native = root.__breeNative;
+    if (!native || root.__breeReplEval) return;
     // Agent code runs in this context. The native host stays in these
     // closures only: the global goes before any agent code runs, so a cell
     // cannot call it directly (the guards behind it are native anyway).
-    delete root.__cmuxNative;
+    delete root.__breeNative;
     const hostCall = (fn, op, args) => {
       const r = JSON.parse(fn(op, JSON.stringify(args || {})));
       if (r.error) {
@@ -442,7 +442,7 @@
     const listeners = new Map();
     let nextCall = 1;
     let nextTimer = 1;
-    root.__cmuxHostOnResult = (id, errorJSON, resultJSON) => {
+    root.__breeHostOnResult = (id, errorJSON, resultJSON) => {
       const p = pending.get(id);
       if (!p) return;
       pending.delete(id);
@@ -453,13 +453,13 @@
         p.reject(e);
       } else p.resolve(resultJSON === null || resultJSON === undefined ? undefined : JSON.parse(resultJSON));
     };
-    root.__cmuxHostOnTimer = (id) => {
+    root.__breeHostOnTimer = (id) => {
       const t = timers.get(id);
       if (!t) return;
       timers.delete(id);
       t();
     };
-    root.__cmuxHostOnEvent = (name, payloadJSON) => {
+    root.__breeHostOnEvent = (name, payloadJSON) => {
       const payload = payloadJSON ? JSON.parse(payloadJSON) : {};
       for (const h of listeners.get(name) || []) h(payload);
     };
@@ -533,20 +533,20 @@
     Object.freeze(driver);
     let repl = null;
     // `optionsJSON` (optional): { "maxOutput": characters, 0 for no limit }.
-    root.__cmuxReplEval = async (code, optionsJSON) => {
+    root.__breeReplEval = async (code, optionsJSON) => {
       if (!repl) repl = createBrowserRepl({ host, driver });
       const options = typeof optionsJSON === "string" && optionsJSON ? JSON.parse(optionsJSON) : {};
       const r = await repl.evaluate(code, { maxOutput: options.maxOutput, id: options.evalId });
       if (!r.ok) throw r.exception || new Error(r.error);
       return undefined;
     };
-    root.__cmuxReplCancel = (message, evalId) => (repl ? repl.cancel(message, evalId === null ? undefined : evalId) : false);
-    root.__cmuxFormatError = (e) => formatError(e);
+    root.__breeReplCancel = (message, evalId) => (repl ? repl.cancel(message, evalId === null ? undefined : evalId) : false);
+    root.__breeFormatError = (e) => formatError(e);
     // The app takes these entry points and deletes the globals before any
     // cell runs, so a cell cannot call them (work they start would belong
     // to no cell). The runtime's namespace goes too: a cell must not build
     // a second REPL over this host and driver.
-    delete root.CmuxBrowserRepl;
+    delete root.BreeBrowserRepl;
   }
 
   ns.replHost = { timerDelay, rewriteTopLevel, createReplSession, createBrowserRepl, createOutputGate, DEFAULT_MAX_OUTPUT, HARD_MAX_OUTPUT, formatError, installNativeHost };

@@ -2,19 +2,19 @@ import Foundation
 
 enum CLISocketEnvironment {
     static func socketPath(in environment: [String: String]) throws -> String? {
-        let socketPath = normalized(environment["CMUX_SOCKET_PATH"])
-        let legacySocketPath = normalized(environment["CMUX_SOCKET"])
+        let socketPath = normalized(environment["BREE_SOCKET_PATH"])
+        let legacySocketPath = normalized(environment["BREE_SOCKET"])
         if let socketPath, let legacySocketPath, socketPath != legacySocketPath {
             throw CLIError(message: String(
                 localized: "cli.socket.error.conflictingEnvironment",
-                defaultValue: "Refusing to choose socket: CMUX_SOCKET_PATH and CMUX_SOCKET differ. Use CMUX_SOCKET_PATH or unset CMUX_SOCKET."
+                defaultValue: "Refusing to choose socket: BREE_SOCKET_PATH and BREE_SOCKET differ. Use BREE_SOCKET_PATH or unset BREE_SOCKET."
             ))
         }
         return socketPath ?? legacySocketPath
     }
 
     static func socketPathForTelemetry(in environment: [String: String]) -> String? {
-        normalized(environment["CMUX_SOCKET_PATH"]) ?? normalized(environment["CMUX_SOCKET"])
+        normalized(environment["BREE_SOCKET_PATH"]) ?? normalized(environment["BREE_SOCKET"])
     }
 
     private static func normalized(_ raw: String?) -> String? {

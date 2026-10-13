@@ -18,17 +18,17 @@ from pathlib import Path
 RECIPE_PATH = (
     Path(__file__).resolve().parent.parent
     / "skills"
-    / "cmux-customization"
+    / "bree-customization"
     / "references"
     / "examples.md"
 )
 
 EXPECTED_LAYOUT_COMMANDS = {
-    "cmux layout list --json",
-    "cmux layout get <name>",
-    "cmux layout open <name> --cwd <project>",
-    'cmux layout save <name> --description "<what this creates>"',
-    "cmux layout delete <name>",
+    "bree layout list --json",
+    "bree layout get <name>",
+    "bree layout open <name> --cwd <project>",
+    'bree layout save <name> --description "<what this creates>"',
+    "bree layout delete <name>",
 }
 
 REQUIRED_EXAMPLE_FIELDS = {
@@ -46,14 +46,14 @@ REQUIRED_EXAMPLE_FIELDS = {
 }
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit and os.path.exists(explicit) and os.access(explicit, os.X_OK):
         return explicit
 
     candidates = glob.glob(
         os.path.expanduser(
-            "~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/cmux"
+            "~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/bree"
         )
     )
     candidates = [
@@ -63,25 +63,25 @@ def resolve_cmux_cli() -> str:
         candidates.sort(key=os.path.getmtime, reverse=True)
         return candidates[0]
 
-    raise RuntimeError("Unable to find cmux CLI binary. Set CMUX_CLI_BIN.")
+    raise RuntimeError("Unable to find bree CLI binary. Set BREE_CLI_BIN.")
 
 
 def run_cli(cli_path: str, args: list[str], language: str = "en") -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["AppleLanguages"] = f"({language})"
     for key in [
-        "CMUX_SOCKET_PASSWORD",
-        "CMUX_SOCKET",
-        "CMUX_WORKSPACE_ID",
-        "CMUX_SURFACE_ID",
-        "CMUX_TAB_ID",
+        "BREE_SOCKET_PASSWORD",
+        "BREE_SOCKET",
+        "BREE_WORKSPACE_ID",
+        "BREE_SURFACE_ID",
+        "BREE_TAB_ID",
     ]:
         env.pop(key, None)
-    env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-    env["CMUX_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
+    env["BREE_CLI_SENTRY_DISABLED"] = "1"
+    env["BREE_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
 
-    with tempfile.TemporaryDirectory(prefix="cmux-workflow-catalog-") as tmpdir:
-        env["CMUX_SOCKET_PATH"] = os.path.join(
+    with tempfile.TemporaryDirectory(prefix="bree-workflow-catalog-") as tmpdir:
+        env["BREE_SOCKET_PATH"] = os.path.join(
             tmpdir, f"missing-{uuid.uuid4().hex}.sock"
         )
         return subprocess.run(
@@ -138,14 +138,14 @@ def check_localized_field(original, localized, label: str) -> None:
 
 def check_localized_catalog(cli_path: str) -> None:
     """Exercise shipped translations through the executable's app-bundle lookup."""
-    with tempfile.TemporaryDirectory(prefix="cmux-workflow-localization-") as tmpdir:
+    with tempfile.TemporaryDirectory(prefix="bree-workflow-localization-") as tmpdir:
         contents = Path(tmpdir) / "WorkflowTest.app" / "Contents"
         resources = contents / "Resources"
-        executable = resources / "bin" / "cmux"
+        executable = resources / "bin" / "bree"
         executable.parent.mkdir(parents=True)
         shutil.copy2(cli_path, executable)
         (contents / "Info.plist").write_bytes(plistlib.dumps({
-            "CFBundleIdentifier": "com.cmux.workflow-localization-test",
+            "CFBundleIdentifier": "com.bree.workflow-localization-test",
             "CFBundleDevelopmentRegion": "en",
             "CFBundlePackageType": "APPL",
         }))
@@ -157,9 +157,9 @@ def check_localized_catalog(cli_path: str) -> None:
         english = load_json(run_cli(str(executable), ["docs", "workflows", "--json"]), "English catalog")
         # Invariant command syntax embedded in otherwise translatable guidance.
         literals = re.compile(
-            r"cmux layout save <name> --description \"<what this creates>\"|"
-            r"cmux reload-config|gh pr status|ssh devbox|"
-            r"(?:~/\.config/cmux/|\.cmux/)?(?:cmux|dock)\.json|"
+            r"bree layout save <name> --description \"<what this creates>\"|"
+            r"bree reload-config|gh pr status|ssh devbox|"
+            r"(?:~/\.config/bree/|\.bree/)?(?:bree|dock)\.json|"
             r"actions/ui/commands|actions/ui|<name>"
         )
         for language in ["de", "fr", "ar", "es", "zh-Hant", "zh-Hans", "ko", "ja"]:
@@ -179,7 +179,7 @@ def check_localized_catalog(cli_path: str) -> None:
                     require(literals.findall(str(base[field])) == literals.findall(str(translated[field])),
                             f"{language}: command/path syntax changed in {base['id']}.{field}")
                 for primitive in base["primitives"]:
-                    if "." in primitive or primitive.startswith("cmux "):
+                    if "." in primitive or primitive.startswith("bree "):
                         require(primitive in translated["primitives"], f"{language}: primitive syntax changed")
             for base, translated in paired(english["saved_layouts"]["steps"], localized["saved_layouts"]["steps"]):
                 require(base["command"] == translated["command"], f"{language}: layout command changed")
@@ -203,7 +203,7 @@ def check_localized_catalog(cli_path: str) -> None:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
 
         plain = run_cli(cli_path, ["docs", "workflows"])
         require(plain.returncode == 0, f"plain workflow docs failed: {plain.stderr!r}")
@@ -212,14 +212,14 @@ def main() -> int:
             "Saved layouts:",
             "Shipped workflow examples:",
             "Adapt and save:",
-            "cmux layout list --json",
-            "cmux layout save <name>",
+            "bree layout list --json",
+            "bree layout save <name>",
         ]:
             require(needle in plain.stdout, f"plain workflow docs missing {needle!r}")
 
         canonical = load_json(
             run_cli(cli_path, ["docs", "workflows", "--json"]),
-            "cmux docs workflows --json",
+            "bree docs workflows --json",
         )
         require(canonical.get("topic") == "workflows", "workflow topic must be canonical")
         require(canonical.get("catalog_version") == 1, "workflow catalog version must be 1")
@@ -261,8 +261,8 @@ def main() -> int:
             require(
                 example["source"]
                 == (
-                    "https://github.com/manaflow-ai/cmux/blob/main/"
-                    "skills/cmux-customization/references/examples.md#"
+                    "https://github.com/ecyx00/bree/blob/main/"
+                    "skills/bree-customization/references/examples.md#"
                     f"{example['id']}"
                 ),
                 f"{example['id']}: source must point at its matching shipped recipe",
@@ -293,11 +293,11 @@ def main() -> int:
 
         alias = load_json(
             run_cli(cli_path, ["docs", "templates", "--json"]),
-            "cmux docs templates --json",
+            "bree docs templates --json",
         )
         require(alias == canonical, "templates alias must return the canonical catalog")
 
-        index = load_json(run_cli(cli_path, ["docs", "--json"]), "cmux docs --json")
+        index = load_json(run_cli(cli_path, ["docs", "--json"]), "bree docs --json")
         topics = index.get("topics")
         require(isinstance(topics, list), "docs index topics must be a list")
         workflow_topics = [

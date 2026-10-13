@@ -22,7 +22,7 @@
 //   handlers with a DataTransfer and writes what they set, or the selection,
 //   to the tab's clipboard; WebKit's own command, which writes the system
 //   clipboard, never runs from page script.
-(function cmuxPageClipboard(post) {
+(function breePageClipboard(post) {
   "use strict";
   const define = Object.defineProperty;
   const apply = Reflect.apply;
@@ -89,7 +89,7 @@
     }
   }
 
-  const constructing = Symbol("cmux clipboard");
+  const constructing = Symbol("bree clipboard");
   let clipboardInstance = null;
 
   class Clipboard extends NativeEventTarget {

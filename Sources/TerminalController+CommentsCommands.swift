@@ -1,4 +1,4 @@
-import CmuxDiffComments
+import BreeDiffComments
 import Foundation
 
 /// Socket v2 surface for diff-viewer review comments.

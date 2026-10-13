@@ -2,19 +2,19 @@ import Foundation
 
 struct NewWorkspaceMenuModel: Equatable {
     enum CreateRow: Equatable {
-        case action(CmuxResolvedConfigMenuAction, deletable: Bool, isDefault: Bool)
+        case action(BreeResolvedConfigMenuAction, deletable: Bool, isDefault: Bool)
         case separator
     }
 
     struct LayoutRow: Equatable {
-        let menuAction: CmuxResolvedConfigMenuAction
+        let menuAction: BreeResolvedConfigMenuAction
         let isDefault: Bool
         let deletable: Bool
     }
 
     struct ManagementSection: Equatable {
         let defaultLayout: NewWorkspaceDefaultLayoutMenuModel
-        let deletableActions: [CmuxResolvedConfigAction]
+        let deletableActions: [BreeResolvedConfigAction]
     }
 
     enum Section: Equatable {
@@ -27,11 +27,11 @@ struct NewWorkspaceMenuModel: Equatable {
     let sections: [Section]
 
     static func build(
-        newWorkspaceContextMenuItems: [CmuxResolvedConfigContextMenuItem],
+        newWorkspaceContextMenuItems: [BreeResolvedConfigContextMenuItem],
         templateNames: [String],
-        loadedActions: [CmuxResolvedConfigAction],
+        loadedActions: [BreeResolvedConfigAction],
         newWorkspaceActionID: String?,
-        deletable: (CmuxResolvedConfigAction) -> Bool
+        deletable: (BreeResolvedConfigAction) -> Bool
     ) -> NewWorkspaceMenuModel {
         var createRows: [CreateRow] = []
         var layoutRows: [LayoutRow] = []
@@ -96,7 +96,7 @@ struct NewWorkspaceMenuModel: Equatable {
         return NewWorkspaceMenuModel(sections: sections)
     }
 
-    static func isWorkspaceLayout(_ action: CmuxResolvedConfigAction) -> Bool {
+    static func isWorkspaceLayout(_ action: BreeResolvedConfigAction) -> Bool {
         action.workspaceCommandName != nil || action.action.inlineWorkspace != nil
     }
 }

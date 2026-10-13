@@ -7,7 +7,7 @@ import Foundation
 /// reliably connect to the app's Unix socket on CI, so the app runs them
 /// itself through the same dispatcher (`TerminalController.handleSocketLine`).
 ///
-/// - `CMUX_UI_TEST_SOCKET_COMMANDS`: newline-separated commands, run in
+/// - `BREE_UI_TEST_SOCKET_COMMANDS`: newline-separated commands, run in
 ///   order. `{last}` is replaced by the id the most recent `new_*` command
 ///   returned (`new_workspace`, `new_split`, ...). `wait <ms>` pauses without
 ///   sending anything, e.g. to let a new workspace's terminal panel appear
@@ -19,12 +19,12 @@ import Foundation
 ///   most recent `workspace.group.create` returned, and an `"ok": false`
 ///   reply counts as a failure. `{pid}` is the app's own process id, a live
 ///   PID for `set_agent_pid` (agent status rows show only for a live agent).
-/// - `CMUX_UI_TEST_SOCKET_COMMANDS_RESULT_PATH`: JSON written when done:
+/// - `BREE_UI_TEST_SOCKET_COMMANDS_RESULT_PATH`: JSON written when done:
 ///   `{"done": "1", "replies": [...], "failed": "0|1"}`; wait on it before
 ///   asserting on the UI.
 struct UITestSocketCommandScript: Equatable {
-    static let commandsKey = "CMUX_UI_TEST_SOCKET_COMMANDS"
-    static let resultPathKey = "CMUX_UI_TEST_SOCKET_COMMANDS_RESULT_PATH"
+    static let commandsKey = "BREE_UI_TEST_SOCKET_COMMANDS"
+    static let resultPathKey = "BREE_UI_TEST_SOCKET_COMMANDS_RESULT_PATH"
 
     let commands: [String]
 

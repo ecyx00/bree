@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import Combine
 
 /// "Pinned" section at the top of the Files sidebar: a collapsible list of the

@@ -24,8 +24,8 @@ import tarfile
 import tempfile
 import time
 
-DEFAULT_URL = "https://ci-cache.cmux.com"
-LOCKFILE = "cmux.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+DEFAULT_URL = "https://ci-cache.bree.com"
+LOCKFILE = "bree.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 SPM_CACHE_LAYOUT = "scripts/ci/swiftpm-cache-layout"
 MAX_ARCHIVE = 2 * 1024**3
 MAX_EXPANDED = 16 * 1024**3
@@ -387,7 +387,7 @@ def seed_ghostty(repo, cache, deadline, *, allow_network=False, warm_only=False)
                                        text=True, timeout=min(10, remaining(deadline))).strip()
     dirty = subprocess.check_output(["git", "-C", str(repo / "ghostty"), "status", "--porcelain"],
                                     text=True, timeout=min(10, remaining(deadline))).strip()
-    if dirty or os.environ.get("CMUX_GHOSTTYKIT_NO_PREBUILT") == "1" or os.environ.get("CMUX_GHOSTTYKIT_CRASH_REPORT_SUBDIR", "cmux/crash") != "cmux/crash":
+    if dirty or os.environ.get("BREE_GHOSTTYKIT_NO_PREBUILT") == "1" or os.environ.get("BREE_GHOSTTYKIT_CRASH_REPORT_SUBDIR", "bree/crash") != "bree/crash":
         return {"status": "miss", "reason": "Ghostty needs a custom/local build", "verified_install": False}
     checksums = dict(line.split()[:2] for line in (repo / "scripts/ghosttykit-checksums.txt").read_text().splitlines()
                      if line.strip() and not line.startswith("#") and len(line.split()) >= 2)
@@ -454,7 +454,7 @@ def main(argv=None):
     parser.add_argument("--source-packages-dir", type=Path)
     parser.add_argument("--receipt", required=True, type=Path)
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--cache-root", type=Path, default=Path.home() / "Projects/.cmux-build-cache")
+    parser.add_argument("--cache-root", type=Path, default=Path.home() / "Projects/.bree-build-cache")
     parser.add_argument("--timeout", type=float, default=120)
     args = parser.parse_args(argv)
     if args.warm and args.source_packages_dir is not None:

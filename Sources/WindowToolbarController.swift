@@ -1,11 +1,11 @@
 import AppKit
 import Combine
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 @MainActor
 final class WindowToolbarController: NSObject, NSToolbarDelegate {
-    private let commandItemIdentifier = NSToolbarItem.Identifier("cmux.focusedCommand")
+    private let commandItemIdentifier = NSToolbarItem.Identifier("bree.focusedCommand")
 
     private weak var tabManager: TabManager?
 
@@ -158,7 +158,7 @@ final class WindowToolbarController: NSObject, NSToolbarDelegate {
     private func attach(to window: NSWindow) {
         guard window.toolbar == nil else { return }
         guard !WorkspacePresentationModeSettings.isMinimal() else { return }
-        let toolbar = NSToolbar(identifier: NSToolbar.Identifier("cmux.toolbar"))
+        let toolbar = NSToolbar(identifier: NSToolbar.Identifier("bree.toolbar"))
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly
         toolbar.sizeMode = .small

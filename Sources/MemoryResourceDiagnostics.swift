@@ -1,10 +1,10 @@
-import CmuxFoundation
+import BreeFoundation
 
 /// App adapter that projects only records from one captured descendant topology.
 typealias MemoryResourceDiagnostics = ProcessMemoryDiagnostics
 
 extension ProcessMemoryDiagnostics {
-    init(snapshot: CmuxTopProcessSnapshot, appPID: Int) {
+    init(snapshot: BreeTopProcessSnapshot, appPID: Int) {
         let pids = snapshot.expandedPIDs(rootPIDs: [appPID]).subtracting([appPID])
         self.init(
             descendants: pids.lazy.compactMap { pid in
@@ -13,7 +13,7 @@ extension ProcessMemoryDiagnostics {
                     name: process.name,
                     residentBytes: process.residentMemorySource == .unavailable ? nil : process.residentBytes,
                     physicalFootprintBytes: process.memorySource == .physicalFootprint ? process.memoryBytes : nil,
-                    workspaceID: process.cmuxWorkspaceID
+                    workspaceID: process.breeWorkspaceID
                 )
             },
             enumerationComplete: snapshot.enumerationIsComplete && snapshot.process(pid: appPID) != nil,

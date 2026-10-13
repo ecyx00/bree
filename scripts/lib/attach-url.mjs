@@ -1,4 +1,4 @@
-// Pure encoder for the cmux iOS attach deep link.
+// Pure encoder for the bree iOS attach deep link.
 //
 // Takes the raw payload returned by the `mobile.attach_ticket.create` RPC
 // (`{ ticket: { routes, version, ... }, ... }`), optionally filters the ticket
@@ -6,7 +6,7 @@
 // `<scheme>://attach?v=<n>&payload=<b64>` URL the phone consumes.
 //
 // The scheme is the exact target bundle identifier, mirroring
-// `CmxPairingURLScheme` in `Packages/Shared/CMUXMobileCore`. Historical shared
+// `CmxPairingURLScheme` in `Packages/Shared/BREEMobileCore`. Historical shared
 // schemes remain parse-only for old URLs; this encoder never creates one.
 //
 // This is the single source of truth for the encode recipe, shared by
@@ -15,10 +15,10 @@
 // `node --test scripts/lib/attach-url.test.mjs`.
 
 /** The pairing/attach URL scheme development (DEBUG/tagged) builds emit. */
-export const DEV_URL_SCHEME = "cmux-ios-dev";
+export const DEV_URL_SCHEME = "bree-ios-dev";
 
 /** The pairing/attach URL scheme Release (beta + prod) builds emit. */
-export const RELEASE_URL_SCHEME = "cmux-ios";
+export const RELEASE_URL_SCHEME = "bree-ios";
 
 export function schemeForIOSBundleIdentifier(bundleIdentifier) {
   const normalized = String(bundleIdentifier || "").trim().toLowerCase();
@@ -28,7 +28,7 @@ export function schemeForIOSBundleIdentifier(bundleIdentifier) {
   ) {
     throw new Error("An exact iOS bundle identifier is required");
   }
-  return `cmux-ios-${normalized}`;
+  return `bree-ios-${normalized}`;
 }
 
 export function isCanonicalAttachURL(value) {
@@ -39,8 +39,8 @@ export function isCanonicalAttachURL(value) {
   if (!match) return false;
   const scheme = match[1].toLowerCase();
   if ([DEV_URL_SCHEME, RELEASE_URL_SCHEME].includes(scheme)) return true;
-  if (!scheme.startsWith("cmux-ios-")) return false;
-  const bundleIdentifier = scheme.slice("cmux-ios-".length);
+  if (!scheme.startsWith("bree-ios-")) return false;
+  const bundleIdentifier = scheme.slice("bree-ios-".length);
   return bundleIdentifier.includes(".") &&
     /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(bundleIdentifier);
 }
@@ -114,8 +114,8 @@ export function buildAttachURL(payload, filter = {}) {
   }
 
   const exactBundleIdentifier = typeof scheme === "string" &&
-    scheme.startsWith("cmux-ios-")
-    ? scheme.slice("cmux-ios-".length)
+    scheme.startsWith("bree-ios-")
+    ? scheme.slice("bree-ios-".length)
     : "";
   if (
     !exactBundleIdentifier.includes(".") ||

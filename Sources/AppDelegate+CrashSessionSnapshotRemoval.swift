@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import Foundation
 
 extension AppDelegate {
@@ -30,7 +30,7 @@ extension AppDelegate {
         case .loaded(let snapshot):
             Self.clearCrashOnlyPrimarySnapshotRemovalMarker()
             guard let prunedSnapshot = SessionPersistencePolicy
-                .pruningCmuxCrashDiagnosticWindows(from: snapshot)
+                .pruningBreeCrashDiagnosticWindows(from: snapshot)
                 .snapshot else {
                 return
             }
@@ -97,7 +97,7 @@ extension AppDelegate {
         }
         sessionSnapshotOverwriteGuard = SessionSnapshotOverwriteGuard(baseline: baseline, launchDate: now)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "session.history.archive baselineWorkspaces=\(baseline.workspaces) " +
                 "baselinePanels=\(baseline.panels)"
         )
@@ -122,7 +122,7 @@ extension AppDelegate {
             return snapshot
         case .hold:
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "session.save.held reason=poorer_young_launch " +
                     "panels=\(snapshot.richness.panels) baselinePanels=\(overwriteGuard.baseline.panels)"
             )

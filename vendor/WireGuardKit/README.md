@@ -2,7 +2,7 @@
 
 Vendored copy of the `WireGuardKit` Swift package from
 [wireguard-apple](https://git.zx2c4.com/wireguard-apple/), MIT licensed
-(see `COPYING`). It is the WireGuard engine inside the cmux Cloud tunnel
+(see `COPYING`). It is the WireGuard engine inside the bree Cloud tunnel
 system extension (`TunnelExtension/`).
 
 - Upstream: https://git.zx2c4.com/wireguard-apple (mirror: https://github.com/WireGuard/wireguard-apple)
@@ -23,13 +23,13 @@ Swift adapter to one reviewed snapshot.
 - `Sources/WireGuardKit/TunnelConfiguration+WgQuickConfig.swift` and
   `Sources/WireGuardKit/String+ArrayConversion.swift` were moved here from the
   upstream `Sources/Shared/Model` (part of the WireGuard app target, not the
-  kit) so the extension can parse the wg-quick config the cmux app writes. The
+  kit) so the extension can parse the wg-quick config the bree app writes. The
   parser's `init(fromWgQuickConfig:called:)`, `asWgQuickConfig()`, and
   `ParseError` are `public`; nothing else changed.
 - `Sources/WireGuardKitGo/Makefile` and `goruntime-boottime-over-monotonic.diff`
   are not vendored. `scripts/build-wireguard-go.sh` replaces the Makefile and
   builds with the stock Go toolchain. The runtime patch makes Go timers count
-  time spent asleep, which matters for iOS background wake-ups; the cmux
+  time spent asleep, which matters for iOS background wake-ups; the bree
   extension is macOS-only and re-handshakes through the adapter's network path
   monitor after wake, so it is intentionally skipped.
 - `Sources/WireGuardKitC/WireGuardKitC.h` gains `#include <sys/types.h>`: the header

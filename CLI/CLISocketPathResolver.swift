@@ -1,7 +1,7 @@
 import Darwin
 import Foundation
-import CmuxFoundation
-import CmuxSettings
+import BreeFoundation
+import BreeSettings
 
 enum CLIExecutableLocator {
     static func currentExecutableURL() -> URL? {
@@ -131,24 +131,24 @@ struct CLISocketPathResolver {
         case inaccessible(errnoCode: Int32)
     }
 
-    private static var stableSocketFileName: String { CmuxIdentity.current.socketFileName }
-    // identity-lint: allow legacy shared socket path kept for reading/cleanup of cmux.app sockets, never created by Bree
-    static let legacyDefaultSocketPath = "/tmp/cmux.sock"
+    private static var stableSocketFileName: String { BreeIdentity.current.socketFileName }
+    // identity-lint: allow legacy shared socket path kept for reading/cleanup of bree.app sockets, never created by Bree
+    static let legacyDefaultSocketPath = "/tmp/bree.sock"
 
     /// Default socket location for help text, derived from the same identity that
     /// ``stableDefaultSocketPath`` uses (so the help cannot drift from the real default).
     /// Tagged dev builds use a per-tag socket in `/tmp`, which is not spelled out.
     static var helpDefaultSocketLocation: String {
-        let identity = CmuxIdentity.current
+        let identity = BreeIdentity.current
         if identity.kind == .breeDev {
             return "a per-build socket under /tmp"
         }
         return "~/.local/state/\(identity.stateDirectoryName)/\(identity.socketFileName)"
     }
-    private static let fallbackSocketPath = "/tmp/cmux-debug.sock"
-    private static let nightlySocketPath = "/tmp/cmux-nightly.sock"
-    private static let rcSocketPath = "/tmp/cmux-rc.sock"
-    private static let stagingSocketPath = "/tmp/cmux-staging.sock"
+    private static let fallbackSocketPath = "/tmp/bree-debug.sock"
+    private static let nightlySocketPath = "/tmp/bree-nightly.sock"
+    private static let rcSocketPath = "/tmp/bree-rc.sock"
+    private static let stagingSocketPath = "/tmp/bree-staging.sock"
 
     private let environment: [String: String]
     private let bundleIdentifier: String?
@@ -161,9 +161,9 @@ struct CLISocketPathResolver {
     /// Debug-only environment key that confines implicit discovery to `stateDirectory`.
     ///
     /// Tests that spawn the CLI under a temporary home set it so the machine-wide
-    /// `/tmp` marker files and legacy `/tmp` socket aliases, which a real cmux running
+    /// `/tmp` marker files and legacy `/tmp` socket aliases, which a real bree running
     /// as the same user publishes, cannot route them to that app. Release builds ignore it.
-    static let isolatedDiscoveryEnvironmentKey = "CMUX_TEST_ISOLATED_SOCKET_DISCOVERY"
+    static let isolatedDiscoveryEnvironmentKey = "BREE_TEST_ISOLATED_SOCKET_DISCOVERY"
 
     /// Creates a resolver with explicit discovery inputs and filesystem probes.
     ///
@@ -183,7 +183,7 @@ struct CLISocketPathResolver {
         self.currentUserID = currentUserID
         self.inspectSocketPathEntry = inspectSocketPathEntry
         self.socketAcceptsConnections = socketAcceptsConnections
-        self.stateDirectory = stateDirectory ?? CmuxStateDirectory.url(homeDirectory: fileManager.homeDirectoryForCurrentUser)
+        self.stateDirectory = stateDirectory ?? BreeStateDirectory.url(homeDirectory: fileManager.homeDirectoryForCurrentUser)
 #if DEBUG
         self.confinesDiscoveryToStateDirectory = environment[Self.isolatedDiscoveryEnvironmentKey] == "1"
 #else
@@ -231,12 +231,12 @@ struct CLISocketPathResolver {
 
     private static func userScopedStableSocketPath(currentUserID: uid_t = getuid()) -> String {
         stableSocketDirectoryURL()?
-            .appendingPathComponent("cmux-\(currentUserID).sock", isDirectory: false)
+            .appendingPathComponent("bree-\(currentUserID).sock", isDirectory: false)
             .path ?? legacyUserScopedStableSocketPath(currentUserID: currentUserID)
     }
 
     private static func legacyUserScopedStableSocketPath(currentUserID: uid_t = getuid()) -> String {
-        "/tmp/cmux-\(currentUserID).sock"
+        "/tmp/bree-\(currentUserID).sock"
     }
 
     static func isImplicitDefaultPath(
@@ -303,7 +303,7 @@ struct CLISocketPathResolver {
         // stable app's marker still names a user-scoped stable listener. Walk
         // those markers too, in deterministic order, rather than treating one
         // variant's file as the entire discovery state.
-        // Bree never walks cmux's markers: that would route its CLI to the user's cmux.
+        // Bree never walks bree's markers: that would route its CLI to the user's bree.
         if variant != .bree {
             candidates.append(contentsOf: readLastSocketPaths(
                 bundleIdentifier: SocketPathMarkerFiles.stableBundleIdentifier,
@@ -353,10 +353,10 @@ struct CLISocketPathResolver {
         case .stable, .nightly, .rc, .staging, .dev:
             paths = resolvedStableImplicitDefaultPaths()
         case .bree:
-            // Only Bree's own state directory; the /tmp aliases belong to cmux.
+            // Only Bree's own state directory; the /tmp aliases belong to bree.
             paths = resolvedStableImplicitDefaultPaths().filter { isInsideStateDirectory($0) }
         }
-        // The legacy /tmp aliases are shared by every cmux running as this user.
+        // The legacy /tmp aliases are shared by every bree running as this user.
         guard confinesDiscoveryToStateDirectory else { return paths }
         return paths.filter { isInsideStateDirectory($0) }
     }
@@ -365,7 +365,7 @@ struct CLISocketPathResolver {
         Self.dedupe([
             resolvedStableDefaultSocketPath,
             Self.legacyDefaultSocketPath,
-            stateDirectory.appendingPathComponent("cmux-\(currentUserID).sock", isDirectory: false).path,
+            stateDirectory.appendingPathComponent("bree-\(currentUserID).sock", isDirectory: false).path,
             Self.legacyUserScopedStableSocketPath(currentUserID: currentUserID),
         ])
     }
@@ -543,13 +543,13 @@ struct CLISocketPathResolver {
 
     /// The directory holding the control socket and its marker files.
     ///
-    /// Resolves to ``CmuxStateDirectory`` (`~/.local/state/cmux`), matching the
+    /// Resolves to ``BreeStateDirectory`` (`~/.local/state/bree`), matching the
     /// app's `SocketControlSettings.stableSocketDirectoryURL()`. This keeps the
     /// CLI off the app's TCC-protected Application Support data on the agent hook
-    /// path (https://github.com/manaflow-ai/cmux/issues/5146). The CLI is a
+    /// path (https://github.com/ecyx00/bree/issues/5146). The CLI is a
     /// composition root, so it names the concrete `FileManager.default` here.
     private static func stableSocketDirectoryURL() -> URL? {
-        CmuxStateDirectory.url(homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
+        BreeStateDirectory.url(homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
     }
 
     private static func dedupe(_ paths: [String]) -> [String] {

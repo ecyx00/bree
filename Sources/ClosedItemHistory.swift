@@ -1,12 +1,12 @@
-import CmuxFoundation
-import CmuxSurfaceCatalogModel
-import CmuxWorkspaces
+import BreeFoundation
+import BreeSurfaceCatalogModel
+import BreeWorkspaces
 import Foundation
 import Combine
 import Bonsplit
 import OSLog
 private let closedItemHistoryLogger = Logger(
-    subsystem: "com.cmuxterm.app",
+    subsystem: "com.bree.app",
     category: "ClosedItemHistory"
 )
 struct ClosedPanelSplitPlacement: Codable, Sendable {
@@ -391,7 +391,7 @@ final class ClosedItemHistoryStore: ObservableObject {
     }
 
     /// A Cloud workspace through either transport — the legacy managed remote
-    /// (`managedCloudVMID`) or the cmux-tui binding (`cloudVM`) — the same
+    /// (`managedCloudVMID`) or the bree-tui binding (`cloudVM`) — the same
     /// definition session restore uses under `DisableCloud`, so a purge and a
     /// blocked restore agree on what a Cloud record is.
     static func workspaceSnapshotHostsCloudVM(_ snapshot: SessionWorkspaceSnapshot) -> Bool {
@@ -752,14 +752,14 @@ final class ClosedItemHistoryStore: ObservableObject {
         }
         let bundleId = (bundleIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false)
             ? bundleIdentifier!
-            : "com.cmuxterm.app"
+            : "com.bree.app"
         let safeBundleId = bundleId.replacingOccurrences(
             of: "[^A-Za-z0-9._-]",
             with: "_",
             options: .regularExpression
         )
         return resolvedAppSupport
-            .appendingPathComponent(CmuxIdentity.current.applicationSupportDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.applicationSupportDirectoryName, isDirectory: true)
             .appendingPathComponent("closed-item-history-\(safeBundleId).json", isDirectory: false)
     }
 
@@ -830,7 +830,7 @@ final class ClosedItemHistoryStore: ObservableObject {
 }
 
 extension Notification.Name {
-    static let closedItemHistoryRevisionDidChange = Notification.Name("cmux.closedItemHistoryRevisionDidChange")
+    static let closedItemHistoryRevisionDidChange = Notification.Name("bree.closedItemHistoryRevisionDidChange")
 }
 
 private struct ClosedItemHistoryPersistenceSnapshot: Codable, Sendable {

@@ -3,7 +3,7 @@ import Foundation
 
 #if DEBUG
 enum TabGeometryDebugLog {
-    static let isEnabled = ProcessInfo.processInfo.environment["CMUX_TAB_GEOMETRY_LOG"] != nil
+    static let isEnabled = ProcessInfo.processInfo.environment["BREE_TAB_GEOMETRY_LOG"] != nil
 
     private static let queue = DispatchQueue(label: "com.bonsplit.tab-geometry-debug-log")
     private static let sink = TabGeometryDebugLogSink()
@@ -101,7 +101,7 @@ enum TabGeometryDebugLog {
 }
 
 private final class TabGeometryDebugLogSink {
-    private let path = "/tmp/cmux-tab-geometry.log"
+    private let path = "/tmp/bree-tab-geometry.log"
     private var handle: FileHandle?
     private var wroteHeader = false
     private let timestampFormatter: DateFormatter = {

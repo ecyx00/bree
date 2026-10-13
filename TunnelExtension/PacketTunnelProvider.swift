@@ -1,9 +1,9 @@
 import Foundation
 import NetworkExtension
-import CmuxCloudTunnelCore
+import BreeCloudTunnelCore
 import os
 
-nonisolated private let logger = Logger(subsystem: "com.cmuxterm.app.tunnel", category: "PacketTunnelProvider")
+nonisolated private let logger = Logger(subsystem: "com.bree.app.tunnel", category: "PacketTunnelProvider")
 
 /// Runs the saved Cloud WireGuard configuration in a macOS system extension.
 /// The app owns enrollment and explicit activation. The provider owns ordered

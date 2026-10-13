@@ -49,13 +49,13 @@ class EnsureGhosttyKitZigTests(unittest.TestCase):
 
         env = {
             key: value for key, value in os.environ.items()
-            if not key.startswith(("CMUX_GHOSTTYKIT_", "GIT_"))
+            if not key.startswith(("BREE_GHOSTTYKIT_", "GIT_"))
         }
         env.update(
             PATH=str(bin_dir), HOME=str(root), LC_ALL="C",
             GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
-            CMUX_GHOSTTYKIT_CACHE_DIR=str(root / "cache"),
-            CMUX_GHOSTTYKIT_NO_PREBUILT="1",
+            BREE_GHOSTTYKIT_CACHE_DIR=str(root / "cache"),
+            BREE_GHOSTTYKIT_NO_PREBUILT="1",
             TEST_ROOT=str(root),
         )
         for args in (
@@ -67,7 +67,7 @@ class EnsureGhosttyKitZigTests(unittest.TestCase):
         sha = subprocess.check_output(
             ["git", "-C", str(ghostty), "rev-parse", "HEAD"], env=env, text=True,
         ).strip()
-        key = f"{sha}-crashsubdir-cmux-crash-sentry-off-noi18n-v2"
+        key = f"{sha}-crashsubdir-bree-crash-sentry-off-noi18n-v2"
 
         if zig_version is not None:
             zig = bin_dir / "zig"
@@ -118,7 +118,7 @@ class EnsureGhosttyKitZigTests(unittest.TestCase):
                             'printf "downloaded\\n" > "$TEST_ROOT/curl-called"\n'
                         )
                         curl.chmod(0o755)
-                        env["CMUX_GHOSTTYKIT_NO_PREBUILT"] = "0"
+                        env["BREE_GHOSTTYKIT_NO_PREBUILT"] = "0"
 
                     result = self.run_ensure(root, env)
                     self.assertEqual(result.returncode, 0, result.stdout)

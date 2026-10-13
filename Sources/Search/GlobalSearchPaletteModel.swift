@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 /// Search state and per-open lifecycle for the global search palette.

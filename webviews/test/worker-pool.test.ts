@@ -40,7 +40,7 @@ class FakeWorker {
 
 test("the worker factory spawns module workers from the entry and counts traffic", () => {
   FakeWorker.created = [];
-  const workerURL = new URL("cmux-diff-viewer://token/assets/app/chunks/diff-worker.mjs");
+  const workerURL = new URL("bree-diff-viewer://token/assets/app/chunks/diff-worker.mjs");
   const stats = createDiffWorkerPoolStats(workerURL);
   const target = { dataset: {} as DOMStringMap };
   const options = createDiffWorkerPoolOptions(workerURL, stats, FakeWorker as unknown as typeof Worker, target);
@@ -63,9 +63,9 @@ test("the worker factory spawns module workers from the entry and counts traffic
   // Mirrored onto the document element so a debug-socket eval in an isolated
   // world can read the counters without access to page globals.
   expect(target.dataset).toEqual({
-    cmuxDiffWorkerUrl: workerURL.href,
-    cmuxDiffWorkersCreated: "2",
-    cmuxDiffWorkerMessages: "3",
-    cmuxDiffWorkerErrors: "1",
+    breeDiffWorkerUrl: workerURL.href,
+    breeDiffWorkersCreated: "2",
+    breeDiffWorkerMessages: "3",
+    breeDiffWorkerErrors: "1",
   });
 });

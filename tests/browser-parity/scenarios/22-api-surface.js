@@ -79,8 +79,8 @@ fs.mkdirSync("./artifacts", { recursive: true });
 fs.writeFileSync("./artifacts/content.txt", await page.locator("body").innerText());
 emit("export-content", fs.readFileSync("./artifacts/content.txt", "utf8").includes("Surface"));
 emit("untrusted", await page.evaluate(() => window.__summary().filter((l) => l.includes("UNTRUSTED") && !l.startsWith("click #counter"))));
-// ---- cell session=surface cmux-only
-// WebKit panes have no touch screen, so tap() is a click in cmux; Playwright
+// ---- cell session=surface bree-only
+// WebKit panes have no touch screen, so tap() is a click in bree; Playwright
 // needs a touch-enabled context for it.
 await page.locator("#counter").tap();
-emitCmux("tap", await page.locator("#counter").textContent());
+emitBree("tap", await page.locator("#counter").textContent());

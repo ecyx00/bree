@@ -2,12 +2,12 @@ import AppKit
 
 extension Notification.Name {
     /// Something a pane tab bar button reflects changed (Files open, Architecture open).
-    static let surfaceTabBarDynamicStateDidChange = Notification.Name("cmux.surfaceTabBarDynamicStateDidChange")
+    static let surfaceTabBarDynamicStateDidChange = Notification.Name("bree.surfaceTabBarDynamicStateDidChange")
 }
 
 extension Workspace {
     /// Whether a built-in tab bar button should read as "on" right now.
-    func surfaceTabBarButtonIsActive(_ button: CmuxSurfaceTabBarButton) -> Bool {
+    func surfaceTabBarButtonIsActive(_ button: BreeSurfaceTabBarButton) -> Bool {
         guard case .builtIn(let action) = button.action else { return false }
         switch action {
         case .toggleFiles:
@@ -18,6 +18,8 @@ extension Workspace {
             return ArchitectureWindowController.shared.isShowing(for: self)
         case .toggleWiki:
             return WikiPopoverController.shared.isShowing(for: self)
+        case .showBoard:
+            return BoardPopoverController.shared.isShowing(in: owningTabManager.flatMap { AppDelegate.shared?.mainWindowContext(for: $0) }?.window)
         default:
             return false
         }

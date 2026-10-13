@@ -21,18 +21,18 @@ DARWIN_SO_NOSIGPIPE = 0x1022
 
 class BrokenPipeWritesTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.cli = os.environ["CMUX_CLI_BIN"]
-        self.root = tempfile.TemporaryDirectory(prefix="cmux-broken-pipe-")
+        self.cli = os.environ["BREE_CLI_BIN"]
+        self.root = tempfile.TemporaryDirectory(prefix="bree-broken-pipe-")
         self.addCleanup(self.root.cleanup)
         self.env = {
             key: value for key, value in os.environ.items()
-            if not key.startswith(("CMUX_", "SENTRY_")) and key != "CODEX_HOME"
+            if not key.startswith(("BREE_", "SENTRY_")) and key != "CODEX_HOME"
         }
         self.env.update({
             "CFFIXED_USER_HOME": self.root.name,
             "XDG_CONFIG_HOME": self.root.name,
-            "CMUX_CLI_SENTRY_DISABLED": "1",
-            "CMUX_CLAUDE_HOOK_SENTRY_DISABLED": "1",
+            "BREE_CLI_SENTRY_DISABLED": "1",
+            "BREE_CLAUDE_HOOK_SENTRY_DISABLED": "1",
         })
 
     def run_cli(
@@ -108,7 +108,7 @@ class BrokenPipeWritesTests(unittest.TestCase):
         for status in ({"enabled": False}, {}):
             with self.subTest(status=status):
                 with FakeUnixServer(self.responder("vm.feature_status", status)) as server:
-                    self.env["CMUX_SOCKET_PATH"] = server.path
+                    self.env["BREE_SOCKET_PATH"] = server.path
                     config = Path(self.root.name) / "pty.json"
                     config.write_text("invalid JSON: never dial a remote endpoint")
                     result = self.run_cli("vm-pty-connect", "--config", str(config))
@@ -118,7 +118,7 @@ class BrokenPipeWritesTests(unittest.TestCase):
 
     def test_cloud_gate_allows_config_processing_when_enabled(self) -> None:
         with FakeUnixServer(self.responder("vm.feature_status", {"enabled": True})) as server:
-            self.env["CMUX_SOCKET_PATH"] = server.path
+            self.env["BREE_SOCKET_PATH"] = server.path
             config = Path(self.root.name) / "pty.json"
             config.write_text("invalid JSON: never dial a remote endpoint")
             result = self.run_cli("vm-pty-connect", "--config", str(config))
@@ -148,7 +148,7 @@ class BrokenPipeWritesTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(writer.getsockopt(socket.SOL_SOCKET, DARWIN_SO_NOSIGPIPE), original)
-            self.assertTrue(reader.recv(4096).startswith(b"cmux "))
+            self.assertTrue(reader.recv(4096).startswith(b"bree "))
 
     def test_consumer_closes_during_large_stdout_write(self) -> None:
         with FakeUnixServer(self.responder("system.large_payload", {"payload": "x" * 262_144})) as server:
@@ -194,11 +194,11 @@ class BrokenPipeWritesTests(unittest.TestCase):
     def test_socket_disconnect_is_filtered_before_sentry_capture(self) -> None:
         # The DEBUG capture probe is downstream of classification, before SDK
         # startup. An actionable control proves an absent probe is meaningful.
-        self.env.pop("CMUX_CLI_SENTRY_DISABLED")
-        self.env.pop("CMUX_CLAUDE_HOOK_SENTRY_DISABLED")
-        self.env["CMUX_BUNDLE_ID"] = "com.cmuxterm.app.debug.cli-pipe-regressions"
+        self.env.pop("BREE_CLI_SENTRY_DISABLED")
+        self.env.pop("BREE_CLAUDE_HOOK_SENTRY_DISABLED")
+        self.env["BREE_BUNDLE_ID"] = "com.bree.app.debug.cli-pipe-regressions"
         probe = Path(self.root.name) / "capture.txt"
-        self.env["CMUX_CLI_SENTRY_CAPTURE_PROBE_PATH"] = str(probe)
+        self.env["BREE_CLI_SENTRY_CAPTURE_PROBE_PATH"] = str(probe)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
             listener.bind(("127.0.0.1", 0))
             port = listener.getsockname()[1]

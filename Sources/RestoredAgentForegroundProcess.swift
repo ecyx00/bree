@@ -1,16 +1,16 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
-import CmuxFoundation
+import BreeFoundation
 
 /// Foreground-process evidence that a restored or hook-published agent is
 /// still the command running in its pane.
 ///
 /// Pi-compatible TUIs emit OSC 133 prompt and command marks while the agent
-/// keeps running, so cmux's shell-activity state flips between idle and busy
+/// keeps running, so bree's shell-activity state flips between idle and busy
 /// on every turn. A flip alone cannot prove that the agent exited or was
 /// replaced (#12084); the process in the pane's foreground can. This covers
 /// the window before the agent's session-start hook has registered its PID
-/// with cmux, when neither the runtime PID table nor the live agent index can
+/// with bree, when neither the runtime PID table nor the live agent index can
 /// vouch for the session yet.
 enum RestoredAgentForegroundProcess {
     /// Whether the pane's foreground process is `agent`'s own process.
@@ -21,8 +21,8 @@ enum RestoredAgentForegroundProcess {
     static func matches(
         _ agent: SessionRestorableAgentSnapshot,
         foregroundProcessID: Int?,
-        processArguments: (Int) -> CmuxTopProcessArguments? =
-            CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for:),
+        processArguments: (Int) -> BreeTopProcessArguments? =
+            BreeTopProcessSnapshot.processArgumentsAndEnvironment(for:),
         processIdentity: ((pid_t) -> AgentPIDProcessIdentity?)? = nil,
         validator: CachedAgentProcessIdentityValidator = CachedAgentProcessIdentityValidator()
     ) -> Bool {

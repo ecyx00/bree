@@ -4,7 +4,7 @@ The contract between the REPL runtime (JavaScript, engine-neutral) and an engine
 driver. The runtime builds the reference A and reference B APIs on these primitives the
 same way Playwright builds its API on a browser protocol. Drivers:
 
-- `webkit`: cmux app, `WKWebView` panes (Swift).
+- `webkit`: bree app, `WKWebView` panes (Swift).
 - `chromium`: CDP passthrough, when a Chromium engine lands.
 - `dev`: Playwright WebKit (tests/browser-parity/lib/dev-driver.mjs), used to
   develop the runtime without an app build.
@@ -62,7 +62,7 @@ runtime's own agent-world reads hold nothing), its `tab.navigate`,
 `tab.reload` or `tab.history` until the navigation commits, or while a call
 wakes the tab,
 is sent to that session too, also in a user's tab (the call caused it, so
-cmux's own dialog or Open panel must not come up in front of the user, and
+bree's own dialog or Open panel must not come up in front of the user, and
 the call must not wait for an answer only the user can give); downloads
 keep the user's location.
 
@@ -101,7 +101,7 @@ No driver method moves the user's focus or selection except
 stays in the web view and the window's first responder stays the user's.
 A key-down no page handles is not passed on: WebKit resends such a key
 through `NSApp.sendEvent` to the key window (the user's terminal, menus), so
-keys the REPL and `cmux browser press` send carry a mark (`eventSourceUserData`; the mobile browser stream's keys, a person's, do not) and the app
+keys the REPL and `bree browser press` send carry a mark (`eventSourceUserData`; the mobile browser stream's keys, a person's, do not) and the app
 drops a marked key that arrives outside the web view's own delivery.
 
 ## Hibernated and crashed tabs
@@ -110,7 +110,7 @@ A tab a relaunch restored but no pane has shown yet lists as `hibernated`
 too; the first call on it creates its browser, which then wakes the same
 way. Every call with a `targetId` except `tabs.close`, `tab.keep`,
 `tab.navigate` and `tab.history` first wakes a hibernated tab
-(the driver starts the restore of the page cmux unloaded, off screen) and
+(the driver starts the restore of the page bree unloaded, off screen) and
 waits, at most 30 s on the injected clock, until the restore commits and
 the document reaches `DOMContentLoaded`. Then the call runs. On a crashed
 tab (web content process ended, Reload offered in the pane) every call but
@@ -124,9 +124,9 @@ ended is restored like a hibernated one. Errors, where `<tab>` is `tab <id> ("<t
 | Condition | Code | Message |
 | --- | --- | --- |
 | Crashed | `crashed` | `<method>: <tab> crashed: its web content process ended (a WebKit crash, or macOS reclaimed its memory). Call page.reload() or page.goto(url) to load it again; until then only navigation, tab.info and page.close() work on it` |
-| The user stopped the tab from loading | `hibernated` | `<method>: <tab> is hibernated (cmux unloaded it to save memory while it was hidden) and the user stopped it from loading, so cmux does not load it again on its own. Call page.reload() to load it, then retry` |
-| The restore ended without a page | `hibernated` | `<method>: <tab> is hibernated (cmux unloaded it to save memory while it was hidden) and loading it again did not finish with a page. Call page.reload() to load it, then retry` |
-| Still loading after 30 s | `timeout` | `<method>: <tab> was hibernated (cmux unloaded it to save memory while it was hidden) and did not load again within 30 s, so the call did not run. It is still loading: retry the call, or call page.reload()` |
+| The user stopped the tab from loading | `hibernated` | `<method>: <tab> is hibernated (bree unloaded it to save memory while it was hidden) and the user stopped it from loading, so bree does not load it again on its own. Call page.reload() to load it, then retry` |
+| The restore ended without a page | `hibernated` | `<method>: <tab> is hibernated (bree unloaded it to save memory while it was hidden) and loading it again did not finish with a page. Call page.reload() to load it, then retry` |
+| Still loading after 30 s | `timeout` | `<method>: <tab> was hibernated (bree unloaded it to save memory while it was hidden) and did not load again within 30 s, so the call did not run. It is still loading: retry the call, or call page.reload()` |
 
 ## Frames and scripts
 
@@ -187,7 +187,7 @@ Every event carries `targetId`.
 | `tab.created` | `{ targetId, openerTargetId?, url }` (popups and `target=_blank`) |
 | `tab.closed` | |
 | `tab.crashed` | (the web content process ended; calls other than navigation fail until a reload or navigation starts a new one) |
-| `tab.replaced` | (cmux gave the tab a new web view: it restored a page it had unloaded to save memory, or recovered a crashed one; frame ids and element handles from before are gone) |
+| `tab.replaced` | (bree gave the tab a new web view: it restored a page it had unloaded to save memory, or recovered a crashed one; frame ids and element handles from before are gone) |
 | `tab.navigated` | `{ frameId, url, sameDocument }` |
 | `navigation.blocked` | `{ url, reason }`: the driver cancelled a main-frame navigation of a tab the session created because the domain policy blocks `url` |
 | `tab.loadState` | `{ state: "domcontentloaded"\|"load"\|"networkidle" }` |
@@ -205,7 +205,7 @@ Every event carries `targetId`.
 | --- | --- |
 | `cookies.get` / `cookies.set` | `{ urls?, targetId? }`, `{ cookies, targetId? }`. They use the store of the target tab (a private tab's, or the session's proxy store, is not the user's profile), which the runtime names on every call a page makes; without `targetId`, the session's `session.configure({ proxy })` store, else the active tab's. A URL the domain policy blocks fails with `blocked`; `cookies.get` leaves out the cookies of blocked sites and `cookies.set` refuses one, and also refuses a cookie with a Domain attribute (`.example.com`) unless an allowed pattern covers every subdomain it reaches (`*.example.com`) and no prohibited host is among them (see "Guards") |
 | `cookies.clear` | `{ targetId?, all?, name?, domain?, path? }`. Deletes the cookies of the target tab's store (without `targetId`, the store `cookies.get` uses) on that tab's site, its registrable domain by the system's Public Suffix List (CFNetwork), and the site's subdomains, narrowed by exact `name`, `domain` and `path`. The driver takes the site from the tab; a `site` parameter is ignored. On a persistent profile (the user's cookies) a tab with no http(s) site and `all: true` fail with `invalid`; a store that is not persistent (a private tab's, the session's proxy store) is cleared whole for either. Cookies of sites the domain policy blocks are never cleared |
-| `clipboard.read` / `clipboard.write` | per-tab virtual clipboard `{ items: [{ type, base64 }] }`. Meta+C, Meta+X and Meta+V run the engine's own Copy, Cut and Paste against it, so the page gets trusted `copy`, `cut` and `paste` events with `clipboardData` (every type), and the system clipboard is neither read nor written. They run only in tabs a session created: in a user's tab `input.key` refuses them with `unsupported` before any key reaches the page. Until the engine reports the command done, a JavaScript dialog in that tab is answered as an unhandled one is (`dialog.respond` with `accept: false`) and reported with `dismissedDuring`, never held. On WebKit, which has no per-view pasteboard, the general-pasteboard lookups WebKit itself makes (its pasteboard IPC answered through WebCore) get a private pasteboard from the start of one command until WebKit reports it done or 5 s pass; lookups by any other code, `NSPasteboard.general` included, get the system pasteboard. The tab's clipboard takes the private pasteboard only when the command finished in time. At 5 s the driver ends the tab's web content process (`tab.crashed`) in the same main-thread turn that ends the redirect, and the call fails with `timeout`: WebKit handles no message from that process afterwards, so a Copy or Cut the page would finish late never writes the system clipboard. It ends the process only when every other tab in it was created by the same session and no popup window of cmux's shares it (popups share their opener's process); otherwise the shortcut falls back to script (the selection's text, or inserting the clipboard's text, without clipboard events). A session that detaches, or a tab that closes, during the command does not change that. If another tab or a popup window joins the process during a command, the private pasteboard stays until WebKit finishes or 5 s more pass, when the driver ends the process anyway (its pages crash). A caller that stops waiting shortens none of these times. A Paste also runs through WebKit only while the private pasteboard's change count is below the system's, so WebKit's read grant, which compares change counts, can never cover the system clipboard; otherwise it falls back to inserting text. Commands run one at a time across all tabs, because WebKit's pasteboard requests do not say which web view they serve, so two tabs' commands at once would share one private pasteboard. For the same reason a copy in another web view during a command (a person's, or a page's in a user's tab) reaches the private pasteboard; WebKit's own Copy or Cut writes it at most once and a Paste never, so a command whose pasteboard was written more often fails with `stale` and leaves the tab's clipboard unchanged (the one copy it cannot tell apart is the only write of a Copy or Cut whose page cancelled the event and set no data). A person's paste in another web view during a command still reads the private pasteboard. Items that name a local file (a file URL, also a `file:` URL as `text/uri-list` or another URL type, a filename list, an alias, a Finder node or a file promise) are left out when the tab's clipboard is put on the private pasteboard for a Paste, so WebKit never hands the page a local file. A command waits up to 5 s for the one before it, which ends by then (10 s when its process could not be ended at once), then gets its own 5 s; one that cannot start fails with `timeout`, names the tab it waited for, and does not run. While a command runs, another web view's paste or copy uses the private pasteboard too. Writes a page's own scripts make (the asynchronous Clipboard API, `execCommand("copy")`) are outside this redirect; the page clipboard guard (see "Guards") sends them to this clipboard |
+| `clipboard.read` / `clipboard.write` | per-tab virtual clipboard `{ items: [{ type, base64 }] }`. Meta+C, Meta+X and Meta+V run the engine's own Copy, Cut and Paste against it, so the page gets trusted `copy`, `cut` and `paste` events with `clipboardData` (every type), and the system clipboard is neither read nor written. They run only in tabs a session created: in a user's tab `input.key` refuses them with `unsupported` before any key reaches the page. Until the engine reports the command done, a JavaScript dialog in that tab is answered as an unhandled one is (`dialog.respond` with `accept: false`) and reported with `dismissedDuring`, never held. On WebKit, which has no per-view pasteboard, the general-pasteboard lookups WebKit itself makes (its pasteboard IPC answered through WebCore) get a private pasteboard from the start of one command until WebKit reports it done or 5 s pass; lookups by any other code, `NSPasteboard.general` included, get the system pasteboard. The tab's clipboard takes the private pasteboard only when the command finished in time. At 5 s the driver ends the tab's web content process (`tab.crashed`) in the same main-thread turn that ends the redirect, and the call fails with `timeout`: WebKit handles no message from that process afterwards, so a Copy or Cut the page would finish late never writes the system clipboard. It ends the process only when every other tab in it was created by the same session and no popup window of bree's shares it (popups share their opener's process); otherwise the shortcut falls back to script (the selection's text, or inserting the clipboard's text, without clipboard events). A session that detaches, or a tab that closes, during the command does not change that. If another tab or a popup window joins the process during a command, the private pasteboard stays until WebKit finishes or 5 s more pass, when the driver ends the process anyway (its pages crash). A caller that stops waiting shortens none of these times. A Paste also runs through WebKit only while the private pasteboard's change count is below the system's, so WebKit's read grant, which compares change counts, can never cover the system clipboard; otherwise it falls back to inserting text. Commands run one at a time across all tabs, because WebKit's pasteboard requests do not say which web view they serve, so two tabs' commands at once would share one private pasteboard. For the same reason a copy in another web view during a command (a person's, or a page's in a user's tab) reaches the private pasteboard; WebKit's own Copy or Cut writes it at most once and a Paste never, so a command whose pasteboard was written more often fails with `stale` and leaves the tab's clipboard unchanged (the one copy it cannot tell apart is the only write of a Copy or Cut whose page cancelled the event and set no data). A person's paste in another web view during a command still reads the private pasteboard. Items that name a local file (a file URL, also a `file:` URL as `text/uri-list` or another URL type, a filename list, an alias, a Finder node or a file promise) are left out when the tab's clipboard is put on the private pasteboard for a Paste, so WebKit never hands the page a local file. A command waits up to 5 s for the one before it, which ends by then (10 s when its process could not be ended at once), then gets its own 5 s; one that cannot start fails with `timeout`, names the tab it waited for, and does not run. While a command runs, another web view's paste or copy uses the private pasteboard too. Writes a page's own scripts make (the asynchronous Clipboard API, `execCommand("copy")`) are outside this redirect; the page clipboard guard (see "Guards") sends them to this clipboard |
 
 ## Guards
 
@@ -319,7 +319,7 @@ native (`BrowserReplBoundary` in the session, and the driver):
   of the active app) opens as a background tab, told to no session, never
   as a key popup window. A window
   a page opens from a tab a session created becomes a popup tab through
-  cmux's own navigation, which trusts local files and cmux's internal
+  bree's own navigation, which trusts local files and bree's internal
   schemes, and the page controls its URL. So it goes to the sessions
   (`tab.created`) only when it is an `http`, `https`, `about:blank` or
   `blob:` (of such an origin) page that the browser's URL allowlist and
@@ -398,24 +398,24 @@ otherwise throws the reference's own unsupported error text.
 ### Native host contract (JavaScriptCore)
 
 The app runs each REPL session in its own `JSContext` on a dedicated thread.
-Before loading the runtime it installs one global, `__cmuxNative`. The runtime
+Before loading the runtime it installs one global, `__breeNative`. The runtime
 (`repl-host.js`) builds `host`, timers, `fs`, `fetch` and `driver` on it. All
 structured values cross the boundary as JSON strings.
 
 | Member | Contract |
 | --- | --- |
 | `version` | `1` |
-| `sessionId`, `cwd` | session name; absolute fs root: the CLI caller's cwd, or, when the request has none, a new directory of the session's own under the temporary directory (removed on close when empty). The app refuses `/`, the home directory and any directory containing it with an error telling the agent to `cd` to a project or scratch directory; `cmux browser repl mcp` sends no cwd when started in one of those |
+| `sessionId`, `cwd` | session name; absolute fs root: the CLI caller's cwd, or, when the request has none, a new directory of the session's own under the temporary directory (removed on close when empty). The app refuses `/`, the home directory and any directory containing it with an error telling the agent to `cd` to a project or scratch directory; `bree browser repl mcp` sends no cwd when started in one of those |
 | `capabilities` | array of driver capability names (`[]` on WebKit) |
 | `print(level, text)` | append one output line; `level` is `log`, `info`, `warn`, `error` or `debug`; `text` is already formatted. An evaluation keeps at most 16 MiB of lines; the rest goes to `<tmpdir>/output-<evalId>.txt`, announced by a `# output continues in <path>` line and summed up by a last `# output truncated: …; full output: <path>` line |
-| `setTimer(id, delayMs, repeat)` / `clearTimer(id)` | on fire the app calls `globalThis.__cmuxHostOnTimer(id)`; repeating timers keep firing until cleared, each fire `delayMs` after the previous callback ran, so a busy thread holds at most one queued callback per timer. `setTimer` returns `false`, scheduling nothing, when the session already has 10,000 timers scheduled or fired with their callback not yet run; the runtime's `setTimeout` then throws a `RangeError` |
-| `driverCall(callId, method, paramsJSON)` | the app later calls `globalThis.__cmuxHostOnResult(callId, errorJSON, resultJSON)`; exactly one of the two is `null`; `errorJSON` is `{ code, message }` |
-| `fetch(callId, requestJSON)` | request `{ url, method, headers: [[k, v]], bodyBase64?, targetId?, credentials?, origin? }`; result via `__cmuxHostOnResult`: `{ url, status, statusText, headers: [[k, v]], bodyBase64, redirected }`. Cookies come from, and `Set-Cookie` goes back to, the attached tab's cookie store (a cookie goes to a URL its domain matches and whose path its path matches by RFC 6265, so a `/account` cookie never goes to `/accounting`), for `credentials` `include` (default) always, `same-origin` only for URLs on `origin`, `omit` never. The domain policy is checked on the URL and every redirect hop (`blocked`); a body over 64 MiB fails; a session runs at most 16 fetches at once and queues the rest in order; when a cell times out, the fetches it started are cancelled and its queued ones fail with `cancelled`; the session redacts the URL, headers and the body (UTF-8 text as text; other bytes by each value's UTF-8 and escaped bytes, and its percent-encoded and Base64 forms) |
+| `setTimer(id, delayMs, repeat)` / `clearTimer(id)` | on fire the app calls `globalThis.__breeHostOnTimer(id)`; repeating timers keep firing until cleared, each fire `delayMs` after the previous callback ran, so a busy thread holds at most one queued callback per timer. `setTimer` returns `false`, scheduling nothing, when the session already has 10,000 timers scheduled or fired with their callback not yet run; the runtime's `setTimeout` then throws a `RangeError` |
+| `driverCall(callId, method, paramsJSON)` | the app later calls `globalThis.__breeHostOnResult(callId, errorJSON, resultJSON)`; exactly one of the two is `null`; `errorJSON` is `{ code, message }` |
+| `fetch(callId, requestJSON)` | request `{ url, method, headers: [[k, v]], bodyBase64?, targetId?, credentials?, origin? }`; result via `__breeHostOnResult`: `{ url, status, statusText, headers: [[k, v]], bodyBase64, redirected }`. Cookies come from, and `Set-Cookie` goes back to, the attached tab's cookie store (a cookie goes to a URL its domain matches and whose path its path matches by RFC 6265, so a `/account` cookie never goes to `/accounting`), for `credentials` `include` (default) always, `same-origin` only for URLs on `origin`, `omit` never. The domain policy is checked on the URL and every redirect hop (`blocked`); a body over 64 MiB fails; a session runs at most 16 fetches at once and queues the rest in order; when a cell times out, the fetches it started are cancelled and its queued ones fail with `cancelled`; the session redacts the URL, headers and the body (UTF-8 text as text; other bytes by each value's UTF-8 and escaped bytes, and its percent-encoded and Base64 forms) |
 | `secrets(op, argsJSON)` | synchronous, `{"ok": value}` or `{"error": {code, message}}`: `set { name, value, domains, totp }`, `load { path }` (read natively) or `load { object }`, `list`, `has { name }`, `delete { name }`, `clear`. No result holds a value |
 | `policy(op, argsJSON)` | synchronous, as `secrets`: `get` → `{ allowed, prohibited, blockIPs, locked }`, `check { url }` → reason or `null`, `site { host }` → the host's site (registrable domain by the Public Suffix List, or the host itself when it has none), the same site `cookies.clear` scopes to, `set { allowed?, prohibited?, blockIPs?, lock?, title }` (a locked policy refuses) |
 | `fs(op, argsJSON)` | synchronous; returns `{"ok": value}` or `{"error": {"code": "ENOENT"\|"EACCES"\|"EEXIST"\|"ENOTDIR"\|"EISDIR"\|"ENOTEMPTY"\|"EINVAL", "message"}}` |
 | `readResource(relativePath)` | text of a bundled `Resources/browser-repl/` file, or `null` |
-| `tmpdir`, `homedir` | the session's private temporary directory (`<app temp>/cmux-browser-repl/<session>-<random>-tmp`, mode 0700, removed on close when empty; no other session's files are in it) and the canonical home directory, for `node:os` |
+| `tmpdir`, `homedir` | the session's private temporary directory (`<app temp>/bree-browser-repl/<session>-<random>-tmp`, mode 0700, removed on close when empty; no other session's files are in it) and the canonical home directory, for `node:os` |
 
 `fs` ops, paths relative to `cwd` (absolute paths must stay inside `cwd` or
 the session's own `tmpdir`, never the system temporary directory that other
@@ -444,15 +444,15 @@ reaches.
 
 Entry points the runtime defines, called by the app:
 
-- `__cmuxReplEval(code)` returns a Promise; the app awaits it with the eval
+- `__breeReplEval(code)` returns a Promise; the app awaits it with the eval
   timeout (120 s by default). Rejection is an uncaught error; the
-  app formats it with `__cmuxFormatError(error)` when defined, else
+  app formats it with `__breeFormatError(error)` when defined, else
   `error.stack ?? String(error)`, and the CLI exits 1. At the timeout the
   app answers the caller at once; a script still running is terminated
-  (`JSContextGroupSetExecutionTimeLimit`), then `__cmuxReplCancel(message)`
+  (`JSContextGroupSetExecutionTimeLimit`), then `__breeReplCancel(message)`
   settles the cell so the next one runs.
-- The runtime (`repl-host.js`) keeps `__cmuxNative` in its closures and
-  deletes the global, and its own `CmuxBrowserRepl` namespace, before any
+- The runtime (`repl-host.js`) keeps `__breeNative` in its closures and
+  deletes the global, and its own `BreeBrowserRepl` namespace, before any
   cell runs. Once the runtime has loaded, the app takes the entry points
   (above and below) and deletes their globals, so no cell can call them.
 - Every call the app makes into the context (a cell, a driver result, a
@@ -462,22 +462,22 @@ Entry points the runtime defines, called by the app:
   whose cell has ended, is terminated after 10 s. A cell runs from when
   the session's thread starts it, so a callback queued ahead of a
   submitted cell counts as outside a cell. After the session closes
-  (`cmux browser repl reset`, idle expiry) every script is terminated and
+  (`bree browser repl reset`, idle expiry) every script is terminated and
   the app makes no further call into the context.
-- `__cmuxHostOnEvent(name, payloadJSON)` delivers every driver event.
-- `__cmuxHostOnTimer(id)`, `__cmuxHostOnResult(callId, errorJSON, resultJSON)`.
+- `__breeHostOnEvent(name, payloadJSON)` delivers every driver event.
+- `__breeHostOnTimer(id)`, `__breeHostOnResult(callId, errorJSON, resultJSON)`.
 
 Script load order: `manifest.json` in `Resources/browser-repl/`,
 `{ "repl": [...], "agent": [...] }`, paths relative to that directory. `repl`
 scripts run in order in the REPL context; `agent` scripts install in order in
 the agent world. A missing or malformed manifest, or a listed file that does
 not exist, fails the evaluation with an error naming the path; nothing is
-skipped. `cmux browser repl guide` prints `guide.md` from the same directory
+skipped. `bree browser repl guide` prints `guide.md` from the same directory
 when present.
 
 ### Agent world
 
-- The world is `WKContentWorld.world(name: "cmux-agent")`. Scripts are added to
+- The world is `WKContentWorld.world(name: "bree-agent")`. Scripts are added to
   a tab's `WKUserContentController` (document start, all frames) when a
   session first touches the tab; frames that loaded earlier get the scripts on
   the first `frame.evaluate`.
@@ -485,7 +485,7 @@ when present.
   `callAsyncJavaScript`, so `awaitPromise` is always true on WebKit.
 - `frameId` values are opaque strings. `null`/omitted means the main frame.
 - The agent is installed with the recipe in `page-agent.js` and found at
-  `globalThis[Symbol.for("cmux.browserRepl.agent")]`; `input.setFiles`
+  `globalThis[Symbol.for("bree.browserRepl.agent")]`; `input.setFiles`
   resolves the handle there, assigns files with `DataTransfer` and dispatches
   `input` and `change`.
 - `frame.evaluate` with `world: "page"` and `handles`: handles live in the
@@ -526,7 +526,7 @@ The dev driver implements all of them.
   to elements in the target world and passes them before `args`, so
   `locator.evaluate` and `evaluateAll` run user functions in the page world on
   elements the agent world found. On WebKit this needs a cross-world lookup,
-  for example through `__cmuxPageAgent.resolveHandle`.
+  for example through `__breePageAgent.resolveHandle`.
 - `tab.info` must answer while a JavaScript dialog is open (page script is
   blocked then): return the last known `title` and `loadState`. `loadState`
   is `commit`, `domcontentloaded` or `load`; the runtime polls it for
@@ -537,8 +537,8 @@ The dev driver implements all of them.
 - `input.key` carries the resolved `key` (`C` for Shift+KeyC), `code`,
   `location`, and `text` only when the key inserts text (none while Meta,
   Control or Alt is held).
-- The page agent exposes `globalThis[Symbol.for("cmux.browserRepl.agent")]`
-  and `globalThis.__cmuxPageAgent.resolveHandle(id)`, both non-enumerable.
+- The page agent exposes `globalThis[Symbol.for("bree.browserRepl.agent")]`
+  and `globalThis.__breePageAgent.resolveHandle(id)`, both non-enumerable.
   Handle ids are strings (`h12`), stable per element for the document's life.
 - Host: `importModule(specifier)` is optional (absent in the app).
   `fetchHandlesCookies` is implied by the native `fetch` contract, so the

@@ -1,7 +1,7 @@
 // The native side of a REPL session's guards, in Node, for the dev backend.
 //
 // In the app these live in Swift (BrowserReplBoundary, BrowserReplSecretStore,
-// BrowserReplDomainPolicy in Packages/macOS/CmuxBrowser): secret values, the
+// BrowserReplDomainPolicy in Packages/macOS/BreeBrowser): secret values, the
 // domain policy and redaction sit between the REPL's JavaScriptCore context
 // and the driver, so agent code cannot switch them off. This module mirrors
 // that contract for the runtime under test on the Playwright dev driver; it is

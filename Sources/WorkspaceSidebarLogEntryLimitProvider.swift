@@ -1,4 +1,4 @@
-import CmuxSidebar
+import BreeSidebar
 import Foundation
 
 /// App-side conformer for the sidebar-metadata model's log-entry limit seam.

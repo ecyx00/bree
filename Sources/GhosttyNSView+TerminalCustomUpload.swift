@@ -1,4 +1,4 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
 
 extension GhosttyNSView {
@@ -91,7 +91,7 @@ extension GhosttyNSView {
                         if outcome == .unavailable { NSSound.beep() }
                     }
 #if DEBUG
-                    cmuxDebugLog("terminal.remoteDropUpload.customFailed surface=\(originSurfaceId?.uuidString.prefix(5) ?? "nil")")
+                    breeDebugLog("terminal.remoteDropUpload.customFailed surface=\(originSurfaceId?.uuidString.prefix(5) ?? "nil")")
 #endif
                 }
             }

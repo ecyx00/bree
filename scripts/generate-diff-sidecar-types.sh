@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CRATE="${ROOT}/Native/DiffSidecar/Cargo.toml"
 OUTPUT_DIR="${ROOT}/webviews/src/diff/generated"
 MODE="${1:-write}"
-TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cmux-diff-types.XXXXXX")"
+TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bree-diff-types.XXXXXX")"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
 TS_RS_EXPORT_DIR="$TEMP_DIR" TS_RS_LARGE_INT=number \

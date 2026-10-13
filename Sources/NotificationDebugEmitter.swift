@@ -1,7 +1,7 @@
 import AppKit
-import CMUXAgentLaunch
-import CmuxNotifications
-import CmuxSettings
+import BREEAgentLaunch
+import BreeNotifications
+import BreeSettings
 import Foundation
 
 #if DEBUG

@@ -1,45 +1,45 @@
-# cmux.json settings
+# bree.json settings
 
-Global app preferences live in `~/.config/cmux/cmux.json`.
+Global app preferences live in `~/.config/bree/bree.json`.
 
-For themes, fonts, transparency, and other appearance settings across Ghostty config and `cmux.json`, see [Customizing cmux's look](customizing-appearance.md).
+For themes, fonts, transparency, and other appearance settings across Ghostty config and `bree.json`, see [Customizing bree's look](customizing-appearance.md).
 
 ## Automation socket trust boundary
 
-`cmuxOnly` allows the cmux CLI and programs started from cmux terminals. This
-uses the process ancestry of the caller, so a program launched inside a cmux
+`breeOnly` allows the bree CLI and programs started from bree terminals. This
+uses the process ancestry of the caller, so a program launched inside a bree
 terminal is trusted even when it later starts another process or leaves the
-terminal's original process group. Use `password` or `cmuxOnly` when untrusted
-code may run inside a cmux terminal. `allowAll` also grants
+terminal's original process group. Use `password` or `breeOnly` when untrusted
+code may run inside a bree terminal. `allowAll` also grants
 access to other local macOS users and is unsafe on a shared Mac.
 
 ## Ghostty config live reload
 
-cmux reads terminal settings from the Ghostty config: `~/.config/ghostty/config` and
+bree reads terminal settings from the Ghostty config: `~/.config/ghostty/config` and
 `~/.config/ghostty/config.ghostty` (under `$XDG_CONFIG_HOME/ghostty/` when that is set),
 `~/Library/Application Support/com.mitchellh.ghostty/config.ghostty`
-(or its legacy `config`), and the cmux config under
-`~/Library/Application Support/com.cmuxterm.app/`. cmux watches these files, every file
+(or its legacy `config`), and the bree config under
+`~/Library/Application Support/com.bree.app/`. bree watches these files, every file
 pulled in with `config-file`, and user theme files named by `theme` (an absolute path, or
 `$XDG_CONFIG_HOME/ghostty/themes/<name>`, which defaults to `~/.config/ghostty/themes/<name>`,
 for each side of a `light:…,dark:…` pair). Saving one of them reloads the
 configuration the same way as Reload Configuration (Cmd+Shift+,), about 300 ms after
 the last write. Atomic saves, Vim-style saves that move the old file aside, files
 created after launch, and newly added includes are all picked up. A save that leaves
-the contents unchanged, or a file cmux already reloaded itself (for example after
-`cmux themes set` or a `cmux themes` preview), does not trigger another reload. A save
-made while a reload is still applying reloads once more after it. Themes bundled with cmux or Ghostty.app
+the contents unchanged, or a file bree already reloaded itself (for example after
+`bree themes set` or a `bree themes` preview), does not trigger another reload. A save
+made while a reload is still applying reloads once more after it. Themes bundled with bree or Ghostty.app
 are not watched.
 
 When Ghostty reports errors for the config (an unknown key, an invalid value, a missing
-theme), cmux shows a notice in the corner of the window listing the first three, with a
+theme), bree shows a notice in the corner of the window listing the first three, with a
 button that opens the file at the offending line. The notice appears once per distinct set
 of errors: reloads that keep the same errors stay quiet, fixing them hides the notice, and
-reintroducing an error shows it again. `cmux config doctor` validates `cmux.json` only.
+reintroducing an error shows it again. `bree config doctor` validates `bree.json` only.
 
 ## `mobile.artifactFolderAccess`
 
-Controls which files and folders cmux on iOS may browse after a chat references a directory or a directory path appears in a terminal.
+Controls which files and folders bree on iOS may browse after a chat references a directory or a directory path appears in a terminal.
 
 ```json
 {
@@ -75,7 +75,7 @@ Link-local addresses, including the cloud metadata service at `169.254.169.254`,
 
 ## `paneBorderColor` and `activePaneBorderColor`
 
-Customize split-workspace pane boundaries controlled by cmux.
+Customize split-workspace pane boundaries controlled by bree.
 
 ```json
 {
@@ -84,10 +84,10 @@ Customize split-workspace pane boundaries controlled by cmux.
 }
 ```
 
-- `paneBorderColor`: overrides the divider color between cmux panes in split workspaces.
-- `activePaneBorderColor`: draws a border around the focused cmux pane in split workspaces.
+- `paneBorderColor`: overrides the divider color between bree panes in split workspaces.
+- `activePaneBorderColor`: draws a border around the focused bree pane in split workspaces.
 
-Both settings accept 6-digit hex colors (`#RRGGBB`). Omit a key, or set it to `null`, to use the default. These settings apply to cmux's multi-surface pane layout. When `paneBorderColor` is unset, the divider uses Ghostty's `split-divider-color` if one is configured.
+Both settings accept 6-digit hex colors (`#RRGGBB`). Omit a key, or set it to `null`, to use the default. These settings apply to bree's multi-surface pane layout. When `paneBorderColor` is unset, the divider uses Ghostty's `split-divider-color` if one is configured.
 
 ## `app.windowTitleTemplate`
 
@@ -96,7 +96,7 @@ Opt-in template for the macOS `NSWindow.title`. Leave it unset or set it to an e
 ```json
 {
   "app": {
-    "windowTitleTemplate": "[cmux:{windowToken}] {activeWorkspace}"
+    "windowTitleTemplate": "[bree:{windowToken}] {activeWorkspace}"
   }
 }
 ```
@@ -107,14 +107,14 @@ Supported placeholders:
 - `{windowToken}`: the first 8 characters of the persisted window UUID.
 - `{activeWorkspace}`: the active workspace title, falling back to the default title when the workspace title is blank.
 - `{activeDirectory}`: the active workspace's current directory.
-- `{defaultTitle}`: the title cmux would have used without a template. For `cmux ssh` and Cloud workspaces it ends with the host, as in `build · big-red`.
-- `{appName}`: `cmux`.
+- `{defaultTitle}`: the title bree would have used without a template. For `bree ssh` and Cloud workspaces it ends with the host, as in `build · big-red`.
+- `{appName}`: `bree`.
 
-For tiling window managers such as AeroSpace or yabai, match on the stable token in the title. For example, the template above gives each restored macOS window a title containing `[cmux:abcd1234]`, so a rule can match `\\[cmux:abcd1234\\]`. The token is stable across relaunches for restored windows because it comes from the persisted window UUID.
+For tiling window managers such as AeroSpace or yabai, match on the stable token in the title. For example, the template above gives each restored macOS window a title containing `[bree:abcd1234]`, so a rule can match `\\[bree:abcd1234\\]`. The token is stable across relaunches for restored windows because it comes from the persisted window UUID.
 
 ## `app.confirmQuit`
 
-Controls when cmux asks before quitting:
+Controls when bree asks before quitting:
 
 - `always`: show the quit confirmation on Cmd+Q or app quit.
 - `dirty-only`: show it only when a workspace has a terminal or panel that reports close confirmation is needed.
@@ -134,7 +134,7 @@ Default: `right`.
 
 ## `terminal.agentHibernation`
 
-Routine Agent Hibernation is opt-in. cmux hibernates idle background agent
+Routine Agent Hibernation is opt-in. bree hibernates idle background agent
 processes to free RAM and CPU, then resumes each one with its saved session
 when you visit its tab. Independently, memory pressure (critical system pressure,
 or aggregate pressure below) can use the same lossless hibernation lifecycle even
@@ -160,17 +160,17 @@ rules, confirmation settle window, and resume behavior.
 
 ### Aggregate memory-pressure safety policy
 
-cmux prefers macOS's resource-coalition physical footprint, which includes the
-cmux process and its descendants. The private coalition layout is enabled only
+bree prefers macOS's resource-coalition physical footprint, which includes the
+bree process and its descendants. The private coalition layout is enabled only
 on OS releases with a validated ABI; if the API or validation is unavailable,
-cmux uses a complete, de-duplicated descendant process tree. An incomplete
+bree uses a complete, de-duplicated descendant process tree. An incomplete
 listing is treated as unavailable and cannot authorize hibernation. Relative
 percentages (warning at 50% and critical at 70% of installed physical memory,
 with an optional 20%/10% available-memory corroboration) decide only when to
-offer the idle-only pass. They are signals, not a memory ceiling or a limit on cmux.
+offer the idle-only pass. They are signals, not a memory ceiling or a limit on bree.
 
 While the same complete pressure remains through the existing
-confirmation window, cmux considers every currently eligible idle, non-visible
+confirmation window, bree considers every currently eligible idle, non-visible
 agent through the ordinary lossless Agent Hibernation lifecycle. The scheduled
 routine pass retains its oldest-activity ordering; the pressure pass considers
 all eligible agents, so its encounter order does not limit or prioritize which
@@ -181,13 +181,13 @@ policy never caps memory use, caps the number of agents/panes/processes,
 throttles or blocks new work, or terminates active or visible work. Hibernated
 agents resume from their saved session exactly as routine Agent Hibernation does.
 
-Enable routine hibernation from the command palette (`⌘⇧P` -> Enable Agent Hibernation), from **Settings > Terminal > Agent Hibernation**, or with `cmux agent-hibernation on`.
+Enable routine hibernation from the command palette (`⌘⇧P` -> Enable Agent Hibernation), from **Settings > Terminal > Agent Hibernation**, or with `bree agent-hibernation on`.
 
 ## `sidebar.compactAgentStatus`
 
 Puts the workspace's own status on one line, like the Claude desktop session list: one small colored glyph, then the title. Agent hooks report each coding agent's state as a status entry (for example Claude Code's "Running" or "Needs input"), and with `compactAgentStatus` off every one gets its own row under the workspace title, next to the branch and directory line. It is on by default: those rows fold into the glyph, along with the notification preview, the unread count badge and the loading spinner, and a long title stops wrapping. Hover the glyph for the agent, branch, and directory details, plus the config profile an agent launched under when it isn't the default (`CLAUDE_CONFIG_DIR=~/.claude-outlook` shows as `outlook`).
 
-Lines you added yourself stay where they are: the workspace description, your own `cmux set-status` keys, logs, progress, ports, the checklist, and a remote workspace's connection row with its Reconnect button. So `cmux set-status` under your own key is still the way to keep a line of your own in compact mode.
+Lines you added yourself stay where they are: the workspace description, your own `bree set-status` keys, logs, progress, ports, the checklist, and a remote workspace's connection row with its Reconnect button. So `bree set-status` under your own key is still the way to keep a line of your own in compact mode.
 
 ```json
 {
@@ -230,8 +230,8 @@ Change any of them with `sidebar.compactStatusIcons`, a map from state to an [SF
 ```
 
 - Default: `false`.
-- Only agent-owned status keys lose their rows (`claude_code`, `codex`, and the other built-in agent integrations). Status set with `cmux set-status` under any other key keeps its row.
-- The notification preview moves to the top of the tooltip too. Rows you added yourself (a workspace description, `cmux set-status` under other keys, logs, progress, ports) keep their lines.
+- Only agent-owned status keys lose their rows (`claude_code`, `codex`, and the other built-in agent integrations). Status set with `bree set-status` under any other key keeps its row.
+- The notification preview moves to the top of the tooltip too. Rows you added yourself (a workspace description, `bree set-status` under other keys, logs, progress, ports) keep their lines.
 - Workspace group headers show a glyph, after the group name, for the workspaces without a row of their own: the anchor workspace while the group is expanded, and every member once it is collapsed. Only states that ask for attention appear there (error, needs input, running, unread), the loudest first; hover it to see which workspace each comes from. It replaces the header's unread count.
 - The pulse is a Core Animation opacity loop capped at 30 Hz. It stops while the window is hidden or occluded, and Reduce Motion keeps the dot still.
 - Branch details follow the git branch toggle: turn it off and the glyph ignores it. Toggle compact status from **Settings > Sidebar > Compact Agent Status**.
@@ -240,7 +240,7 @@ Change any of them with `sidebar.compactStatusIcons`, a map from state to an [SF
 
 `terminal.showTextBoxOnNewTerminals` opens the TextBox on newly-created terminal sessions without moving keyboard focus into it.
 
-`terminal.focusTextBoxOnNewTerminals` opens the TextBox and focuses it for foreground terminal sessions created from the app UI, such as new terminal workspaces, tabs, and splits. Terminals created through the cmux CLI/control socket do not auto-focus the TextBox, even when this setting is enabled, so background automation does not steal keyboard focus.
+`terminal.focusTextBoxOnNewTerminals` opens the TextBox and focuses it for foreground terminal sessions created from the app UI, such as new terminal workspaces, tabs, and splits. Terminals created through the bree CLI/control socket do not auto-focus the TextBox, even when this setting is enabled, so background automation does not steal keyboard focus.
 
 ## Workspace terminal font size shortcuts
 
@@ -248,13 +248,13 @@ Cmd+Ctrl+= and Cmd+Ctrl+- increase or decrease every terminal in the selected wo
 
 ## The plus-button menu
 
-When `ui.newWorkspace.contextMenu` is not set, the plus-button menu lists `cmux.newWorkspace` (Cmd+N), `cmux.newTerminal` (Cmd+T), and `cmux.newBrowser` (Cmd+Shift+L). Each row shows its current shortcut, so a rebind in Settings or `cmux.json` appears the next time the menu opens; unbound and chord shortcuts show no hint. A configured menu keeps your order and still shows hints for built-in rows and for actions with a `shortcut`.
+When `ui.newWorkspace.contextMenu` is not set, the plus-button menu lists `bree.newWorkspace` (Cmd+N), `bree.newTerminal` (Cmd+T), and `bree.newBrowser` (Cmd+Shift+L). Each row shows its current shortcut, so a rebind in Settings or `bree.json` appears the next time the menu opens; unbound and chord shortcuts show no hint. A configured menu keeps your order and still shows hints for built-in rows and for actions with a `shortcut`.
 
 ## `terminal.textBoxSubmitActions`
 
 Controls what the TextBox submit button does for new terminal sessions. Active agent sessions such as Claude, Codex, OpenCode, and Pi always use plain Text Entry so prompts go into the running agent instead of launching another command.
 
-Press Shift-Tab in the TextBox to cycle the default action. This shortcut is `shortcuts.bindings.cycleTextBoxSubmitAction`; rebind or disable it from Settings > Keyboard Shortcuts or `cmux.json`. Right-click the submit button to pick any configured action or open this documentation.
+Press Shift-Tab in the TextBox to cycle the default action. This shortcut is `shortcuts.bindings.cycleTextBoxSubmitAction`; rebind or disable it from Settings > Keyboard Shortcuts or `bree.json`. Right-click the submit button to pick any configured action or open this documentation.
 
 ```json
 {
@@ -295,7 +295,7 @@ Action fields:
 - `title`: menu label for custom actions.
 - `kind`: `textEntry` or `commandTemplate`.
 - `commandTemplate`: shell command for `commandTemplate`. Include `{{prompt}}` where the prompt should be shell-quoted into the command line.
-- `preservePromptAfterLaunch`: optional boolean for custom launch-only actions. When `true`, cmux submits `commandTemplate` as a provider launch command while keeping the TextBox prompt intact for the active agent session.
+- `preservePromptAfterLaunch`: optional boolean for custom launch-only actions. When `true`, bree submits `commandTemplate` as a provider launch command while keeping the TextBox prompt intact for the active agent session.
 - `systemImage`: fallback SF Symbol name shown on the submit button.
 - `assetName`: optional app asset catalog image name, for example `AgentIcons/Codex`.
 - `imagePath`: optional PNG or image path for the submit button.
@@ -305,9 +305,9 @@ Action fields:
 
 Replace the built-in `scp` for terminal file drops and pastes over SSH with a
 command you choose. When you drop or paste a file into a terminal running an SSH
-session, cmux normally `scp`s it to `/tmp/cmux-drop-<uuid>` on the host and types
+session, bree normally `scp`s it to `/tmp/bree-drop-<uuid>` on the host and types
 the remote path. `terminal.uploadCommands` is an ordered list of host-scoped
-rules; when the ssh destination matches a rule, cmux runs that rule's command
+rules; when the ssh destination matches a rule, bree runs that rule's command
 instead and inserts what the command prints.
 
 ```json
@@ -316,7 +316,7 @@ instead and inserts what the command prints.
     "uploadCommands": [
       {
         "hostPattern": "*.example.com",
-        "command": "my-upload \"$CMUX_UPLOAD_LOCAL_PATH\" \"$CMUX_UPLOAD_DESTINATION:$CMUX_UPLOAD_REMOTE_PATH\""
+        "command": "my-upload \"$BREE_UPLOAD_LOCAL_PATH\" \"$BREE_UPLOAD_DESTINATION:$BREE_UPLOAD_REMOTE_PATH\""
       }
     ]
   }
@@ -331,9 +331,9 @@ instead and inserts what the command prints.
   `localhost`), a rule also matches that resolved host, so a pattern written
   against either the alias or the real host works.
 - `command`: run through `/bin/sh -c`, **once per file**. It receives the file and
-  endpoint on its environment: `CMUX_UPLOAD_LOCAL_PATH`, `CMUX_UPLOAD_REMOTE_PATH`
-  (the `/tmp/cmux-drop-<uuid>` path cmux picked), `CMUX_UPLOAD_DESTINATION`,
-  `CMUX_UPLOAD_PORT`, `CMUX_UPLOAD_IDENTITY_FILE`, and `CMUX_UPLOAD_SSH_OPTIONS`
+  endpoint on its environment: `BREE_UPLOAD_LOCAL_PATH`, `BREE_UPLOAD_REMOTE_PATH`
+  (the `/tmp/bree-drop-<uuid>` path bree picked), `BREE_UPLOAD_DESTINATION`,
+  `BREE_UPLOAD_PORT`, `BREE_UPLOAD_IDENTITY_FILE`, and `BREE_UPLOAD_SSH_OPTIONS`
   (newline-separated; the last three are unset when the session has none). The
   rest of the environment is inherited, so a one-liner resolves tools on `PATH`.
 - `enabled`: set to `false` to keep a rule in the list but skip it. Defaults to
@@ -344,12 +344,12 @@ unchanged, so other hosts are untouched.
 
 ### How the command's output is used
 
-cmux inserts the command's **stdout** at the cursor:
+bree inserts the command's **stdout** at the cursor:
 
 - Non-empty stdout is inserted **verbatim** (with control characters stripped),
   so a rule can emit a remote path, a URL, or any reference — for example a line
   an agent in the terminal will read.
-- If the command prints **nothing**, cmux inserts the shell-escaped remote path it
+- If the command prints **nothing**, bree inserts the shell-escaped remote path it
   chose, so the simplest rule just moves the file and behaves like the built-in.
 - For a multi-file drop, each file's output is joined with spaces.
 
@@ -361,7 +361,7 @@ inserts nothing — exactly like an `scp` failure.
 
 ## `automation.workspaceAutoNaming`
 
-Opt-in AI auto-naming of workspaces and tabs from agent conversation content. When enabled, cmux summarizes supported agent sessions into short sidebar and tab names using each agent's own binary, and refreshes them as the conversation topic shifts. See [workspace-auto-naming.md](workspace-auto-naming.md) for the supported adapter list and full behavior.
+Opt-in AI auto-naming of workspaces and tabs from agent conversation content. When enabled, bree summarizes supported agent sessions into short sidebar and tab names using each agent's own binary, and refreshes them as the conversation topic shifts. See [workspace-auto-naming.md](workspace-auto-naming.md) for the supported adapter list and full behavior.
 
 ```json
 {
@@ -375,7 +375,7 @@ Default: `false`. Manual renames (sidebar, command palette, CLI, or `/rename`) a
 
 ## `automation.agentAutoResume`
 
-Sends `continue` to a cmux-launched agent whose turn ended on a retryable upstream error, such as the model being at capacity, an overloaded API, or a lost connection. Retries back off between attempts. A turn that ended waiting on a human (a question, a permission prompt, or a normal finish) is never resumed.
+Sends `continue` to a bree-launched agent whose turn ended on a retryable upstream error, such as the model being at capacity, an overloaded API, or a lost connection. Retries back off between attempts. A turn that ended waiting on a human (a question, a permission prompt, or a normal finish) is never resumed.
 
 ```json
 {
@@ -389,7 +389,7 @@ Default: `true`. Toggle it from **Settings > Automation > Auto-Resume Agents Aft
 
 ## `agentMessages.enabled`
 
-The app-wide switch for `cmux agent message`. When `false`, sends fail with "Agent messages are turned off (agentMessages.enabled is false).", nothing is stored, and messages already queued are marked `failed` instead of being delivered. Turning it back on does not resend them.
+The app-wide switch for `bree agent message`. When `false`, sends fail with "Agent messages are turned off (agentMessages.enabled is false).", nothing is stored, and messages already queued are marked `failed` instead of being delivered. Turning it back on does not resend them.
 
 ```json
 {
@@ -417,13 +417,13 @@ Default: `unified`.
 }
 ```
 
-The toolbar layout toggle persists the last user choice for future generated diff viewers. Passing `cmux diff --layout split` or `cmux diff --layout unified` overrides both the saved toolbar choice and this default for that invocation.
+The toolbar layout toggle persists the last user choice for future generated diff viewers. Passing `bree diff --layout split` or `bree diff --layout unified` overrides both the saved toolbar choice and this default for that invocation.
 
 ## `agents.launchers`
 
-cmux resolves resume commands for the wrapper launchers it owns (`cmux claude-teams`, `cmux codex-teams`, `cmux omo`, …). A launcher cmux does not own is invisible to that resolution: a multi-account router such as [`teamclaude`](https://www.npmjs.com/package/@karpeleslab/teamclaude), an LLM-gateway front end, or any `<wrapper> run -- <agent argv>` shim execs the real agent as a child, so the capture records the inner `claude` and restore replays a bare `claude --resume <id>`. The wrapper is dropped, and whatever it provided — account fallback, quota spreading, request logging — is gone from the restored pane.
+bree resolves resume commands for the wrapper launchers it owns (`bree claude-teams`, `bree codex-teams`, `bree omo`, …). A launcher bree does not own is invisible to that resolution: a multi-account router such as [`teamclaude`](https://www.npmjs.com/package/@karpeleslab/teamclaude), an LLM-gateway front end, or any `<wrapper> run -- <agent argv>` shim execs the real agent as a child, so the capture records the inner `claude` and restore replays a bare `claude --resume <id>`. The wrapper is dropped, and whatever it provided — account fallback, quota spreading, request logging — is gone from the restored pane.
 
-Declare the wrapper here and cmux re-supplies it whenever that session resumes.
+Declare the wrapper here and bree re-supplies it whenever that session resumes.
 
 ```json
 {
@@ -442,14 +442,14 @@ Declare the wrapper here and cmux re-supplies it whenever that session resumes.
 
 - `id`: stable identifier recorded on the launch capture. Letters, numbers, dots, underscores, and hyphens.
 - `kinds` (or `kind` for a single value, never both): built-in agent kinds the launcher wraps, e.g. `["claude"]`. Omit the key to match every kind — an empty array is treated as a mistake, not as "every kind".
-- `detect.argvExecutables`: executable names or paths that identify the launcher. A match requires the **executable** of an ancestor process — or its last path component — to equal an entry exactly, so `claude --add-dir ~/src/teamclaude-notes` never matches. Env prefixes, package runners, and interpreters are followed, up to two levels, so all of these are identified as `teamclaude`: `teamclaude run`, `node /usr/local/bin/teamclaude run`, `env VAR=1 VAR2=2 teamclaude run`, `npx --yes teamclaude run`. Only options whose shape cmux knows are skipped, and anything else ends the search rather than being guessed at — a runner option that takes a value (`npx --package <pkg> wrapper`) would otherwise make the value look like the launcher. An interpreter's own options decide what its program even is (`-e`/`-c` supply it inline, `-m` names a module, `-` reads it from stdin), so the search stops at the first option after an interpreter. In short: a wrapper is recognized in its plain forms (`wrapper run`, `node /path/to/wrapper run`, `env VAR=1 wrapper run`, `npx --yes wrapper run`), and a more exotic invocation simply resumes unwrapped. Detection walks the agent's ancestors at capture time, nearest first, and stops after 8 levels.
-- `resumeArgvPrefix`: argv words placed in front of the agent's own resume argv. cmux keeps every option it would have passed to the agent directly, so the wrapper never has to restate them.
+- `detect.argvExecutables`: executable names or paths that identify the launcher. A match requires the **executable** of an ancestor process — or its last path component — to equal an entry exactly, so `claude --add-dir ~/src/teamclaude-notes` never matches. Env prefixes, package runners, and interpreters are followed, up to two levels, so all of these are identified as `teamclaude`: `teamclaude run`, `node /usr/local/bin/teamclaude run`, `env VAR=1 VAR2=2 teamclaude run`, `npx --yes teamclaude run`. Only options whose shape bree knows are skipped, and anything else ends the search rather than being guessed at — a runner option that takes a value (`npx --package <pkg> wrapper`) would otherwise make the value look like the launcher. An interpreter's own options decide what its program even is (`-e`/`-c` supply it inline, `-m` names a module, `-` reads it from stdin), so the search stops at the first option after an interpreter. In short: a wrapper is recognized in its plain forms (`wrapper run`, `node /path/to/wrapper run`, `env VAR=1 wrapper run`, `npx --yes wrapper run`), and a more exotic invocation simply resumes unwrapped. Detection walks the agent's ancestors at capture time, nearest first, and stops after 8 levels.
+- `resumeArgvPrefix`: argv words placed in front of the agent's own resume argv. bree keeps every option it would have passed to the agent directly, so the wrapper never has to restate them.
 - `includesAgentExecutable`: keep the agent's `argv[0]` after the prefix. Default `false`, which suits wrappers that re-exec their own agent binary after a `--` separator; set it to `true` for `env`-style wrappers that take a full command.
 
 Behavior notes:
 
-- A project-level `cmux.json` (or `.bree/bree.json`) overrides a user-level declaration with the same `id`. The project file is resolved from the agent session's directory, not from wherever a CLI process happened to start.
-- Only resume is wrapped. Fresh launches already run under the wrapper because you started them there, and `cmux restore <kind> <checkpoint-id>` in direct mode is left untouched.
+- A project-level `bree.json` (or `.bree/bree.json`) overrides a user-level declaration with the same `id`. The project file is resolved from the agent session's directory, not from wherever a CLI process happened to start.
+- Only resume is wrapped. Fresh launches already run under the wrapper because you started them there, and `bree restore <kind> <checkpoint-id>` in direct mode is left untouched.
 - Declarations fail closed. A missing detection entry, an empty `resumeArgvPrefix`, a blank `kinds` array, or a value of the wrong type makes that one declaration unusable — the session then resumes exactly as it did before, without the wrapper. The rest of the file still applies.
 - Removing a declaration is safe, and has the same effect: the capture keeps the recorded id, but nothing is re-supplied.
-- Hooks keep working for the wrapped agent. When the prefix replaces the agent executable, cmux puts its per-surface agent shim first on `PATH` for the restored process, so the wrapper's own `claude` lookup still finds the hook-injecting shim. A wrapper that ignores `PATH` (an absolute path to the real binary, for example) needs the global fallback instead: `cmux hooks setup --agent claude`.
+- Hooks keep working for the wrapped agent. When the prefix replaces the agent executable, bree puts its per-surface agent shim first on `PATH` for the restored process, so the wrapper's own `claude` lookup still finds the hook-injecting shim. A wrapper that ignores `PATH` (an absolute path to the real binary, for example) needs the global fallback instead: `bree hooks setup --agent claude`.

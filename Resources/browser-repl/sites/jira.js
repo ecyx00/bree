@@ -3,9 +3,9 @@
 // session cookie authenticates.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
-  const { URL } = root.CmuxBrowserRepl.core;
+  const { URL } = root.BreeBrowserRepl.core;
 
   async function rest(arg) {
     const out = [];
@@ -92,7 +92,7 @@
           } catch (e) {}
           return { status: res.status, json };
         });
-        if (r.status === 401 || r.status === 403) throw new S.SiteError("not_signed_in", `${name}: the cmux browser is not signed in to Atlassian; open https://home.atlassian.com with tabs.open() and ask the user to sign in`);
+        if (r.status === 401 || r.status === 403) throw new S.SiteError("not_signed_in", `${name}: the bree browser is not signed in to Atlassian; open https://home.atlassian.com with tabs.open() and ask the user to sign in`);
         if (r.status !== 200 || !r.json) throw new S.SiteError("http", `${name}: HTTP ${r.status}`);
         return (r.json.sites || [])
           .map((x) => ({ url: x.url, name: x.displayName || x.name || null, products: x.products || x.availableProducts || [] }))
@@ -108,14 +108,14 @@
       // /myself with an account there (anonymous access gets 401).
       async function verifyOnTenant(tgt, name, blocked) {
         if (verified.has(tgt.origin)) return tgt;
-        const allow = `; ${HOME}, where cmux reads the account's site list, is blocked by the domain policy (${blocked}), so the site was checked on its own origin. Add "${HOME}" to session.allowedDomains to check it against the account's site list`;
+        const allow = `; ${HOME}, where bree reads the account's site list, is blocked by the domain policy (${blocked}), so the site was checked on its own origin. Add "${HOME}" to session.allowedDomains to check it against the account's site list`;
         let r = null;
         try {
           [r] = await t.inOrigin(tgt.origin, rest, { paths: ["/rest/api/3/myself"] });
         } catch (e) {
           throw new S.SiteError("invalid", `${name}: ${tgt.origin} is not a Jira site the signed-in account can use (${(e && e.message) || e})${allow}`);
         }
-        if (r.status === 401) throw new S.SiteError("not_signed_in", `${name}: the cmux browser is not signed in to ${tgt.origin}; open it with tabs.open() and ask the user to sign in${allow}`);
+        if (r.status === 401) throw new S.SiteError("not_signed_in", `${name}: the bree browser is not signed in to ${tgt.origin}; open it with tabs.open() and ask the user to sign in${allow}`);
         if (r.status !== 200 || !r.json || !r.json.accountId) {
           throw new S.SiteError("invalid", `${name}: ${tgt.origin} is not a Jira site the signed-in account can use (HTTP ${r.status} from /rest/api/3/myself)${allow}`);
         }
@@ -135,7 +135,7 @@
       async function get(origin, paths, name) {
         const rs = await t.inOrigin(origin, rest, { paths });
         for (const r of rs) {
-          if (r.status === 401) throw new S.SiteError("not_signed_in", `${name}: the cmux browser is not signed in to ${origin}; open it with tabs.open() and ask the user to sign in`);
+          if (r.status === 401) throw new S.SiteError("not_signed_in", `${name}: the bree browser is not signed in to ${origin}; open it with tabs.open() and ask the user to sign in`);
           if (r.status === 404) throw new S.SiteError("not_found", `${name}: not found, or this account cannot see it`);
           if (r.status < 200 || r.status >= 300) throw new S.SiteError("http", `${name}: HTTP ${r.status}${r.json && r.json.errorMessages ? ": " + r.json.errorMessages.join("; ") : ""}`);
         }

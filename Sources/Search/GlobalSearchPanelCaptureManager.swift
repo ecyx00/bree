@@ -35,7 +35,7 @@ final class GlobalSearchPanelCaptureManager {
                     try await index.upsert(document)
                 } catch {
 #if DEBUG
-                    cmuxDebugLog("globalSearch.markdown.upsert failed panel=\(context.panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
+                    breeDebugLog("globalSearch.markdown.upsert failed panel=\(context.panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
 #endif
                 }
             }
@@ -153,7 +153,7 @@ final class GlobalSearchPanelCaptureManager {
                     } catch {
                         guard !Task.isCancelled else { return }
 #if DEBUG
-                        cmuxDebugLog("globalSearch.markdown.capture failed panel=\(panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
+                        breeDebugLog("globalSearch.markdown.capture failed panel=\(panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
 #endif
                     }
                 }
@@ -238,7 +238,7 @@ final class GlobalSearchPanelCaptureManager {
             terminalCaptureFingerprints[panelID] = prepared.fingerprint
         } catch {
 #if DEBUG
-            cmuxDebugLog("globalSearch.terminal.upsert failed panel=\(panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
+            breeDebugLog("globalSearch.terminal.upsert failed panel=\(panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
 #endif
         }
     }
@@ -249,7 +249,7 @@ final class GlobalSearchPanelCaptureManager {
             try await index.deleteDocument(id: documentID)
         } catch {
 #if DEBUG
-            cmuxDebugLog("globalSearch.terminal.purge failed panel=\(panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
+            breeDebugLog("globalSearch.terminal.purge failed panel=\(panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
 #endif
         }
     }
@@ -260,7 +260,7 @@ final class GlobalSearchPanelCaptureManager {
             try await index.deleteDocument(id: documentID)
         } catch {
 #if DEBUG
-            cmuxDebugLog("globalSearch.markdown.purge failed panel=\(panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
+            breeDebugLog("globalSearch.markdown.purge failed panel=\(panelID.uuidString.prefix(5)) error=\(error.localizedDescription)")
 #endif
         }
     }
@@ -304,7 +304,7 @@ final class GlobalSearchPanelCaptureManager {
         } catch {
             guard !Task.isCancelled else { return }
 #if DEBUG
-            cmuxDebugLog("globalSearch.browser.upsert failed panel=\(panel.id.uuidString.prefix(5)) error=\(error.localizedDescription)")
+            breeDebugLog("globalSearch.browser.upsert failed panel=\(panel.id.uuidString.prefix(5)) error=\(error.localizedDescription)")
 #endif
         }
     }

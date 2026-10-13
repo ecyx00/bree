@@ -15,11 +15,11 @@ HELPER = Path(__file__).resolve().parents[1] / "scripts/lib/tagged-reload-lock.p
 
 class ReloadTagLockTests(unittest.TestCase):
     def setUp(self):
-        self.directory = tempfile.TemporaryDirectory(prefix="cmux-reload-lock-test-")
+        self.directory = tempfile.TemporaryDirectory(prefix="bree-reload-lock-test-")
         self.addCleanup(self.directory.cleanup)
         self.script = Path(self.directory.name) / "build.sh"
         self.script.write_text(
-            'test "$CMUX_RELOAD_TAG_LOCK_OWNER" = "$PPID" || exit 90\n'
+            'test "$BREE_RELOAD_TAG_LOCK_OWNER" = "$PPID" || exit 90\n'
             'printf "ready\\n"\n'
             'read -r release\n'
             'exit "${release:-0}"\n'

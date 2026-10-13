@@ -1,10 +1,10 @@
-import CmuxExtensionKit
+import BreeExtensionKit
 import SwiftUI
 
 @main
-final class SampleSidebarExtension: @MainActor CmuxSidebarExtension {
-    static let manifest = CmuxExtensionManifest(
-        id: "co.manaflow.CMUXExtKitSampleSidebarApp.Extension",
+final class SampleSidebarExtension: @MainActor BreeSidebarExtension {
+    static let manifest = BreeExtensionManifest(
+        id: "co.manaflow.BREEExtKitSampleSidebarApp.Extension",
         displayName: String(localized: "sampleSidebar.manifest.displayName", defaultValue: "Bree Sample Sidebar Extension"),
         readScopes: [
             .workspaceList,
@@ -30,11 +30,11 @@ final class SampleSidebarExtension: @MainActor CmuxSidebarExtension {
         SampleSidebarView(model: model)
     }
 
-    func update(context: CmuxSidebarContext) {
+    func update(context: BreeSidebarContext) {
         model.update(context: context)
     }
 
-    func connectionStatusDidChange(_ status: CmuxSidebarConnectionStatus) {
+    func connectionStatusDidChange(_ status: BreeSidebarConnectionStatus) {
         model.connectionStatusDidChange(status)
     }
 }

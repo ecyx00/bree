@@ -3,7 +3,7 @@
     "source": "Actions · bree.json…",
     "identityLocales": {
       "fr": {
-        "reason": "Actions is the standard French noun for this UI label, and cmux.json is an invariant filename. The translated French entry is still required.",
+        "reason": "Actions is the standard French noun for this UI label, and bree.json is an invariant filename. The translated French entry is still required.",
         "values": [
           "Actions · bree.json…"
         ]
@@ -14,7 +14,7 @@
     "source": "Actions · bree.json",
     "identityLocales": {
       "fr": {
-        "reason": "Actions is the standard French noun for this UI label, and cmux.json is an invariant filename. The translated French entry is still required.",
+        "reason": "Actions is the standard French noun for this UI label, and bree.json is an invariant filename. The translated French entry is still required.",
         "values": [
           "Actions · bree.json"
         ]
@@ -340,7 +340,7 @@
     "class": "format",
     "source": "%@ -> %@"
   },
-  "browser.import.destination.cmux": {
+  "browser.import.destination.bree": {
     "source": "Destination",
     "identityLocales": {
       "fr": "Established UI or technical term with the same spelling in this locale; a translated entry is still required."
@@ -727,11 +727,11 @@
       "fr": "Reviewed shared native developer term, abbreviation, or borrowed technical noun. The translated entry is still required."
     }
   },
-  "command.cmuxConfig.builtInSubtitle": {
+  "command.breeConfig.builtInSubtitle": {
     "class": "brand",
     "source": "Bree"
   },
-  "command.cmuxConfig.defaultClaudeCodeTitle": {
+  "command.breeConfig.defaultClaudeCodeTitle": {
     "source": "Claude Code",
     "identityLocales": {
       "ar": "Agent product names are invariant brand names; the translated entry is still required.",
@@ -755,7 +755,7 @@
       "zh-Hant": "Agent product names are invariant brand names; the translated entry is still required."
     }
   },
-  "command.cmuxConfig.defaultCodexTitle": {
+  "command.breeConfig.defaultCodexTitle": {
     "source": "Codex",
     "identityLocales": {
       "ar": "Agent product names are invariant brand names; the translated entry is still required.",
@@ -779,7 +779,7 @@
       "zh-Hant": "Agent product names are invariant brand names; the translated entry is still required."
     }
   },
-  "command.cmuxConfig.defaultOpenCodeTitle": {
+  "command.breeConfig.defaultOpenCodeTitle": {
     "source": "OpenCode",
     "identityLocales": {
       "ar": "Agent product names are invariant brand names; the translated entry is still required.",
@@ -803,15 +803,15 @@
       "zh-Hant": "Agent product names are invariant brand names; the translated entry is still required."
     }
   },
-  "command.cmuxConfig.issue.schemaError.detail": {
+  "command.breeConfig.issue.schemaError.detail": {
     "class": "format",
     "source": "%@"
   },
-  "command.cmuxConfig.issue.subtitle": {
+  "command.breeConfig.issue.subtitle": {
     "class": "format",
     "source": "%@: %@"
   },
-  "command.cmuxConfig.subtitle": {
+  "command.breeConfig.subtitle": {
     "class": "syntax",
     "source": "bree.json"
   },
@@ -1093,15 +1093,15 @@
       "fr": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required."
     }
   },
-  "dialog.cmuxConfig.disclosure.cwd": {
+  "dialog.breeConfig.disclosure.cwd": {
     "source": "cwd: %@",
     "class": "format"
   },
-  "dialog.cmuxConfig.disclosure.cwdCommand": {
+  "dialog.breeConfig.disclosure.cwdCommand": {
     "source": "cwd %1$@: %2$@",
     "class": "format"
   },
-  "dialog.cmuxConfig.disclosure.url": {
+  "dialog.breeConfig.disclosure.url": {
     "source": "url: %@",
     "class": "format"
   },
@@ -1218,7 +1218,7 @@
       "zh-Hant": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
       "ko": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
       "ar": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
-      "zh-Hans": "Dock is the cmux right-sidebar feature name, not the macOS Dock; this market keeps the English product name, as reviewed in #12958."
+      "zh-Hans": "Dock is the bree right-sidebar feature name, not the macOS Dock; this market keeps the English product name, as reviewed in #12958."
     }
   },
   "dock.source.title": {
@@ -1231,7 +1231,7 @@
       "zh-Hant": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
       "ko": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
       "ar": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
-      "zh-Hans": "Dock is the cmux right-sidebar feature name, not the macOS Dock; this market keeps the English product name, as reviewed in #12958."
+      "zh-Hans": "Dock is the bree right-sidebar feature name, not the macOS Dock; this market keeps the English product name, as reviewed in #12958."
     }
   },
   "emptyPanel.action.browser": {
@@ -2011,17 +2011,17 @@
       "zh-Hant": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
       "ko": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
       "ar": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
-      "zh-Hans": "Dock is the cmux right-sidebar feature name, not the macOS Dock; this market keeps the English product name, as reviewed in #12958."
+      "zh-Hans": "Dock is the bree right-sidebar feature name, not the macOS Dock; this market keeps the English product name, as reviewed in #12958."
     }
   },
   "rightSidebar.mode.feed": {
     "source": "Feed",
     "identityLocales": {
       "de": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
-      "ar": "Feed is the cmux right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
-      "es": "Feed is the cmux right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
-      "zh-Hant": "Feed is the cmux right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
-      "zh-Hans": "Feed is the cmux right-sidebar feature name; this market keeps the English product name, as reviewed in #12958."
+      "ar": "Feed is the bree right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
+      "es": "Feed is the bree right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
+      "zh-Hant": "Feed is the bree right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
+      "zh-Hans": "Feed is the bree right-sidebar feature name; this market keeps the English product name, as reviewed in #12958."
     }
   },
   "sessionIndex.agent.claude": {
@@ -2310,10 +2310,10 @@
     "source": "Feed",
     "identityLocales": {
       "de": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required.",
-      "ar": "Feed is the cmux right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
-      "es": "Feed is the cmux right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
-      "zh-Hant": "Feed is the cmux right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
-      "zh-Hans": "Feed is the cmux right-sidebar feature name; this market keeps the English product name, as reviewed in #12958."
+      "ar": "Feed is the bree right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
+      "es": "Feed is the bree right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
+      "zh-Hant": "Feed is the bree right-sidebar feature name; this market keeps the English product name, as reviewed in #12958.",
+      "zh-Hans": "Feed is the bree right-sidebar feature name; this market keeps the English product name, as reviewed in #12958."
     }
   },
   "settings.betaFeatures.workspaceTodosChecklistStyle.inline": {
@@ -2457,7 +2457,7 @@
       "de": "Reviewed native UI spelling, established developer terminology, or the named macOS Dock component; an explicit translated entry remains required."
     }
   },
-  "settings.config.source.cmux": {
+  "settings.config.source.bree": {
     "class": "brand",
     "source": "Bree"
   },
@@ -3137,11 +3137,11 @@
       "es": "Reviewed native word, technical abbreviation, or SaaS tier name with the same spelling in this context."
     }
   },
-  "sleepyMode.glow.cmux": {
+  "sleepyMode.glow.bree": {
     "class": "brand",
     "source": "Bree"
   },
-  "sleepyMode.theme.cmux": {
+  "sleepyMode.theme.bree": {
     "class": "brand",
     "source": "Bree"
   },
@@ -3818,102 +3818,102 @@
   "cli.workflow.literal.codex": {
     "source": "codex",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cli.workflow.literal.claude": {
     "source": "claude",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cli.workflow.literal..bree/bree.json": {
     "source": ".bree/bree.json",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.~/.config/cmux/cmux.json": {
+  "cli.workflow.literal.~/.config/bree/bree.json": {
     "source": "~/.config/bree/bree.json",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cli.workflow.literal..bree/dock.json": {
     "source": ".bree/dock.json",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cli.workflow.literal.actions.workspaceCommand": {
     "source": "actions.workspaceCommand",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cli.workflow.literal.ui.newWorkspace.action": {
     "source": "ui.newWorkspace.action",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cli.workflow.literal.ui.newWorkspace.contextMenu": {
     "source": "ui.newWorkspace.contextMenu",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cli.workflow.literal.commands[].workspace.layout": {
     "source": "commands[].workspace.layout",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cli.workflow.literal.actions.agent": {
     "source": "actions.agent",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cli.workflow.literal.ui.surfaceTabBar.buttons": {
     "source": "ui.surfaceTabBar.buttons",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.cmux markdown": {
+  "cli.workflow.literal.bree markdown": {
     "source": "Bree markdown",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.cmux feed tui --opentui": {
+  "cli.workflow.literal.bree feed tui --opentui": {
     "source": "Bree feed tui --opentui",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.cmux reload-config": {
+  "cli.workflow.literal.bree reload-config": {
     "source": "Bree reload-config",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.cmux docs workflows --json": {
+  "cli.workflow.literal.bree docs workflows --json": {
     "source": "bree docs workflows --json",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.cmux layout list --json": {
+  "cli.workflow.literal.bree layout list --json": {
     "source": "Bree layout list --json",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.cmux layout get <name>": {
+  "cli.workflow.literal.bree layout get <name>": {
     "source": "Bree layout get <name>",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.cmux layout open <name> --cwd <project>": {
+  "cli.workflow.literal.bree layout open <name> --cwd <project>": {
     "source": "Bree layout open <name> --cwd <project>",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.cmux layout save <name> --description \"<what this creates>\"": {
+  "cli.workflow.literal.bree layout save <name> --description \"<what this creates>\"": {
     "source": "Bree layout save <name> --description \"<what this creates>\"",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
-  "cli.workflow.literal.cmux layout delete <name>": {
+  "cli.workflow.literal.bree layout delete <name>": {
     "source": "Bree layout delete <name>",
     "class": "syntax",
-    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/CMUXCLI+DocsSettings.swift. Kept invariant for execution and configuration."
+    "reason": "Literal command, executable, JSON path, or filesystem path in CLI/BREECLI+DocsSettings.swift. Kept invariant for execution and configuration."
   },
   "cloudMenu.team": {
     "source": "Team",
@@ -3924,17 +3924,17 @@
   "cloudMenu.title": {
     "source": "Cloud",
     "identityLocales": {
-      "de": "Product name cmux Cloud keeps its English spelling in this language.",
-      "fr": "Product name cmux Cloud keeps its English spelling in this language.",
-      "es": "Product name cmux Cloud keeps its English spelling in this language."
+      "de": "Product name bree Cloud keeps its English spelling in this language.",
+      "fr": "Product name bree Cloud keeps its English spelling in this language.",
+      "es": "Product name bree Cloud keeps its English spelling in this language."
     }
   },
   "menu.cloud.title": {
     "source": "Cloud",
     "identityLocales": {
-      "de": "Product name cmux Cloud keeps its English spelling in this language.",
-      "fr": "Product name cmux Cloud keeps its English spelling in this language.",
-      "es": "Product name cmux Cloud keeps its English spelling in this language."
+      "de": "Product name bree Cloud keeps its English spelling in this language.",
+      "fr": "Product name bree Cloud keeps its English spelling in this language.",
+      "es": "Product name bree Cloud keeps its English spelling in this language."
     }
   },
   "sidebar.agentStatus.glyph.tooltip": {
@@ -4000,25 +4000,25 @@
   "mobile.tabs.cloud": {
     "source": "Cloud",
     "identityLocales": {
-      "de": "cmux Cloud is a product name; German uses the English word unchanged.",
-      "fr": "cmux Cloud is a product name; French uses the English word unchanged.",
-      "es": "cmux Cloud is a product name; Spanish uses the English word unchanged.",
-      "zh-Hant": "cmux Cloud is a product name, left in Latin script in this locale.",
-      "zh-Hans": "cmux Cloud is a product name, left in Latin script in this locale.",
-      "ko": "cmux Cloud is a product name, left in Latin script in this locale.",
-      "ja": "cmux Cloud is a product name, left in Latin script in this locale."
+      "de": "bree Cloud is a product name; German uses the English word unchanged.",
+      "fr": "bree Cloud is a product name; French uses the English word unchanged.",
+      "es": "bree Cloud is a product name; Spanish uses the English word unchanged.",
+      "zh-Hant": "bree Cloud is a product name, left in Latin script in this locale.",
+      "zh-Hans": "bree Cloud is a product name, left in Latin script in this locale.",
+      "ko": "bree Cloud is a product name, left in Latin script in this locale.",
+      "ja": "bree Cloud is a product name, left in Latin script in this locale."
     }
   },
   "mobile.cloud.title": {
     "source": "Cloud",
     "identityLocales": {
-      "de": "cmux Cloud is a product name; German uses the English word unchanged.",
-      "fr": "cmux Cloud is a product name; French uses the English word unchanged.",
-      "es": "cmux Cloud is a product name; Spanish uses the English word unchanged.",
-      "zh-Hant": "cmux Cloud is a product name, left in Latin script in this locale.",
-      "zh-Hans": "cmux Cloud is a product name, left in Latin script in this locale.",
-      "ko": "cmux Cloud is a product name, left in Latin script in this locale.",
-      "ja": "cmux Cloud is a product name, left in Latin script in this locale."
+      "de": "bree Cloud is a product name; German uses the English word unchanged.",
+      "fr": "bree Cloud is a product name; French uses the English word unchanged.",
+      "es": "bree Cloud is a product name; Spanish uses the English word unchanged.",
+      "zh-Hant": "bree Cloud is a product name, left in Latin script in this locale.",
+      "zh-Hans": "bree Cloud is a product name, left in Latin script in this locale.",
+      "ko": "bree Cloud is a product name, left in Latin script in this locale.",
+      "ja": "bree Cloud is a product name, left in Latin script in this locale."
     }
   },
   "mobile.cloud.machines.header": {

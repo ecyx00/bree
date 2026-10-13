@@ -1,8 +1,8 @@
-import CmuxFoundation
+import BreeFoundation
 import CoreGraphics
 import Foundation
 
-/// Owns the one recording cmux may have in flight, and remembers the last few
+/// Owns the one recording bree may have in flight, and remembers the last few
 /// that finished so an agent can still ask where the file went.
 ///
 /// One at a time on purpose: two recorders sampling the same window would each

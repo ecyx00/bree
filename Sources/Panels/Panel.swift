@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 
 /// Type of panel content
 public enum PanelType: String, Codable, CaseIterable, Sendable {
@@ -106,11 +106,11 @@ public enum WorkspaceAttentionFlashReason: String, Equatable, Sendable {
 
 /// The built-in attention color used when no configured override is valid.
 enum WorkspaceAttentionFlashAccent: Equatable, Sendable {
-    case cmuxAccent
+    case breeAccent
 
-    func strokeColor(accent: CmuxAccentColor) -> NSColor {
+    func strokeColor(accent: BreeAccentColor) -> NSColor {
         switch self {
-        case .cmuxAccent:
+        case .breeAccent:
             return accent.dynamicNSColor
         }
     }
@@ -148,13 +148,13 @@ struct WorkspaceAttentionFlashDecision: Equatable, Sendable {
 
 enum WorkspaceAttentionCoordinator {
     static let notificationRingStyle = WorkspaceAttentionFlashPresentation(
-        accent: .cmuxAccent,
+        accent: .breeAccent,
         glowOpacity: 0.35,
         glowRadius: 3
     )
 
     static let flashRingStyle = WorkspaceAttentionFlashPresentation(
-        accent: .cmuxAccent,
+        accent: .breeAccent,
         glowOpacity: 0.6,
         glowRadius: 6
     )
@@ -203,12 +203,12 @@ enum PanelOverlayRingMetrics {
 }
 
 #if DEBUG
-func cmuxFlashDebugID(_ id: UUID?) -> String {
+func breeFlashDebugID(_ id: UUID?) -> String {
     guard let id else { return "nil" }
     return String(id.uuidString.prefix(6))
 }
 
-func cmuxFlashDebugRect(_ rect: CGRect?) -> String {
+func breeFlashDebugRect(_ rect: CGRect?) -> String {
     guard let rect else { return "nil" }
     return String(
         format: "%.1f,%.1f %.1fx%.1f",
@@ -219,7 +219,7 @@ func cmuxFlashDebugRect(_ rect: CGRect?) -> String {
     )
 }
 
-func cmuxFlashDebugBool(_ value: Bool) -> Int {
+func breeFlashDebugBool(_ value: Bool) -> Int {
     value ? 1 : 0
 }
 #endif

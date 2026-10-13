@@ -1,7 +1,7 @@
 // agents-dense: maximum agents per pixel. One monospace line per session,
 // aligned columns, color only where it means something - the tmux status
 // bar aesthetic for people running twenty agents at once.
-//   cmux right-sidebar set custom agents-dense
+//   bree right-sidebar set custom agents-dense
 
 const TINT = {
   needs_input: "#FF9F0A",
@@ -46,8 +46,8 @@ const counts = computed(() => {
 });
 
 function jump(e) {
-  cmux("workspace.select", { workspace_id: e.ws.id });
-  if (e.a.surfaceId) cmux("surface.focus", { surface_id: e.a.surfaceId });
+  bree("workspace.select", { workspace_id: e.ws.id });
+  if (e.a.surfaceId) bree("surface.focus", { surface_id: e.a.surfaceId });
 }
 
 sidebar(() =>

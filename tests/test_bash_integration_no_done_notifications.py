@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression coverage for bash job-control noise from cmux shell integration.
+Regression coverage for bash job-control noise from bree shell integration.
 
 The bug only appears in an interactive bash attached to a tty. A normal
 subprocess cannot reproduce the prompt-time "[N] Done" notifications, so this
@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 
 
-PROMPT = "__CMUX_TEST_PROMPT__ "
+PROMPT = "__BREE_TEST_PROMPT__ "
 JOB_DONE_RE = re.compile(r"^\[[0-9]+\][^\n\r]*\bDone\b", re.MULTILINE)
 
 
@@ -143,12 +143,12 @@ def _remove_tree_after_reporters_exit(path: str) -> None:
 
 def test_bash_integration_does_not_emit_done_notifications() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    integration_script = repo_root / "Resources/shell-integration/cmux-bash-integration.bash"
+    integration_script = repo_root / "Resources/shell-integration/bree-bash-integration.bash"
 
     tmp = tempfile.mkdtemp()
     try:
         tmp_path = Path(tmp)
-        socket_path = tmp_path / "cmux.sock"
+        socket_path = tmp_path / "bree.sock"
         repo_path = tmp_path / "repo"
         git_dir = repo_path / ".git"
         bin_path = tmp_path / "bin"
@@ -169,7 +169,7 @@ def test_bash_integration_does_not_emit_done_notifications() -> None:
             env = {
                 key: value
                 for key, value in os.environ.items()
-                if not key.startswith("CMUX")
+                if not key.startswith("BREE")
             }
             env.update(
                 {
@@ -184,13 +184,13 @@ def test_bash_integration_does_not_emit_done_notifications() -> None:
                 bash.run("HISTCONTROL=ignorespace")
                 bash.run(f"source {integration_script}")
                 bash.run(
-                    "_cmux_send() { printf '%s\\n' \"$1\" >> "
+                    "_bree_send() { printf '%s\\n' \"$1\" >> "
                     f"{shlex.quote(str(send_log))}; }}"
                 )
-                bash.run(f"export CMUX_SOCKET_PATH={shlex.quote(str(socket_path))}")
-                bash.run("export CMUX_TAB_ID=tab-test")
-                bash.run("export CMUX_PANEL_ID=panel-test")
-                bash.run("_CMUX_TTY_NAME=ttys-test")
+                bash.run(f"export BREE_SOCKET_PATH={shlex.quote(str(socket_path))}")
+                bash.run("export BREE_TAB_ID=tab-test")
+                bash.run("export BREE_PANEL_ID=panel-test")
+                bash.run("_BREE_TTY_NAME=ttys-test")
                 bash.run(f"cd {repo_path}")
 
                 # The next prompts exercise the shell-state, port-kick, TTY,
@@ -199,7 +199,7 @@ def test_bash_integration_does_not_emit_done_notifications() -> None:
                 bash.run("cd ..")
                 bash.run("true")
                 bash.run("sleep 0.2")
-                bash.run("echo __CMUX_DONE_CHECK__")
+                bash.run("echo __BREE_DONE_CHECK__")
 
                 sent_payloads = (
                     send_log.read_text(encoding="utf-8")

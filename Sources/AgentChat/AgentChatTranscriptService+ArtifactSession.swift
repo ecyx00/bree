@@ -1,4 +1,4 @@
-import CmuxMobileHost
+import BreeMobileHost
 extension AgentChatTranscriptService {
     /// Resolves the live or most recently active session bound to a terminal surface.
     ///

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Builds the Release Bree app (bundle id com.bree.app) next to the user's cmux.
+# Builds the Release Bree app (bundle id com.bree.app).
 # Usage: scripts/build-bree.sh [--install] [--package]
 #   --install  copy the bundle to /Applications/Bree.app, quitting only a running Bree.app.
 #   --package  stamp the Bree version from VERSION, sign ad hoc, and write
 #              dist/Bree-<version>-arm64.zip plus a .sha256 (release artifact, host arch only).
 # --package does not touch /Applications.
-# It never touches /Applications/cmux.app or anything with bundle id com.cmuxterm.app.
+# It never touches any other app in /Applications.
 set -euo pipefail
 
-BREE_BUNDLE_ID="com.bree.app"
+BREE_RELEASE_BUNDLE_ID="com.bree.app"
 BREE_APP_NAME="Bree"
 BREE_INSTALL_PATH="/Applications/Bree.app"
 DERIVED_DATA="$HOME/Library/Developer/Xcode/DerivedData/bree-release"
@@ -36,25 +36,25 @@ fi
 
 # Xcode build phases need zig and cargo; append so system tools keep priority.
 export PATH="$PATH:/opt/homebrew/opt/zig@0.16/bin:/opt/homebrew/opt/rustup/bin"
-export CMUX_GHOSTTYKIT_PREPROVISIONED=1
+export BREE_GHOSTTYKIT_PREPROVISIONED=1
 
 # Production Bree never comes from an incremental build: drop stale intermediates first.
 rm -rf "$DERIVED_DATA/Build/Intermediates.noindex"
 
-# The app's own Resources/cmux.entitlements carries keychain-access-groups, which demands a
+# The Xcode project once carried keychain-access-groups, which demands a
 # provisioning profile, so override it. The path must be absolute: a relative one is resolved
 # per target and breaks SwiftPM package targets (swift-crypto).
 # Local install on this Mac: build the host arch only and skip dSYMs (a universal build
 # with dSYMs ran the 14 GB disk out of space).
 xcodebuild \
-  -project cmux.xcodeproj \
-  -scheme cmux \
+  -project bree.xcodeproj \
+  -scheme bree \
   -configuration Release \
   -destination 'platform=macOS' \
   -derivedDataPath "$DERIVED_DATA" \
-  PRODUCT_BUNDLE_IDENTIFIER="$BREE_BUNDLE_ID" \
-  CMUX_AUTH_CALLBACK_SCHEME=bree \
-  CMUX_SIDEBAR_EXTENSION_POINT_ID="${BREE_BUNDLE_ID}.cmux.sidebar" \
+  PRODUCT_BUNDLE_IDENTIFIER="$BREE_RELEASE_BUNDLE_ID" \
+  BREE_AUTH_CALLBACK_SCHEME=bree \
+  BREE_SIDEBAR_EXTENSION_POINT_ID="${BREE_RELEASE_BUNDLE_ID}.bree.sidebar" \
   CODE_SIGN_IDENTITY=- \
   ONLY_ACTIVE_ARCH=YES \
   DEBUG_INFORMATION_FORMAT=dwarf \
@@ -64,10 +64,16 @@ xcodebuild \
   clean build
 
 PRODUCTS_DIR="$DERIVED_DATA/Build/Products/Release"
-BUILT_APP="$PRODUCTS_DIR/cmux.app"
+BUILT_APP="$PRODUCTS_DIR/bree.app"
 APP_PATH="$PRODUCTS_DIR/${BREE_APP_NAME}.app"
 if [[ ! -d "$BUILT_APP" ]]; then
   echo "error: built app not found at $BUILT_APP" >&2
+  exit 1
+fi
+
+# Bree is English only: the "Strip Non-English Localizations" build phase must have run.
+if find "$BUILT_APP/Contents/Resources" -type d -name '*.lproj' ! -name en.lproj ! -name Base.lproj | grep -q .; then
+  echo "error: non-English .lproj directories remain in $BUILT_APP" >&2
   exit 1
 fi
 
@@ -80,11 +86,11 @@ for key in CFBundleName CFBundleDisplayName; do
   /usr/libexec/PlistBuddy -c "Set :${key} ${BREE_APP_NAME}" "$INFO_PLIST" 2>/dev/null \
     || /usr/libexec/PlistBuddy -c "Add :${key} string ${BREE_APP_NAME}" "$INFO_PLIST"
 done
-# Bree has its own version (VERSION file); the upstream MARKETING_VERSION is cmux's.
+# Bree has its own version (VERSION file); the upstream MARKETING_VERSION is bree's.
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${BREE_VERSION}" "$INFO_PLIST"
 # Release identity: the executable is Bree (Activity Monitor shows this name). Nothing else
-# resolves Contents/MacOS/cmux; the bundled CLI is Resources/bin/bree and stays as is.
-mv "$STAGING/Contents/MacOS/cmux" "$STAGING/Contents/MacOS/${BREE_APP_NAME}"
+# resolves Contents/MacOS/bree; the bundled CLI is Resources/bin/bree and stays as is.
+mv "$STAGING/Contents/MacOS/bree" "$STAGING/Contents/MacOS/${BREE_APP_NAME}"
 /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable ${BREE_APP_NAME}" "$INFO_PLIST"
 # Permission prompts come from the localized InfoPlist.strings (UTF-16); say Bree there.
 python3 -I - "$STAGING/Contents" <<'PY'
@@ -93,14 +99,14 @@ info = sys.argv[1] + "/Info.plist"
 plist = plistlib.load(open(info, "rb"))
 for key, value in plist.items():
     if key.endswith("UsageDescription") and isinstance(value, str):
-        plist[key] = value.replace("cmux", "Bree")
+        plist[key] = value.replace("bree", "Bree")
 plistlib.dump(plist, open(info, "wb"))
 for path in glob.glob(sys.argv[1] + "/Resources/*.lproj/InfoPlist.strings"):
     raw = open(path, "rb").read()
     enc = "utf-16" if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else "utf-8"
     text = raw.decode(enc)
-    if "cmux" in text:
-        open(path, "wb").write(text.replace("cmux", "Bree").encode(enc))
+    if "bree" in text:
+        open(path, "wb").write(text.replace("bree", "Bree").encode(enc))
 PY
 xattr -cr "$STAGING" || true
 # The plist edit invalidated the seal; re-sign (Bree Local Code Signing if present, else ad hoc) with the keychain-free entitlements.
@@ -117,10 +123,10 @@ if [[ "$PACKAGE" -eq 1 ]]; then
 fi
 
 if [[ "$INSTALL" -eq 1 ]]; then
-  # Match only the exact Bree install path; cmux.app never matches this pattern.
+  # Match only the exact Bree install path; bree.app never matches this pattern.
   bree_process_pattern='^/Applications/Bree\.app/Contents/MacOS/'
   if pgrep -f "$bree_process_pattern" >/dev/null 2>&1; then
-    osascript -e "tell application id \"${BREE_BUNDLE_ID}\" to quit" >/dev/null 2>&1 || true
+    osascript -e "tell application id \"${BREE_RELEASE_BUNDLE_ID}\" to quit" >/dev/null 2>&1 || true
     for _ in $(seq 1 20); do
       pgrep -f "$bree_process_pattern" >/dev/null 2>&1 || break
       sleep 0.5

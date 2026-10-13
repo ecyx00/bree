@@ -2,7 +2,7 @@ import Foundation
 
 extension Notification.Name {
     /// Posted after any pin was added or removed. The object is the project root.
-    static let pinnedFilesDidChange = Notification.Name("cmux.pinnedFilesDidChange")
+    static let pinnedFilesDidChange = Notification.Name("bree.pinnedFilesDidChange")
 }
 
 /// Pinned files per project, kept in UserDefaults (never in the user's repo).

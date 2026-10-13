@@ -1,6 +1,6 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import WebKit
 
 /// The bounded result of preparing one browser WebView for automation input.
@@ -56,7 +56,7 @@ extension BrowserPanel {
                     instanceID: observedWebViewInstanceID
                 )
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.documentReadyBridge panel=\(self.id.uuidString.prefix(5)) " +
                     "instance=\(observedWebViewInstanceID.uuidString.prefix(6))"
                 )
@@ -186,7 +186,7 @@ extension BrowserPanel {
     func makeReplacementWebView(
         profileID: UUID,
         websiteDataStore: WKWebsiteDataStore
-    ) -> CmuxWebView {
+    ) -> BreeWebView {
         let replacementStore: WKWebsiteDataStore
         if cloudAccess.model?.usesBrowserProxy == true {
             if let endpoint = cloudAccess.model?.browserProxy,

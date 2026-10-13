@@ -9,7 +9,7 @@ fi
 
 output="$1"
 archs="${2:-}"
-source="${SRCROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/workers/cmux-paste-text/main.m"
+source="${SRCROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}/workers/bree-paste-text/main.m"
 mkdir -p "$(dirname "$output")"
 
 arch_flags=()

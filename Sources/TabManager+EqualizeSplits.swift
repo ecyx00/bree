@@ -1,4 +1,4 @@
-import CmuxPanes
+import BreePanes
 import Foundation
 
 extension TabManager {

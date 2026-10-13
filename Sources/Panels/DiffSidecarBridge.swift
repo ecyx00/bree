@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 import WebKit
 
@@ -22,14 +22,14 @@ private enum InvocationError: Error {
 /// opens a socket, and WebKit never receives filesystem paths or process access.
 @MainActor
 final class DiffSidecarBridge: NSObject, WKScriptMessageHandlerWithReply {
-    static let handlerName = "cmuxDiff"
+    static let handlerName = "breeDiff"
     static let shared = DiffSidecarBridge()
 
     private static var handlerInstalledKey: UInt8 = 0
     private static let maximumRequestBytes = 1024 * 1024
     private nonisolated static let maximumResponseBytes = 32 * 1024 * 1024
     private nonisolated static let processPool = DiffSidecarProcessPool(limit: 4)
-    private nonisolated static let processGroupReadyMarker = Data("cmux-diff-sidecar-process-group-ready\n".utf8)
+    private nonisolated static let processGroupReadyMarker = Data("bree-diff-sidecar-process-group-ready\n".utf8)
     private nonisolated static let startupTimeout: TimeInterval = 5
     private nonisolated static let terminationGrace: TimeInterval = 0.25
     private static let pendingSessionID = "00000000-0000-0000-0000-000000000000"
@@ -199,15 +199,15 @@ final class DiffSidecarBridge: NSObject, WKScriptMessageHandlerWithReply {
 
     static func isTrustedSidecarURL(_ url: URL?) -> Bool {
         guard let url else { return false }
-        return CmuxDiffViewerURLSchemeHandler.shared.allowsNavigation(to: url)
+        return BreeDiffViewerURLSchemeHandler.shared.allowsNavigation(to: url)
     }
 
     /// The bundled CLI the sidecar shells out to. Bree ships it as `bree`
-    /// (reload.sh removes the pre-rename `cmux`); the old name is a fallback.
+    /// (reload.sh removes the pre-rename `bree`); the old name is a fallback.
     nonisolated static func bundledCLIURL(in binDirectory: URL) -> URL {
         let bree = binDirectory.appendingPathComponent("bree", isDirectory: false)
         if FileManager.default.isExecutableFile(atPath: bree.path) { return bree }
-        return binDirectory.appendingPathComponent("cmux", isDirectory: false)
+        return binDirectory.appendingPathComponent("bree", isDirectory: false)
     }
 
     #if compiler(>=6.2)
@@ -218,17 +218,17 @@ final class DiffSidecarBridge: NSObject, WKScriptMessageHandlerWithReply {
     nonisolated fileprivate static func runSidecar(request: Data) async throws -> Data {
         let resources = Bundle.main.bundleURL
             .appendingPathComponent("Contents/Resources/bin", isDirectory: true)
-        let sidecar = resources.appendingPathComponent("cmux-diff-sidecar", isDirectory: false)
-        let cmux = bundledCLIURL(in: resources)
+        let sidecar = resources.appendingPathComponent("bree-diff-sidecar", isDirectory: false)
+        let bree = bundledCLIURL(in: resources)
         guard FileManager.default.isExecutableFile(atPath: sidecar.path),
-              FileManager.default.isExecutableFile(atPath: cmux.path) else {
+              FileManager.default.isExecutableFile(atPath: bree.path) else {
             throw CocoaError(.fileNoSuchFile)
         }
 
         let root = try prepareRootDirectory()
         let process = Process()
         process.executableURL = sidecar
-        process.arguments = ["rpc", "--root", root.path, "--cmux", cmux.path, "--process-group-ready"]
+        process.arguments = ["rpc", "--root", root.path, "--bree", bree.path, "--process-group-ready"]
 
         let input = Pipe()
         let output = Pipe()
@@ -466,7 +466,7 @@ final class DiffSidecarBridge: NSObject, WKScriptMessageHandlerWithReply {
 
     nonisolated private static func prepareRootDirectory() throws -> URL {
         let root = URL(fileURLWithPath: "/tmp", isDirectory: true)
-            .appendingPathComponent("\(CmuxIdentity.current.tempNamePrefix)-diff-viewer-\(Darwin.getuid())", isDirectory: true)
+            .appendingPathComponent("\(BreeIdentity.current.tempNamePrefix)-diff-viewer-\(Darwin.getuid())", isDirectory: true)
         try FileManager.default.createDirectory(
             at: root,
             withIntermediateDirectories: true,

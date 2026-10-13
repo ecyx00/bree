@@ -1,12 +1,12 @@
 # Shell integration: reducing Git watcher churn
 
-`CMUX_NO_GIT_WATCH=1` is a **supported opt-out** for cmux's zsh and bash
+`BREE_NO_GIT_WATCH=1` is a **supported opt-out** for bree's zsh and bash
 Git integration. Use it to mitigate shell watcher process churn, including
 frequent `sleep` launches and the resulting security-agent audit volume on
 managed Macs. It can remain enabled; it is not an experimental or temporary-only
 switch. The trade-off is losing shell-driven Git updates.
 
-This is a shell setting, not an app-wide watcher switch. It does not stop cmux's
+This is a shell setting, not an app-wide watcher switch. It does not stop bree's
 own Git filesystem watchers, fix unrelated shell
 integration problems, or remove orphaned processes from older sessions. It does
 not control Git work done by your prompt theme, plugins, or commands.
@@ -16,10 +16,10 @@ not control Git work done by your prompt theme, plugins, or commands.
 Run this in each existing zsh or bash pane that needs the mitigation:
 
 ```sh
-export CMUX_NO_GIT_WATCH=1
+export BREE_NO_GIT_WATCH=1
 ```
 
-The shell applies it when the next cmux prompt hook runs. An already-running
+The shell applies it when the next bree prompt hook runs. An already-running
 command or child watcher has its previous environment until the shell regains
 control; this is not an immediate process-wide stop. At that prompt, the
 integration stops its tracked Git job, and zsh also stops its
@@ -34,7 +34,7 @@ reads:
   export in that file too.
 
 Put it before startup commands that launch nested shells. Open a new pane and
-check `printf '%s\n' "${CMUX_NO_GIT_WATCH:-unset}"`: it must print `1`.
+check `printf '%s\n' "${BREE_NO_GIT_WATCH:-unset}"`: it must print `1`.
 Only the literal value `1` disables the feature; `true`, `0`, an empty value,
 and an unset variable do not.
 
@@ -46,12 +46,12 @@ setting in their own environment/startup files; do not assume SSH or a tmux
 server forwards a later local environment change.
 
 To restore shell-driven updates, remove the startup export and run
-`unset CMUX_NO_GIT_WATCH` in affected panes, or open new panes with it unset.
+`unset BREE_NO_GIT_WATCH` in affected panes, or open new panes with it unset.
 Updates resume through the normal prompt/command hooks.
 
 ## Exact scope in the current integrations
 
-| Behavior | With `CMUX_NO_GIT_WATCH=1` |
+| Behavior | With `BREE_NO_GIT_WATCH=1` |
 | --- | --- |
 | Prompt-time HEAD inspection and branch refresh | Disabled in both shells, including after `cd`, a branch change, or a Git command. No new async branch-report job is started. |
 | HEAD watching during a foreground command | Disabled in zsh. Bash has no equivalent active foreground HEAD loop in the current integration. |
@@ -80,25 +80,25 @@ and after; distinguish shell-owned watchers from app-owned watchers and other
 programs. The environment value proves configuration, not that every source of
 churn has stopped.
 
-The source contract runs without launching cmux or contacting GitHub:
+The source contract runs without launching bree or contacting GitHub:
 
 ```sh
 python3 tests/test_shell_no_git_watch.py
 ```
 
-It sources the shipped [zsh](../Resources/shell-integration/cmux-zsh-integration.zsh)
-and [bash](../Resources/shell-integration/cmux-bash-integration.bash) integrations
+It sources the shipped [zsh](../Resources/shell-integration/bree-zsh-integration.zsh)
+and [bash](../Resources/shell-integration/bree-bash-integration.bash) integrations
 in isolated shells, checks disabled reports and watcher startup,
 preserved messages, literal-value semantics, and re-enabling reports. It replaces
 message delivery and the watcher process-creation boundary; it does not measure
 production launch rates or exercise the app's metadata services.
 
 This support contract complements the watcher repairs rather than implementing
-them: [#15066](https://github.com/manaflow-ai/cmux/issues/15066) /
-[#6032](https://github.com/manaflow-ai/cmux/pull/6032) cover zsh fork-free waits,
-[#10926](https://github.com/manaflow-ai/cmux/issues/10926) tracked orphan lifecycle
-problems, and [#2924](https://github.com/manaflow-ai/cmux/pull/2924) removes dead
-per-shell PR polling code. [#15075](https://github.com/manaflow-ai/cmux/pull/15075)
+them: [#15066](https://github.com/ecyx00/bree/issues/15066) /
+[#6032](https://github.com/ecyx00/bree/pull/6032) cover zsh fork-free waits,
+[#10926](https://github.com/ecyx00/bree/issues/10926) tracked orphan lifecycle
+problems, and [#2924](https://github.com/ecyx00/bree/pull/2924) removes dead
+per-shell PR polling code. [#15075](https://github.com/ecyx00/bree/pull/15075)
 already removed bash's PR poller for
-[#15067](https://github.com/manaflow-ai/cmux/issues/15067). The open fixes are
+[#15067](https://github.com/ecyx00/bree/issues/15067). The open fixes are
 still needed; this mitigation does not replace them.

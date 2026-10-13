@@ -3,7 +3,7 @@ import Foundation
 /// Orphaned agent notifications after a session restore.
 ///
 /// Notifications are persisted across relaunch so an unseen agent result is not
-/// lost. But an agent that was alive when cmux quit dies with the app without
+/// lost. But an agent that was alive when bree quit dies with the app without
 /// firing its SessionEnd hook, so nothing ever clears its last "Completed in …"
 /// notification, and the sidebar keeps showing it as the workspace's latest
 /// summary on every subsequent launch. The live-session safety net
@@ -35,7 +35,7 @@ extension Workspace {
         for panelSnapshot in snapshot.panels where Self.restoredPanelHostedLocalAgent(panelSnapshot) {
             guard let newPanelId = oldToNewPanelIds[panelSnapshot.id] else { continue }
             // Only agent-produced notifications are the agent's to retire; a
-            // `cmux notify` banner on the same pane keeps its own lifetime.
+            // `bree notify` banner on the same pane keeps its own lifetime.
             // Unknown provenance restores as agent-produced, as the store does.
             let ids = Set((panelSnapshot.notifications ?? [])
                 .filter { $0.isAgentEvent ?? true }
@@ -44,7 +44,7 @@ extension Workspace {
             restoredAgentNotificationIdsByPanelId[newPanelId] = ids
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "restoredAgentNotifications.track workspace=\(id.uuidString.prefix(8)) panels=\(snapshot.panels.count) tracked=\(restoredAgentNotificationIdsByPanelId.count)"
         )
 #endif
@@ -66,7 +66,7 @@ extension Workspace {
             if restoredAgentLifecycle.ownsInFlightRestoredCommand(panelId: panelId) { continue }
             let hasLiveAgent = !(agentPIDKeysByPanelId[panelId] ?? []).isEmpty
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "restoredAgentNotifications.prune workspace=\(id.uuidString.prefix(8)) panel=\(panelId.uuidString.prefix(8)) exists=\(panels[panelId] != nil ? 1 : 0) liveAgent=\(hasLiveAgent ? 1 : 0) tracked=\(trackedIds.count)"
             )
 #endif

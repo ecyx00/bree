@@ -1,11 +1,11 @@
 import SwiftUI
 import Foundation
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
+import BreeAppKitSupportUI
+import BreeFoundation
 import Bonsplit
-import CmuxWorkspaces
-import CmuxTerminal
+import BreeWorkspaces
+import BreeTerminal
 
 private enum WorkspaceTitlebarInteractionMetrics {
     // Keep in sync with the minimal-mode titlebar strip so the monitor only
@@ -742,7 +742,7 @@ extension WorkspaceContentView {
         if !found {
             let ts = ISO8601DateFormatter().string(from: Date())
             let line = "[\(ts)] PANEL NOT FOUND for tabId=\(tab.id) ws=\(workspace.id) panelCount=\(workspace.panels.count)\n"
-            let logPath = "/tmp/cmux-panel-debug.log"
+            let logPath = "/tmp/bree-panel-debug.log"
             guard let handle = OwnedLogFile(path: logPath).openForAppending() else { return }
             defer { try? handle.close() }
             try? handle.write(contentsOf: Data(line.utf8))
@@ -797,7 +797,7 @@ struct EmptyPanelView: View {
 
         var body: some View {
             Text(text)
-                .cmuxFont(size: 11, weight: .semibold, design: .rounded)
+                .scaledFont(size: 11, weight: .semibold, design: .rounded)
                 .foregroundStyle(.white.opacity(0.9))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
@@ -811,7 +811,7 @@ struct EmptyPanelView: View {
 
     private func createTerminal() {
         #if DEBUG
-        cmuxDebugLog("emptyPane.newTerminal pane=\(paneId.id.uuidString.prefix(5))")
+        breeDebugLog("emptyPane.newTerminal pane=\(paneId.id.uuidString.prefix(5))")
         #endif
         focusPane()
         _ = workspace.newTerminalSurface(inPane: paneId, inheritWorkingDirectoryFallback: true)
@@ -819,7 +819,7 @@ struct EmptyPanelView: View {
 
     private func createBrowser() {
         #if DEBUG
-        cmuxDebugLog("emptyPane.newBrowser pane=\(paneId.id.uuidString.prefix(5))")
+        breeDebugLog("emptyPane.newBrowser pane=\(paneId.id.uuidString.prefix(5))")
         #endif
         focusPane()
         _ = workspace.newBrowserSurface(inPane: paneId)
@@ -846,7 +846,7 @@ struct EmptyPanelView: View {
             HStack(spacing: 10) {
                 HStack(spacing: 6) {
                     // Label sits on the monochrome accent fill: surfaceBase text.
-                    CmuxSystemSymbolImage(
+                    BreeSystemSymbolImage(
                         systemName: systemImage,
                         pointSize: 13,
                         tint: BreeChromePaletteStore.shared.palette.surfaceBase
@@ -869,10 +869,10 @@ struct EmptyPanelView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            CmuxSystemSymbolImage(magnified: "terminal.fill", pointSize: 48, tint: Color(nsColor: .tertiaryLabelColor))
+            BreeSystemSymbolImage(magnified: "terminal.fill", pointSize: 48, tint: Color(nsColor: .tertiaryLabelColor))
 
             Text(String(localized: "emptyPanel.title", defaultValue: "Empty Panel"))
-                .cmuxFont(.headline)
+                .scaledFont(.headline)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 12) {

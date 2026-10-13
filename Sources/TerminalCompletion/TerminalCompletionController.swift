@@ -1,14 +1,14 @@
 import AppKit
-import CmuxFoundation
-import CmuxTerminalCore
+import BreeFoundation
+import BreeTerminalCore
 import GhosttyKit
 import SwiftUI
 
-/// Debug-only trace to /tmp/cmux-debug-<tag>.log. Lengths only, never text.
+/// Debug-only trace to /tmp/bree-debug-<tag>.log. Lengths only, never text.
 @inline(__always)
 private func completionLog(_ message: @autoclosure () -> String) {
 #if DEBUG
-    cmuxDebugLog(message())
+    breeDebugLog(message())
 #endif
 }
 
@@ -333,7 +333,7 @@ final class TerminalCompletionController {
             backing: .buffered,
             defer: false
         )
-        panel.identifier = NSUserInterfaceItemIdentifier("cmux.terminal.completionPanel")
+        panel.identifier = NSUserInterfaceItemIdentifier("bree.terminal.completionPanel")
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = true
         panel.becomesKeyOnlyIfNeeded = true
@@ -457,7 +457,7 @@ struct TerminalCompletionPopupView: View {
                 .breeFont(.body, weight: .medium)
                 .foregroundStyle(selected ? palette.activeIndicator : palette.textSecondary)
                 .frame(width: 18)
-            Text(Self.highlighted(candidate.title, query: model.query, accent: palette.signalInfo))
+            Text(Self.highlighted(candidate.title, query: model.query, accent: palette.accentFill))
                 .breeFont(.body)
                 .foregroundStyle(palette.textPrimary)
                 .lineLimit(1)

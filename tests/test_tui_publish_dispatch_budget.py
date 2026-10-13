@@ -2,7 +2,7 @@
 """The tui release dispatcher must conclude before its publishers stop waiting.
 
 tui-publish-npm.yml and tui-publish-pypi.yml each poll the dispatching
-cmux-tui-release.yml run, give up once their bounded wait expires, and then
+bree-tui-release.yml run, give up once their bounded wait expires, and then
 refuse to publish unless that run's conclusion is `success`. The dispatcher's
 own bookkeeping therefore sits inside a hard deadline it does not own.
 
@@ -15,7 +15,7 @@ turned the run red. Both halves are fatal on their own:
 - a red run is rejected by their conclusion gate forever, so a retry fails in
   about a second.
 
-cmux-tui v0.13.0 was lost exactly this way on 2026-08-26. Every build, package,
+bree-tui v0.13.0 was lost exactly this way on 2026-08-26. Every build, package,
 verify and attest job in run 32998045028 succeeded; the dispatch step ran
 18:31:03 -> 18:35:50 and failed; both publishers failed their wait at ~18:35:17
 and skipped `publish`. 0.13.0 is absent from npm and PyPI to this day.
@@ -33,7 +33,7 @@ import yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WF = os.path.join(ROOT, ".github", "workflows")
-RELEASE = os.path.join(WF, "cmux-tui-release.yml")
+RELEASE = os.path.join(WF, "bree-tui-release.yml")
 PUBLISHERS = [os.path.join(WF, "tui-publish-npm.yml"), os.path.join(WF, "tui-publish-pypi.yml")]
 
 FAILURES = []

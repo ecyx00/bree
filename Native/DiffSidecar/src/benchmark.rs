@@ -32,7 +32,7 @@ pub fn run(sample_bytes: usize, iterations: usize) -> Result<BenchmarkReport, St
     if iterations == 0 {
         return Err("benchmark requires at least one iteration".to_owned());
     }
-    let root = std::env::temp_dir().join(format!("cmux-diff-benchmark-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bree-diff-benchmark-{}", std::process::id()));
     std::fs::create_dir_all(&root).map_err(|error| error.to_string())?;
     let _temporary_directory = TemporaryBenchmarkDirectory(root.clone());
     let patch_path = root.join("sample.patch");

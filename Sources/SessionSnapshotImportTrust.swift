@@ -1,5 +1,5 @@
-import CMUXAgentLaunch
-import CmuxControlSocket
+import BREEAgentLaunch
+import BreeControlSocket
 import Foundation
 
 /// What `SessionSnapshotImportTrust` removed or held back from an imported
@@ -22,20 +22,20 @@ struct SessionSnapshotImportTrustReport: Equatable, Sendable {
 }
 
 /// Restore policy for a session snapshot read from an arbitrary file
-/// (`cmux restore-session --from <path>`).
+/// (`bree restore-session --from <path>`).
 ///
 /// A file can carry anything, so no command from it may run automatically or
 /// reach outside the restored windows. The one automatic launch is a
-/// built-in agent resume whose command cmux generates itself (below). Mirrors, and is stricter than, the
+/// built-in agent resume whose command bree generates itself (below). Mirrors, and is stricter than, the
 /// policy for public CLI/socket-created surface resume bindings: layout,
 /// working directories, text, and http(s) pages restore; command-bearing
-/// state is either reconstructed by cmux from known values or kept for
+/// state is either reconstructed by bree from known values or kept for
 /// manual restore only.
 ///
 /// - Built-in agents (a known `RestorableAgentKind`, or a built-in Vault
 ///   registration id) are rebuilt from kind, session id, and working
 ///   directory only. Launch argv, permission mode, and registration content
-///   from the file are discarded, so the resume command is the one cmux
+///   from the file are discarded, so the resume command is the one bree
 ///   generates. They auto-resume only when the working directory is an
 ///   existing local directory not flagged as needing remote trust.
 /// - Custom agent registrations stay attached for manual restore, but the
@@ -43,7 +43,7 @@ struct SessionSnapshotImportTrustReport: Equatable, Sendable {
 /// - Resume bindings are marked as untrusted session-import bindings: the
 ///   approval store never matches them (not even an existing auto-approved
 ///   prefix) and never records approvals for them, so they only run through
-///   `cmux restore --surface`. A hook binding already covered by a rebuilt
+///   `bree restore --surface`. A hook binding already covered by a rebuilt
 ///   built-in agent is dropped.
 /// - tmux start commands are dropped.
 /// - Scrollback keeps text and SGR styling only; OSC (clipboard, notification,
@@ -61,8 +61,8 @@ struct SessionSnapshotImportTrustReport: Equatable, Sendable {
 enum SessionSnapshotImportTrust {
     /// Built-in Vault registrations, keyed by id. File content is never used
     /// for these; the app's own definition replaces it.
-    static var builtInRegistrationsByID: [String: CmuxVaultAgentRegistration] {
-        let builtIns: [CmuxVaultAgentRegistration] = [
+    static var builtInRegistrationsByID: [String: BreeVaultAgentRegistration] {
+        let builtIns: [BreeVaultAgentRegistration] = [
             .builtInPi,
             .builtInOmp,
             .builtInCampfire,
@@ -133,7 +133,7 @@ enum SessionSnapshotImportTrust {
 
     private static func sanitizedPanel(
         _ panel: SessionPanelSnapshot,
-        builtIns: [String: CmuxVaultAgentRegistration],
+        builtIns: [String: BreeVaultAgentRegistration],
         isExistingDirectory: (String) -> Bool,
         report: inout SessionSnapshotImportTrustReport
     ) -> SessionPanelSnapshot {
@@ -205,7 +205,7 @@ enum SessionSnapshotImportTrust {
         return panel
     }
 
-    /// Whether a session id is a plain token cmux can pass as one argument:
+    /// Whether a session id is a plain token bree can pass as one argument:
     /// letters, digits, `_` and `-`, with single dots between segments. Rejects
     /// empty values, leading dots or hyphens, `..`, `:`, `+`, and path
     /// separators.
@@ -221,10 +221,10 @@ enum SessionSnapshotImportTrust {
     /// session id is not a plain token.
     static func rebuiltBuiltInAgent(
         _ agent: SessionRestorableAgentSnapshot,
-        builtIns: [String: CmuxVaultAgentRegistration] = builtInRegistrationsByID
+        builtIns: [String: BreeVaultAgentRegistration] = builtInRegistrationsByID
     ) -> SessionRestorableAgentSnapshot? {
         guard isSafeSessionID(agent.sessionId) else { return nil }
-        let registration: CmuxVaultAgentRegistration?
+        let registration: BreeVaultAgentRegistration?
         if let fileRegistration = agent.registration {
             guard let builtIn = builtIns[fileRegistration.id],
                   agent.kind.rawValue == builtIn.id else {

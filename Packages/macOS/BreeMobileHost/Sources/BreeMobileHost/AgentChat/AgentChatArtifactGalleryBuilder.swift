@@ -1,0 +1,3 @@
+public import BreeAgentChat
+
+public typealias AgentChatArtifactGalleryBuilder = ChatArtifactGalleryBuilder

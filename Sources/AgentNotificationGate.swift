@@ -1,4 +1,4 @@
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 /// User policy for the "Claude finished a turn" notification.

@@ -1,4 +1,5 @@
 import AppKit
+import BreeFoundation
 import SwiftUI
 
 /// Shown above the terminal when an agent woken from hibernation did not come back.
@@ -13,7 +14,7 @@ struct AgentWakeFailureBanner: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(BreeChromePalette.currentSnapshot.signalAttention)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(message)

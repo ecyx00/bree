@@ -1,24 +1,24 @@
 import Foundation
 import Observation
 import SwiftUI
-import CmuxExtensionKit
+import BreeExtensionKit
 
 @Observable
 @MainActor
 final class SidebarConnectionModel {
-    private(set) var snapshot: CmuxSidebarSnapshot?
+    private(set) var snapshot: BreeSidebarSnapshot?
     private(set) var errorText: String?
 
     @ObservationIgnored
-    private var host: CmuxSidebarHost?
+    private var host: BreeSidebarHost?
 
-    func update(context: CmuxSidebarContext) {
+    func update(context: BreeSidebarContext) {
         snapshot = context.snapshot
         host = context.host
         errorText = nil
     }
 
-    func connectionStatusDidChange(_ status: CmuxSidebarConnectionStatus) {
+    func connectionStatusDidChange(_ status: BreeSidebarConnectionStatus) {
         switch status {
         case .connected:
             errorText = nil
@@ -76,9 +76,9 @@ final class SidebarConnectionModel {
         do {
             try await operation()
             errorText = nil
-        } catch CmuxSidebarActionError.rejected(let message) {
+        } catch BreeSidebarActionError.rejected(let message) {
             errorText = message
-        } catch CmuxSidebarActionError.cancelled {
+        } catch BreeSidebarActionError.cancelled {
             errorText = nil
         } catch {
             errorText = String(localized: "sampleSidebar.actionDenied", defaultValue: "Bree did not allow that action")

@@ -19,7 +19,7 @@ actor TerminalPlainTextPasteWorkerConnection {
     init(executableURL: URL) {
         let process = Process()
         process.executableURL = executableURL
-        process.arguments = ["--cmux-plain-text-paste-server"]
+        process.arguments = ["--bree-plain-text-paste-server"]
         process.standardInput = input
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice

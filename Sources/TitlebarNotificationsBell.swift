@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// The Attention / Notifications button, in the right-hand control cluster of
@@ -11,7 +11,7 @@ struct TitlebarNotificationsBell: View {
     @ObservedObject private var attention = AttentionStore.shared
 
     var body: some View {
-        let counts = TitlebarControlsVisibility.bellCounts(unread: notifications.unreadCount)
+        let counts = TitlebarControlsVisibility.bellCounts()
         let title = String(localized: "titlebar.notifications.tooltip", defaultValue: "Show notifications")
         let shortcut = KeyboardShortcutSettings.Action.showNotifications
         Button {
@@ -30,7 +30,7 @@ struct TitlebarNotificationsBell: View {
                         .breeFont(.count, weight: .medium, countRow: .caption)
                         .foregroundColor(palette.surfaceBase)
                         .frame(width: 14, height: 14)
-                        .background(Circle().fill(counts.needsAttention ? palette.signalAttention : palette.accentFill))
+                        .background(Circle().fill(palette.accentFill))
                         .offset(x: -1, y: 2)
                 }
             }

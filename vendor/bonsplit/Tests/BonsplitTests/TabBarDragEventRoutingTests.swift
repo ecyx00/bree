@@ -251,7 +251,7 @@ import Testing
     }
 
     @Test func laidOutTabStillArmsWhenGeometryRegistryLagsBehindTheStrip() throws {
-        // Regression (cmux issue 12152): the press gate must judge a press
+        // Regression (bree issue 12152): the press gate must judge a press
         // against what is on screen, not against the strip's bookkeeping.
         // SwiftUI mounts each tab's hit-region view as a sibling subtree of
         // the strip background and the registry entry is pushed separately;
@@ -311,7 +311,7 @@ import Testing
     }
 
     @Test func pressOverLaidOutTabIsATabPressWhenGeometryRegistryLagsBehindTheStrip() throws {
-        // Regression (cmux issue 12152): the same laid-out tab must also count
+        // Regression (bree issue 12152): the same laid-out tab must also count
         // as a tab press for the strip background, or minimal mode turns the
         // press into a window drag and the double-click path into a new tab.
         let window = NSWindow(
@@ -347,7 +347,7 @@ import Testing
         #expect(!sourceView.containsBonsplitTabItemHit(localPoint: NSPoint(x: 200, y: 35)))
     }
 
-    /// Models cmux's main window: the content view is a flipped SwiftUI host
+    /// Models bree's main window: the content view is a flipped SwiftUI host
     /// while the window frame is not, so a point converted into the content
     /// view mirrors vertically if it is handed to `hitTest` directly.
     private final class FlippedContentView: NSView {
@@ -355,7 +355,7 @@ import Testing
     }
 
     @Test func flippedHostContentViewStillArmsAndStillYieldsToTheTabsOwnControl() throws {
-        // Regression (cmux issue 12152): with a flipped content view the veto
+        // Regression (bree issue 12152): with a flipped content view the veto
         // hit-tested the mirror image of the press, so the file editor at the
         // bottom of the window answered for presses on the strip at the top.
         let window = NSWindow(
@@ -410,8 +410,8 @@ import Testing
     }
 
     /// Models a host whose window hit-test answers a view the pointer is not
-    /// inside: cmux's main window resolved the focused file editor for presses
-    /// on the pane tab strip (cmux issue 12152).
+    /// inside: bree's main window resolved the focused file editor for presses
+    /// on the pane tab strip (bree issue 12152).
     private final class EditorAnsweringContentView: NSView {
         weak var editor: NSTextView?
 
@@ -421,7 +421,7 @@ import Testing
     }
 
     @Test func editableTextViewOutsideTheStripNeverVetoesATabPress() throws {
-        // Regression (cmux issue 12152): the native-interaction veto exists so a
+        // Regression (bree issue 12152): the native-interaction veto exists so a
         // control inside a tab (close button, rename field) keeps its press. A
         // view the press is not inside, such as the focused file editor below
         // the strip, owns nothing about that press and must not block the drag.

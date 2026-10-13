@@ -1,5 +1,5 @@
 import Bonsplit
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
 @MainActor

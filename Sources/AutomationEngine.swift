@@ -1,7 +1,7 @@
-import CmuxSettings
+import BreeSettings
 import Foundation
 
-/// A bounded in-process bridge from ``CmuxEventBus`` to configured actions.
+/// A bounded in-process bridge from ``BreeEventBus`` to configured actions.
 ///
 /// The engine is main-actor owned because notification delivery and the v2
 /// dispatcher are main-actor domains. Event consumption itself happens on a
@@ -10,7 +10,7 @@ import Foundation
 @MainActor
 final class AutomationEngine {
     typealias NotificationHandler = @MainActor (UUID, UUID?, String, String, String) -> Void
-    typealias RPCRunner = @Sendable (String, [String: Any], Bool, CmuxAutomationEventOrigin) async -> String
+    typealias RPCRunner = @Sendable (String, [String: Any], Bool, BreeAutomationEventOrigin) async -> String
     typealias RecoverySleeper = @Sendable (Duration) async throws -> Void
     typealias ProcessRunner = @Sendable (String, [String: String]) async -> AutomationActionExecutionResult
     typealias WebhookRunner = @Sendable (URL, [String: String], Data) async -> AutomationActionExecutionResult
@@ -33,7 +33,7 @@ final class AutomationEngine {
     ]
 
     private let configStore: AutomationConfigStore
-    private let eventBus: CmuxEventBus
+    private let eventBus: BreeEventBus
     private let notificationHandler: NotificationHandler
     private let rpcRunner: RPCRunner
     private let processRunner: ProcessRunner?
@@ -50,7 +50,7 @@ final class AutomationEngine {
     private var fireDatesByRuleID: [String: [Date]] = [:]
     private var firingRecords: [AutomationFiringRecord] = []
     private var concurrentFirings = 0
-    private var subscription: CmuxEventSubscription?
+    private var subscription: BreeEventSubscription?
     private var eventTask: Task<Void, Never>?
     private var firingTasks: [UUID: Task<Void, Never>] = [:]
     private var shouldRun = false
@@ -66,7 +66,7 @@ final class AutomationEngine {
 
     init(
         configStore: AutomationConfigStore = AutomationConfigStore(),
-        eventBus: CmuxEventBus = .shared,
+        eventBus: BreeEventBus = .shared,
         notificationHandler: @escaping NotificationHandler = { workspaceID, surfaceID, title, subtitle, body in
             TerminalController.shared.deliverNotificationSynchronously(
                 tabId: workspaceID,
@@ -168,7 +168,7 @@ final class AutomationEngine {
         }
     }
 
-    private func subscriptionDidClose(_ closedSubscription: CmuxEventSubscription) {
+    private func subscriptionDidClose(_ closedSubscription: BreeEventSubscription) {
         guard subscription === closedSubscription else { return }
         eventBus.unsubscribe(closedSubscription)
         subscription = nil
@@ -479,7 +479,7 @@ final class AutomationEngine {
             return
         }
         let normalized = Self.normalizedEvent(event)
-        if let sequence = CmuxEventBus.int64(normalized["seq"]) {
+        if let sequence = BreeEventBus.int64(normalized["seq"]) {
             lastSequence = max(lastSequence ?? sequence, sequence)
         }
         if eventName == "config.reloaded" {
@@ -663,8 +663,8 @@ final class AutomationEngine {
             action.string(for: "body") ?? action.string(for: "message") ?? (event["name"] as? String ?? "Automation fired"),
             event: event
         )
-        let origin = CmuxAutomationEventOrigin(ruleID: rule.id, chain: chain)
-        CmuxAutomationInvocationContext.$eventOrigin.withValue(origin) {
+        let origin = BreeAutomationEventOrigin(ruleID: rule.id, chain: chain)
+        BreeAutomationInvocationContext.$eventOrigin.withValue(origin) {
             notificationHandler(workspaceID, surfaceID, title, subtitle, body)
         }
         return .success("notification delivered")
@@ -685,7 +685,7 @@ final class AutomationEngine {
             ?? action.bool(for: "focus")
             ?? nestedFocus
             ?? false
-        let origin = CmuxAutomationEventOrigin(ruleID: rule.id, chain: chain)
+        let origin = BreeAutomationEventOrigin(ruleID: rule.id, chain: chain)
         let response = await rpcRunner(method, params, allowFocus, origin)
         if response.hasPrefix("ERROR:") {
             return .failure(response)
@@ -714,15 +714,15 @@ final class AutomationEngine {
             return .failure("could not serialize automation event")
         }
         var environment = [
-            "CMUX_AUTOMATION_EVENT": eventLine,
-            "CMUX_AUTOMATION_EVENT_JSON": eventLine,
-            "CMUX_EVENT_JSON": eventLine,
-            "CMUX_AUTOMATION_RULE_ID": rule.id,
-            "CMUX_AUTOMATION_CHAIN": Self.encodedChain(chain),
-            "CMUX_AUTOMATION_EVENT_NAME": event["name"] as? String ?? "",
-            "CMUX_AUTOMATION_EVENT_CATEGORY": event["category"] as? String ?? ""
+            "BREE_AUTOMATION_EVENT": eventLine,
+            "BREE_AUTOMATION_EVENT_JSON": eventLine,
+            "BREE_EVENT_JSON": eventLine,
+            "BREE_AUTOMATION_RULE_ID": rule.id,
+            "BREE_AUTOMATION_CHAIN": Self.encodedChain(chain),
+            "BREE_AUTOMATION_EVENT_NAME": event["name"] as? String ?? "",
+            "BREE_AUTOMATION_EVENT_CATEGORY": event["category"] as? String ?? ""
         ]
-        if let source = event["source"] as? String { environment["CMUX_AUTOMATION_SOURCE"] = source }
+        if let source = event["source"] as? String { environment["BREE_AUTOMATION_SOURCE"] = source }
         let timeoutSeconds = min(
             300,
             max(0.1, action.double(for: "timeout_seconds") ?? 60)
@@ -914,7 +914,7 @@ final class AutomationEngine {
     }
 
     private static func eventJSONData(_ event: [String: Any]) -> Data? {
-        let sanitized = CmuxEventBus.sanitizedJSONValue(event)
+        let sanitized = BreeEventBus.sanitizedJSONValue(event)
         guard JSONSerialization.isValidJSONObject(sanitized) else { return nil }
         return try? JSONSerialization.data(withJSONObject: sanitized, options: [.sortedKeys])
     }
@@ -932,7 +932,7 @@ final class AutomationEngine {
         return UUID(uuidString: raw.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
-    private static func origin(from event: [String: Any]) -> CmuxAutomationEventOrigin? {
+    private static func origin(from event: [String: Any]) -> BreeAutomationEventOrigin? {
         // The event bus owns the top-level envelope. A payload field is
         // client-controlled data and must never be treated as an internal
         // automation chain marker.
@@ -943,7 +943,7 @@ final class AutomationEngine {
             .filter { !$0.isEmpty }
             .prefix(Self.maximumChainDepth)
             .map { String($0.prefix(256)) }
-        return CmuxAutomationEventOrigin(
+        return BreeAutomationEventOrigin(
             ruleID: ruleID,
             chain: chain.isEmpty ? [String(ruleID.prefix(256))] : chain
         )

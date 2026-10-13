@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension DockSplitStore {

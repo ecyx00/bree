@@ -1,6 +1,6 @@
-import CmuxCloud
+import BreeCloud
 import Foundation
-import CmuxControlSocket
+import BreeControlSocket
 import os
 
 /// Socket/CLI handlers for the remote-tmux (`ssh … tmux -CC`) beta feature.
@@ -236,7 +236,7 @@ extension TerminalController {
         (params["activate"] as? Bool) ?? false
     }
 
-    /// `cmux ssh-tmux --name`; see
+    /// `bree ssh-tmux --name`; see
     /// ``RemoteTmuxController/mirrorSession(host:sessionName:sessionId:into:customTitle:)``
     /// for the cosmetic-only rationale.
     private nonisolated static func remoteTmuxWorkspaceName(from params: [String: Any]) -> String? {
@@ -286,7 +286,7 @@ extension TerminalController {
 
     /// `remote.tmux.state` — report a control client's observed control-mode state.
     ///
-    /// Diagnostics surface for verifying the ghostty → cmux event pipe end to end.
+    /// Diagnostics surface for verifying the ghostty → bree event pipe end to end.
     nonisolated func v2RemoteTmuxState(id: Any?, params: [String: Any]) -> String {
         guard ManagedRemoteConnectionsPolicy.isEnabled else {
             return v2Error(id: id, code: "remote_connections_disabled", message: ManagedRemoteConnectionsPolicy.disabledMessage)
@@ -332,11 +332,11 @@ extension TerminalController {
         }
     }
 
-    /// `remote.tmux.pane_surfaces` — the tmux pane id → cmux surface id map for
+    /// `remote.tmux.pane_surfaces` — the tmux pane id → bree surface id map for
     /// EVERY mirrored window, single-pane windows included.
     ///
     /// Content oracles need this. Reading "the focused surface" cannot verify a
-    /// named pane: cmux does not follow tmux's active pane or current window
+    /// named pane: bree does not follow tmux's active pane or current window
     /// (see handleActivePaneChanged, and %session-window-changed is only
     /// recorded), so a harness that runs `select-pane` and then reads the
     /// focused surface silently reads whatever pane the app already showed —

@@ -17,16 +17,16 @@ FIXTURES = ROOT / "tests" / "fixtures" / "pbxproj-test-wiring"
 
 class SyncTestWiringTests(unittest.TestCase):
     def make_repo(self, fixture: str, files: list[str]) -> Path:
-        tempdir = Path(tempfile.mkdtemp(prefix="cmux-sync-test-wiring-"))
+        tempdir = Path(tempfile.mkdtemp(prefix="bree-sync-test-wiring-"))
         self.addCleanup(shutil.rmtree, tempdir, ignore_errors=True)
-        (tempdir / "cmux.xcodeproj").mkdir()
-        (tempdir / "cmuxTests").mkdir()
+        (tempdir / "bree.xcodeproj").mkdir()
+        (tempdir / "breeTests").mkdir()
         shutil.copyfile(
             FIXTURES / fixture,
-            tempdir / "cmux.xcodeproj" / "project.pbxproj",
+            tempdir / "bree.xcodeproj" / "project.pbxproj",
         )
         for name in files:
-            (tempdir / "cmuxTests" / name).write_text(
+            (tempdir / "breeTests" / name).write_text(
                 "import Testing\n@Test func placeholder() {}\n", encoding="utf-8"
             )
         return tempdir
@@ -51,9 +51,9 @@ class SyncTestWiringTests(unittest.TestCase):
         )
 
     def project_text(self, repo: Path) -> str:
-        return (repo / "cmux.xcodeproj" / "project.pbxproj").read_text(encoding="utf-8")
+        return (repo / "bree.xcodeproj" / "project.pbxproj").read_text(encoding="utf-8")
 
-    def test_new_test_becomes_real_cmux_tests_member_and_lint_agrees(self) -> None:
+    def test_new_test_becomes_real_bree_tests_member_and_lint_agrees(self) -> None:
         repo = self.make_repo("base.pbxproj", ["ExistingTests.swift", "NewTests.swift"])
 
         before = self.run_lint(repo)
@@ -75,19 +75,19 @@ class SyncTestWiringTests(unittest.TestCase):
         repo = self.make_repo("base.pbxproj", ["ExistingTests.swift", "AlphaTests.swift"])
         self.run_sync(repo)
         result = subprocess.run(
-            ["python3", str(NORMALIZER), "--check", str(repo / "cmux.xcodeproj" / "project.pbxproj")],
+            ["python3", str(NORMALIZER), "--check", str(repo / "bree.xcodeproj" / "project.pbxproj")],
             text=True,
             capture_output=True,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_blank_lines_in_sources_phase_stay_normalized(self) -> None:
-        # The real project carries blank lines inside the cmuxTests Sources
+        # The real project carries blank lines inside the breeTests Sources
         # `files` list, and the normalizer sorts them ahead of the entries.
         # Rewriting that list must leave them where the normalizer puts them,
         # or every sync produces a project that check-pbxproj.sh rejects.
         repo = self.make_repo("base.pbxproj", ["ExistingTests.swift", "AlphaTests.swift"])
-        project = repo / "cmux.xcodeproj" / "project.pbxproj"
+        project = repo / "bree.xcodeproj" / "project.pbxproj"
         text = project.read_text(encoding="utf-8")
         entry = "\t\t\t\t555555555555555555555555 /* ExistingTests.swift in Sources */,\n"
         self.assertEqual(text.count(entry), 1)
@@ -141,14 +141,14 @@ class SyncTestWiringTests(unittest.TestCase):
         before = self.project_text(repo)
         result = self.run_sync(repo, check=False)
         self.assertEqual(result.returncode, 2)
-        self.assertIn("unexpected target(s): cmuxUITests", result.stderr)
+        self.assertIn("unexpected target(s): breeUITests", result.stderr)
         self.assertIn("refusing to change target membership", result.stderr)
         self.assertEqual(self.project_text(repo), before)
 
     def test_deleted_file_is_reported_by_check_then_pruned(self) -> None:
         repo = self.make_repo("base.pbxproj", ["ExistingTests.swift", "RemovedTests.swift"])
         self.run_sync(repo)
-        (repo / "cmuxTests" / "RemovedTests.swift").unlink()
+        (repo / "breeTests" / "RemovedTests.swift").unlink()
 
         check = self.run_sync(repo, "--check", check=False)
         self.assertEqual(check.returncode, 1)
@@ -184,7 +184,7 @@ class SyncTestWiringTests(unittest.TestCase):
         for present in (True, False):
             with self.subTest(managed_file_present=present):
                 repo = self.make_repo("base.pbxproj", ["ExistingTests.swift"] if present else [])
-                project = repo / "cmux.xcodeproj/project.pbxproj"
+                project = repo / "bree.xcodeproj/project.pbxproj"
                 text = self.project_text(repo).replace(
                     "/* End PBXBuildFile section */",
                     "\t\tAAAAAAAAAAAAAAAAAAAAAAAA /* ExistingTests.swift in Sources */ = "
@@ -204,7 +204,7 @@ class SyncTestWiringTests(unittest.TestCase):
 
     def test_shared_production_source_keeps_its_own_group_owner(self) -> None:
         repo = self.make_repo("base.pbxproj", [])
-        project = repo / "cmux.xcodeproj/project.pbxproj"
+        project = repo / "bree.xcodeproj/project.pbxproj"
         text = self.project_text(repo).replace(
             "\t\t\t\t444444444444444444444444 /* ExistingTests.swift */,\n", ""
         ).replace(
@@ -224,7 +224,7 @@ class SyncTestWiringTests(unittest.TestCase):
 
     def test_deleted_file_is_detected_after_its_group_child_was_removed(self) -> None:
         repo = self.make_repo("base.pbxproj", [])
-        project = repo / "cmux.xcodeproj/project.pbxproj"
+        project = repo / "bree.xcodeproj/project.pbxproj"
         project.write_text(self.project_text(repo).replace(
             "\t\t\t\t444444444444444444444444 /* ExistingTests.swift */,\n", ""
         ), encoding="utf-8")
@@ -250,7 +250,7 @@ class SyncTestWiringTests(unittest.TestCase):
         repo = self.make_repo("base.pbxproj", ["ExistingTests.swift", "NewTests.swift"])
         before = self.project_text(repo)
         result = self.run_sync(repo, "--dry-run")
-        self.assertIn("+++ cmux.xcodeproj/project.pbxproj", result.stdout)
+        self.assertIn("+++ bree.xcodeproj/project.pbxproj", result.stdout)
         self.assertIn("NewTests.swift", result.stdout)
         self.assertEqual(self.project_text(repo), before)
 
@@ -266,7 +266,7 @@ class SyncTestWiringTests(unittest.TestCase):
 
     def test_stale_build_and_sources_comments_are_repaired_by_identity(self) -> None:
         repo = self.make_repo("base.pbxproj", ["ExistingTests.swift"])
-        project = repo / "cmux.xcodeproj" / "project.pbxproj"
+        project = repo / "bree.xcodeproj" / "project.pbxproj"
         text = self.project_text(repo).replace(
             "ExistingTests.swift in Sources", "StaleDisplayName.swift in Sources"
         )
@@ -291,7 +291,7 @@ class SyncTestWiringTests(unittest.TestCase):
 
     def test_second_same_path_ref_in_foreign_target_is_rejected(self) -> None:
         repo = self.make_repo("base.pbxproj", ["ExistingTests.swift"])
-        project = repo / "cmux.xcodeproj" / "project.pbxproj"
+        project = repo / "bree.xcodeproj" / "project.pbxproj"
         text = self.project_text(repo)
         text = text.replace(
             "/* End PBXBuildFile section */",
@@ -328,7 +328,7 @@ class SyncTestWiringTests(unittest.TestCase):
 
     def test_multiline_file_reference_is_parsed_without_duplicate_creation(self) -> None:
         repo = self.make_repo("base.pbxproj", ["ExistingTests.swift"])
-        project = repo / "cmux.xcodeproj" / "project.pbxproj"
+        project = repo / "bree.xcodeproj" / "project.pbxproj"
         text = self.project_text(repo)
         old = (
             "\t\t444444444444444444444444 /* ExistingTests.swift */ = "

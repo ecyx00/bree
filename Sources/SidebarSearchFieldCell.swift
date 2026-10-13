@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// Shared bezel and icon alignment; AppKit owns text editing and button handling.

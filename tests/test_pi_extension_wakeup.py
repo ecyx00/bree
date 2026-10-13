@@ -13,11 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def extension_source():
-    override = os.environ.get('CMUX_TEST_PI_EXTENSION_PATH')
+    override = os.environ.get('BREE_TEST_PI_EXTENSION_PATH')
     if override:
         return Path(override).read_text()
     return '\n'.join(
-        (ROOT / f'CLI/CMUXCLI+PiExtensionSource{part}.swift')
+        (ROOT / f'CLI/BREECLI+PiExtensionSource{part}.swift')
         .read_text().split('#"""\n', 1)[1].rsplit('"""#', 1)[0]
         for part in ['Part1', 'Diagnostics', 'Dispatch', 'Metadata', 'Part2'])
 
@@ -58,7 +58,7 @@ assert.equal(finishTurn(states, 'helpers', {turn_id: 'finish-explicit'}), 'finis
             root = Path(directory)
             extension = root / 'bridge.ts'
             extension.write_text(extension_source())
-            cli = root / 'cmux'
+            cli = root / 'bree'
             cli.write_text('#!/usr/bin/env python3\nimport json,sys\n'
                            f'with open({str(root / "calls")!r}, "a") as f:\n'
                            ' f.write(json.dumps([sys.argv[1:], json.load(sys.stdin)])+"\\n")\n'
@@ -97,9 +97,9 @@ await emit('agent_settled');
 await emit('session_shutdown', {reason: 'quit'});
 ''')
             env = {key: os.environ[key] for key in ('PATH', 'HOME') if key in os.environ}
-            env.update(CMUX_PI_CMUX_BIN=str(cli),
-                       CMUX_SURFACE_ID='fake-surface', CMUX_WORKSPACE_ID='fake-workspace',
-                       CMUX_DEBUG_LOG=str(root / 'diagnostics'))
+            env.update(BREE_PI_BREE_BIN=str(cli),
+                       BREE_SURFACE_ID='fake-surface', BREE_WORKSPACE_ID='fake-workspace',
+                       BREE_DEBUG_LOG=str(root / 'diagnostics'))
             runtime = shutil.which('bun') or 'node'
             result = subprocess.run([runtime, str(script)], cwd=root, env=env,
                                     capture_output=True, text=True, timeout=20)
@@ -124,7 +124,7 @@ await emit('session_shutdown', {reason: 'quit'});
             (root / 'bridge.ts').write_text(extension_source())
             (root / 'package.json').write_text(json.dumps({
                 'name': '@earendil-works/pi-coding-agent', 'version': '0.85.1', 'type': 'module'}))
-            cli = root / 'fake-cmux'
+            cli = root / 'fake-bree'
             cli.write_text('#!/usr/bin/env python3\nimport json,sys\n'
                            'data=sys.stdin.read()\n'
                            f'with open({str(root / "calls")!r}, "a") as f:\n'
@@ -175,8 +175,8 @@ await emit('session_shutdown', {reason:'quit'});
 ''')
             # Do not inherit live socket, launch, diagnostic, or credential configuration.
             env = {key: os.environ[key] for key in ('PATH', 'HOME') if key in os.environ}
-            env.update(CMUX_PI_CMUX_BIN=str(cli), CMUX_SURFACE_ID='fake-surface',
-                       CMUX_WORKSPACE_ID='fake-workspace', CMUX_DEBUG_LOG=str(root / 'diagnostics'))
+            env.update(BREE_PI_BREE_BIN=str(cli), BREE_SURFACE_ID='fake-surface',
+                       BREE_WORKSPACE_ID='fake-workspace', BREE_DEBUG_LOG=str(root / 'diagnostics'))
             result = subprocess.run([shutil.which('bun') or 'node', str(root / 'pi')], cwd=root, env=env,
                                     capture_output=True, text=True, timeout=20)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -204,7 +204,7 @@ await emit('session_shutdown', {reason:'quit'});
                     receipts.add(key)
                     visible.append(payload['message'])
             self.assertEqual(visible, ['ordinary final', 'wake final', 'reload final', 'explicit final'])
-            self.assertTrue(all(p['cmux_notification_routed'] for name, p in lifecycle if name == 'stop'))
+            self.assertTrue(all(p['bree_notification_routed'] for name, p in lifecycle if name == 'stop'))
 
 
 if __name__ == '__main__':

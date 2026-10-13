@@ -1,16 +1,16 @@
 import AppKit
 import Bonsplit
 import Combine
-import CmuxAgentChat
-import CmuxAppKitSupportUI
-import CmuxBrowser
-import CmuxCore
-import CmuxFoundation
-import CmuxNotifications
-import CmuxSettings
-import CmuxTerminal
-import CmuxTerminalCore
-import CmuxWorkspaces
+import BreeAgentChat
+import BreeAppKitSupportUI
+import BreeBrowser
+import BreeCore
+import BreeFoundation
+import BreeNotifications
+import BreeSettings
+import BreeTerminal
+import BreeTerminalCore
+import BreeWorkspaces
 import Observation
 import SwiftUI
 import WebKit
@@ -458,7 +458,7 @@ final class DockSplitStore: BonsplitDelegate, FilePreviewTabMetadataHost {
             return false
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "session.restore.dockBrowser.materialize.request dock=\(workspaceId.uuidString.prefix(8)) " +
                 "panel=\(panelId.uuidString.prefix(8)) reason=\(reason)"
         )
@@ -931,7 +931,7 @@ final class DockSplitStore: BonsplitDelegate, FilePreviewTabMetadataHost {
 
     private func inheritedTerminalFontSizeConfig(
         sourcePanelId: UUID?
-    ) -> CmuxSurfaceConfigTemplate? {
+    ) -> BreeSurfaceConfigTemplate? {
         let sourceTerminalPanel = sourcePanelId.flatMap {
             panels[$0] as? TerminalPanel
         }
@@ -999,7 +999,7 @@ final class DockSplitStore: BonsplitDelegate, FilePreviewTabMetadataHost {
             transferProjection?.representedRequestTokens
             ?? []
         )
-        var config = CmuxSurfaceConfigTemplate()
+        var config = BreeSurfaceConfigTemplate()
         config.fontSizeLineage = lineage
         config.fontSizeChangeToken = inheritanceContext?.token
         config.fontSizeChangeTokens =
@@ -1014,7 +1014,7 @@ final class DockSplitStore: BonsplitDelegate, FilePreviewTabMetadataHost {
         command: String?,
         url: URL?,
         initialRequest: URLRequest? = nil,
-        configTemplate: CmuxSurfaceConfigTemplate? = nil,
+        configTemplate: BreeSurfaceConfigTemplate? = nil,
         environment: [String: String],
         workingDirectory: String,
         tmuxStartCommand: String? = nil,
@@ -1095,7 +1095,7 @@ final class DockSplitStore: BonsplitDelegate, FilePreviewTabMetadataHost {
         useLoginShellWrapper: Bool,
         workingDirectory: String,
         environment: [String: String],
-        configTemplate: CmuxSurfaceConfigTemplate?,
+        configTemplate: BreeSurfaceConfigTemplate?,
         tmuxStartCommand: String? = nil,
         initialInput: String? = nil,
         startupRestoreAgent: SessionRestorableAgentSnapshot? = nil,
@@ -1103,8 +1103,8 @@ final class DockSplitStore: BonsplitDelegate, FilePreviewTabMetadataHost {
         controlTitle: String?
     ) -> TerminalPanel {
         var resolvedEnvironment = environment
-        if let controlId { resolvedEnvironment["CMUX_DOCK_CONTROL_ID"] = controlId }
-        if let controlTitle { resolvedEnvironment["CMUX_DOCK_CONTROL_TITLE"] = controlTitle }
+        if let controlId { resolvedEnvironment["BREE_DOCK_CONTROL_ID"] = controlId }
+        if let controlTitle { resolvedEnvironment["BREE_DOCK_CONTROL_TITLE"] = controlTitle }
 
         let initialCommand: String?
         if let command, !command.isEmpty {
@@ -1419,7 +1419,7 @@ final class DockSplitStore: BonsplitDelegate, FilePreviewTabMetadataHost {
     func trustAndReload() {
         guard !isRetired else { return }
         if let trustRequest {
-            CmuxActionTrust.shared.trust(trustRequest.descriptor)
+            BreeActionTrust.shared.trust(trustRequest.descriptor)
         }
         reload()
     }
@@ -1583,7 +1583,7 @@ final class DockSplitStore: BonsplitDelegate, FilePreviewTabMetadataHost {
     private func trustRequestIfNeeded(for resolution: DockConfigResolution) -> DockTrustRequest? {
         guard resolution.isProjectSource, let sourceURL = resolution.sourceURL else { return nil }
         let descriptor = Self.trustDescriptor(for: resolution)
-        guard !CmuxActionTrust.shared.isTrusted(descriptor) else { return nil }
+        guard !BreeActionTrust.shared.isTrusted(descriptor) else { return nil }
         return DockTrustRequest(descriptor: descriptor, configPath: sourceURL.path)
     }
 

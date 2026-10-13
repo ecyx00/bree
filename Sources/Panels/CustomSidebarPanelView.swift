@@ -1,12 +1,12 @@
-import CmuxAppKitSupportUI
-import CmuxNotifications
-import CmuxSettings
-import CmuxSettingsUI
-import CmuxSidebar
-import CmuxSidebarInterpreterClient
-import CmuxSidebarRemoteRender
-import CmuxSwiftRender
-import CmuxSwiftRenderUI
+import BreeAppKitSupportUI
+import BreeNotifications
+import BreeSettings
+import BreeSettingsUI
+import BreeSidebar
+import BreeSidebarInterpreterClient
+import BreeSidebarRemoteRender
+import BreeSwiftRender
+import BreeSwiftRenderUI
 import SwiftUI
 
 struct CustomSidebarPanelView: View {
@@ -32,7 +32,7 @@ struct CustomSidebarPanelView: View {
                     CustomSidebarSurface(
                         fileURL: panel.fileURL,
                         dataContext: customSidebarDataContext(now: timeline.date),
-                        dispatch: makeCmuxSidebarActionDispatch(),
+                        dispatch: makeBreeSidebarActionDispatch(),
                         contentInsets: CustomSidebarContentInsets.zero,
                         rendersInProcess: customSidebarRenderer == .inProcess,
                         client: $renderWorkerClient

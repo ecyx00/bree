@@ -55,7 +55,7 @@ extension Workspace {
     /// current tab selection and pane focus.
     ///
     /// This follows reorders that originate on the remote (a second tmux client, or
-    /// a manual `move-window` / a `new-window` inserted mid-list). The cmux→tmux
+    /// a manual `move-window` / a `new-window` inserted mid-list). The bree→tmux
     /// drag direction is handled by `handleMirrorWindowsReordered`. bonsplit's
     /// `reorderTab` selects+focuses the moved tab (and `selectTab`/`focusPane` fire
     /// the same activation), so the whole operation runs under
@@ -71,7 +71,7 @@ extension Workspace {
     /// final order. A drag-aware guard would need bonsplit to expose drag state.
     @discardableResult
     func reorderRemoteTmuxMirrorTabs(toPanelOrder panelOrder: [UUID]) -> Bool {
-        // A global tmux window order cannot span multiple cmux panes.
+        // A global tmux window order cannot span multiple bree panes.
         let presentPaneIds = Set(panelOrder.compactMap { paneId(forPanelId: $0) })
         guard presentPaneIds.count == 1, let paneId = presentPaneIds.first else { return false }
         let currentPanelIds = bonsplitController.tabs(inPane: paneId).compactMap { panelIdFromSurfaceId($0.id) }
@@ -80,7 +80,7 @@ extension Workspace {
             requested: panelOrder
         ) else { return false }
 #if DEBUG
-        cmuxDebugLog("remote-tmux: reorder mirror tabs ws=\(id.uuidString.prefix(5)) count=\(desired.count)")
+        breeDebugLog("remote-tmux: reorder mirror tabs ws=\(id.uuidString.prefix(5)) count=\(desired.count)")
 #endif
 
         performRemoteTmuxMirrorMutation {

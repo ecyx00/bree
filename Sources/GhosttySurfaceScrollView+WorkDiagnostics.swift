@@ -1,4 +1,4 @@
-import CMUXMobileCore
+import BREEMobileCore
 import Foundation
 
 extension GhosttySurfaceScrollView {

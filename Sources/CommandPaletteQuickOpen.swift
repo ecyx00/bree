@@ -1,4 +1,4 @@
-import CmuxCommandPalette
+import BreeCommandPalette
 import Foundation
 
 /// A Quick Open query with a trailing `:N` or `:N:M` (line, column) split off.

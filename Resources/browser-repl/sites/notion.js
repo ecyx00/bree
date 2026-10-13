@@ -4,7 +4,7 @@
 // session cookie authenticates and never reaches the REPL.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
   const ORIGIN = "https://www.notion.so";
 
@@ -163,7 +163,7 @@
         }
         for (let i = 0; i < rs.length; i++) {
           const r = rs[i];
-          if (r.status === 401 || (r.json && /unauthorized|not logged in/i.test(r.json.name || r.json.message || ""))) throw new S.SiteError("not_signed_in", "notion: the cmux browser is not signed in to Notion; open https://www.notion.so with tabs.open() and ask the user to sign in");
+          if (r.status === 401 || (r.json && /unauthorized|not logged in/i.test(r.json.name || r.json.message || ""))) throw new S.SiteError("not_signed_in", "notion: the bree browser is not signed in to Notion; open https://www.notion.so with tabs.open() and ask the user to sign in");
           if (r.status < 200 || r.status >= 300) throw new S.SiteError("http", `notion ${list[i].endpoint}: HTTP ${r.status}${r.json && r.json.message ? `: ${r.json.message}` : ""}`);
         }
         return rs.map((r) => r.json);
@@ -251,7 +251,7 @@
                   ops.push({ pointer: { table: "block", id, spaceId }, path: ["content"], command: "listAfter", args: after ? { after, id: bid } : { id: bid } });
                   after = bid;
                 }
-                await calls([{ endpoint: "saveTransactions", body: { requestId: uuid(), transactions: [{ id: uuid(), spaceId, debug: { userAction: "cmux.sites.notion.append" }, operations: ops }] } }], input);
+                await calls([{ endpoint: "saveTransactions", body: { requestId: uuid(), transactions: [{ id: uuid(), spaceId, debug: { userAction: "bree.sites.notion.append" }, operations: ops }] } }], input);
                 return { status: "appended", page: id, blockIds: ids };
               },
             };

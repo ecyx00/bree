@@ -13,7 +13,7 @@ VStack(alignment: .leading, spacing: 12) {
 
     Text("WORKSPACES").font(.caption2).foregroundColor(.secondary)
     ForEach(workspaces) { w in
-        Button(action: { cmux("workspace.select", workspace_id: w.id) }) {
+        Button(action: { bree("workspace.select", workspace_id: w.id) }) {
             HStack(spacing: 8) {
                 Text(w.selected ? "●" : "○")
                     .font(.caption2)

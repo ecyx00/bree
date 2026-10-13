@@ -25,7 +25,7 @@ struct BrowserDeveloperToolsDockControlNormalizer {
 extension BrowserPanel {
     func normalizeDeveloperToolsDockControls() {
         BrowserDeveloperToolsDockControlNormalizer().normalize(
-            inspectorFrontendWebView: webView.cmuxInspectorFrontendWebView(),
+            inspectorFrontendWebView: webView.breeInspectorFrontendWebView(),
             hostWindow: webView.window
         )
     }

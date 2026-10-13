@@ -1,6 +1,6 @@
 import AppKit
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeTerminal
+import BreeTerminalCore
 
 extension GhosttyNSView {
     func recordDirectAgentHibernationTerminalInput() {
@@ -49,7 +49,7 @@ extension GhosttyNSView {
     /// Pastes the clipboard's plain text with its line breaks joined into one
     /// line, so a command that was copied with a break at every wrap point
     /// reaches the shell whole. It goes through the same paste path as
-    /// `cmux paste` and never presses Return.
+    /// `bree paste` and never presses Return.
     @IBAction func pasteAsOneLine(_ sender: Any?) {
         guard let text = multiLineClipboardPlainText else { return }
         let joined = TerminalPasteLineJoin(text).joined

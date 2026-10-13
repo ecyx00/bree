@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: `cmux omc` preserves fallback provider dirs in PATH.
+Regression test: `bree omc` preserves fallback provider dirs in PATH.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from claude_teams_test_utils import focused_cmux_server, resolve_cmux_cli
+from claude_teams_test_utils import focused_bree_server, resolve_bree_cli
 
 
 def make_executable(path: Path, content: str) -> None:
@@ -20,12 +20,12 @@ def make_executable(path: Path, content: str) -> None:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-omc-fallback-path-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-omc-fallback-path-") as td:
         root = Path(td)
         fallback_bin = root / ".bun" / "bin"
         fallback_bin.mkdir(parents=True, exist_ok=True)
@@ -52,8 +52,8 @@ omc-node-helper "$@"
         env = os.environ.copy()
         env["HOME"] = str(root)
         env["PATH"] = "/usr/bin:/bin"
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_SOCKET_PATH"] = str(root / "missing.sock")
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_SOCKET_PATH"] = str(root / "missing.sock")
         env["FAKE_OMC_LOG"] = str(omc_log)
 
         proc = subprocess.run(
@@ -66,7 +66,7 @@ omc-node-helper "$@"
         )
 
         if proc.returncode != 0:
-            print("FAIL: `cmux omc --version` failed with omc in a fallback dir")
+            print("FAIL: `bree omc --version` failed with omc in a fallback dir")
             print(f"exit={proc.returncode}")
             print(f"stdout={proc.stdout.strip()}")
             print(f"stderr={proc.stderr.strip()}")
@@ -142,17 +142,17 @@ omc-node-helper "$@"
                 timeout=30,
             )
             if real_launch.returncode == 0 or omc_log.exists():
-                print(f"FAIL: real OMC launch {invocation!r} continued without a live cmux surface context")
+                print(f"FAIL: real OMC launch {invocation!r} continued without a live bree surface context")
                 return 1
-        with focused_cmux_server(root / "focused-cmux.sock") as (socket_path, requests):
+        with focused_bree_server(root / "focused-bree.sock") as (socket_path, requests):
             focused_env = env.copy()
-            focused_env["CMUX_SOCKET_PATH"] = socket_path
+            focused_env["BREE_SOCKET_PATH"] = socket_path
             for key in (
-                "CMUX_WORKSPACE_ID",
-                "CMUX_SURFACE_ID",
-                "CMUX_PANEL_ID",
-                "CMUX_TAB_ID",
-                "CMUX_PANE_ID",
+                "BREE_WORKSPACE_ID",
+                "BREE_SURFACE_ID",
+                "BREE_PANEL_ID",
+                "BREE_TAB_ID",
+                "BREE_PANE_ID",
             ):
                 focused_env.pop(key, None)
             focused = subprocess.run(
@@ -164,7 +164,7 @@ omc-node-helper "$@"
                 timeout=30,
             )
         if focused.returncode == 0 or omc_log.exists():
-            print("FAIL: contextless OMC launch borrowed the globally focused cmux surface")
+            print("FAIL: contextless OMC launch borrowed the globally focused bree surface")
             return 1
         if "system.identify" in requests:
             print(f"FAIL: contextless OMC launch consulted mutable focus: {requests!r}")

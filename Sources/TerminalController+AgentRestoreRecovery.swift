@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 extension TerminalController {

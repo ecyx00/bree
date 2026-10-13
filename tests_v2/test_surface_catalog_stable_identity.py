@@ -7,12 +7,12 @@ from pathlib import Path
 import uuid
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
 def require(condition, message):
     if not condition:
-        raise cmuxError(message)
+        raise breeError(message)
 
 
 def rows(client, workspace):
@@ -29,12 +29,12 @@ def check_identity(row):
 
 
 def main():
-    socket_path = os.environ.get("CMUX_SOCKET_PATH", "")
-    require(bool(socket_path), "CMUX_SOCKET_PATH must explicitly select a tagged test app")
+    socket_path = os.environ.get("BREE_SOCKET_PATH", "")
+    require(bool(socket_path), "BREE_SOCKET_PATH must explicitly select a tagged test app")
     token = "identity-regression-" + uuid.uuid4().hex
     created = []
     cleanup_errors = []
-    with cmux(socket_path) as client:
+    with bree(socket_path) as client:
         try:
             for index, count in enumerate((2, 1)):
                 result = client._call("workspace.create", {

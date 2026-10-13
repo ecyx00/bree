@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
 
 const runtimeSource = readFileSync(
-  new URL("../../Packages/macOS/CmuxBrowser/Sources/CmuxBrowser/Resources/BrowserDesignModeRuntime.js", import.meta.url),
+  new URL("../../Packages/macOS/BreeBrowser/Sources/BreeBrowser/Resources/BrowserDesignModeRuntime.js", import.meta.url),
   "utf8",
 );
 
@@ -17,17 +17,17 @@ function fixture(html: string, options: { stallAnimationFrames?: boolean } = {})
   const attachShadow = dom.window.Element.prototype.attachShadow;
   dom.window.Element.prototype.attachShadow = function(init: ShadowRootInit) {
     const root = attachShadow.call(this, init);
-    if (this.getAttribute("data-cmux-design-mode") === "overlay") overlayShadowRoot = root;
+    if (this.getAttribute("data-bree-design-mode") === "overlay") overlayShadowRoot = root;
     return root;
   };
   if (options.stallAnimationFrames) {
     Object.defineProperty(dom.window, "requestAnimationFrame", { value: () => 1 });
   }
   Object.defineProperty(dom.window, "webkit", {
-    value: { messageHandlers: { cmuxDesignMode: { postMessage: (value: unknown) => messages.push(value) } } },
+    value: { messageHandlers: { breeDesignMode: { postMessage: (value: unknown) => messages.push(value) } } },
   });
   dom.window.eval(runtimeSource);
-  const runtime = (dom.window as unknown as { __cmuxDesignMode: DesignRuntime }).__cmuxDesignMode;
+  const runtime = (dom.window as unknown as { __breeDesignMode: DesignRuntime }).__breeDesignMode;
   runtime.enable();
   return { dom, messages, overlayShadowRoot: () => overlayShadowRoot, runtime };
 }
@@ -666,7 +666,7 @@ describe("browser design-mode runtime", () => {
   test("selects through an interaction shield before the page receives pointer gestures", () => {
     const { dom, runtime } = fixture(`<main><button id="danger">Delete</button></main>`);
     const button = dom.window.document.querySelector("#danger") as HTMLButtonElement;
-    const overlay = dom.window.document.querySelector("[data-cmux-design-mode=overlay]") as HTMLElement;
+    const overlay = dom.window.document.querySelector("[data-bree-design-mode=overlay]") as HTMLElement;
     let pagePointerDowns = 0;
     button.addEventListener("pointerdown", () => { pagePointerDowns += 1; });
     Object.defineProperty(dom.window.document, "elementFromPoint", { value: () => button });
@@ -1071,7 +1071,7 @@ describe("browser design-mode runtime", () => {
     expect(finalSnapshot.enabled).toBe(false);
     expect(paragraph.style.getPropertyValue("color")).toBe("purple");
     expect(paragraph.textContent).toBe("Hello");
-    expect(dom.window.document.querySelector("[data-cmux-design-mode=overlay]")).toBeNull();
-    expect((dom.window as unknown as { __cmuxDesignMode?: unknown }).__cmuxDesignMode).toBeUndefined();
+    expect(dom.window.document.querySelector("[data-bree-design-mode=overlay]")).toBeNull();
+    expect((dom.window as unknown as { __breeDesignMode?: unknown }).__breeDesignMode).toBeUndefined();
   });
 });

@@ -1,7 +1,7 @@
-# cmux automations
+# bree automations
 
-cmux can subscribe to its in-process event bus and run ordered actions from
-~/.cmuxterm/automations.json. The file is versioned so it can be checked into
+bree can subscribe to its in-process event bus and run ordered actions from
+~/.bree/automations.json. The file is versioned so it can be checked into
 a repository and reviewed like any other configuration.
 
 ## Configuration
@@ -43,7 +43,7 @@ suffix, in, and not. Selector and contains comparisons ignore case using a
 locale-independent policy. Rules are enabled by default; set "enabled": false
 to keep a rule in the file without firing it.
 
-Every rule has a rate limit. When rate_limit is omitted cmux uses one firing
+Every rule has a rate limit. When rate_limit is omitted bree uses one firing
 per second. The engine also caps concurrent firings and keeps the most recent
 256 firing records in memory.
 
@@ -59,9 +59,9 @@ per second. The engine also caps concurrent firings and keeps the most recent
 - run executes command (or cmd) through /bin/sh -c in an owned process group
   (60 seconds by default;
   set timeout_seconds to a value up to 300). The serialized
-  event is available as CMUX_AUTOMATION_EVENT and
-  CMUX_AUTOMATION_EVENT_JSON; CMUX_AUTOMATION_RULE_ID and
-  CMUX_AUTOMATION_CHAIN (a JSON string array) identify the firing.
+  event is available as BREE_AUTOMATION_EVENT and
+  BREE_AUTOMATION_EVENT_JSON; BREE_AUTOMATION_RULE_ID and
+  BREE_AUTOMATION_CHAIN (a JSON string array) identify the firing.
 - webhook sends the event JSON as an HTTP POST to url. Optional string
   headers are added to the request. URLs with credential-bearing headers
   (including Authorization, token, cookie, or API-key headers) must use
@@ -75,13 +75,13 @@ direct self-triggering and multi-rule cycles.
 ## CLI
 
 ```text
-cmux automation list
-cmux automation show <id>
-cmux automation test <id> --event <json>
-cmux automation enable <id>
-cmux automation disable <id>
-cmux automation logs [--limit <n>]
-cmux automation reload
+bree automation list
+bree automation show <id>
+bree automation test <id> --event <json>
+bree automation enable <id>
+bree automation disable <id>
+bree automation logs [--limit <n>]
+bree automation reload
 ```
 
 test is a dry run: it reads the config and evaluates a synthetic event
@@ -90,4 +90,4 @@ credential-like predicate, action, session, event, and webhook-URL fields
 (including query credentials) before returning them. Event JSON supplied with
 @file is read only from a regular file and is bounded to 4 MiB with the same
 nesting guard as the configuration loader. logs reports the bounded in-memory
-firing ring from the running cmux process.
+firing ring from the running bree process.

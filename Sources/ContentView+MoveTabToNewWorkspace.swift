@@ -1,6 +1,6 @@
-import CmuxCommandPalette
+import BreeCommandPalette
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 extension ContentView {

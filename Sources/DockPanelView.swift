@@ -1,9 +1,9 @@
 import AppKit
 import Bonsplit
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxNotifications
-import CmuxTerminal
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeNotifications
+import BreeTerminal
 import SwiftUI
 
 /// Bottom panel. Renders the workspace's Dock `BonsplitController` tree
@@ -297,7 +297,7 @@ final class DockKeyboardFocusView: NSView {
     func ownsKeyboardFocus(_ responder: NSResponder) -> Bool {
         if responder === self { return true }
         if let window, ownsDockBrowserFocus?(responder, window) == true { return true }
-        guard let ghosttyView = responder.cmuxStrictOwningGhosttyView(),
+        guard let ghosttyView = responder.breeStrictOwningGhosttyView(),
               let surfaceId = ghosttyView.terminalSurface?.id else {
             return false
         }

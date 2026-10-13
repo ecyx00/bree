@@ -1,22 +1,22 @@
 // The per-tab virtual clipboard: read/write from the REPL, and Meta+C,
 // Meta+X and Meta+V in the page. The system clipboard is never used.
-// oracle: skip (the virtual clipboard is cmux-defined)
+// oracle: skip (the virtual clipboard is bree-defined)
 await page.goto(`${PRIMARY}/input.html`);
 await page.clipboard.writeText("clip text");
-emitCmux("read-text", await page.clipboard.readText());
+emitBree("read-text", await page.clipboard.readText());
 await page.locator("#clip").click();
 await page.keyboard.press("Meta+v");
-emitCmux("pasted", await page.locator("#clip").inputValue());
+emitBree("pasted", await page.locator("#clip").inputValue());
 await page.locator("#keys").fill("copy me");
 await page.locator("#keys").selectText();
 await page.keyboard.press("Meta+c");
-emitCmux("copied", await page.clipboard.readText());
+emitBree("copied", await page.clipboard.readText());
 await page.keyboard.press("Meta+x");
-emitCmux("cut", [await page.clipboard.readText(), await page.locator("#keys").inputValue()]);
+emitBree("cut", [await page.clipboard.readText(), await page.locator("#keys").inputValue()]);
 await page.clipboard.write([{ type: "text/plain", data: "via write" }]);
 const items = await page.clipboard.read();
-emitCmux("read-items", items.map((i) => [i.type, i.data.toString()]));
-emitCmux("trusted-paste", await page.evaluate(() => window.__summary().filter((l) => /^(input) #clip/.test(l))));
+emitBree("read-items", items.map((i) => [i.type, i.data.toString()]));
+emitBree("trusted-paste", await page.evaluate(() => window.__summary().filter((l) => /^(input) #clip/.test(l))));
 
 // Copy and Cut run the page's own handlers: one that sets clipboardData and
 // cancels decides what lands on the tab's clipboard, and cancelling a cut
@@ -33,7 +33,7 @@ await page.evaluate(() => {
         e.clipboardData.setData("text/html", `<b>${type}</b>`);
         e.preventDefault();
       } else if (mode === "alert") {
-        // A dialog in the handler must not hold the command: cmux answers
+        // A dialog in the handler must not hold the command: bree answers
         // it as Playwright answers a dialog nobody handles.
         const answer = type === "copy" ? (alert(`${type} alert`), "alerted") : String(confirm(`${type} confirm`));
         e.clipboardData.setData("text/plain", `after ${type}: ${answer}`);
@@ -48,16 +48,16 @@ await page.locator("#keys").fill("make it loud");
 await page.evaluate(() => { document.getElementById("keys").dataset.mode = "custom"; });
 await page.locator("#keys").selectText();
 await page.keyboard.press("Meta+c");
-emitCmux("custom-copy", [await page.clipboard.readText(), await clipHtml(/<b\b[^>]*>copy<\/b>/), await page.locator("#keys").inputValue()]);
+emitBree("custom-copy", [await page.clipboard.readText(), await clipHtml(/<b\b[^>]*>copy<\/b>/), await page.locator("#keys").inputValue()]);
 await page.locator("#keys").selectText();
 await page.keyboard.press("Meta+x");
-emitCmux("custom-cut", [await page.clipboard.readText(), await clipHtml(/<b\b[^>]*>cut<\/b>/), await page.locator("#keys").inputValue()]);
+emitBree("custom-cut", [await page.clipboard.readText(), await clipHtml(/<b\b[^>]*>cut<\/b>/), await page.locator("#keys").inputValue()]);
 // A plain cut removes the selection and fires the page's cut event.
 await page.evaluate(() => { document.getElementById("keys").dataset.mode = ""; });
 await page.locator("#keys").selectText();
 await page.keyboard.press("Meta+x");
-emitCmux("plain-cut", [await page.clipboard.readText(), await page.locator("#keys").inputValue()]);
-emitCmux("clipboard-events", await page.evaluate(() => window.__clip));
+emitBree("plain-cut", [await page.clipboard.readText(), await page.locator("#keys").inputValue()]);
+emitBree("clipboard-events", await page.evaluate(() => window.__clip));
 // Dialogs from a Copy or Cut handler: dismissed at once, reported once at the
 // top of the next snapshot and to "dialog" listeners, and never left open.
 await page.locator("#keys").fill("ask first");
@@ -67,8 +67,8 @@ await page.keyboard.press("Meta+c");
 const pendingAfterCopy = page.dialog() && page.dialog().type;
 if (pendingAfterCopy) await page.dialog().dismiss();
 const header = (await snapshot()).tree.split("\n").filter((l) => /^dialog/.test(l));
-emitCmux("alert-copy", { pending: pendingAfterCopy, clipboard: await page.clipboard.readText(), header });
-emitCmux("alert-copy-reported-once", (await snapshot()).tree.split("\n").filter((l) => /^dialog/.test(l)));
+emitBree("alert-copy", { pending: pendingAfterCopy, clipboard: await page.clipboard.readText(), header });
+emitBree("alert-copy-reported-once", (await snapshot()).tree.split("\n").filter((l) => /^dialog/.test(l)));
 const seen = [];
 page.on("dialog", (d) => {
   seen.push([d.type(), d.message()]);
@@ -77,9 +77,9 @@ page.on("dialog", (d) => {
 await page.locator("#keys").selectText();
 await page.keyboard.press("Meta+x");
 await page.waitForTimeout(100);
-emitCmux("confirm-cut-listener", { seen, clipboard: await page.clipboard.readText(), value: await page.locator("#keys").inputValue() });
+emitBree("confirm-cut-listener", { seen, clipboard: await page.clipboard.readText(), value: await page.locator("#keys").inputValue() });
 // ---- cell
-// A Copy the page has not finished within 5 s: cmux ends the tab's web
+// A Copy the page has not finished within 5 s: bree ends the tab's web
 // content process, so nothing the page does later reaches a pasteboard.
 // WebKit would otherwise write a late copy's data to the system clipboard,
 // the one the terminal pastes from. This handler clears the selection
@@ -107,7 +107,7 @@ const lateCopy = await page.keyboard.press("Meta+c").then(
 );
 for (let i = 0; i < 40 && !lateCopyCrashed; i++) await sleep(50);
 await page.reload();
-emitCmux("late-copy", { late: lateCopy, crashed: lateCopyCrashed, clipboard: await page.clipboard.readText(), reloaded: await page.locator("#keys").inputValue() });
+emitBree("late-copy", { late: lateCopy, crashed: lateCopyCrashed, clipboard: await page.clipboard.readText(), reloaded: await page.locator("#keys").inputValue() });
 // ---- cell
 // Page scripts in a tab the session opened never write the system clipboard,
 // the one the terminal pastes from, even right after the agent's click gave
@@ -150,16 +150,16 @@ const pageCopy = async (id, expectWrite = true) => {
   for (let i = 0; expectWrite && i < 60 && (await page.clipboard.readText()) === before; i++) await sleep(50);
   return [await page.evaluate(() => window.__pageCopy), await page.clipboard.readText()];
 };
-emitCmux("page-write-text", await pageCopy("write-text"));
-emitCmux("page-write-item", await pageCopy("write-item"));
-emitCmux("page-exec-copy", await pageCopy("exec-copy"));
-emitCmux("page-read-text", await pageCopy("read-text", false));
-// ---- cell cmux-only
+emitBree("page-write-text", await pageCopy("write-text"));
+emitBree("page-write-item", await pageCopy("write-item"));
+emitBree("page-exec-copy", await pageCopy("exec-copy"));
+emitBree("page-read-text", await pageCopy("read-text", false));
+// ---- cell bree-only
 // A tab a one-shot run keeps is the user's once the run ends.
 const keptForClipboard = await tabs.open(`${PRIMARY}/input.html?clipboard-user-tab`);
 await keptForClipboard.keep();
-// ---- cell session=clipboard-user cmux-only
-// Copy, Cut and Paste are refused in a user's tab: cmux contains a page
+// ---- cell session=clipboard-user bree-only
+// Copy, Cut and Paste are refused in a user's tab: bree contains a page
 // that outlives the 5 s timeout by ending the tab's web content process,
 // which it does only in tabs a session opened.
 const clipboardUserRow = (await tabs.list()).find((t) => t.url.endsWith("?clipboard-user-tab"));
@@ -170,5 +170,5 @@ const userTabShortcuts = [];
 for (const key of ["Meta+c", "Meta+x", "Meta+v"]) {
   userTabShortcuts.push(await clipboardUserTab.keyboard.press(key).then(() => "ran", (e) => [e.code ?? null, /in a user's tab/.test(e.message)]));
 }
-emitCmux("user-tab-clipboard", { shortcuts: userTabShortcuts, value: await clipboardUserTab.locator("#keys").inputValue() });
+emitBree("user-tab-clipboard", { shortcuts: userTabShortcuts, value: await clipboardUserTab.locator("#keys").inputValue() });
 await clipboardUserTab.close();

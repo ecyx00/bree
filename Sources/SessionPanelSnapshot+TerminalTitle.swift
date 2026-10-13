@@ -1,4 +1,4 @@
-import CmuxTerminalCore
+import BreeTerminalCore
 
 extension SessionPanelSnapshot {
     /// Old snapshots may contain raw OSC transcripts. Custom names are restored

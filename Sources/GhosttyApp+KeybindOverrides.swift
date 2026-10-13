@@ -2,7 +2,7 @@ import GhosttyKit
 
 extension GhosttyApp {
     /// Removes host-action defaults before loading user files. Otherwise clearing
-    /// a cmux shortcut would revive Ghostty's fallback through the runtime callback.
+    /// a bree shortcut would revive Ghostty's fallback through the runtime callback.
     func loadGhosttyHostKeybindDefaults(_ config: ghostty_config_t) {
         let triggers = [
             "super+n", "super+t", "super+q", "super+,", "super+enter",
@@ -14,13 +14,13 @@ extension GhosttyApp {
             triggers.map { "keybind = \($0)=unbind" }.joined(separator: "\n")
                 + "\n" + Self.numberedWorkspaceGhosttyUnbinds,
             into: config,
-            prefix: "cmux-host-keybind-defaults",
+            prefix: "bree-host-keybind-defaults",
             logLabel: "host keybind defaults"
         )
     }
 
-    func loadCmuxOwnedGhosttyKeybindOverrides(_ config: ghostty_config_t) {
-        // cmux owns these split, close, and workspace font-size shortcuts through
+    func loadBreeOwnedGhosttyKeybindOverrides(_ config: ghostty_config_t) {
+        // bree owns these split, close, and workspace font-size shortcuts through
         // KeyboardShortcutSettings.
         // Remove Ghostty's default fallbacks so remapped or cleared shortcuts
         // can reach the focused terminal instead of running actions outside the
@@ -36,8 +36,8 @@ extension GhosttyApp {
             \(Self.numberedWorkspaceGhosttyUnbinds)
             """,
             into: config,
-            prefix: "cmux-owned-keybind-overrides",
-            logLabel: "cmux-owned keybind overrides"
+            prefix: "bree-owned-keybind-overrides",
+            logLabel: "bree-owned keybind overrides"
         )
     }
 
@@ -47,7 +47,7 @@ extension GhosttyApp {
     ///
     /// Without this, a `⌘1–9` remapped away in Settings still falls through to the
     /// focused terminal and Ghostty performs `goto_tab`, so the rebind looks
-    /// hardcoded (https://github.com/manaflow-ai/cmux/issues/5189). Ghostty registers
+    /// hardcoded (https://github.com/ecyx00/bree/issues/5189). Ghostty registers
     /// each digit under both its Unicode form (`super+1`) and its physical-key form
     /// (`super+digit_1`), so both are unbound here.
     private static let numberedWorkspaceGhosttyUnbinds: String = {

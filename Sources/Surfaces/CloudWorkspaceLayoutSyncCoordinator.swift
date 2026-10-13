@@ -1,5 +1,5 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// Writes native Cloud workspace arrangements to their machine.
@@ -117,7 +117,7 @@ final class CloudWorkspaceLayoutSyncCoordinator {
             }
             outcomes[workspaceID] = step
 #if DEBUG
-            cmuxDebugLog("cloudWorkspace.layoutSync workspace=\(workspaceID) remote=\(current.remoteWorkspaceID) step=\(step)")
+            breeDebugLog("cloudWorkspace.layoutSync workspace=\(workspaceID) remote=\(current.remoteWorkspaceID) step=\(step)")
 #endif
             if step == .done { baselines[workspaceID] = tree }
         }

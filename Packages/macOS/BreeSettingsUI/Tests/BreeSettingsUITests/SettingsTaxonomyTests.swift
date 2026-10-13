@@ -1,0 +1,54 @@
+import BreeSettings
+import Testing
+@testable import BreeSettingsUI
+
+@Suite("Settings taxonomy")
+struct SettingsTaxonomyTests {
+    /// Every sidebar leaf is listed once, and every other section is hosted by one of them.
+    @Test func everyNavigationLeafHasAVisibleHost() {
+        let sections = SettingsTaxonomyGroup.sectionsInDisplayOrder
+
+        #expect(Set(sections).count == sections.count)
+        for section in SettingsSectionID.allCases {
+            #expect(sections.contains(SettingsSectionMountModel.hostSection(for: section)))
+        }
+    }
+
+    /// Verifies grouping leaves the search/deep-link section identities intact.
+    @Test func taxonomyKeepsExistingSectionSearchIdentities() throws {
+        let index = SettingsSearchIndex(catalog: SettingCatalog(), curatedEntries: [])
+        let sectionEntries = index.match("")
+        let entriesByID = Dictionary(uniqueKeysWithValues: sectionEntries.map { ($0.id, $0) })
+
+        // Search keeps its original declaration order and stable IDs.
+        // Taxonomy is only the empty-query browse presentation.
+        #expect(sectionEntries.map(\.id) == SettingsSectionID.allCases.map { "section:\($0.rawValue)" })
+
+        for section in SettingsTaxonomyGroup.sectionsInDisplayOrder {
+            let entryID = "section:\(section.rawValue)"
+            let entry = try #require(entriesByID[entryID])
+            #expect(entry.anchorID == entryID)
+            #expect(entry.kind == .section)
+        }
+    }
+
+    /// Every theme setting lives on the Themes page, whichever bree.json
+    /// namespace owns it, so search results for them open that page.
+    @Test func themeSettingsResolveToTheThemesSection() throws {
+        let index = SettingsSearchIndex(catalog: SettingCatalog())
+        #expect(index.anchorID(forSettingsPath: "app.accentColor") == "setting:themes:accent-color")
+        #expect(index.anchorID(forSettingsPath: "terminal.adaptiveDefaultTheme") == "setting:themes:adaptive-default-theme")
+        #expect(index.anchorID(forSettingsPath: "browser.theme") == "setting:themes:browser-theme")
+
+        let hits = index.match("terminal theme")
+        let terminalTheme = try #require(hits.first { $0.id == "setting:themes:terminal-theme" })
+        #expect(terminalTheme.anchorID == "setting:themes:terminal-theme")
+    }
+
+    /// Ensures every visible taxonomy header resolves to nonempty localized copy.
+    @Test func everyGroupHasALocalizedTitle() {
+        for group in SettingsTaxonomyGroup.allCases {
+            #expect(!group.title.isEmpty)
+        }
+    }
+}

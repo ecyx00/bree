@@ -1,5 +1,5 @@
 import AppKit
-import CmuxTerminal
+import BreeTerminal
 
 extension AppDelegate {
     /// Focused and visible terminal lifecycle tokens that should observe a
@@ -29,7 +29,7 @@ extension AppDelegate {
 
         append(
             NSApp.keyWindow?.firstResponder
-                .cmuxStrictOwningGhosttyView()?
+                .breeStrictOwningGhosttyView()?
                 .terminalSurface
         )
 

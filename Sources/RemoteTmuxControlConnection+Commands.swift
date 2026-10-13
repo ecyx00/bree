@@ -1,4 +1,4 @@
-import CmuxRemoteSession
+import BreeRemoteSession
 import Foundation
 
 extension RemoteTmuxControlConnection {
@@ -60,19 +60,19 @@ extension RemoteTmuxControlConnection {
     // MARK: - Mirror session environment (issue #833)
 
     /// Marker signalling to remote shell integration that this tmux session is
-    /// mirrored by a local cmux over ssh-tmux (`tmux -CC`, no relay socket).
-    static let mirrorMarkerEnvironmentKey = "CMUX_REMOTE_TMUX_MIRROR"
+    /// mirrored by a local bree over ssh-tmux (`tmux -CC`, no relay socket).
+    static let mirrorMarkerEnvironmentKey = "BREE_REMOTE_TMUX_MIRROR"
 
     /// Pushes the mirror marker + identity pairs into the remote tmux SESSION
     /// environment. Called from the first post-attach `list-windows` result, so
     /// both paths — first connect and every reconnect — refresh values that
     /// would otherwise go permanently stale after an app relaunch (issue #833:
-    /// the `tmux -CC` attach has no cmux wrapper shell outside tmux on the
+    /// the `tmux -CC` attach has no bree wrapper shell outside tmux on the
     /// remote, so nobody else ever re-publishes them).
     ///
-    /// Deliberately NOT pushed: `CMUX_SOCKET_PATH`. The ssh-tmux transport has
+    /// Deliberately NOT pushed: `BREE_SOCKET_PATH`. The ssh-tmux transport has
     /// no relay/reverse forward, so the local Mac socket path is meaningless on
-    /// the remote host; publishing it would point remote `cmux` CLI invocations
+    /// the remote host; publishing it would point remote `bree` CLI invocations
     /// at a dead socket. Notification delivery instead rides the OSC 777/9
     /// intercept in ``RemoteTmuxSessionMirror`` (see
     /// ``RemoteTmuxNotificationOSCFilter``).
@@ -235,7 +235,7 @@ extension RemoteTmuxControlConnection {
     @discardableResult
     func requestPaneRects(windowId: Int, generation: Int) -> Bool {
         #if DEBUG
-        cmuxDebugLog("remote.rects.request @\(windowId) gen=\(generation)")
+        breeDebugLog("remote.rects.request @\(windowId) gen=\(generation)")
         #endif
         let snapshotKey = RemoteTmuxPaneTitleSnapshotKey(windowId: windowId, generation: generation)
         paneTitleMetadataSnapshotRevisions[snapshotKey] = paneTitleMetadataRevision
@@ -270,11 +270,11 @@ extension RemoteTmuxControlConnection {
     /// remote (the alternate screen does not reflow).
     ///
     /// After the paint it restores terminal state the live `%output` doesn't carry
-    /// (it set before cmux attached): scroll region, DEC private modes, the mouse
+    /// (it set before bree attached): scroll region, DEC private modes, the mouse
     /// tracking mode, and the cursor. Restoring the mouse mode means clicks, scroll,
     /// and drag in the mirror are forwarded to the remote app — so drag-to-select
     /// becomes the app's own selection/OSC 52 copy, and **Shift+drag** does a native
-    /// cmux copy (exactly as a local terminal behaves with a mouse-mode app).
+    /// bree copy (exactly as a local terminal behaves with a mouse-mode app).
     @discardableResult
     func capturePane(paneId: Int, clearScrollback: Bool = false) -> UUID? {
         guard let seedID = beginPaneSeed(
@@ -292,7 +292,7 @@ extension RemoteTmuxControlConnection {
         // captured rows. An alt-screen TUI (e.g. claude) must render on the mirror's
         // alternate screen so resize matches the remote (the alternate screen does
         // not reflow; the primary screen reflows/scrolls and offsets rows). The
-        // pane was already on the alt screen before cmux attached, so its 1049h is
+        // pane was already on the alt screen before bree attached, so its 1049h is
         // not in the live %output — query `#{alternate_on}` and enter alt ourselves.
         // Ordered first so the enter lands before the capture paint in the FIFO.
         let altScreenCommand = Self.paneAltScreenQueryCommand(paneId: paneId)
@@ -541,7 +541,7 @@ extension RemoteTmuxControlConnection {
         -> (setBuffer: String, pasteBuffer: String)?
     {
         guard !text.isEmpty else { return nil }
-        let buffer = "cmux-paste-\(paneId)"
+        let buffer = "bree-paste-\(paneId)"
         return (
             setBuffer: "set-buffer -b \(buffer) -- \(RemoteTmuxHost.shellSingleQuoted(text))",
             pasteBuffer: "paste-buffer -p -d -b \(buffer) -t %\(paneId)"

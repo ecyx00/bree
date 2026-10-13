@@ -1,7 +1,7 @@
-import CmuxRemoteSession
+import BreeRemoteSession
 import Bonsplit
-import CmuxControlSocket
-import CmuxPanes
+import BreeControlSocket
+import BreePanes
 import Foundation
 
 @MainActor

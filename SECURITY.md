@@ -5,15 +5,15 @@
 Email **founders@manaflow.com**. Put "security" in the subject line.
 
 Do not open a public issue for a vulnerability, and do not post it in Discord.
-A public report means everyone running cmux learns about it at the same time we
-do, and cmux runs your shell.
+A public report means everyone running bree learns about it at the same time we
+do, and bree runs your shell.
 
 Tell us what you can:
 
 - What an attacker can do, and what they need to start (a local account, a
   malicious escape sequence, a crafted repository, a hostile server on the other
-  end of `cmux ssh`).
-- The cmux version and how you installed it.
+  end of `bree ssh`).
+- The bree version and how you installed it.
 - Steps or a proof of concept. A rough one is fine.
 
 You do not need a CVSS score or a written-up advisory. A paragraph that says
@@ -34,20 +34,20 @@ details are the part to keep out of public threads.
 
 ## Scope
 
-cmux is a terminal, so a lot of alarming-looking behavior is the job: it runs
+bree is a terminal, so a lot of alarming-looking behavior is the job: it runs
 the commands you type, it runs your shell config, and it runs agents you have
 told it to run. Things we do consider vulnerabilities:
 
-- Escaping the sandbox of a cmux Cloud VM, or reaching another tenant's data.
+- Escaping the sandbox of a bree Cloud VM, or reaching another tenant's data.
 - Terminal output that runs code without the user asking: an escape sequence, a
   file name, a git branch name, a pasted string, an agent's output.
 - Anything that leaks credentials or tokens outside the machine, including into
   logs we upload.
-- Authentication and authorization mistakes in `cmux ssh`, the relay, or the
+- Authentication and authorization mistakes in `bree ssh`, the relay, or the
   web dashboard.
 - Privilege escalation through the update path or the installed helpers.
 
-Things we do not: `cmux` running a command that you typed, a shell config that
+Things we do not: `bree` running a command that you typed, a shell config that
 does something surprising, or an agent doing something you approved.
 
 ## Supported versions

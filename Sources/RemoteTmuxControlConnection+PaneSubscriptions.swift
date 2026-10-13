@@ -1,4 +1,4 @@
-import CmuxRemoteSession
+import BreeRemoteSession
 import Foundation
 
 extension RemoteTmuxControlConnection {
@@ -87,7 +87,7 @@ extension RemoteTmuxControlConnection {
     /// Subscribes to live `pane_current_path` changes for `paneId` via tmux
     /// control-mode `refresh-client -B`, so a remote `cd` updates the mirrored
     /// tab's folder without polling. tmux emits the value once on subscribe and
-    /// again on every change as `%subscription-changed cmux_cwd_<paneId> … : <path>`.
+    /// again on every change as `%subscription-changed bree_cwd_<paneId> … : <path>`.
     /// Best-effort: on tmux builds that don't support subscriptions the command is
     /// a no-op and ``requestPanePath(paneId:)`` still supplies the initial folder.
     func subscribePanePath(paneId: Int) {
@@ -129,7 +129,7 @@ extension RemoteTmuxControlConnection {
         paneForegroundStates[paneId] = state
         let noReflow = state.suppressesReflow
         #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "remote.reflow.classify pane=\(paneId) src=\(source) raw=\"\(rawValue.trimmingCharacters(in: .whitespacesAndNewlines))\" "
                 + "alt=\(state.alternateOn ? 1 : 0) cmd=\"\(state.command)\" noReflow=\(noReflow ? 1 : 0)"
         )

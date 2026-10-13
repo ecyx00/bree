@@ -29,59 +29,59 @@ _PURE_HIDDEN_CR_ZSHRC = r"""
 setopt prompt_percent promptsubst nopromptcr nopromptsp
 prompt_newline=$'\n%{\r%}'
 
-typeset -g CMUX_TOP='%F{4}%~%f'
-typeset -g CMUX_LAST_PROMPT=''
-typeset -gi CMUX_ASYNC_DONE=0
-typeset -g CMUX_ASYNC_FD=''
+typeset -g BREE_TOP='%F{4}%~%f'
+typeset -g BREE_LAST_PROMPT=''
+typeset -gi BREE_ASYNC_DONE=0
+typeset -g BREE_ASYNC_FD=''
 
-cmux_render_prompt() {
+bree_render_prompt() {
   local cleaned_ps1=$PROMPT
   if [[ $PROMPT = *$prompt_newline* ]]; then
     cleaned_ps1=${PROMPT##*${prompt_newline}}
   fi
 
-  PROMPT="${CMUX_TOP}${prompt_newline}${cleaned_ps1:-%F{5}❯%f }"
+  PROMPT="${BREE_TOP}${prompt_newline}${cleaned_ps1:-%F{5}❯%f }"
 
   local expanded_prompt="${(S%%)PROMPT}"
   if [[ ${1:-} == precmd ]]; then
     print
-  elif [[ $CMUX_LAST_PROMPT != $expanded_prompt ]]; then
+  elif [[ $BREE_LAST_PROMPT != $expanded_prompt ]]; then
     zle && zle .reset-prompt
   fi
-  typeset -g CMUX_LAST_PROMPT=$expanded_prompt
+  typeset -g BREE_LAST_PROMPT=$expanded_prompt
 }
 
-cmux_async_ready() {
+bree_async_ready() {
   emulate -L zsh
-  local fd="${1:-$CMUX_ASYNC_FD}"
+  local fd="${1:-$BREE_ASYNC_FD}"
   if [[ -n $fd ]]; then
     zle -F "$fd"
     exec {fd}<&-
   fi
-  CMUX_ASYNC_FD=''
+  BREE_ASYNC_FD=''
 
-  (( CMUX_ASYNC_DONE )) && return
-  CMUX_ASYNC_DONE=1
-  CMUX_TOP='%F{4}%~%f %F{242}main%f%F{218}*%f'
-  cmux_render_prompt async
+  (( BREE_ASYNC_DONE )) && return
+  BREE_ASYNC_DONE=1
+  BREE_TOP='%F{4}%~%f %F{242}main%f%F{218}*%f'
+  bree_render_prompt async
 }
 
 precmd() {
-  CMUX_ASYNC_DONE=0
-  cmux_render_prompt precmd
+  BREE_ASYNC_DONE=0
+  bree_render_prompt precmd
 }
 
-cmux_line_init() {
-  if (( !CMUX_ASYNC_DONE )) && [[ -z $CMUX_ASYNC_FD ]]; then
-    exec {CMUX_ASYNC_FD}< <(
+bree_line_init() {
+  if (( !BREE_ASYNC_DONE )) && [[ -z $BREE_ASYNC_FD ]]; then
+    exec {BREE_ASYNC_FD}< <(
       sleep 0.05
       printf 'ready\n'
     )
-    zle -F "$CMUX_ASYNC_FD" cmux_async_ready
+    zle -F "$BREE_ASYNC_FD" bree_async_ready
   fi
 }
 
-zle -N zle-line-init cmux_line_init
+zle -N zle-line-init bree_line_init
 PROMPT='%F{5}❯%f '
 """.lstrip()
 
@@ -153,7 +153,7 @@ def main() -> int:
         print("SKIP: zsh not installed")
         return 0
 
-    base = Path(tempfile.mkdtemp(prefix="cmux_ghostty_pure_hidden_cr_"))
+    base = Path(tempfile.mkdtemp(prefix="bree_ghostty_pure_hidden_cr_"))
     try:
         home = base / "home"
         home.mkdir(parents=True, exist_ok=True)

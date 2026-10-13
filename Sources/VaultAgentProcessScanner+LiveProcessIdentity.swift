@@ -3,7 +3,7 @@ import Foundation
 extension RestorableAgentSessionIndex {
     /// Whether a live scoped process's executable is credibly the agent the hook
     /// record captured: exact basename match, the launch-time executable recorded
-    /// in the process's own cmux launch environment, or a known agent entrypoint
+    /// in the process's own bree launch environment, or a known agent entrypoint
     /// shape in argv (versioned claude installs, node-launched codex, etc.).
     static func liveProcessExecutableMatchesRecordedAgent(
         kind: RestorableAgentKind,

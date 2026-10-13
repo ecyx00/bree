@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 /// Live ownership gate for a relay target that resolves through a Dock store.

@@ -1,5 +1,5 @@
 import Bonsplit
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Foundation
 
 enum IMessageModeSettings {
@@ -23,7 +23,7 @@ enum IMessageModeSettings {
 ///   reorders by its most-recent unread member.
 ///
 /// Both knobs are persisted to UserDefaults via the keys below and mirrored
-/// in `~/.config/cmux/cmux.json` under `sidebar.imessageMode.*`. The sort
+/// in `~/.config/bree/bree.json` under `sidebar.imessageMode.*`. The sort
 /// path treats the current build as passthrough until the broader iMessage
 /// sort logic exists; the knobs land here so user-set values survive the
 /// upgrade that activates the behavior.
@@ -249,7 +249,7 @@ extension TabManager {
                 panelId: Self.panelId(in: workspace, forSurfaceId: surfaceId)
             )
             if messageRecorded {
-                CmuxEventBus.shared.publishWorkspacePromptSubmitted(
+                BreeEventBus.shared.publishWorkspacePromptSubmitted(
                     workspaceId: workspaceId,
                     message: message,
                     preview: Workspace.conversationMessagePreview(from: message),
@@ -275,7 +275,7 @@ extension TabManager {
 
     /// Resolves a hook-reported surface id to the panel it belongs to.
     ///
-    /// Hook payloads carry `CMUX_SURFACE_ID`, which is a surface id for split
+    /// Hook payloads carry `BREE_SURFACE_ID`, which is a surface id for split
     /// panes but already a panel id for the simple case, so both shapes are
     /// accepted the same way the focused-notification seam accepts them.
     private static func panelId(in workspace: Workspace, forSurfaceId surfaceId: String?) -> UUID? {

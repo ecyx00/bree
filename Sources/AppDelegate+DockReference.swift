@@ -1,5 +1,5 @@
 import AppKit
-import CmuxTerminal
+import BreeTerminal
 
 extension AppDelegate.MainWindowContext {
     /// Cancels work scoped to this context before the window owner releases it.

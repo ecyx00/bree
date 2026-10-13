@@ -25,14 +25,14 @@ enum ProcessDefaultsDomain {
 
 /// Gives each app-host test process its own preferences domain.
 ///
-/// Every app-host test process runs the same `cmux DEV` bundle, so all of them
+/// Every app-host test process runs the same `Bree Dev` bundle, so all of them
 /// share one persistent domain in the runner user's real
 /// `~/Library/Preferences`. `CFFIXED_USER_HOME` does not move it: the
 /// preferences daemon resolves the path from the user account, not from the
 /// process environment. State one process saved (the last closed window frame,
 /// the right sidebar's mode and visibility, shortcut overrides, feature flags)
 /// was therefore the starting state of the next process, and of the runner
-/// user's own `cmux DEV`.
+/// user's own `Bree Dev`.
 ///
 /// Before anything reads preferences, an app-host test process replaces the
 /// `+[NSUserDefaults standardUserDefaults]` implementation with one that
@@ -86,10 +86,10 @@ enum TestProcessDefaults {
 
     /// Whether this process is an XCTest host: xcodebuild injects the test
     /// bundle through these variables, and the CI wrapper sets
-    /// `CMUX_TEST_PROCESS` before XCTest connects. An XCUITest target app gets
+    /// `BREE_TEST_PROCESS` before XCTest connects. An XCUITest target app gets
     /// none of them.
     static func hostsTestBundles(environment: [String: String]) -> Bool {
-        environment["CMUX_TEST_PROCESS"] == "1"
+        environment["BREE_TEST_PROCESS"] == "1"
             || environment["XCTestConfigurationFilePath"] != nil
             || environment["XCInjectBundleInto"] != nil
     }

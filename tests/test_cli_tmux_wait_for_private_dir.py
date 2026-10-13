@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""`cmux wait-for` keeps its signal files in a private per-user directory.
+"""`bree wait-for` keeps its signal files in a private per-user directory.
 
 Compiles the CLI's wait-for signal owner with a small driver. No app, socket
 or full CLI build.
@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class TmuxWaitForSignalPrivateDirectory(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.temp = tempfile.TemporaryDirectory(prefix="cmux-wait-for-test-")
+        cls.temp = tempfile.TemporaryDirectory(prefix="bree-wait-for-test-")
         cls.addClassCleanup(cls.temp.cleanup)
         cls.binary = Path(cls.temp.name) / "wait-for-fixture"
         build = subprocess.run([
@@ -34,7 +34,7 @@ class TmuxWaitForSignalPrivateDirectory(unittest.TestCase):
             raise RuntimeError(build.stderr)
 
     def setUp(self) -> None:
-        self.name = f"cmux-test-{uuid.uuid4().hex}"
+        self.name = f"bree-test-{uuid.uuid4().hex}"
         self.path = Path(self.run_fixture("path").stdout.strip())
         self.addCleanup(self.remove_signal_path)
 
@@ -102,7 +102,7 @@ class TmuxWaitForSignalPrivateDirectory(unittest.TestCase):
         self.assertEqual(target.read_text(), "kept\n")
 
     def test_channel_names_have_distinct_signal_files(self) -> None:
-        first = f"cmux-test-{uuid.uuid4().hex}/a/b"
+        first = f"bree-test-{uuid.uuid4().hex}/a/b"
         second = first.replace("/", "_")
         first_path = Path(subprocess.run(
             [str(self.binary), "path", first], capture_output=True, text=True, check=True

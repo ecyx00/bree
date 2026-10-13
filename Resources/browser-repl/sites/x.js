@@ -4,7 +4,7 @@
 // after a confirmed draft.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
   const ORIGIN = "https://x.com";
   const SIGN_IN = [/x\.com\/(i\/flow\/login|login|i\/flow\/signup)/, /twitter\.com\/(i\/flow\/login|login)/];

@@ -1,6 +1,6 @@
 import Foundation
 import CoreFoundation
-import CmuxControlSocket
+import BreeControlSocket
 import Darwin
 
 extension SocketClient {
@@ -16,7 +16,7 @@ extension SocketClient {
             "method": method,
             "params": params
         ]
-        if let ruleID = ProcessInfo.processInfo.environment["CMUX_AUTOMATION_RULE_ID"],
+        if let ruleID = ProcessInfo.processInfo.environment["BREE_AUTOMATION_RULE_ID"],
            !ruleID.isEmpty {
             request["automation_origin"] = Self.automationOriginPayload(ruleID: ruleID)
         }

@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxPanes
+import BreePanes
 
 enum GhosttyGotoSplitRoute {
     case direction(NavigationDirection)
@@ -20,7 +20,7 @@ extension AppDelegate {
         tabManager: TabManager?,
         window: NSWindow?
     ) -> Bool {
-        cmuxRememberFindSelectionBeforePanelFocusMove(tabManager: tabManager, window: window)
+        breeRememberFindSelectionBeforePanelFocusMove(tabManager: tabManager, window: window)
         switch route {
         case .direction(let direction):
             tabManager?.movePaneFocus(direction: direction)
@@ -106,7 +106,7 @@ extension AppDelegate {
     }
 
     /// Ghostty's imported `goto_split` bindings are compatibility fallbacks, not
-    /// peers of cmux's live shortcut configuration. Any configured cmux action
+    /// peers of bree's live shortcut configuration. Any configured bree action
     /// that currently owns the stroke wins. Keeping this arbitration in one
     /// place prevents cached Ghostty bindings from shadowing later handlers
     /// after a Settings rebind.

@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// One open popover anchored to a pane tab bar button (Architecture, Wiki). It owns the NSPopover, its anchor
@@ -422,11 +422,12 @@ private struct PopoverResizeHandles: NSViewRepresentable {
 /// Each entry point calls `closeOthers(than:)` right before it shows itself.
 @MainActor
 enum BreeOverlays {
-    enum Kind { case palette, wiki, architecture, attention }
+    enum Kind { case palette, wiki, architecture, attention, board }
 
     static func closeOthers(than kind: Kind) {
         if kind != .wiki { WikiPopoverController.shared.closeAllAttached() }
         if kind != .architecture { ArchitectureWindowController.shared.closeAllAttached() }
+        if kind != .board { BoardPopoverController.shared.closeAllAttached() }
         if kind != .attention { _ = AppDelegate.shared?.dismissNotificationsPopoverIfShown() }
         if kind != .palette {
             // The palette lives in the window's SwiftUI tree; each ContentView ignores windows that are not its own.

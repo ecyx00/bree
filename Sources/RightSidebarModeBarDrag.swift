@@ -1,7 +1,7 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import Observation
-import CmuxSidebar
+import BreeSidebar
 import SwiftUI
 
 /// Owns a mode bar tab drag. Inside the bar the real tab follows the pointer
@@ -280,7 +280,7 @@ private struct RightSidebarModeBarDragPreview: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            CmuxSystemSymbolImage(
+            BreeSystemSymbolImage(
                 systemName: mode.symbolName,
                 pointSize: RightSidebarChromeControlStyle.modeIconSize,
                 weight: RightSidebarChromeControlStyle.iconWeight,

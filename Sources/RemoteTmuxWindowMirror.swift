@@ -1,13 +1,13 @@
-import CmuxRemoteSession
+import BreeRemoteSession
 import AppKit
 import Bonsplit
-import CmuxTerminal
+import BreeTerminal
 import Foundation
 import Observation
 
 /// Owns the per-pane ``TerminalPanel``s and current layout for ONE mirrored tmux
-/// window, so a single cmux tab can render the tmux window's full multi-pane
-/// split layout side by side — with the native cmux pane chrome (each pane is a
+/// window, so a single bree tab can render the tmux window's full multi-pane
+/// split layout side by side — with the native bree pane chrome (each pane is a
 /// real ``TerminalPanel`` rendered via ``TerminalPanelView``).
 ///
 /// Created by ``RemoteTmuxSessionMirror`` from a window's first published layout;
@@ -34,7 +34,7 @@ final class RemoteTmuxWindowMirror: RemoteTmuxControlPaneMutationOwner {
     /// The bonsplit tab's panel id this window renders into.
     let panelId: UUID
 
-    /// Native cmux split/tab chrome for this mirrored tmux window.
+    /// Native bree split/tab chrome for this mirrored tmux window.
     var bonsplitController: BonsplitController
 
     @ObservationIgnored weak var connection: RemoteTmuxControlConnection?

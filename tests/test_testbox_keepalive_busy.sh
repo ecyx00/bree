@@ -20,7 +20,7 @@ work="$(cd "$(mktemp -d)" && pwd -P)"
 pids=()
 cleanup() { for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done; rm -rf "$work"; }
 trap cleanup EXIT
-mkdir -p "$work/checkout/cmux-tui" "$work/elsewhere"
+mkdir -p "$work/checkout/bree-tui" "$work/elsewhere"
 
 # Wait (deadline 30 s) until process $1 works in directory $2.
 wait_for_cwd() {
@@ -56,11 +56,11 @@ if "$busy" "$work/checkout" "$keepalive"; then
   exit 1
 fi
 
-# A long command inside the checkout (cargo test in cmux-tui/) is use.
-(cd "$work/checkout/cmux-tui" && exec sleep 60) &
+# A long command inside the checkout (cargo test in bree-tui/) is use.
+(cd "$work/checkout/bree-tui" && exec sleep 60) &
 worker="$!"
 pids+=("$worker")
-wait_for_cwd "$worker" "$work/checkout/cmux-tui"
+wait_for_cwd "$worker" "$work/checkout/bree-tui"
 if ! "$busy" "$work/checkout" "$keepalive"; then
   echo "FAIL: a process working in the checkout did not count as busy" >&2
   exit 1

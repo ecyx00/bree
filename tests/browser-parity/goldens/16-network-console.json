@@ -38,5 +38,5 @@
     "cookie-set": true,
     "fetch-sends-cookies": true
   },
-  "cmux": {}
+  "bree": {}
 }

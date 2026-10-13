@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:bree.xcodeproj">
+   </FileRef>
+   <Group
+      location = "container:Packages/Shared"
+      name = "Packages (Shared)">
+      <FileRef
+         location = "group:BreeAgentChat">
+      </FileRef>
+      <FileRef
+         location = "group:BREEAuthCore">
+      </FileRef>
+      <FileRef
+         location = "group:BreeAuthRuntime">
+      </FileRef>
+      <FileRef
+         location = "group:BreeGhosttyKit">
+      </FileRef>
+      <FileRef
+         location = "group:BREEMobileCore">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSyntaxHighlighting">
+      </FileRef>
+      <FileRef
+         location = "group:BreeTerminalPrediction">
+      </FileRef>
+      <FileRef
+         location = "group:BreeTerminalSizing">
+      </FileRef>
+   </Group>
+   <Group
+      location = "container:Packages/macOS"
+      name = "Packages (macOS)">
+      <FileRef
+         location = "group:BreeAgentJournal">
+      </FileRef>
+      <FileRef
+         location = "group:BREEAgentLaunch">
+      </FileRef>
+      <FileRef
+         location = "group:BreeAgentSessionStore">
+      </FileRef>
+      <FileRef
+         location = "group:BreeAppKitSupportUI">
+      </FileRef>
+      <FileRef
+         location = "group:BreeBrowser">
+      </FileRef>
+      <FileRef
+         location = "group:BreeCloud">
+      </FileRef>
+      <FileRef
+         location = "group:BreeCloudBannerCore">
+      </FileRef>
+      <FileRef
+         location = "group:BreeCloudImagePaste">
+      </FileRef>
+      <FileRef
+         location = "group:BreeCloudMachines">
+      </FileRef>
+      <FileRef
+         location = "group:BreeCloudTui">
+      </FileRef>
+      <FileRef
+         location = "group:BreeCloudTunnelCore">
+      </FileRef>
+      <FileRef
+         location = "group:BreeCommandPalette">
+      </FileRef>
+      <FileRef
+         location = "group:BreeControlSocket">
+      </FileRef>
+      <FileRef
+         location = "group:BreeCore">
+      </FileRef>
+      <FileRef
+         location = "group:BREEDebugLog">
+      </FileRef>
+      <FileRef
+         location = "group:BreeDiffComments">
+      </FileRef>
+      <FileRef
+         location = "group:BreeExtensionKit">
+      </FileRef>
+      <FileRef
+         location = "group:BreeFilePreviewCore">
+      </FileRef>
+      <FileRef
+         location = "group:BreeFoundation">
+      </FileRef>
+      <FileRef
+         location = "group:BreeGit">
+      </FileRef>
+      <FileRef
+         location = "group:BreeLiveEval">
+      </FileRef>
+      <FileRef
+         location = "group:BreeMobileHost">
+      </FileRef>
+      <FileRef
+         location = "group:BreeNotifications">
+      </FileRef>
+      <FileRef
+         location = "group:BreePanes">
+      </FileRef>
+      <FileRef
+         location = "group:BREEProjectModel">
+      </FileRef>
+      <FileRef
+         location = "group:BreeRemoteDaemon">
+      </FileRef>
+      <FileRef
+         location = "group:BreeRemoteSession">
+      </FileRef>
+      <FileRef
+         location = "group:BreeRemoteWorkspace">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSettings">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSettingsUI">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSidebar">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSidebarGit">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSidebarInterpreterService">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSidebarProviderKit">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSudoBroker">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSudoBrokerUI">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSurfaceCatalogModel">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSwiftRender">
+      </FileRef>
+      <FileRef
+         location = "group:BreeSwiftRenderUI">
+      </FileRef>
+      <FileRef
+         location = "group:BreeTerminal">
+      </FileRef>
+      <FileRef
+         location = "group:BreeTerminalCore">
+      </FileRef>
+      <FileRef
+         location = "group:BreeTerminalImport">
+      </FileRef>
+      <FileRef
+         location = "group:BreeTerminalSharing">
+      </FileRef>
+      <FileRef
+         location = "group:BreeTestSupport">
+      </FileRef>
+      <FileRef
+         location = "group:BreeWindowing">
+      </FileRef>
+      <FileRef
+         location = "group:BreeWorkspaces">
+      </FileRef>
+   </Group>
+   <Group
+      location = "container:Examples"
+      name = "Examples">
+      <FileRef
+         location = "group:TabsVisibleSidebar/TabsVisibleSidebar.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:SampleSidebarExtensionApp/SampleSidebarExtensionApp.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:BreeExtensionSidebarExamples">
+      </FileRef>
+   </Group>
+</Workspace>

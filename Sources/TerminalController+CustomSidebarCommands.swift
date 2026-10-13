@@ -1,7 +1,7 @@
 import AppKit
-import CmuxControlSocket
-import CmuxSettings
-import CmuxSwiftRenderUI
+import BreeControlSocket
+import BreeSettings
+import BreeSwiftRenderUI
 import Foundation
 
 extension TerminalController {
@@ -64,10 +64,10 @@ extension TerminalController {
             return .ok(payload)
         }
 
-        let providerId = CmuxExtensionSidebarSelection.customSidebarProviderPrefix + name
+        let providerId = BreeExtensionSidebarSelection.customSidebarProviderPrefix + name
         v2MainSync {
             UserDefaults.standard.set(true, forKey: SettingCatalog().betaFeatures.customSidebars.userDefaultsKey)
-            CmuxExtensionSidebarSelection.setProviderId(providerId)
+            BreeExtensionSidebarSelection.setProviderId(providerId)
             NotificationCenter.default.post(
                 name: .customSidebarReloadRequested,
                 object: nil,
@@ -189,12 +189,12 @@ extension TerminalController {
     }
 
     private nonisolated func v2CustomSidebarValidationReport(name: String?) -> CustomSidebarValidationReport {
-        CustomSidebarValidator().validate(directory: CmuxExtensionSidebarSelection.customSidebarsDirectory, name: name)
+        CustomSidebarValidator().validate(directory: BreeExtensionSidebarSelection.customSidebarsDirectory, name: name)
     }
 
     private nonisolated func v2CustomSidebarReportPayload(_ report: CustomSidebarValidationReport) -> [String: Any] {
         [
-            "directory": CmuxExtensionSidebarSelection.customSidebarsDirectory.path,
+            "directory": BreeExtensionSidebarSelection.customSidebarsDirectory.path,
             "valid_count": report.validCount,
             "error_count": report.errorCount,
             "sidebars": report.entries.map { entry in

@@ -1,8 +1,8 @@
 // panel-sessions: right-sidebar demo. Every session (terminal/browser tab)
 // with live search and a scope toggle: just the selected workspace, or all
 // workspaces. Click a row to jump to that session.
-//   cp Examples/CustomSidebars/panel-sessions.js ~/.config/cmux/sidebars/
-//   cmux right-sidebar set custom panel-sessions
+//   cp Examples/CustomSidebars/panel-sessions.js ~/.config/bree/sidebars/
+//   bree right-sidebar set custom panel-sessions
 
 const [query, setQuery] = signal("");
 const [scopeAll, setScopeAll] = signal(false);
@@ -39,8 +39,8 @@ const sessions = computed(() => {
 });
 
 function jump(s) {
-  cmux("workspace.select", { workspace_id: s.wsId });
-  if (s.surfaceId) cmux("surface.focus", { surface_id: s.surfaceId });
+  bree("workspace.select", { workspace_id: s.wsId });
+  if (s.surfaceId) bree("surface.focus", { surface_id: s.surfaceId });
 }
 
 function scopeButton(label, all) {

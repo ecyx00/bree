@@ -1,5 +1,5 @@
 import Foundation
-import CMUXAgentLaunch
+import BREEAgentLaunch
 
 extension RestorableAgentSessionIndex {
     static func forkParentFallbackWrapperLaunch(
@@ -13,7 +13,7 @@ extension RestorableAgentSessionIndex {
         launcher: String,
         launchCommand: (executablePath: String, arguments: [String])
     )? {
-        guard wrapperProcessLooksLikeCmuxCLI(
+        guard wrapperProcessLooksLikeBreeCLI(
             processName: processName,
             processPath: processPath,
             arguments: arguments,
@@ -51,8 +51,8 @@ extension RestorableAgentSessionIndex {
         guard let preserved = AgentLaunchSanitizer.preservedArguments(kind: "codex-fork-replay", args: tail) else {
             return nil
         }
-        // codex-teams keeps the cmux wrapper process alive; its exec-time env does
-        // not carry CMUX_AGENT_LAUNCH_KIND, so cached validation has no teams/base
+        // codex-teams keeps the bree wrapper process alive; its exec-time env does
+        // not carry BREE_AGENT_LAUNCH_KIND, so cached validation has no teams/base
         // kind mismatch to reject.
         let executable = wrapperExecutable(arguments: arguments)
         return (
@@ -63,22 +63,22 @@ extension RestorableAgentSessionIndex {
         )
     }
 
-    private static func wrapperProcessLooksLikeCmuxCLI(
+    private static func wrapperProcessLooksLikeBreeCLI(
         processName: String,
         processPath: String?,
         arguments: [String],
         environment: [String: String]
     ) -> Bool {
-        let bundledCLIPath = normalizedWrapperValue(environment["CMUX_BUNDLED_CLI_PATH"])
+        let bundledCLIPath = normalizedWrapperValue(environment["BREE_BUNDLED_CLI_PATH"])
         let candidates = [arguments.first, processPath, processName].compactMap(normalizedWrapperValue)
         return candidates.contains { candidate in
-            executableBasename(candidate).compare("cmux", options: [.caseInsensitive, .literal]) == .orderedSame
+            executableBasename(candidate).compare("bree", options: [.caseInsensitive, .literal]) == .orderedSame
                 || bundledCLIPath.map { ($0 as NSString).standardizingPath == (candidate as NSString).standardizingPath } == true
         }
     }
 
     private static func wrapperExecutable(arguments: [String]) -> String {
-        normalizedWrapperValue(arguments.first) ?? "cmux"
+        normalizedWrapperValue(arguments.first) ?? "bree"
     }
 
     private static func normalizedWrapperUUID(_ value: String) -> String? {

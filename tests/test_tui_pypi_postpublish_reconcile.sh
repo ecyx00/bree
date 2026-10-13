@@ -2,13 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-HELPER="$ROOT_DIR/cmux-tui/scripts/verify-pypi-tui-upload.sh"
+HELPER="$ROOT_DIR/bree-tui/scripts/verify-pypi-tui-upload.sh"
 [[ -x "$HELPER" ]] || {
   echo "missing executable PyPI reconciliation helper: $HELPER" >&2
   exit 1
 }
 
-tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/cmux-tui-pypi-reconcile.XXXXXX")"
+tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/bree-tui-pypi-reconcile.XXXXXX")"
 trap 'rm -rf "$tmp_dir"' EXIT
 
 wheel_directory="$tmp_dir/dist"
@@ -20,12 +20,12 @@ expected_wheels=()
 mkdir -p "$wheel_directory" "$stub_directory"
 
 for wheel in \
-  cmux-1.2.3-py3-none-macosx_11_0_arm64.whl \
-  cmux-1.2.3-py3-none-macosx_10_12_x86_64.whl \
-  cmux-1.2.3-py3-none-manylinux_2_17_x86_64.whl \
-  cmux-1.2.3-py3-none-musllinux_1_2_x86_64.whl \
-  cmux-1.2.3-py3-none-manylinux_2_17_aarch64.whl \
-  cmux-1.2.3-py3-none-musllinux_1_2_aarch64.whl; do
+  bree-1.2.3-py3-none-macosx_11_0_arm64.whl \
+  bree-1.2.3-py3-none-macosx_10_12_x86_64.whl \
+  bree-1.2.3-py3-none-manylinux_2_17_x86_64.whl \
+  bree-1.2.3-py3-none-musllinux_1_2_x86_64.whl \
+  bree-1.2.3-py3-none-manylinux_2_17_aarch64.whl \
+  bree-1.2.3-py3-none-musllinux_1_2_aarch64.whl; do
   : >"$wheel_directory/$wheel"
   expected_wheels+=("$wheel_directory/$wheel")
 done
@@ -84,7 +84,7 @@ while IFS= read -r invocation; do
     }
   done
   [[ "$invocation" == *"--registry pypi"* ]] || exit 1
-  [[ "$invocation" == *"--package cmux"* ]] || exit 1
+  [[ "$invocation" == *"--package bree"* ]] || exit 1
   [[ "$invocation" == *"--version 1.2.3"* ]] || exit 1
   [[ "$invocation" == *"--wait-seconds 120"* ]] || exit 1
   [[ "$invocation" == *"--require-match"* ]] || exit 1
@@ -97,7 +97,7 @@ for wheel in "$wheel_directory"/*.whl; do
   }
 done
 
-missing_wheel="$wheel_directory/cmux-1.2.3-py3-none-musllinux_1_2_aarch64.whl"
+missing_wheel="$wheel_directory/bree-1.2.3-py3-none-musllinux_1_2_aarch64.whl"
 rm "$missing_wheel"
 : >"$calls"
 : >"$artifacts"

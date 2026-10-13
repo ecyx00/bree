@@ -1,7 +1,7 @@
-import CmuxCloud
-import CmuxCore
-import CmuxFoundation
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeCore
+import BreeFoundation
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension TerminalController {
@@ -67,7 +67,7 @@ extension TerminalController {
                 SurfacePaneFactory.focus(panelID: panelID, in: id)
             }
             var result = payload
-            result["transport"] = "cmux-tui"
+            result["transport"] = "bree-tui"
             result["carrier"] = "ssh"
             result["machine"] = connection.id
             result["remote"] = workspace.remoteStatusPayload()

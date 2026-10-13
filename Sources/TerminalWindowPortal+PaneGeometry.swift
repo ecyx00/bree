@@ -1,5 +1,5 @@
 import AppKit
-import CmuxTerminalCore
+import BreeTerminalCore
 
 // MARK: - Pane geometry publication
 

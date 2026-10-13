@@ -1,8 +1,8 @@
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 struct BrowserDesignModeToolbarButton: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     let controller: BrowserDesignModeController
     let iconPointSize: CGFloat
     let hitSize: CGFloat
@@ -15,11 +15,11 @@ struct BrowserDesignModeToolbarButton: View {
                 guard await onToggle() else { return }
             }
         } label: {
-            CmuxSystemSymbolImage(
+            BreeSystemSymbolImage(
                 systemName: controller.isActive ? "paintbrush.pointed.fill" : "paintbrush.pointed",
                 pointSize: iconPointSize,
                 weight: .medium,
-                tint: controller.isActive ? cmuxAccent.color : inactiveColor
+                tint: controller.isActive ? breeAccent.color : inactiveColor
             )
             .frame(width: hitSize, height: hitSize, alignment: .center)
         }

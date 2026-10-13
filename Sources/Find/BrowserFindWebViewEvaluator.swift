@@ -1,4 +1,4 @@
-import CmuxBrowser
+import BreeBrowser
 import WebKit
 
 /// Evaluates find-in-page scripts against the current `WKWebView` of a `BrowserPanel`.

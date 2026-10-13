@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WRAPPER = ROOT / "Resources" / "bin" / "cmux-claude-wrapper"
+WRAPPER = ROOT / "Resources" / "bin" / "bree-claude-wrapper"
 SHELL_INTEGRATION_DIR = ROOT / "Resources" / "shell-integration"
 
 
@@ -38,16 +38,16 @@ def run_wrapper(argv: list[str], env: dict[str, str]) -> subprocess.CompletedPro
     )
 
 
-def test_wrapper_skips_cmux_shims_and_bundled_claude(failures: list[str]) -> None:
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-wrapper-resolution-") as td:
+def test_wrapper_skips_bree_shims_and_bundled_claude(failures: list[str]) -> None:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-wrapper-resolution-") as td:
         root = Path(td)
-        bundle_bin = root / "cmux.app" / "Contents" / "Resources" / "bin"
+        bundle_bin = root / "bree.app" / "Contents" / "Resources" / "bin"
         shim_bin = root / "shim-bin"
         real_bin = root / "real-bin"
         for directory in (bundle_bin, shim_bin, real_bin):
             directory.mkdir(parents=True, exist_ok=True)
 
-        wrapper = bundle_bin / "cmux-claude-wrapper"
+        wrapper = bundle_bin / "bree-claude-wrapper"
         wrapper.write_bytes(WRAPPER.read_bytes())
         wrapper.chmod(0o755)
 
@@ -67,16 +67,16 @@ echo real-claude "$@"
         write_executable(
             shim,
             f"""#!/bin/sh
-export CMUX_CLAUDE_WRAPPER_SHIM="{shim}"
-export CMUX_CLAUDE_WRAPPER_SHIM_ROOT="{shim_bin}"
+export BREE_CLAUDE_WRAPPER_SHIM="{shim}"
+export BREE_CLAUDE_WRAPPER_SHIM_ROOT="{shim_bin}"
 exec "{wrapper}" "$@"
 """,
         )
 
         env = minimal_env(f"{shim_bin}:{bundle_bin}:{real_bin}:/usr/bin:/bin")
-        env["CMUX_CLAUDE_WRAPPER_SHIM"] = str(shim)
-        env["CMUX_CLAUDE_WRAPPER_SHIM_ROOT"] = str(shim_bin)
-        env["CMUX_CUSTOM_CLAUDE_PATH"] = str(bundle_bin / "claude")
+        env["BREE_CLAUDE_WRAPPER_SHIM"] = str(shim)
+        env["BREE_CLAUDE_WRAPPER_SHIM_ROOT"] = str(shim_bin)
+        env["BREE_CUSTOM_CLAUDE_PATH"] = str(bundle_bin / "claude")
 
         result = run_wrapper([str(shim), "--version"], env)
         output = (result.stdout + result.stderr).strip()
@@ -86,17 +86,17 @@ exec "{wrapper}" "$@"
             failures.append(f"expected user claude, got {output!r}")
 
 
-def test_wrapper_skips_inherited_cmux_cli_shim_roots(failures: list[str]) -> None:
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-wrapper-inherited-shim-") as td:
+def test_wrapper_skips_inherited_bree_cli_shim_roots(failures: list[str]) -> None:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-wrapper-inherited-shim-") as td:
         root = Path(td)
         wrapper_bin = root / "wrapper-bin"
-        current_shim_root = root / "tmp" / "cmux-cli-shims" / "current-surface"
-        inherited_shim_root = root / "tmp" / "cmux-cli-shims" / "old-surface"
+        current_shim_root = root / "tmp" / "bree-cli-shims" / "current-surface"
+        inherited_shim_root = root / "tmp" / "bree-cli-shims" / "old-surface"
         real_bin = root / "real-bin"
         for directory in (wrapper_bin, current_shim_root, inherited_shim_root, real_bin):
             directory.mkdir(parents=True, exist_ok=True)
 
-        wrapper = wrapper_bin / "cmux-claude-wrapper"
+        wrapper = wrapper_bin / "bree-claude-wrapper"
         wrapper.write_bytes(WRAPPER.read_bytes())
         wrapper.chmod(0o755)
 
@@ -123,19 +123,19 @@ echo real-claude "$@"
         )
 
         env = minimal_env(f"{current_shim_root}:{wrapper_bin}:{inherited_shim_root}:{real_bin}:/usr/bin:/bin")
-        env["CMUX_CLAUDE_WRAPPER_SHIM"] = str(current_shim)
-        env["CMUX_CLAUDE_WRAPPER_SHIM_ROOT"] = str(current_shim_root)
+        env["BREE_CLAUDE_WRAPPER_SHIM"] = str(current_shim)
+        env["BREE_CLAUDE_WRAPPER_SHIM_ROOT"] = str(current_shim_root)
 
         result = run_wrapper([str(wrapper), "--version"], env)
         output = (result.stdout + result.stderr).strip()
         if result.returncode != 0:
             failures.append(f"inherited-shim wrapper exited {result.returncode}: {output}")
         if output != "real-claude --version":
-            failures.append(f"expected inherited cmux shim roots to be skipped, got {output!r}")
+            failures.append(f"expected inherited bree shim roots to be skipped, got {output!r}")
 
 
 def test_shell_integration_does_not_shim_grok(failures: list[str]) -> None:
-    with tempfile.TemporaryDirectory(prefix="cmux-grok-wrapper-resolution-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-grok-wrapper-resolution-") as td:
         root = Path(td)
         real_bin = root / "real-bin"
         real_bin.mkdir(parents=True, exist_ok=True)
@@ -147,7 +147,7 @@ echo real-grok "$@"
         )
 
         base_env = minimal_env(f"{real_bin}:/usr/bin:/bin")
-        base_env["CMUX_SHELL_INTEGRATION_DIR"] = str(SHELL_INTEGRATION_DIR)
+        base_env["BREE_SHELL_INTEGRATION_DIR"] = str(SHELL_INTEGRATION_DIR)
 
         shell_commands = [
             [
@@ -155,13 +155,13 @@ echo real-grok "$@"
                 "--noprofile",
                 "--norc",
                 "-c",
-                'source "$CMUX_SHELL_INTEGRATION_DIR/cmux-bash-integration.bash"; grok --version',
+                'source "$BREE_SHELL_INTEGRATION_DIR/bree-bash-integration.bash"; grok --version',
             ],
             [
                 "/bin/zsh",
                 "-f",
                 "-c",
-                'source "$CMUX_SHELL_INTEGRATION_DIR/cmux-zsh-integration.zsh"; grok --version',
+                'source "$BREE_SHELL_INTEGRATION_DIR/bree-zsh-integration.zsh"; grok --version',
             ],
         ]
         for argv in shell_commands:
@@ -175,7 +175,7 @@ echo real-grok "$@"
 
 
 def test_shell_integration_preserves_empty_path_components(failures: list[str]) -> None:
-    with tempfile.TemporaryDirectory(prefix="cmux-shell-path-components-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-shell-path-components-") as td:
         root = Path(td)
         tmpdir = root / "tmp"
         first = root / "first-bin"
@@ -186,7 +186,7 @@ def test_shell_integration_preserves_empty_path_components(failures: list[str]) 
         surface_id = "surface-path-test"
         home = root / "home"
         home.mkdir()
-        shim_root = home / ".cmuxterm" / "cmux-cli-shims" / surface_id
+        shim_root = home / ".bree" / "bree-cli-shims" / surface_id
         bundled_bin = SHELL_INTEGRATION_DIR.parent / "bin"
         expected_paths = {
             "bash": f"{bundled_bin}:{shim_root}::{first}::{last}:",
@@ -196,9 +196,9 @@ def test_shell_integration_preserves_empty_path_components(failures: list[str]) 
         input_path = f":{first}::{shim_root}:{last}:"
         base_env = minimal_env("/usr/bin:/bin", tmpdir)
         base_env["HOME"] = str(home)
-        base_env["CMUX_SHELL_INTEGRATION_DIR"] = str(SHELL_INTEGRATION_DIR)
-        base_env["CMUX_SURFACE_ID"] = surface_id
-        base_env["CMUX_TEST_INPUT_PATH"] = input_path
+        base_env["BREE_SHELL_INTEGRATION_DIR"] = str(SHELL_INTEGRATION_DIR)
+        base_env["BREE_SURFACE_ID"] = surface_id
+        base_env["BREE_TEST_INPUT_PATH"] = input_path
 
         shell_commands = [
             [
@@ -206,17 +206,17 @@ def test_shell_integration_preserves_empty_path_components(failures: list[str]) 
                 "--noprofile",
                 "--norc",
                 "-c",
-                'PATH="$CMUX_TEST_INPUT_PATH"; '
-                'source "$CMUX_SHELL_INTEGRATION_DIR/cmux-bash-integration.bash"; '
+                'PATH="$BREE_TEST_INPUT_PATH"; '
+                'source "$BREE_SHELL_INTEGRATION_DIR/bree-bash-integration.bash"; '
                 'printf "%s\\n" "$PATH"',
             ],
             [
                 "/bin/zsh",
                 "-f",
                 "-c",
-                'PATH="$CMUX_TEST_INPUT_PATH"; '
-                'source "$CMUX_SHELL_INTEGRATION_DIR/cmux-zsh-integration.zsh"; '
-                '_cmux_fix_path; '
+                'PATH="$BREE_TEST_INPUT_PATH"; '
+                'source "$BREE_SHELL_INTEGRATION_DIR/bree-zsh-integration.zsh"; '
+                '_bree_fix_path; '
                 'printf "%s\\n" "$PATH"',
             ],
         ]
@@ -236,8 +236,8 @@ def test_shell_integration_preserves_empty_path_components(failures: list[str]) 
 
 def main() -> int:
     failures: list[str] = []
-    test_wrapper_skips_cmux_shims_and_bundled_claude(failures)
-    test_wrapper_skips_inherited_cmux_cli_shim_roots(failures)
+    test_wrapper_skips_bree_shims_and_bundled_claude(failures)
+    test_wrapper_skips_inherited_bree_cli_shim_roots(failures)
     test_shell_integration_does_not_shim_grok(failures)
     test_shell_integration_preserves_empty_path_components(failures)
     if failures:

@@ -6,7 +6,7 @@ extension AppDelegate {
     func renderNewWorkspaceContextMenu(
         model: NewWorkspaceMenuModel,
         context: MainWindowContext,
-        cmuxConfigStore: CmuxConfigStore
+        breeConfigStore: BreeConfigStore
     ) -> NSMenu? {
         let menu = NSMenu()
         var renderedSectionCount = 0
@@ -19,7 +19,7 @@ extension AppDelegate {
         }
 
         func actionItem(
-            menuAction: CmuxResolvedConfigMenuAction,
+            menuAction: BreeResolvedConfigMenuAction,
             isDefault: Bool
         ) -> NSMenuItem {
             let item = NSMenuItem(
@@ -36,7 +36,7 @@ extension AppDelegate {
             applyNewWorkspaceMenuShortcutHint(to: item, action: menuAction.action)
             item.image = menuAction.icon?.contextMenuImage(
                 configSourcePath: menuAction.iconSourcePath,
-                globalConfigPath: cmuxConfigStore.globalConfigPath
+                globalConfigPath: breeConfigStore.globalConfigPath
             )
             if isDefault {
                 item.badge = defaultBadge()
@@ -44,7 +44,7 @@ extension AppDelegate {
             return item
         }
 
-        func alternateDeleteItem(action: CmuxResolvedConfigAction) -> NSMenuItem {
+        func alternateDeleteItem(action: BreeResolvedConfigAction) -> NSMenuItem {
             let deleteFormat = String(
                 localized: "menu.newWorkspace.deleteLayoutAlternate",
                 defaultValue: "Delete “%@”"
@@ -180,10 +180,10 @@ extension AppDelegate {
                         if entry.isCurrent {
                             item.badge = defaultBadge()
                         }
-                        if let action = cmuxConfigStore.actionLookup[entry.id] {
+                        if let action = breeConfigStore.actionLookup[entry.id] {
                             item.image = action.icon?.contextMenuImage(
                                 configSourcePath: action.iconSourcePath,
-                                globalConfigPath: cmuxConfigStore.globalConfigPath
+                                globalConfigPath: breeConfigStore.globalConfigPath
                             )
                         }
                         submenu.addItem(item)
@@ -208,7 +208,7 @@ extension AppDelegate {
                             )
                             item.image = action.icon?.contextMenuImage(
                                 configSourcePath: action.iconSourcePath,
-                                globalConfigPath: cmuxConfigStore.globalConfigPath
+                                globalConfigPath: breeConfigStore.globalConfigPath
                             )
                             submenu.addItem(item)
                         }
@@ -246,7 +246,7 @@ extension AppDelegate {
     /// New Workspace has no hint: this row always creates locally, while its
     /// shortcut follows the selected workspace's machine.
     nonisolated static func newWorkspaceMenuShortcutHint(
-        for action: CmuxResolvedConfigAction
+        for action: BreeResolvedConfigAction
     ) -> StoredShortcut? {
         if case .builtIn(.newWorkspace) = action.action { return nil }
         let shortcut: StoredShortcut
@@ -264,7 +264,7 @@ extension AppDelegate {
     /// AppKit draws a key equivalent as the grey shortcut column of the menu
     /// row. The menu is rebuilt on every open, so this always reflects the
     /// current binding.
-    func applyNewWorkspaceMenuShortcutHint(to item: NSMenuItem, action: CmuxResolvedConfigAction) {
+    func applyNewWorkspaceMenuShortcutHint(to item: NSMenuItem, action: BreeResolvedConfigAction) {
         guard let shortcut = Self.newWorkspaceMenuShortcutHint(for: action),
               let keyEquivalent = shortcut.menuItemKeyEquivalent else {
             item.keyEquivalent = ""

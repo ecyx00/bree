@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// Remembers which absolute paths exist so line text can link them. The check runs off the main

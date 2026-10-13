@@ -11,7 +11,7 @@ Whether that is fatal depends on the toolchain. The Swift used by this
 repository's main macOS lanes accepts it; the older Swift on the macos-14 and
 macos-15-intel hosts in ci-macos-compat.yml does not, and rejected it on all
 four runners of run 34656982146. Because that workflow is workflow_dispatch
-only, the break sat in CMUXMobileCoreTests from at least 2026-09-01 without a
+only, the break sat in BREEMobileCoreTests from at least 2026-09-01 without a
 required check ever going red.
 
 A lint is the right shape for this rather than a compiler: it is a syntactic

@@ -1,7 +1,7 @@
 import type { FindMatch } from "./model";
 
-export const FIND_HIGHLIGHT_NAME = "cmux-find-match";
-export const FIND_ACTIVE_HIGHLIGHT_NAME = "cmux-find-active";
+export const FIND_HIGHLIGHT_NAME = "bree-find-match";
+export const FIND_ACTIVE_HIGHLIGHT_NAME = "bree-find-active";
 
 // ::highlight() pseudo styles are scoped per tree: rules in the outer
 // document never reach shadow trees, and the code view renders every row

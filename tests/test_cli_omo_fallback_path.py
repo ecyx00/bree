@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: `cmux omo` preserves fallback OpenCode dirs in PATH.
+Regression test: `bree omo` preserves fallback OpenCode dirs in PATH.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 
 
 def make_executable(path: Path, content: str) -> None:
@@ -20,12 +20,12 @@ def make_executable(path: Path, content: str) -> None:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-omo-fallback-path-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-omo-fallback-path-") as td:
         root = Path(td)
         fallback_bin = root / ".bun" / "bin"
         fallback_bin.mkdir(parents=True, exist_ok=True)
@@ -56,8 +56,8 @@ exec opencode-node-helper "$@"
         env = os.environ.copy()
         env["HOME"] = str(root)
         env["PATH"] = "/usr/bin:/bin"
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_SOCKET_PATH"] = str(root / "missing.sock")
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_SOCKET_PATH"] = str(root / "missing.sock")
         env["FAKE_PROVIDER_LOG"] = str(provider_log)
 
         proc = subprocess.run(
@@ -70,7 +70,7 @@ exec opencode-node-helper "$@"
         )
 
         if proc.returncode != 0:
-            print("FAIL: `cmux omo` failed with OpenCode in a fallback dir")
+            print("FAIL: `bree omo` failed with OpenCode in a fallback dir")
             print(f"exit={proc.returncode}")
             print(f"stdout={proc.stdout.strip()}")
             print(f"stderr={proc.stderr.strip()}")
@@ -161,7 +161,7 @@ exec opencode-node-helper "$@"
                 print(f"FAIL: contextless OMO launch was not rejected: {invocation!r}")
                 return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-omo-fallback-install-path-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-omo-fallback-install-path-") as td:
         root = Path(td)
         fallback_bin = root / ".bun" / "bin"
         fallback_bin.mkdir(parents=True, exist_ok=True)
@@ -194,8 +194,8 @@ mkdir -p "$PWD/node_modules/oh-my-openagent"
         env = os.environ.copy()
         env["HOME"] = str(root)
         env["PATH"] = "/usr/bin:/bin"
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_SOCKET_PATH"] = str(root / "missing.sock")
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_SOCKET_PATH"] = str(root / "missing.sock")
 
         proc = subprocess.run(
             [cli_path, "omo", "--version", "--port", "19778"],
@@ -207,7 +207,7 @@ mkdir -p "$PWD/node_modules/oh-my-openagent"
         )
 
         if proc.returncode != 0:
-            print("FAIL: `cmux omo` failed to install OMO with bun in a fallback dir")
+            print("FAIL: `bree omo` failed to install OMO with bun in a fallback dir")
             print(f"exit={proc.returncode}")
             print(f"stdout={proc.stdout.strip()}")
             print(f"stderr={proc.stderr.strip()}")
@@ -224,10 +224,10 @@ mkdir -p "$PWD/node_modules/oh-my-openagent"
             print(f"FAIL: expected fallback install PATH to reach helper, got {lines!r}")
             return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-omo-skip-app-bundle-path-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-omo-skip-app-bundle-path-") as td:
         root = Path(td)
         fallback_bin = root / ".bun" / "bin"
-        stale_app_bin = root / "Older cmux.app" / "Contents" / "Resources" / "bin"
+        stale_app_bin = root / "Older bree.app" / "Contents" / "Resources" / "bin"
         fallback_bin.mkdir(parents=True, exist_ok=True)
         stale_app_bin.mkdir(parents=True, exist_ok=True)
         user_config_dir = root / ".config" / "opencode"
@@ -262,8 +262,8 @@ exec opencode-node-helper "$@"
         env = os.environ.copy()
         env["HOME"] = str(root)
         env["PATH"] = f"{stale_app_bin}:/usr/bin:/bin"
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_SOCKET_PATH"] = str(root / "missing.sock")
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_SOCKET_PATH"] = str(root / "missing.sock")
 
         proc = subprocess.run(
             [cli_path, "omo", "--version", "--port", "19779"],
@@ -275,7 +275,7 @@ exec opencode-node-helper "$@"
         )
 
         if proc.returncode != 0:
-            print("FAIL: `cmux omo` failed when stale app-bundled OpenCode was first on PATH")
+            print("FAIL: `bree omo` failed when stale app-bundled OpenCode was first on PATH")
             print(f"exit={proc.returncode}")
             print(f"stdout={proc.stdout.strip()}")
             print(f"stderr={proc.stderr.strip()}")
@@ -292,7 +292,7 @@ exec opencode-node-helper "$@"
             print(f"FAIL: expected app-bundled OpenCode to be skipped, got {lines!r}")
             return 1
 
-    print("PASS: cmux omo preserves management commands and rejects contextless launches")
+    print("PASS: bree omo preserves management commands and rejects contextless launches")
     return 0
 
 

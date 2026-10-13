@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "held": true,
     "bounded": true,
     "names-holder": true,

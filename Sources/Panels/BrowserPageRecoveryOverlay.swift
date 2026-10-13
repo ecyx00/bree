@@ -1,6 +1,6 @@
 import AppKit
-import CmuxBrowser
-import CmuxFoundation
+import BreeBrowser
+import BreeFoundation
 import SwiftUI
 
 /// What a browser pane asks the user to do before its page comes back.
@@ -8,7 +8,7 @@ enum BrowserPageRecoveryPrompt {
     /// The visible page's WebContent process died.
     case crashed
     /// The page was unloaded to save memory and automatic restore is off
-    /// (https://github.com/manaflow-ai/cmux/issues/9561). The snapshot is the
+    /// (https://github.com/ecyx00/bree/issues/9561). The snapshot is the
     /// page as it looked when the pane was hidden.
     case unloaded(snapshot: BrowserPageSnapshotImage?)
 }
@@ -30,7 +30,7 @@ struct BrowserPageRecoveryOverlay: View {
                         String(localized: "browser.error.reload", defaultValue: "Reload"),
                         systemImage: "arrow.clockwise"
                     )
-                    .cmuxFont(size: 13, weight: .medium)
+                    .scaledFont(size: 13, weight: .medium)
                     .padding(.horizontal, 6)
                 }
                 .buttonStyle(.breeProminent)
@@ -55,14 +55,14 @@ struct BrowserPageRecoveryOverlay: View {
                         localized: "browser.discard.unloadedMessage",
                         defaultValue: "This page was unloaded to save memory."
                     ))
-                    .cmuxFont(size: 13)
+                    .scaledFont(size: 13)
                     .foregroundStyle(.secondary)
                     Button(action: action) {
                         Label(
                             String(localized: "browser.discard.restore", defaultValue: "Restore"),
                             systemImage: "arrow.counterclockwise"
                         )
-                        .cmuxFont(size: 13, weight: .medium)
+                        .scaledFont(size: 13, weight: .medium)
                         .padding(.horizontal, 6)
                     }
                     .buttonStyle(.breeProminent)

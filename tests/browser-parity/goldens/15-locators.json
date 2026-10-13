@@ -46,5 +46,5 @@
     "strict": true,
     "timeout": "TimeoutError"
   },
-  "cmux": {}
+  "bree": {}
 }

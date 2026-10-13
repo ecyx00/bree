@@ -12,21 +12,21 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
-def _focused_surface_id(client: cmux) -> str:
+def _focused_surface_id(client: bree) -> str:
     surfaces = client.list_surfaces()
     for _, sid, focused in surfaces:
         if focused:
             return sid
-    raise cmuxError(f"No focused surface in list_surfaces: {surfaces}")
+    raise breeError(f"No focused surface in list_surfaces: {surfaces}")
 
 
-def _palette_visible(client: cmux, window_id: str) -> bool:
+def _palette_visible(client: bree, window_id: str) -> bool:
     res = client._call("debug.command_palette.visible", {"window_id": window_id}) or {}
     return bool(res.get("visible"))
 
@@ -37,14 +37,14 @@ def _wait_until(predicate, timeout_s: float = 3.0, interval_s: float = 0.05, mes
         if predicate():
             return
         time.sleep(interval_s)
-    raise cmuxError(message)
+    raise breeError(message)
 
 
 def main() -> int:
-    token = "CMUX_PALETTE_FOCUS_PROBE_9412"
-    restore_token = "CMUX_PALETTE_RESTORE_PROBE_7731"
+    token = "BREE_PALETTE_FOCUS_PROBE_9412"
+    restore_token = "BREE_PALETTE_RESTORE_PROBE_7731"
 
-    with cmux(SOCKET_PATH) as client:
+    with bree(SOCKET_PATH) as client:
         client.new_workspace()
         client.activate_app()
         time.sleep(0.2)
@@ -73,7 +73,7 @@ def main() -> int:
         post_text = client.read_terminal_text(panel_id)
 
         if token in post_text and token not in pre_text:
-            raise cmuxError("typed probe text leaked into terminal while palette is open")
+            raise breeError("typed probe text leaked into terminal while palette is open")
 
         # Close palette and ensure focus returns to previously-focused terminal.
         client._call("debug.command_palette.toggle", {"window_id": window_id})

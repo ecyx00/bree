@@ -53,7 +53,7 @@ use crate::{HTTP_PROTOCOL_VERSION, health_response};
 #[derive(Clone)]
 pub struct ServerConfig {
     pub root: PathBuf,
-    pub cmux_executable: PathBuf,
+    pub bree_executable: PathBuf,
     pub executable_path: PathBuf,
 }
 
@@ -93,7 +93,7 @@ const MAX_RPC_REQUEST_BYTES: usize = 1024 * 1024;
 const MAX_RPC_RESPONSE_BYTES: usize = 32 * 1024 * 1024;
 const RPC_STDIN_READ_TIMEOUT: Duration = Duration::from_secs(10);
 // The caller-supplied ID cannot be trusted until the complete envelope parses.
-const UNTRUSTED_RPC_REQUEST_ID: &str = "__cmux_untrusted_request__";
+const UNTRUSTED_RPC_REQUEST_ID: &str = "__bree_untrusted_request__";
 const MAX_CONCURRENT_CHILD_PROCESSES: usize = 4;
 const BRANCH_LIST_CHILD_TIMEOUT: Duration = Duration::from_secs(30);
 const SESSION_GIT_TIMEOUT: Duration = Duration::from_secs(60);
@@ -316,13 +316,13 @@ async fn write_rpc_response(response: &DiffResponse) -> Result<(), String> {
 #[cfg(feature = "http-server")]
 fn router(state: AppState) -> Router {
     Router::new()
-        .route("/__cmux_diff_viewer_healthz", get(health))
-        .route("/__cmux_diff_rpc", post(rpc))
-        .route("/__cmux_diff_ws", get(websocket))
-        .route("/__cmux_diff_viewer_refs", get(branch_refs))
-        .route("/__cmux_diff_viewer_branch", get(branch_change))
+        .route("/__bree_diff_viewer_healthz", get(health))
+        .route("/__bree_diff_rpc", post(rpc))
+        .route("/__bree_diff_ws", get(websocket))
+        .route("/__bree_diff_viewer_refs", get(branch_refs))
+        .route("/__bree_diff_viewer_branch", get(branch_change))
         .route(
-            "/__cmux_diff_viewer_wait/{*resource}",
+            "/__bree_diff_viewer_wait/{*resource}",
             get(wait_for_resource),
         )
         .route("/{*resource}", any(resource))
@@ -725,7 +725,7 @@ async fn resolve_session_source(
     };
     let output = tokio::time::timeout(
         SESSION_GIT_TIMEOUT,
-        Command::new(&state.config.cmux_executable)
+        Command::new(&state.config.bree_executable)
             .arg("__diff-viewer-refs")
             .arg("--repo")
             .arg(repo)
@@ -1655,7 +1655,7 @@ async fn has_session_token(state: &AppState, token: &str) -> bool {
 
 fn resource_url(state: &AppState, token: &str, request_path: &str) -> String {
     if state.port == 0 {
-        format!("cmux-diff-viewer://{token}{request_path}")
+        format!("bree-diff-viewer://{token}{request_path}")
     } else {
         format!("http://127.0.0.1:{}/{token}{request_path}", state.port)
     }
@@ -1702,7 +1702,7 @@ async fn load_branch_refs(
     let Ok(_permit) = state.child_processes.try_acquire() else {
         return Err(());
     };
-    let mut command = Command::new(&state.config.cmux_executable);
+    let mut command = Command::new(&state.config.bree_executable);
     command
         .arg("__diff-viewer-refs")
         .arg("--repo")
@@ -1759,7 +1759,7 @@ async fn change_branch(
     let Ok(_permit) = state.child_processes.try_acquire() else {
         return Err(());
     };
-    let mut command = Command::new(&state.config.cmux_executable);
+    let mut command = Command::new(&state.config.bree_executable);
     command
         .arg("__diff-viewer-branch")
         .arg("--group")
@@ -1782,7 +1782,7 @@ async fn change_branch(
     }
     let scheme_url = String::from_utf8_lossy(&output.stdout);
     let scheme_url = scheme_url.trim();
-    let authority = format!("cmux-diff-viewer://{token}");
+    let authority = format!("bree-diff-viewer://{token}");
     let Some(path) = scheme_url.strip_prefix(&authority) else {
         return Err(());
     };
@@ -1797,7 +1797,7 @@ async fn change_branch(
         Ok(scheme_url.to_owned())
     } else {
         Ok(format!(
-            "http://127.0.0.1:{}/{token}{}#cmux-diff-viewer",
+            "http://127.0.0.1:{}/{token}{}#bree-diff-viewer",
             server_port(state),
             path
         ))
@@ -1838,7 +1838,7 @@ async fn wait_for_resource(
 
 #[cfg(feature = "http-server")]
 fn replacement_timeout() -> Duration {
-    let seconds = std::env::var("CMUX_DIFF_VIEWER_WAIT_TIMEOUT_SECONDS")
+    let seconds = std::env::var("BREE_DIFF_VIEWER_WAIT_TIMEOUT_SECONDS")
         .ok()
         .and_then(|value| value.parse::<f64>().ok())
         .filter(|value| value.is_finite())
@@ -1885,7 +1885,7 @@ fn file_is_pending(path: &Path) -> bool {
     {
         return false;
     }
-    String::from_utf8_lossy(&bytes).contains("data-cmux-diff-pending=\"true\"")
+    String::from_utf8_lossy(&bytes).contains("data-bree-diff-pending=\"true\"")
 }
 
 #[cfg(feature = "http-server")]
@@ -2261,7 +2261,7 @@ mod tests {
     #[test]
     fn temporary_patch_guard_follows_rename_until_registration() {
         let root = std::env::temp_dir().join(format!(
-            "cmux-diff-sidecar-rename-guard-{}-{}",
+            "bree-diff-sidecar-rename-guard-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -2285,7 +2285,7 @@ mod tests {
     #[test]
     fn session_ids_are_reserved_across_temporary_and_final_names() {
         let root = std::env::temp_dir().join(format!(
-            "cmux-diff-sidecar-reservation-test-{}-{}",
+            "bree-diff-sidecar-reservation-test-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -2304,7 +2304,7 @@ mod tests {
     #[tokio::test]
     async fn startup_prunes_only_orphaned_session_temp_files() {
         let root = std::env::temp_dir().join(format!(
-            "cmux-diff-sidecar-orphan-test-{}-{}",
+            "bree-diff-sidecar-orphan-test-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -2365,7 +2365,7 @@ mod tests {
     #[tokio::test]
     async fn owner_descriptor_recovers_rename_crash_and_repairs_manifest() {
         let root = std::env::temp_dir().join(format!(
-            "cmux-diff-sidecar-owner-recovery-{}-{}",
+            "bree-diff-sidecar-owner-recovery-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -2437,7 +2437,7 @@ mod tests {
     #[tokio::test]
     async fn unstaged_patch_includes_untracked_files() {
         let root = std::env::temp_dir().join(format!(
-            "cmux-diff-sidecar-untracked-{}-{}",
+            "bree-diff-sidecar-untracked-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -2457,8 +2457,8 @@ mod tests {
             );
         };
         run_git(&["init"]);
-        run_git(&["config", "user.name", "cmux tests"]);
-        run_git(&["config", "user.email", "cmux@example.invalid"]);
+        run_git(&["config", "user.name", "bree tests"]);
+        run_git(&["config", "user.email", "bree@example.invalid"]);
         std::fs::write(repo.join(".gitignore"), ".gitignore\nignored.txt\n")
             .expect("write gitignore");
         std::fs::write(repo.join("story.txt"), "one\n").expect("write initial file");
@@ -2500,7 +2500,7 @@ mod tests {
     #[tokio::test]
     async fn generated_paths_follow_gitattributes_and_lockfiles() {
         let root = std::env::temp_dir().join(format!(
-            "cmux-diff-sidecar-generated-{}-{}",
+            "bree-diff-sidecar-generated-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -2520,8 +2520,8 @@ mod tests {
             );
         };
         run_git(&["init"]);
-        run_git(&["config", "user.name", "cmux tests"]);
-        run_git(&["config", "user.email", "cmux@example.invalid"]);
+        run_git(&["config", "user.name", "bree tests"]);
+        run_git(&["config", "user.email", "bree@example.invalid"]);
         std::fs::write(
             repo.join(".gitattributes"),
             "dist/** linguist-generated=true\n*.min.js -diff\n",
@@ -2566,7 +2566,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
 
         let root = std::env::temp_dir().join(format!(
-            "cmux-diff-sidecar-untracked-skip-{}-{}",
+            "bree-diff-sidecar-untracked-skip-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -2586,8 +2586,8 @@ mod tests {
             );
         };
         run_git(&["init"]);
-        run_git(&["config", "user.name", "cmux tests"]);
-        run_git(&["config", "user.email", "cmux@example.invalid"]);
+        run_git(&["config", "user.name", "bree tests"]);
+        run_git(&["config", "user.email", "bree@example.invalid"]);
         std::fs::write(repo.join("story.txt"), "one\n").expect("write initial file");
         run_git(&["add", "story.txt"]);
         run_git(&["commit", "-m", "initial"]);
@@ -2620,7 +2620,7 @@ mod tests {
     #[tokio::test]
     async fn git_patch_limit_removes_partial_output() {
         let root = std::env::temp_dir().join(format!(
-            "cmux-diff-sidecar-size-limit-{}-{}",
+            "bree-diff-sidecar-size-limit-{}-{}",
             std::process::id(),
             uuid::Uuid::new_v4()
         ));
@@ -2640,8 +2640,8 @@ mod tests {
             );
         };
         run_git(&["init"]);
-        run_git(&["config", "user.name", "cmux tests"]);
-        run_git(&["config", "user.email", "cmux@example.invalid"]);
+        run_git(&["config", "user.name", "bree tests"]);
+        run_git(&["config", "user.email", "bree@example.invalid"]);
         std::fs::write(repo.join("large.txt"), "before\n").expect("write initial file");
         run_git(&["add", "large.txt"]);
         run_git(&["commit", "-m", "initial"]);

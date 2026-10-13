@@ -13,68 +13,68 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux.sock")
-SSH_HOST = os.environ.get("CMUX_SSH_TEST_HOST", "").strip()
-SSH_PORT = os.environ.get("CMUX_SSH_TEST_PORT", "").strip()
-SSH_IDENTITY = os.environ.get("CMUX_SSH_TEST_IDENTITY", "").strip()
-SSH_OPTIONS_RAW = os.environ.get("CMUX_SSH_TEST_OPTIONS", "").strip()
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree.sock")
+SSH_HOST = os.environ.get("BREE_SSH_TEST_HOST", "").strip()
+SSH_PORT = os.environ.get("BREE_SSH_TEST_PORT", "").strip()
+SSH_IDENTITY = os.environ.get("BREE_SSH_TEST_IDENTITY", "").strip()
+SSH_OPTIONS_RAW = os.environ.get("BREE_SSH_TEST_OPTIONS", "").strip()
 
 
 def _must(cond: bool, msg: str) -> None:
     if not cond:
-        raise cmuxError(msg)
+        raise breeError(msg)
 
 
 def _run(cmd: list[str], *, env: dict[str, str] | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
     proc = subprocess.run(cmd, capture_output=True, text=True, env=env, check=False)
     if check and proc.returncode != 0:
         merged = f"{proc.stdout}\n{proc.stderr}".strip()
-        raise cmuxError(f"Command failed ({' '.join(cmd)}): {merged}")
+        raise breeError(f"Command failed ({' '.join(cmd)}): {merged}")
     return proc
 
 
 def _find_cli_binary() -> str:
-    env_cli = os.environ.get("CMUXTERM_CLI")
+    env_cli = os.environ.get("BREE_CLI")
     if env_cli and os.path.isfile(env_cli) and os.access(env_cli, os.X_OK):
         return env_cli
 
-    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/cmux-tests-v2/Build/Products/Debug/cmux")
+    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/bree-tests-v2/Build/Products/Debug/bree")
     if os.path.isfile(fixed) and os.access(fixed, os.X_OK):
         return fixed
 
-    candidates = glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/cmux"), recursive=True)
-    candidates += glob.glob("/tmp/cmux-*/Build/Products/Debug/cmux")
+    candidates = glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/bree"), recursive=True)
+    candidates += glob.glob("/tmp/bree-*/Build/Products/Debug/bree")
     candidates = [p for p in candidates if os.path.isfile(p) and os.access(p, os.X_OK)]
     if not candidates:
-        raise cmuxError("Could not locate cmux CLI binary; set CMUXTERM_CLI")
+        raise breeError("Could not locate bree CLI binary; set BREE_CLI")
     candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
     return candidates[0]
 
 
 def _run_cli_json(cli: str, args: list[str]) -> dict:
     env = dict(os.environ)
-    env.pop("CMUX_WORKSPACE_ID", None)
-    env.pop("CMUX_SURFACE_ID", None)
-    env.pop("CMUX_TAB_ID", None)
+    env.pop("BREE_WORKSPACE_ID", None)
+    env.pop("BREE_SURFACE_ID", None)
+    env.pop("BREE_TAB_ID", None)
 
     proc = _run([cli, "--socket", SOCKET_PATH, "--json", *args], env=env)
     try:
         return json.loads(proc.stdout or "{}")
     except Exception as exc:  # noqa: BLE001
-        raise cmuxError(f"Invalid JSON output for {' '.join(args)}: {proc.stdout!r} ({exc})")
+        raise breeError(f"Invalid JSON output for {' '.join(args)}: {proc.stdout!r} ({exc})")
 
 
-def _resolve_workspace_id(client: cmux, payload: dict, *, before_workspace_ids: set[str]) -> str:
+def _resolve_workspace_id(client: bree, payload: dict, *, before_workspace_ids: set[str]) -> str:
     workspace_id = str(payload.get("workspace_id") or "")
     if workspace_id:
         return workspace_id
 
     workspace_ref = str(payload.get("workspace_ref") or "")
     if workspace_ref.startswith("workspace:"):
-        with cmux(SOCKET_PATH) as lookup_client:
+        with bree(SOCKET_PATH) as lookup_client:
             listed = lookup_client._call("workspace.list", {}) or {}
             for row in listed.get("workspaces") or []:
                 if str(row.get("ref") or "") == workspace_ref:
@@ -87,10 +87,10 @@ def _resolve_workspace_id(client: cmux, payload: dict, *, before_workspace_ids: 
     if len(new_ids) == 1:
         return new_ids[0]
 
-    raise cmuxError(f"Unable to resolve workspace_id from payload: {payload}")
+    raise breeError(f"Unable to resolve workspace_id from payload: {payload}")
 
 
-def _wait_remote_ready(client: cmux, workspace_id: str, timeout_s: float = 65.0) -> dict:
+def _wait_remote_ready(client: bree, workspace_id: str, timeout_s: float = 65.0) -> dict:
     deadline = time.time() + timeout_s
     last = {}
     while time.time() < deadline:
@@ -105,10 +105,10 @@ def _wait_remote_ready(client: cmux, workspace_id: str, timeout_s: float = 65.0)
         ):
             return last
         time.sleep(0.25)
-    raise cmuxError(f"Remote did not reach connected+ready+proxy-ready state: {last}")
+    raise breeError(f"Remote did not reach connected+ready+proxy-ready state: {last}")
 
 
-def _surface_scrollback_text(client: cmux, workspace_id: str, surface_id: str) -> str:
+def _surface_scrollback_text(client: bree, workspace_id: str, surface_id: str) -> str:
     payload = client._call(
         "surface.read_text",
         {"workspace_id": workspace_id, "surface_id": surface_id, "scrollback": True},
@@ -116,16 +116,16 @@ def _surface_scrollback_text(client: cmux, workspace_id: str, surface_id: str) -
     return str(payload.get("text") or "")
 
 
-def _wait_surface_contains(client: cmux, workspace_id: str, surface_id: str, token: str, timeout_s: float = 20.0) -> None:
+def _wait_surface_contains(client: bree, workspace_id: str, surface_id: str, token: str, timeout_s: float = 20.0) -> None:
     deadline = time.time() + timeout_s
     while time.time() < deadline:
         if token in _surface_scrollback_text(client, workspace_id, surface_id):
             return
         time.sleep(0.2)
-    raise cmuxError(f"Timed out waiting for terminal token: {token}")
+    raise breeError(f"Timed out waiting for terminal token: {token}")
 
 
-def _browser_body_text(client: cmux, surface_id: str) -> str:
+def _browser_body_text(client: bree, surface_id: str) -> str:
     payload = client._call(
         "browser.eval",
         {
@@ -136,43 +136,43 @@ def _browser_body_text(client: cmux, surface_id: str) -> str:
     return str(payload.get("value") or "")
 
 
-def _wait_browser_contains(client: cmux, surface_id: str, token: str, timeout_s: float = 20.0) -> None:
+def _wait_browser_contains(client: bree, surface_id: str, token: str, timeout_s: float = 20.0) -> None:
     deadline = time.time() + timeout_s
     last_text = ""
     while time.time() < deadline:
         try:
             last_text = _browser_body_text(client, surface_id)
-        except cmuxError:
+        except breeError:
             time.sleep(0.2)
             continue
         if token in last_text:
             return
         time.sleep(0.2)
-    raise cmuxError(f"Timed out waiting for browser content token {token!r}; last body sample={last_text[:240]!r}")
+    raise breeError(f"Timed out waiting for browser content token {token!r}; last body sample={last_text[:240]!r}")
 
 
-def _browser_favicon_state(client: cmux, surface_id: str) -> dict:
+def _browser_favicon_state(client: bree, surface_id: str) -> dict:
     return dict(client._call("debug.browser.favicon", {"surface_id": surface_id}) or {})
 
 
-def _wait_browser_favicon(client: cmux, surface_id: str, timeout_s: float = 20.0) -> dict:
+def _wait_browser_favicon(client: bree, surface_id: str, timeout_s: float = 20.0) -> dict:
     deadline = time.time() + timeout_s
     last = {}
     while time.time() < deadline:
         try:
             last = _browser_favicon_state(client, surface_id)
-        except cmuxError:
+        except breeError:
             time.sleep(0.2)
             continue
         if bool(last.get("has_favicon")) and bool(str(last.get("png_base64") or "")):
             return last
         time.sleep(0.2)
-    raise cmuxError(f"Timed out waiting for browser favicon state on {surface_id}: {last}")
+    raise breeError(f"Timed out waiting for browser favicon state on {surface_id}: {last}")
 
 
 def main() -> int:
     if not SSH_HOST:
-        print("SKIP: set CMUX_SSH_TEST_HOST to run remote favicon proxy regression")
+        print("SKIP: set BREE_SSH_TEST_HOST to run remote favicon proxy regression")
         return 0
 
     cli = _find_cli_binary()
@@ -183,18 +183,18 @@ def main() -> int:
     hit_file_path = ""
 
     stamp = secrets.token_hex(4)
-    page_token = f"CMUX_REMOTE_FAVICON_PAGE_{stamp}"
-    server_ready_token = f"CMUX_REMOTE_FAVICON_READY_{stamp}"
+    page_token = f"BREE_REMOTE_FAVICON_PAGE_{stamp}"
+    server_ready_token = f"BREE_REMOTE_FAVICON_READY_{stamp}"
     default_web_port = 25000 + (os.getpid() % 2000)
-    ssh_web_port = int(os.environ.get("CMUX_SSH_TEST_WEB_PORT", str(default_web_port)))
+    ssh_web_port = int(os.environ.get("BREE_SSH_TEST_WEB_PORT", str(default_web_port)))
     url = f"http://localhost:{ssh_web_port}/"
     png_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9WewAAAABJRU5ErkJggg=="
-    server_script_path = f"/tmp/cmux_remote_favicon_server_{stamp}.py"
-    server_log_path = f"/tmp/cmux_remote_favicon_server_{stamp}.log"
-    hit_file_path = f"/tmp/cmux_remote_favicon_hit_{stamp}"
+    server_script_path = f"/tmp/bree_remote_favicon_server_{stamp}.py"
+    server_log_path = f"/tmp/bree_remote_favicon_server_{stamp}.log"
+    hit_file_path = f"/tmp/bree_remote_favicon_hit_{stamp}"
 
     try:
-        with cmux(SOCKET_PATH) as setup_client:
+        with bree(SOCKET_PATH) as setup_client:
             before_workspace_ids = {wid for _index, wid, _title, _focused in setup_client.list_workspaces()}
 
         ssh_args = ["ssh", SSH_HOST, "--name", f"ssh-browser-favicon-{stamp}"]
@@ -210,7 +210,7 @@ def main() -> int:
 
         payload = _run_cli_json(cli, ssh_args)
 
-        with cmux(SOCKET_PATH) as client:
+        with bree(SOCKET_PATH) as client:
             remote_workspace_id = _resolve_workspace_id(client, payload, before_workspace_ids=before_workspace_ids)
             _wait_remote_ready(client, remote_workspace_id, timeout_s=65.0)
 
@@ -242,7 +242,7 @@ class Handler(BaseHTTPRequestHandler):
 
         body = (
             "<!doctype html><html><head>"
-            "<link rel=\\"icon\\" href=\\"/favicon.ico?via=cmux\\">"
+            "<link rel=\\"icon\\" href=\\"/favicon.ico?via=bree\\">"
             f"</head><body>{{PAGE_TOKEN}}</body></html>"
         ).replace("{{PAGE_TOKEN}}", PAGE_TOKEN)
         data = body.encode("utf-8")
@@ -298,7 +298,7 @@ done"""
                     f"pkill -f {server_script_path} >/dev/null 2>&1 || true; "
                     f"rm -f {server_script_path} {server_log_path} {hit_file_path}"
                 )
-                with cmux(SOCKET_PATH) as cleanup_client:
+                with bree(SOCKET_PATH) as cleanup_client:
                     cleanup_client._call(
                         "surface.send_text",
                         {"workspace_id": remote_workspace_id, "surface_id": remote_surface_id, "text": cleanup},

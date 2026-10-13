@@ -1,6 +1,6 @@
-import CmuxRemoteSession
+import BreeRemoteSession
 
-typealias RemoteTmuxPaneTitleMetadata = CmuxRemoteSession.RemoteTmuxPaneTitleMetadata
+typealias RemoteTmuxPaneTitleMetadata = BreeRemoteSession.RemoteTmuxPaneTitleMetadata
 
 /// Identifies one pane-rectangle snapshot so an older reply cannot overwrite a
 /// newer live pane-title subscription event.

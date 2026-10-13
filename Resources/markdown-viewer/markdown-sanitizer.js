@@ -200,9 +200,9 @@
     return /^#[^\s'"()<>\\]*$/.test(String(value == null ? '' : value).trim());
   }
 
-  var MARKDOWN_CLASS_TOKEN = /^(?:hljs(?:-[\w-]+)?|[a-z][a-z0-9]*_|language-[\w+#.-]+|cmux-(?:mermaid|vega|source|frontmatter))$/;
+  var MARKDOWN_CLASS_TOKEN = /^(?:hljs(?:-[\w-]+)?|[a-z][a-z0-9]*_|language-[\w+#.-]+|bree-(?:mermaid|vega|source|frontmatter))$/;
   // Obsidian vault notes only: callout boxes, properties table, tag chips, wikilinks and note embeds.
-  var OBSIDIAN_CLASS_TOKEN = /^(?:hljs(?:-[\w-]+)?|[a-z][a-z0-9]*_|language-[\w+#.-]+|cmux-(?:mermaid|vega|source|frontmatter)|cmux-(?:callout(?:-[a-z0-9]+)*|props|tag|wikilink(?:-missing)?|embed(?:-title)?))$/;
+  var OBSIDIAN_CLASS_TOKEN = /^(?:hljs(?:-[\w-]+)?|[a-z][a-z0-9]*_|language-[\w+#.-]+|bree-(?:mermaid|vega|source|frontmatter)|bree-(?:callout(?:-[a-z0-9]+)*|props|tag|wikilink(?:-missing)?|embed(?:-title)?))$/;
   var DIAGRAM_CLASS_TOKEN = /^[A-Za-z_][\w-]*$/;
 
   function filterClassTokens(value, pattern) {
@@ -210,7 +210,7 @@
     var kept = [];
     for (var i = 0; i < tokens.length; i++) {
       var token = tokens[i];
-      if (token && pattern.test(token) && token.indexOf('cmux-remote-') !== 0) {
+      if (token && pattern.test(token) && token.indexOf('bree-remote-') !== 0) {
         kept.push(token);
       }
     }
@@ -291,7 +291,7 @@
     var img = doc.createElement('img');
     img.setAttribute('src', 'data:image/svg+xml;base64,' + utf8Base64(xml));
     img.setAttribute('alt', '');
-    img.setAttribute('class', 'cmux-inline-svg');
+    img.setAttribute('class', 'bree-inline-svg');
     return img;
   }
 
@@ -304,7 +304,7 @@
 
   function sanitizedAttributeValue(profile, namespace, tag, name, lower, value) {
     if (lower.indexOf('on') === 0) { return null; }
-    if (lower.indexOf('data-cmux-') === 0) { return null; }
+    if (lower.indexOf('data-bree-') === 0) { return null; }
     if (URL_ATTRIBUTES[lower]) {
       if (namespace === SVG_NS) {
         return (lower === 'href' || lower === 'xlink:href') && isFragmentReference(value)
@@ -388,7 +388,7 @@
     var doc = options.document || global.document;
     var profile = options.profile;
     if (!doc || !profile) {
-      throw new Error('CmuxMarkdownSanitizer requires a document and a profile');
+      throw new Error('BreeMarkdownSanitizer requires a document and a profile');
     }
     var source = parseInert(html, doc);
     var output = doc.createDocumentFragment();
@@ -489,7 +489,7 @@
     });
   }
 
-  global.CmuxMarkdownSanitizer = {
+  global.BreeMarkdownSanitizer = {
     createProfile: createProfile,
     markdownProfile: markdownProfile,
     diagramProfile: diagramProfile,

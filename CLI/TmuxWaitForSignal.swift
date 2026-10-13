@@ -1,8 +1,8 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 
-/// The marker file behind `cmux wait-for`: `-S` creates it and a waiter
+/// The marker file behind `bree wait-for`: `-S` creates it and a waiter
 /// consumes it, so a signal sent before the wait still wakes the waiter.
 ///
 /// Signals live in a private per-user directory, so no other user can plant,
@@ -22,7 +22,7 @@ struct TmuxWaitForSignal {
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")
         fileName = (encoded.isEmpty ? "empty" : encoded) + ".sig"
-        directoryPath = Self.userTemporaryDirectory() + "\(CmuxIdentity.current.tempNamePrefix)-wait-for"
+        directoryPath = Self.userTemporaryDirectory() + "\(BreeIdentity.current.tempNamePrefix)-wait-for"
         path = directoryPath + "/" + fileName
     }
 

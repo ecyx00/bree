@@ -1,5 +1,5 @@
-import CmuxTerminalCore
-import CmuxWorkspaces
+import BreeTerminalCore
+import BreeWorkspaces
 import Foundation
 
 extension Workspace {

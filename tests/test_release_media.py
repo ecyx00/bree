@@ -26,7 +26,7 @@ export const changelogMedia: Record<string, VersionMedia> = {
         title: "Alpha",
         description:
           "Alpha text with {braces} and a \\"quote\\".",
-        tryIt: "Run `cmux alpha`.",
+        tryIt: "Run `bree alpha`.",
       },
       {
         title: "Beta",
@@ -84,7 +84,7 @@ class SceneValidationTests(unittest.TestCase):
             "long clip": minimal_scene(capture={"type": "clip", "seconds": 12}),
             "bad slug": minimal_scene(slug="Alpha Clip"),
             "step outside clip": minimal_scene(capture={"type": "clip", "seconds": 6, "during": [{"at": 7, "sleep": 1}]}),
-            "two step kinds": minimal_scene(setup=[{"sleep": 1, "cmux": ["ping"]}]),
+            "two step kinds": minimal_scene(setup=[{"sleep": 1, "bree": ["ping"]}]),
             "bad matte": minimal_scene(output={"matte": "white"}),
             "no window size": minimal_scene(window={"width": 800}),
         }
@@ -174,10 +174,10 @@ class HostAgentTests(unittest.TestCase):
         self.assertEqual(base["app"]["appearance"], "system")
 
     def test_settings_are_read_as_jsonc(self):
-        text = '// cmux template\n{\n  "a": "x // kept, }", /* note */\n  "b": [1, 2,],\n}\n'
+        text = '// bree template\n{\n  "a": "x // kept, }", /* note */\n  "b": [1, 2,],\n}\n'
         self.assertEqual(host_agent.parse_jsonc(text), {"a": "x // kept, }", "b": [1, 2]})
         self.assertEqual(host_agent.parse_jsonc("// only a comment\n"), {})
-        # cmux's own template: a trailing comma before commented-out entries.
+        # bree's own template: a trailing comma before commented-out entries.
         template = '\ufeff{\n  "schemaVersion": 1,\n  // "app": {\n  //   "appearance": "system"\n  // }\n}\n'
         self.assertEqual(host_agent.parse_jsonc(template), {"schemaVersion": 1})
         with self.assertRaises(host_agent.AgentError):
@@ -186,29 +186,29 @@ class HostAgentTests(unittest.TestCase):
     def test_steps_substitute_and_save_handles(self):
         calls = []
 
-        def cmux(*args):
+        def bree(*args):
             calls.append(args)
             return "OK surface:7 workspace:1"
 
         names = {"window": "W-1"}
-        host_agent.run_step({"cmux": ["new-split", "right", "--window", "{window}"], "save": "right"}, cmux, None, names)
-        host_agent.run_step({"cmux": ["send", "--surface", "{right}", "ls\\n"]}, cmux, None, names)
+        host_agent.run_step({"bree": ["new-split", "right", "--window", "{window}"], "save": "right"}, bree, None, names)
+        host_agent.run_step({"bree": ["send", "--surface", "{right}", "ls\\n"]}, bree, None, names)
         self.assertEqual(calls, [("new-split", "right", "--window", "W-1"), ("send", "--surface", "surface:7", "ls\\n")])
 
     def test_save_requires_an_ok_handle(self):
         with self.assertRaises(host_agent.AgentError):
-            host_agent.run_step({"cmux": ["new-window"], "save": "w"}, lambda *a: "ERROR nope", None, {})
+            host_agent.run_step({"bree": ["new-window"], "save": "w"}, lambda *a: "ERROR nope", None, {})
 
     def test_settings_guard_restores_original_bytes(self):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmp:
-            path = os.path.join(tmp, "cmux.json")
+            path = os.path.join(tmp, "bree.json")
             original = b'{\n  "app": {"appearance": "system"}\n}\n'
             with open(path, "wb") as handle:
                 handle.write(original)
-            saved = host_agent.CMUX_JSON
-            host_agent.CMUX_JSON = path
+            saved = host_agent.BREE_JSON
+            host_agent.BREE_JSON = path
             try:
                 guard = host_agent.SettingsGuard()
                 guard.apply({"app": {"appearance": "dark"}})
@@ -218,7 +218,7 @@ class HostAgentTests(unittest.TestCase):
                 with open(path, "rb") as handle:
                     self.assertEqual(handle.read(), original)
             finally:
-                host_agent.CMUX_JSON = saved
+                host_agent.BREE_JSON = saved
 
 
 if __name__ == "__main__":

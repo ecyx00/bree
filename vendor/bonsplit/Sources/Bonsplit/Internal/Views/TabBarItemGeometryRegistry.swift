@@ -185,6 +185,11 @@ final class TabBarItemGeometryRegistry {
         let maximumOffset = max(0, metrics.documentWidth - metrics.viewportWidth)
         let clampedOffset = min(max(metrics.offset, 0), maximumOffset)
         setHorizontalOffset(clampedOffset, metrics: metrics)
+        // The selected tab must stay visible after a resize shrinks the viewport.
+        if let selectedTabId {
+            pendingScrollIntent = .revealSelectedTab(selectedTabId)
+            reconcilePendingScrollIntent()
+        }
     }
 
     /// Scrolls an overflowing strip horizontally for a vertical mouse wheel

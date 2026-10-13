@@ -1,0 +1,11 @@
+{
+  "name": "bree-relay",
+  "version": "0.0.0-managed",
+  "description": "bree remote relay binary launcher.",
+  "bin": {"bree-relay": "bin/bree-relay.js"},
+  "repository": {"type": "git", "url": "git+https://github.com/ecyx00/bree.git", "directory": "bree-tui/dist/npm/bree-relay"},
+  "license": "MIT",
+  "engines": {"node": ">=18"},
+  "files": ["bin/bree-relay.js"],
+  "optionalDependencies": {}
+}

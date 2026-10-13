@@ -1,8 +1,8 @@
 import AppKit
-import CmuxControlSocket
-import CmuxSettings
+import BreeControlSocket
+import BreeSettings
 import Foundation
-import CmuxTerminal
+import BreeTerminal
 
 /// The debug-domain witnesses are the byte-faithful bodies of the former
 /// `v2Debug*` dispatchers `processV2Command` routed (DEBUG builds only), minus

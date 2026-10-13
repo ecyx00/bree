@@ -1,6 +1,6 @@
 import Bonsplit
-import CmuxSurfaceCatalogModel
-import CmuxWorkspaces
+import BreeSurfaceCatalogModel
+import BreeWorkspaces
 import Foundation
 import GhosttyKit
 
@@ -43,7 +43,7 @@ extension Workspace {
         let controller = bonsplitController
         let placeholderTabs = originalTabs.filter { panelIdFromSurfaceId($0.id) == nil }
     #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.placeholderRepair pane=\(originalPane.id.uuidString.prefix(5)) " +
             "action=reusePlaceholder placeholderCount=\(placeholderTabs.count)"
         )
@@ -79,14 +79,14 @@ extension Workspace {
                 isPinned: false
             )
             rememberTerminalConfigInheritanceSource(replacementPanel)
-            publishCmuxSurfaceCreated(replacementPanel.id, paneId: originalPane, kind: "terminal", origin: "placeholder_repair", focused: false)
+            publishBreeSurfaceCreated(replacementPanel.id, paneId: originalPane, kind: "terminal", origin: "placeholder_repair", focused: false)
 
             for extraPlaceholder in placeholderTabs.dropFirst() {
                 bonsplitController.closeTab(extraPlaceholder.id)
             }
         } else {
     #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "split.placeholderRepair pane=\(originalPane.id.uuidString.prefix(5)) " +
                 "fallback=createTerminalAndDropPlaceholders"
             )

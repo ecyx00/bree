@@ -1,6 +1,6 @@
-import CmuxAgentJournal
-import CmuxSettings
-import CmuxWorkspaces
+import BreeAgentJournal
+import BreeSettings
+import BreeWorkspaces
 import Foundation
 
 /// Applies the `agentActivity` mode of `app.reorderOnNotification`.
@@ -50,7 +50,7 @@ final class WorkspaceActivityReorderController {
     /// surface in this workspace.
     func agentActivity(_ activity: AgentLifecycleActivity, workspaceId: UUID) {
 #if DEBUG
-        cmuxDebugLog("workspace.activityReorder.agent workspace=\(workspaceId.uuidString.prefix(8)) activity=\(activity.rawValue)")
+        breeDebugLog("workspace.activityReorder.agent workspace=\(workspaceId.uuidString.prefix(8)) activity=\(activity.rawValue)")
 #endif
         request(workspaceId: workspaceId, trigger: .agentActivity)
     }

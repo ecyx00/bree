@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""`cmux browser repl` bounds what it reads from stdin and never writes raw control characters."""
+"""`bree browser repl` bounds what it reads from stdin and never writes raw control characters."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ import tempfile
 import threading
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 from fake_socket_env import cli_environment
-from test_browser_profile_cli import FakeCmuxHandler, ThreadedUnixServer
+from test_browser_profile_cli import FakeBreeHandler, ThreadedUnixServer
 
 LIMIT = 15 * 1024 * 1024
 
@@ -33,8 +33,8 @@ class ReplState:
 
 
 def serve(temporary: str, state: ReplState) -> tuple[ThreadedUnixServer, str]:
-    socket_path = str(Path(temporary) / "cmux.sock")
-    server = ThreadedUnixServer(socket_path, FakeCmuxHandler)
+    socket_path = str(Path(temporary) / "bree.sock")
+    server = ThreadedUnixServer(socket_path, FakeBreeHandler)
     server.state = state  # type: ignore[assignment]
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server, socket_path
@@ -42,7 +42,7 @@ def serve(temporary: str, state: ReplState) -> tuple[ThreadedUnixServer, str]:
 
 def stdin_is_read_only_up_to_the_limit(cli: str) -> None:
     """An endless stdin stops at the 15 MiB limit instead of being read whole first."""
-    with tempfile.TemporaryDirectory(prefix="cmux-repl-io-", dir="/tmp") as temporary:
+    with tempfile.TemporaryDirectory(prefix="bree-repl-io-", dir="/tmp") as temporary:
         state = ReplState([])
         server, socket_path = serve(temporary, state)
         try:
@@ -78,7 +78,7 @@ def stdin_is_read_only_up_to_the_limit(cli: str) -> None:
 def output_has_no_control_characters(cli: str) -> None:
     """Page text with escape sequences prints as visible characters, never as controls."""
     hostile = "title: Inbox\x1b]52;c;cHduZWQ=\x07\x1b[2J\x9b31mRed\rover\ttab"
-    with tempfile.TemporaryDirectory(prefix="cmux-repl-io-", dir="/tmp") as temporary:
+    with tempfile.TemporaryDirectory(prefix="bree-repl-io-", dir="/tmp") as temporary:
         state = ReplState([hostile, "plain line"])
         server, socket_path = serve(temporary, state)
         try:
@@ -105,7 +105,7 @@ def output_has_no_control_characters(cli: str) -> None:
 
 
 def main() -> None:
-    cli = resolve_cmux_cli()
+    cli = resolve_bree_cli()
     stdin_is_read_only_up_to_the_limit(cli)
     output_has_no_control_characters(cli)
     print("PASS: browser repl stdin limit and control-character output")

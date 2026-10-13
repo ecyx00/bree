@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxPanes
+import BreePanes
 import Foundation
 
 /// Split admission (#15371): a split may not leave a pane smaller than its
@@ -61,7 +61,7 @@ extension Workspace {
     }
 
     /// The single space check for every split Bonsplit starts: UI split
-    /// buttons, tab drags, and cmux's programmatic helpers all pass here.
+    /// buttons, tab drags, and bree's programmatic helpers all pass here.
     /// Only restoration and remote-layout projection transactions opt out.
     /// A refused split beeps, like Cmd+D with no room.
     func admitsBonsplitUISplit(of paneId: PaneID, orientation: SplitOrientation) -> Bool {

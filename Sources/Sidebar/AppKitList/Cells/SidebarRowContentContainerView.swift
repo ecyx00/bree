@@ -1,5 +1,5 @@
 import AppKit
-import CmuxWorkspaces
+import BreeWorkspaces
 import SwiftUI
 
 /// Flipped host for the row's content subviews; its `alphaValue` implements

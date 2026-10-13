@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 
 #if DEBUG
 extension TerminalController {

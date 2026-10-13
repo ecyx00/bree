@@ -1,5 +1,5 @@
 import AppKit
-import CmuxSidebar
+import BreeSidebar
 import Foundation
 
 /// Resolving a workspace's glyph from its agent and branch
@@ -135,7 +135,7 @@ extension SidebarCompactStatusGlyph {
 
     /// Human name for an agent status key (`claude_code` -> "Claude Code").
     static func agentDisplayName(forStatusKey key: String) -> String {
-        if let definition = CmuxTaskManagerCodingAgentDefinition.builtIns.first(where: {
+        if let definition = BreeTaskManagerCodingAgentDefinition.builtIns.first(where: {
             $0.id == key || $0.directBasenames.contains(key)
         }) {
             return definition.displayName

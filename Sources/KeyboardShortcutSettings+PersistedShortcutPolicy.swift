@@ -1,4 +1,4 @@
-import CmuxSettings
+import BreeSettings
 
 /// Bridges the app target's legacy shortcut representation into the shared
 /// action-owned persistence policy.
@@ -6,12 +6,12 @@ extension KeyboardShortcutSettings.Action {
     func shortcutBindingPolicyRejection(
         for shortcut: StoredShortcut
     ) -> KeyboardShortcutSettings.ShortcutRecordingRejection? {
-        guard let settingsAction = CmuxSettings.ShortcutAction(rawValue: rawValue) else {
+        guard let settingsAction = BreeSettings.ShortcutAction(rawValue: rawValue) else {
             return nil
         }
 
         switch settingsAction.shortcutBindingPolicyResult(
-            for: shortcut.cmuxSettingsStoredShortcut
+            for: shortcut.breeSettingsStoredShortcut
         ) {
         case .accepted:
             return nil
@@ -43,26 +43,26 @@ extension KeyboardShortcutSettings {
             return nil
         }
 
-        guard let settingsAction = CmuxSettings.ShortcutAction(rawValue: action.rawValue) else {
+        guard let settingsAction = BreeSettings.ShortcutAction(rawValue: action.rawValue) else {
             return nil
         }
 
         return settingsAction.effectivePersistedShortcut(
-            candidate?.cmuxSettingsStoredShortcut,
-            defaultShortcut: action.defaultShortcut.cmuxSettingsStoredShortcut,
+            candidate?.breeSettingsStoredShortcut,
+            defaultShortcut: action.defaultShortcut.breeSettingsStoredShortcut,
             normalizing: { shortcut in
                 normalizedExecutableShortcut(
-                    StoredShortcut(cmuxSettingsStoredShortcut: shortcut),
+                    StoredShortcut(breeSettingsStoredShortcut: shortcut),
                     for: action
-                )?.cmuxSettingsStoredShortcut
+                )?.breeSettingsStoredShortcut
             },
             conflictsWithReservedShortcut: { shortcut in
                 conflictsWithConfiguredSystemWideHotkey(
-                    StoredShortcut(cmuxSettingsStoredShortcut: shortcut),
+                    StoredShortcut(breeSettingsStoredShortcut: shortcut),
                     action: action
                 )
             }
-        ).map(StoredShortcut.init(cmuxSettingsStoredShortcut:))
+        ).map(StoredShortcut.init(breeSettingsStoredShortcut:))
     }
 
     private static func normalizedExecutableShortcut(
@@ -122,23 +122,23 @@ extension SystemWideHotkeySettings {
 }
 
 extension StoredShortcut {
-    init(cmuxSettingsStoredShortcut shortcut: CmuxSettings.StoredShortcut) {
+    init(breeSettingsStoredShortcut shortcut: BreeSettings.StoredShortcut) {
         self.init(
-            first: ShortcutStroke(cmuxSettingsShortcutStroke: shortcut.first),
-            second: shortcut.second.map(ShortcutStroke.init(cmuxSettingsShortcutStroke:))
+            first: ShortcutStroke(breeSettingsShortcutStroke: shortcut.first),
+            second: shortcut.second.map(ShortcutStroke.init(breeSettingsShortcutStroke:))
         )
     }
 
-    var cmuxSettingsStoredShortcut: CmuxSettings.StoredShortcut {
-        CmuxSettings.StoredShortcut(
-            first: firstStroke.cmuxSettingsShortcutStroke,
-            second: secondStroke?.cmuxSettingsShortcutStroke
+    var breeSettingsStoredShortcut: BreeSettings.StoredShortcut {
+        BreeSettings.StoredShortcut(
+            first: firstStroke.breeSettingsShortcutStroke,
+            second: secondStroke?.breeSettingsShortcutStroke
         )
     }
 }
 
 extension ShortcutStroke {
-    init(cmuxSettingsShortcutStroke stroke: CmuxSettings.ShortcutStroke) {
+    init(breeSettingsShortcutStroke stroke: BreeSettings.ShortcutStroke) {
         self.init(
             key: stroke.key,
             command: stroke.command,
@@ -149,8 +149,8 @@ extension ShortcutStroke {
         )
     }
 
-    var cmuxSettingsShortcutStroke: CmuxSettings.ShortcutStroke {
-        CmuxSettings.ShortcutStroke(
+    var breeSettingsShortcutStroke: BreeSettings.ShortcutStroke {
+        BreeSettings.ShortcutStroke(
             key: key,
             command: command,
             shift: shift,

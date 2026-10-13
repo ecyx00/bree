@@ -1,5 +1,5 @@
-import CmuxControlSocket
-import CmuxBrowser
+import BreeControlSocket
+import BreeBrowser
 import Foundation
 
 /// Async socket-dispatch helpers kept separate from the legacy synchronous
@@ -97,7 +97,7 @@ extension TerminalController {
             return errorResponse
         }
         let authorizedRequest = relayAuthorization.request
-        let automationOrigin = CmuxAutomationInvocationContext.eventOrigin
+        let automationOrigin = BreeAutomationInvocationContext.eventOrigin
         Self.noteRemoteActionIfSocketClient(authorizedRequest)
         if let focusError = Self.focusSuppressionResponse(
             method: authorizedRequest.method,
@@ -117,7 +117,7 @@ extension TerminalController {
         }
 
         let policy = Self.executionPolicy(forV2Method: authorizedRequest.method)
-        return try await CmuxAutomationInvocationContext.$eventOrigin.withValue(automationOrigin) {
+        return try await BreeAutomationInvocationContext.$eventOrigin.withValue(automationOrigin) {
             try await withSocketCommandPolicyAsync(
                 commandKey: authorizedRequest.method,
                 isV2: true,

@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CmuxSurfaceCatalogModel
+import BreeFoundation
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension SurfaceCatalog {

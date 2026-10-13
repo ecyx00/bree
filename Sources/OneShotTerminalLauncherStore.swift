@@ -1,9 +1,9 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 import os
 
 nonisolated private let oneShotTerminalLauncherLogger = Logger(
-    subsystem: "com.cmuxterm.app",
+    subsystem: "com.bree.app",
     category: "OneShotTerminalLauncherStore"
 )
 
@@ -22,7 +22,7 @@ struct OneShotTerminalLauncherStore {
     private let temporaryDirectory: URL
     private let currentDate: Date
 
-    private let directoryName = "\(CmuxIdentity.current.tempNamePrefix)-r"
+    private let directoryName = "\(BreeIdentity.current.tempNamePrefix)-r"
     private let scriptTTL: TimeInterval = 24 * 60 * 60
     private let pruneInterval: TimeInterval = 5 * 60
     private let pruneMarkerName = ".last-prune"
@@ -81,18 +81,18 @@ struct OneShotTerminalLauncherStore {
                 let quotedDirectory = TerminalStartupShellQuoting.singleQuoted(workingDirectory)
                 lines.append(contentsOf: [
                     "if ! cd -- \(quotedDirectory) 2>/dev/null; then",
-                    "  _cmux_resume_probe=\(quotedDirectory)",
-                    "  [[ ! -e \"$_cmux_resume_probe\" ]] || exit 1",
+                    "  _bree_resume_probe=\(quotedDirectory)",
+                    "  [[ ! -e \"$_bree_resume_probe\" ]] || exit 1",
                     "  while true; do",
-                    "    _cmux_resume_parent=\"${_cmux_resume_probe:h}\"",
-                    "    [[ \"$_cmux_resume_parent\" != \"$_cmux_resume_probe\" ]] || exit 1",
-                    "    if [[ -e \"$_cmux_resume_parent\" ]]; then",
-                    "      [[ -d \"$_cmux_resume_parent\" && -x \"$_cmux_resume_parent\" ]] || exit 1",
+                    "    _bree_resume_parent=\"${_bree_resume_probe:h}\"",
+                    "    [[ \"$_bree_resume_parent\" != \"$_bree_resume_probe\" ]] || exit 1",
+                    "    if [[ -e \"$_bree_resume_parent\" ]]; then",
+                    "      [[ -d \"$_bree_resume_parent\" && -x \"$_bree_resume_parent\" ]] || exit 1",
                     "      break",
                     "    fi",
-                    "    _cmux_resume_probe=\"$_cmux_resume_parent\"",
+                    "    _bree_resume_probe=\"$_bree_resume_parent\"",
                     "  done",
-                    "  unset _cmux_resume_probe _cmux_resume_parent",
+                    "  unset _bree_resume_probe _bree_resume_parent",
                     "fi",
                 ])
             }

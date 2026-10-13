@@ -148,7 +148,7 @@ extension Workspace {
 /// is not the one being used. A bell in the terminal you are typing into —
 /// readline beeping at the end of the line, `less` at the last page — is
 /// feedback to you, not news from a background pane, so it must not render as
-/// a notification arriving (the same flash `cmux notify` produces).
+/// a notification arriving (the same flash `bree notify` produces).
 struct TerminalVisualBellResponse: Equatable {
     let marksUnread: Bool
     let flashes: Bool

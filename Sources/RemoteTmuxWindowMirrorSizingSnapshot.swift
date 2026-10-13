@@ -1,6 +1,6 @@
-import CmuxRemoteSession
+import BreeRemoteSession
 import AppKit
-import CmuxTerminal
+import BreeTerminal
 
 /// Per-window sizing introspection returned by
 /// ``RemoteTmuxWindowMirror/sizingSnapshot()`` and serialized by the
@@ -40,7 +40,7 @@ struct RemoteTmuxWindowMirrorSizingSnapshot: Sendable {
     /// The base tree's total assigned cells (tmux's current window size).
     let baseCols: Int
     let baseRows: Int
-    /// The last per-window size cmux requested (nil before the first push).
+    /// The last per-window size bree requested (nil before the first push).
     let pushedColumns: Int?
     let pushedRows: Int?
     let zoomed: Bool

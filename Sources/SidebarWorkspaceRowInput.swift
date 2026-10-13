@@ -1,6 +1,6 @@
-import CmuxCore
-import CmuxSidebar
-import CmuxWorkspaces
+import BreeCore
+import BreeSidebar
+import BreeWorkspaces
 import Foundation
 
 /// Immutable inputs used to assemble one workspace row when a lazy stack realizes it.

@@ -19,7 +19,7 @@ export const diffWorkerModuleURL = new URL(/* @vite-ignore */ "./diff-worker.mjs
 
 /**
  * Counters for the highlight worker pool. They are mirrored onto
- * `<html data-cmux-diff-worker-*>` so a debug-socket `browser eval` (which
+ * `<html data-bree-diff-worker-*>` so a debug-socket `browser eval` (which
  * runs in an isolated world and cannot read page globals) can prove that
  * workers were spawned from the emitted entry and answered highlight
  * requests even in a hidden web view, where Pierre never paints tokens.
@@ -35,10 +35,10 @@ type DatasetTarget = { dataset: DOMStringMap };
 
 export function publishDiffWorkerPoolStats(stats: DiffWorkerPoolStats, target: DatasetTarget | undefined): void {
   if (!target) return;
-  target.dataset.cmuxDiffWorkerUrl = stats.workerURL;
-  target.dataset.cmuxDiffWorkersCreated = String(stats.created);
-  target.dataset.cmuxDiffWorkerMessages = String(stats.messages);
-  target.dataset.cmuxDiffWorkerErrors = String(stats.errors);
+  target.dataset.breeDiffWorkerUrl = stats.workerURL;
+  target.dataset.breeDiffWorkersCreated = String(stats.created);
+  target.dataset.breeDiffWorkerMessages = String(stats.messages);
+  target.dataset.breeDiffWorkerErrors = String(stats.errors);
 }
 
 export function createDiffWorkerPoolStats(workerModuleURL: URL): DiffWorkerPoolStats {

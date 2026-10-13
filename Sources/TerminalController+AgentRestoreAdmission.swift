@@ -1,6 +1,6 @@
-import CMUXAgentLaunch
-import CmuxFoundation
-import CmuxControlSocket
+import BREEAgentLaunch
+import BreeFoundation
+import BreeControlSocket
 import Foundation
 
 /// Outcome of the single pre-exec admission boundary for managed agent restores.
@@ -78,7 +78,7 @@ extension TerminalController {
             case .index(let index):
                 liveOwner = index.liveSessionOwner(
                     kind: inputs.kind, sessionID: inputs.sessionID, revalidateProcessEvidence: true,
-                    processArgumentsProvider: { CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: $0) },
+                    processArgumentsProvider: { BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: $0) },
                     processPresenceProvider: { pid in
                         guard pid > 0, pid <= Int(Int32.max) else { return .absent }
                         return PIDPresence.current(pid: pid_t(pid))
@@ -300,7 +300,7 @@ extension TerminalController {
         let elapsed = startedAt.duration(to: .now).components
         let elapsedMilliseconds = elapsed.seconds * 1_000
             + elapsed.attoseconds / 1_000_000_000_000_000
-        cmuxDebugLog(
+        breeDebugLog(
             "agentRestore.admit kind=\(inputs.kind) session=\(inputs.sessionID) surface=\(inputs.surfaceID.uuidString) decision=\(decision.debugLabel) ms=\(elapsedMilliseconds)"
         )
 #endif

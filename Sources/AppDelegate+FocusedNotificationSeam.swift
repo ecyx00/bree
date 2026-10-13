@@ -1,5 +1,5 @@
 import Bonsplit
-import CmuxNotifications
+import BreeNotifications
 import Foundation
 
 @MainActor

@@ -37,10 +37,10 @@ class WindowHandler(socketserver.StreamRequestHandler):
 class NewWindowNameTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.cli = os.environ["CMUX_CLI_BIN"]
+        cls.cli = os.environ["BREE_CLI_BIN"]
 
     def setUp(self) -> None:
-        self.root = tempfile.TemporaryDirectory(prefix="cmux-window-", dir="/tmp")
+        self.root = tempfile.TemporaryDirectory(prefix="bree-window-", dir="/tmp")
         self.path = str(Path(self.root.name, "socket"))
         self.server = socketserver.ThreadingUnixStreamServer(self.path, WindowHandler)
         self.server.requests = []
@@ -54,8 +54,8 @@ class NewWindowNameTests(unittest.TestCase):
         self.root.cleanup()
 
     def run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
-        environment = {k: v for k, v in os.environ.items() if not k.startswith("CMUX")}
-        environment.update({"CMUX_CLI_SENTRY_DISABLED": "1", "AppleLanguages": "(en)"})
+        environment = {k: v for k, v in os.environ.items() if not k.startswith("BREE")}
+        environment.update({"BREE_CLI_SENTRY_DISABLED": "1", "AppleLanguages": "(en)"})
         return subprocess.run([self.cli, "--socket", self.path, "new-window", *args],
                               env=environment, stdin=subprocess.DEVNULL,
                               capture_output=True, text=True, timeout=10, check=False)

@@ -1,6 +1,6 @@
 import Bonsplit
 import Foundation
-import CmuxWorkspaces
+import BreeWorkspaces
 
 extension Workspace {
     func customSidebarSessionSnapshot(for panel: any Panel) -> SessionCustomSidebarPanelSnapshot? {
@@ -79,7 +79,7 @@ extension Workspace {
     ) -> CustomSidebarPanel? {
         guard !isRetiredFromOwningTabManager else { return nil }
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let fileURL = CmuxExtensionSidebarSelection.customSidebarFileURL(forName: name) else {
+        guard let fileURL = BreeExtensionSidebarSelection.customSidebarFileURL(forName: name) else {
             return nil
         }
         let shouldFocusNewTab = focus ?? (bonsplitController.focusedPaneId == paneId)
@@ -108,10 +108,10 @@ extension Workspace {
         if let targetIndex {
             _ = bonsplitController.reorderTab(newTabId, toIndex: targetIndex)
         }
-        publishCmuxSurfaceCreated(
+        publishBreeSurfaceCreated(
             customPanel.id,
             paneId: paneId,
-            kind: Self.cmuxEventSurfaceKind(customPanel),
+            kind: Self.breeEventSurfaceKind(customPanel),
             origin: "custom_sidebar_tab",
             focused: shouldFocusNewTab
         )
@@ -138,7 +138,7 @@ extension Workspace {
     ) -> CustomSidebarPanel? {
         guard !isRetiredFromOwningTabManager else { return nil }
         let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let fileURL = CmuxExtensionSidebarSelection.customSidebarFileURL(forName: name) else {
+        guard let fileURL = BreeExtensionSidebarSelection.customSidebarFileURL(forName: name) else {
             return nil
         }
         guard admitsSplitSpacePreflight(splitting: paneId, orientation: orientation) else { return nil }
@@ -179,12 +179,12 @@ extension Workspace {
             reason: "workspace.customSidebarSplitReparent"
         )
         focusPanel(customPanel.id, previousHostedView: previousHostedView)
-        publishCmuxSplitCreated(
+        publishBreeSplitCreated(
             newPaneId,
             sourcePaneId: paneId,
             orientation: orientation,
             surfaceId: customPanel.id,
-            kind: Self.cmuxEventSurfaceKind(customPanel),
+            kind: Self.breeEventSurfaceKind(customPanel),
             origin: "custom_sidebar_split",
             focused: true
         )

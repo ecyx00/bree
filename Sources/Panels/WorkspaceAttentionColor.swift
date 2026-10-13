@@ -1,12 +1,14 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// The resolved color shared by pane flashes and unread notification rings.
 ///
-/// A configured color paints both. Without one, both use the palette's
-/// attention signal colour (`BreeChromePalette.signalAttention`), captured at
-/// init so a theme change makes the value unequal and the renderers repaint.
+/// A configured color paints both. Without one, both use the ivory accent
+/// (`BreeChromePalette.accentFill`): plain unread is not a call to act. A ring
+/// for a pane that needs the user uses `needsYouNSColor` (the attention
+/// signal). Both are captured at init so a theme change makes the value
+/// unequal and the renderers repaint.
 ///
 /// The setting store remains the only owner of the configured string. This
 /// value validates one immutable snapshot before it reaches a renderer, so
@@ -14,15 +16,16 @@ import SwiftUI
 /// setting in their drawing loops.
 struct WorkspaceAttentionColor: Hashable, Sendable {
     private let rgb: UInt32?
-    /// The resolved cmux accent used when no valid color is configured.
-    private let accent: CmuxAccentColor
+    /// The resolved bree accent used when no valid color is configured.
+    private let accent: BreeAccentColor
     private let themeForegroundHex: String?
     private let attentionSignal: BreeRGBA
+    private let unreadAccent: BreeRGBA
     private let focusRing: BreeRGBA
     private let useThemeForeground: Bool
     init(
         configuredHex: String?,
-        accent: CmuxAccentColor = CmuxAccentColor(),
+        accent: BreeAccentColor = BreeAccentColor(),
         themeForeground: NSColor? = nil,
         useThemeForeground: Bool = false
     ) {
@@ -32,17 +35,21 @@ struct WorkspaceAttentionColor: Hashable, Sendable {
         self.useThemeForeground = useThemeForeground
         let palette = BreeChromePalette.currentSnapshot
         self.attentionSignal = palette.rgba(.signalAttention)
+        self.unreadAccent = palette.rgba(.accentFill)
         self.focusRing = palette.rgba(.focusRing)
     }
 
     var nsColor: NSColor {
         guard let rgb else {
-            return attentionSignal.nsColor
+            return unreadAccent.nsColor
         }
         return Self.color(rgb: rgb, alpha: 1)
     }
 
-    /// The pane flash keeps the configured color or the existing cmux accent.
+    /// Ring colour for a pane whose agent needs the user.
+    var needsYouNSColor: NSColor { attentionSignal.nsColor }
+
+    /// The pane flash keeps the configured color or the existing bree accent.
     var flashNSColor: NSColor {
         guard rgb == nil, useThemeForeground,
               let themeForegroundHex,

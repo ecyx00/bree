@@ -8,12 +8,12 @@ a tagged build (`./scripts/reload.sh --tag TAG`) and `setup-slow-remote.sh`:
     record.py --list
 
 The dogfood tour format cannot express this: it has no way to put a remote
-behind a slow link, to open a `cmux ssh` workspace, to type with controlled
+behind a slow link, to open a `bree ssh` workspace, to type with controlled
 gaps between keys, or to capture video. This script does those four things:
 
 - the link: `delay_proxy.py` as the ProxyCommand of `Host pe-slow`, configured
   through link.json, which it re-reads while connected;
-- the workspace: the build's own CLI runs `cmux ssh pe-slow` (a known-remote
+- the workspace: the build's own CLI runs `bree ssh pe-slow` (a known-remote
   surface), or `workspace.create` opens a local one;
 - keys: `debug.shortcut.simulate` on the tag's debug socket, paced here
   (shifted characters go through cua-driver, since simulate sends them
@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cua import Cua  # noqa: E402
 
 LINK = os.path.expanduser(os.environ.get(
-    "PE_LINK_FILE", "~/.cmux-dogfood/predictive-echo/link.json"))
+    "PE_LINK_FILE", "~/.bree-dogfood/predictive-echo/link.json"))
 
 # Each step: ("type", text, gap_ms) | ("key", combo) | ("keys", combo, count, gap_ms)
 # | ("paste", text) | ("wait", seconds) | ("link", {...}) | ("mark", label)
@@ -144,10 +144,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tag")
     ap.add_argument("--scenario")
-    ap.add_argument("--out", default=os.path.expanduser("~/.cmux-dogfood/predictive-echo/out"))
+    ap.add_argument("--out", default=os.path.expanduser("~/.bree-dogfood/predictive-echo/out"))
     ap.add_argument("--link", help="JSON overriding the scenario's link settings")
     ap.add_argument("--repo", default=os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")),
-                    help="cmux checkout whose scripts/cmux-debug-cli.sh drives the tag")
+                    help="bree checkout whose scripts/bree-debug-cli.sh drives the tag")
     ap.add_argument("--derived-data", help="the --derived-data the tag was built with, if not the default")
     ap.add_argument("--list", action="store_true")
     args = ap.parse_args()
@@ -160,15 +160,15 @@ def main():
         with open(LINK, "w") as f:
             json.dump(link, f)
 
-    sock_path = f"/tmp/cmux-debug-{args.tag}.sock"
+    sock_path = f"/tmp/bree-debug-{args.tag}.sock"
     sock = DebugSocket(sock_path)
     run_dir = os.path.join(args.out, f"{args.scenario}-{args.tag}")
     os.makedirs(run_dir, exist_ok=True)
     marks = []
     with Cua() as c:
         if scenario["remote"]:
-            cli = os.path.join(args.repo, "scripts/cmux-debug-cli.sh")
-            subprocess.run([cli, "ssh", "pe-slow"], check=True, env={**os.environ, "CMUX_TAG": args.tag, **({"CMUX_DERIVED_DATA": args.derived_data} if args.derived_data else {})})
+            cli = os.path.join(args.repo, "scripts/bree-debug-cli.sh")
+            subprocess.run([cli, "ssh", "pe-slow"], check=True, env={**os.environ, "BREE_TAG": args.tag, **({"BREE_DERIVED_DATA": args.derived_data} if args.derived_data else {})})
             time.sleep(8)  # connect, bootstrap, reach the prompt
         else:
             sock.call("workspace.create", {"title": "Local", "focus": True})
@@ -183,7 +183,7 @@ def main():
                          "x": b["width"] * 0.6, "y": b["height"] * 0.5})
         time.sleep(0.5)
         sock.connect()
-        # A fresh `cmux ssh` workspace can show its first prompt blank; Ctrl-L
+        # A fresh `bree ssh` workspace can show its first prompt blank; Ctrl-L
         # has the shell redraw it at the top.
         sock.key("ctrl+l")
         time.sleep(1.0)

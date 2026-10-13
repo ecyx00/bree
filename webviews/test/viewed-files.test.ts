@@ -34,7 +34,7 @@ test("patchFingerprint hashes the hunk text and ignores the index line", () => {
 });
 
 test("fileDiffFingerprint prefers the streamed patch fingerprint and falls back to hunk content", () => {
-  expect(fileDiffFingerprint({ cmuxPatchFingerprint: "deadbeef", hunks: [] })).toBe("deadbeef");
+  expect(fileDiffFingerprint({ breePatchFingerprint: "deadbeef", hunks: [] })).toBe("deadbeef");
   const hunks = [{ additionStart: 1, additionCount: 1, deletionStart: 1, deletionCount: 0, hunkContent: [{ type: "change", lines: ["+x"] }] }];
   const fallback = fileDiffFingerprint({ name: "a.txt", hunks });
   expect(fallback).toMatch(/^[0-9a-f]{8}$/);
@@ -64,9 +64,9 @@ test("viewedScopeFor keys typed git sources by repo and source identity", () => 
 
 test("viewedProgress counts only files whose stored fingerprint still matches", () => {
   const items = [
-    { id: "a.txt", fileDiff: { name: "a.txt", cmuxPatchFingerprint: "aaa", hunks: [] } },
-    { id: "b.txt", fileDiff: { name: "b.txt", cmuxPatchFingerprint: "bbb", hunks: [] } },
-    { id: "c.txt", fileDiff: { name: "c.txt", cmuxPatchFingerprint: "ccc", hunks: [] } },
+    { id: "a.txt", fileDiff: { name: "a.txt", breePatchFingerprint: "aaa", hunks: [] } },
+    { id: "b.txt", fileDiff: { name: "b.txt", breePatchFingerprint: "bbb", hunks: [] } },
+    { id: "c.txt", fileDiff: { name: "c.txt", breePatchFingerprint: "ccc", hunks: [] } },
   ];
   const viewedByPath = new Map([
     ["a.txt", { path: "a.txt", fingerprint: "aaa" }],
@@ -78,8 +78,8 @@ test("viewedProgress counts only files whose stored fingerprint still matches", 
 
 test("toggleViewedItem collapses a viewed file, expands an unviewed one, and reports the persistence change", () => {
   const items = [
-    { id: "a.txt", type: "diff", version: 0, collapsed: false, fileDiff: { name: "a.txt", cmuxPatchFingerprint: "aaa", hunks: [] } },
-    { id: "b.txt", type: "diff", version: 0, collapsed: false, fileDiff: { name: "b.txt", cmuxPatchFingerprint: "bbb", hunks: [] } },
+    { id: "a.txt", type: "diff", version: 0, collapsed: false, fileDiff: { name: "a.txt", breePatchFingerprint: "aaa", hunks: [] } },
+    { id: "b.txt", type: "diff", version: 0, collapsed: false, fileDiff: { name: "b.txt", breePatchFingerprint: "bbb", hunks: [] } },
   ];
   const marked = toggleViewedItem(items, new Map(), "a.txt");
   expect(marked.change).toEqual({ kind: "set", entry: { path: "a.txt", fingerprint: "aaa" } });

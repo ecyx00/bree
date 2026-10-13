@@ -1,5 +1,5 @@
-import CmuxBrowser
-import CmuxControlSocket
+import BreeBrowser
+import BreeControlSocket
 import Foundation
 
 extension TerminalController {

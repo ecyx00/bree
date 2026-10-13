@@ -1,4 +1,4 @@
-import CmuxBrowser
+import BreeBrowser
 import WebKit
 
 /// Bridges the omnibar page-focus repository to a panel's live web view.

@@ -49,7 +49,7 @@ final class WorkspaceActionSaveDialogAccessory {
         let screenFrame = visibleFrame ?? NSRect(x: 0, y: 0, width: 1024, height: 768)
         let maximumSectionHeight = min(
             160,
-            CmuxAlertScrollableDetailsView.maximumHeight(for: screenFrame)
+            BreeAlertScrollableDetailsView.maximumHeight(for: screenFrame)
                 / CGFloat(max(1, sectionCount))
         )
         Self.addDisclosureSections(

@@ -1,4 +1,4 @@
-// capabilities.json must map every reference capability to a cmux equivalent
+// capabilities.json must map every reference capability to a bree equivalent
 // with differential cases (tests/browser-parity/diff), or to an exclusion the
 // design doc lists.
 //
@@ -49,18 +49,18 @@ function checkEntry(name, entry) {
     assert.ok(entry.excluded.length > 20, `${name} needs an exclusion reason`);
     return;
   }
-  assert.ok(entry.cmux, `${name} has no cmux equivalent`);
+  assert.ok(entry.bree, `${name} has no bree equivalent`);
   // unit/diff.test.mjs checks the cases and their verdicts.
   assert.ok(Array.isArray(entry.cases) && entry.cases.length, `${name} needs differential cases`);
   assert.equal(entry.proof, undefined, `${name}: proof keys were replaced by cases`);
 }
 
-test("every reference A global maps to cmux", () => {
+test("every reference A global maps to bree", () => {
   for (const g of REFERENCE_A_GLOBALS) checkEntry(`reference-a ${g}`, caps["reference-a"].globals[g]);
   assert.deepEqual(Object.keys(caps["reference-a"].globals).sort(), [...REFERENCE_A_GLOBALS].sort());
 });
 
-test("every Page, Locator, Keyboard and Mouse member reference A has maps to cmux", () => {
+test("every Page, Locator, Keyboard and Mouse member reference A has maps to bree", () => {
   const members = referenceAMembers();
   assert.ok(members.length > 80, `only ${members.length} reference A members parsed`);
   for (const [cls, name] of members) checkEntry(`reference-a ${cls}.${name}`, caps["reference-a"][cls][name]);
@@ -71,7 +71,7 @@ test("every Page, Locator, Keyboard and Mouse member reference A has maps to cmu
   }
 });
 
-test("every line of the reference B surface maps to cmux or an allowed exclusion", () => {
+test("every line of the reference B surface maps to bree or an allowed exclusion", () => {
   const members = referenceBMembers();
   assert.equal(members.length, 152);
   for (const m of members) checkEntry(m, caps["reference-b"][m]);
@@ -79,11 +79,11 @@ test("every line of the reference B surface maps to cmux or an allowed exclusion
 });
 
 // Site integrations (docs/browser-repl/site-tools.md): every member in
-// reference/site-surface.txt maps to a cmux tool with tests that exist, or to
+// reference/site-surface.txt maps to a bree tool with tests that exist, or to
 // a pending user decision.
 const SITE_DECISIONS = new Set(["captcha", "password-managers", "imessage", "imagegen", "bot-evasion", "doc-editing", "social-writes", "contacts", "agent-platform"]);
 
-test("every site member maps to a tested cmux tool or a pending decision", async () => {
+test("every site member maps to a tested bree tool or a pending decision", async () => {
   const lines = fs.readFileSync(path.join(root, "reference/site-surface.txt"), "utf8").split("\n").filter((l) => l && !l.startsWith("#"));
   assert.ok(lines.length > 100, `only ${lines.length} site members`);
   const sites = caps.sites;
@@ -109,7 +109,7 @@ test("every site member maps to a tested cmux tool or a pending decision", async
       assert.ok((entry.reason || "").length > 40, `${ref} ${member}: decision needs its reason`);
       continue;
     }
-    assert.ok(entry.cmux, `${ref} ${member} has no cmux equivalent`);
+    assert.ok(entry.bree, `${ref} ${member} has no bree equivalent`);
     assert.ok(Array.isArray(entry.tests) && entry.tests.length, `${ref} ${member} has no proving test`);
     for (const t of entry.tests) {
       if (t.startsWith("diff:")) {

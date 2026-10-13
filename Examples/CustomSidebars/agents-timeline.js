@@ -1,7 +1,7 @@
 // agents-timeline: subagents as a recency feed on a vertical rail. Reads
 // like a log - the newest activity sits on top with a time gutter, so a
 // glance answers "what just happened" rather than "what exists".
-//   cmux right-sidebar set custom agents-timeline
+//   bree right-sidebar set custom agents-timeline
 
 const TINT = {
   needs_input: "#FF9F0A",
@@ -36,8 +36,8 @@ const feed = computed(() => {
 });
 
 function jump(e) {
-  cmux("workspace.select", { workspace_id: e.ws.id });
-  if (e.a.surfaceId) cmux("surface.focus", { surface_id: e.a.surfaceId });
+  bree("workspace.select", { workspace_id: e.ws.id });
+  if (e.a.surfaceId) bree("surface.focus", { surface_id: e.a.surfaceId });
 }
 
 sidebar(() =>

@@ -1,7 +1,7 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
-import CmuxSettings
-import CmuxTerminalCore
+import BreeSettings
+import BreeTerminalCore
 import Foundation
 
 /// Owns remote click downloads and discards completions whose source terminal has changed.
@@ -61,7 +61,7 @@ final class RemoteTerminalFilePreviewCoordinator {
         let timeout = self.timeout
         let requestID = UUID()
         #if DEBUG
-        cmuxDebugLog("remotePreview.start request=\(requestID.uuidString) surface=\(sourcePanelID.uuidString)")
+        breeDebugLog("remotePreview.start request=\(requestID.uuidString) surface=\(sourcePanelID.uuidString)")
         #endif
         let sourceSurface = panel.surface
         let lifecycleID = sourceSurface.terminalLifecycleId
@@ -101,11 +101,11 @@ final class RemoteTerminalFilePreviewCoordinator {
                       workspace.focusedPanelId == sourcePanelID,
                       panel.hostedView.window?.isKeyWindow == true else {
                     #if DEBUG
-                    cmuxDebugLog("remotePreview.discarded request=\(requestID.uuidString)")
+                    breeDebugLog("remotePreview.discarded request=\(requestID.uuidString)")
                     #endif
                     return
                 }
-                let opened = CommandClickFileOpenRouter.openInCmux(
+                let opened = CommandClickFileOpenRouter.openInBree(
                     workspace: workspace,
                     sourcePanelId: sourcePanelID,
                     filePath: localURL.path,
@@ -113,12 +113,12 @@ final class RemoteTerminalFilePreviewCoordinator {
                     inQuickView: false
                 )
                 #if DEBUG
-                cmuxDebugLog("remotePreview.complete request=\(requestID.uuidString) opened=\(opened)")
+                breeDebugLog("remotePreview.complete request=\(requestID.uuidString) opened=\(opened)")
                 #endif
             } catch {
                 guard !Task.isCancelled else { return }
                 #if DEBUG
-                cmuxDebugLog("remotePreview.failed request=\(requestID.uuidString)")
+                breeDebugLog("remotePreview.failed request=\(requestID.uuidString)")
                 #endif
                 guard let workspace, let panel,
                       workspace.remoteTerminalFilePreviewConfiguration(for: sourcePanelID) == configuration,

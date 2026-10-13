@@ -3,7 +3,7 @@
 # Remote-tmux multi-pane layout repro.
 #
 # Builds a local tmux server under an ownership lock, mirrors it through a
-# tagged Debug cmux app, then checks:
+# tagged Debug bree app, then checks:
 #   1. every pane's mirrored read-screen text matches `capture-pane -p -J`
 #   2. each tmux window's size stays fixed across five 2-second samples
 #
@@ -11,10 +11,10 @@
 # checked-in ssh shim and the same TMUX_TMPDIR so its ssh-tmux transport reaches
 # this local lab server:
 #
-#   CMUX_REMOTE_TMUX_SSH_FOR_TESTING=$PWD/scripts/remote-tmux-e2e-ssh-shim.sh
-#   TMUX_TMPDIR=/tmp/cmux-max1
+#   BREE_REMOTE_TMUX_SSH_FOR_TESTING=$PWD/scripts/remote-tmux-e2e-ssh-shim.sh
+#   TMUX_TMPDIR=/tmp/bree-max1
 #
-# Override both the app and this script with CMUX_LAYOUT_TMUX_TMPDIR when two
+# Override both the app and this script with BREE_LAYOUT_TMUX_TMPDIR when two
 # tagged repro environments need to run side by side.
 #
 # Exit code is the number of failing checks (0 = all green). Setup/precondition
@@ -23,16 +23,16 @@
 set -uo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-: "${CMUX_TAG:?set CMUX_TAG to the tagged debug app (e.g. CMUX_TAG=tmux-layout)}"
+: "${BREE_TAG:?set BREE_TAG to the tagged debug app (e.g. BREE_TAG=tmux-layout)}"
 
-HOST="cmux-max1"
-SESSION="cmux-max1"
-SRVDIR="${CMUX_LAYOUT_TMUX_TMPDIR:-/tmp/cmux-max1}"
+HOST="bree-max1"
+SESSION="bree-max1"
+SRVDIR="${BREE_LAYOUT_TMUX_TMPDIR:-/tmp/bree-max1}"
 SHIM="$REPO/scripts/remote-tmux-e2e-ssh-shim.sh"
-SETTLE_SECONDS="${CMUX_LAYOUT_SETTLE_SECONDS:-5}"
-TMUXBIN="${CMUX_LAYOUT_TMUX:-}"
-CMUX_FUZZ_LOCK_DIR="${SRVDIR}.layout-repro.lock"
-CMUX_FUZZ_LOCK_OWNED=0
+SETTLE_SECONDS="${BREE_LAYOUT_SETTLE_SECONDS:-5}"
+TMUXBIN="${BREE_LAYOUT_TMUX:-}"
+BREE_FUZZ_LOCK_DIR="${SRVDIR}.layout-repro.lock"
+BREE_FUZZ_LOCK_OWNED=0
 SRV_OWNED=0
 
 . "$REPO/scripts/remote-tmux-fuzz-lock.sh"
@@ -47,7 +47,7 @@ TIMEOUT_BIN="$(command -v timeout || command -v gtimeout || true)"
 
 PYTHON_BIN="$(command -v python3 || true)"
 [ -n "$PYTHON_BIN" ] || {
-  echo "ERROR: python3 is required for parsing cmux JSON output" >&2
+  echo "ERROR: python3 is required for parsing bree JSON output" >&2
   exit 2
 }
 
@@ -80,7 +80,7 @@ srv() {
 }
 
 cli() {
-  CMUX_TAG="$CMUX_TAG" "$TIMEOUT_BIN" 90 "$REPO/scripts/cmux-debug-cli.sh" "$@" 2>&1
+  BREE_TAG="$BREE_TAG" "$TIMEOUT_BIN" 90 "$REPO/scripts/bree-debug-cli.sh" "$@" 2>&1
 }
 
 norm() {
@@ -109,7 +109,7 @@ reset_srv() {
 
 ruler_command() {
   local width="$1"
-  printf "%s" "CMUX_RULER_WIDTH=$width /bin/sh -c 'w=\${CMUX_RULER_WIDTH:-80}; printf \"RULER\\n\"; i=1; while [ \"\$i\" -le \"\$w\" ]; do printf \"%d\" \$((i % 10)); i=\$((i + 1)); done; printf \"\\n\"; exec sleep 3600'"
+  printf "%s" "BREE_RULER_WIDTH=$width /bin/sh -c 'w=\${BREE_RULER_WIDTH:-80}; printf \"RULER\\n\"; i=1; while [ \"\$i\" -le \"\$w\" ]; do printf \"%d\" \$((i % 10)); i=\$((i + 1)); done; printf \"\\n\"; exec sleep 3600'"
 }
 
 pane_has_ruler() {
@@ -188,14 +188,14 @@ window_ids() {
 
 attach_mirror() {
   local output status
-  echo "Attaching with: CMUX_TAG=$CMUX_TAG scripts/cmux-debug-cli.sh ssh-tmux $HOST"
+  echo "Attaching with: BREE_TAG=$BREE_TAG scripts/bree-debug-cli.sh ssh-tmux $HOST"
   output="$(cli ssh-tmux "$HOST")"
   status=$?
   printf '%s\n' "$output"
   [ "$status" -eq 0 ] || return "$status"
   MIRROR_WINDOW="$(printf '%s\n' "$output" | awk -F'window=' '/^OK host=/{split($2,a," "); print a[1]; exit}')"
   if [ -z "$MIRROR_WINDOW" ]; then
-    # Fallback for older CLI output: pick the key/newest cmux window.
+    # Fallback for older CLI output: pick the key/newest bree window.
     MIRROR_WINDOW="$(window_ids | tail -1)"
   fi
   [ -n "$MIRROR_WINDOW" ]
@@ -312,19 +312,19 @@ check_window_stability() {
 }
 
 cleanup() {
-  if [ "$SRV_OWNED" = 1 ] && [ "${CMUX_LAYOUT_KEEP_TMUX:-0}" != "1" ]; then
+  if [ "$SRV_OWNED" = 1 ] && [ "${BREE_LAYOUT_KEEP_TMUX:-0}" != "1" ]; then
     srv kill-server >/dev/null 2>&1 || true
   fi
-  cmux_fuzz_lock_release
+  bree_fuzz_lock_release
 }
 trap cleanup EXIT
 
-cmux_fuzz_lock_acquire "$(dirname "$SRVDIR")" || exit 2
+bree_fuzz_lock_acquire "$(dirname "$SRVDIR")" || exit 2
 reset_srv || exit 2
 SRV_OWNED=1
 
-echo "=== remote-tmux layout repro  tag=$CMUX_TAG host=$HOST tmux_tmpdir=$SRVDIR ==="
-echo "Expected tagged app env: CMUX_REMOTE_TMUX_SSH_FOR_TESTING=$SHIM  TMUX_TMPDIR=$SRVDIR"
+echo "=== remote-tmux layout repro  tag=$BREE_TAG host=$HOST tmux_tmpdir=$SRVDIR ==="
+echo "Expected tagged app env: BREE_REMOTE_TMUX_SSH_FOR_TESTING=$SHIM  TMUX_TMPDIR=$SRVDIR"
 
 build_lab || {
   echo "ERROR: failed to build isolated tmux lab under $SRVDIR" >&2
@@ -336,11 +336,11 @@ attach_mirror || {
 ERROR: ssh-tmux attach failed.
 
 The tagged app must already be running with:
-  CMUX_REMOTE_TMUX_SSH_FOR_TESTING=$SHIM
+  BREE_REMOTE_TMUX_SSH_FOR_TESTING=$SHIM
   TMUX_TMPDIR=$SRVDIR
 
 Then rerun:
-  CMUX_TAG=$CMUX_TAG $0
+  BREE_TAG=$BREE_TAG $0
 EOF
   exit 2
 }

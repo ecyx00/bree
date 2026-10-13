@@ -3,7 +3,7 @@ import ColorSync
 import CoreGraphics
 
 extension NSScreen {
-    var cmuxDisplayID: UInt32? {
+    var breeDisplayID: UInt32? {
         let key = NSDeviceDescriptionKey("NSScreenNumber")
         guard let value = deviceDescription[key] as? NSNumber else { return nil }
         return value.uint32Value
@@ -19,14 +19,14 @@ extension NSScreen {
     ///
     /// Must be read while the display is connected — `CGDisplayCreateUUIDFromDisplayID`
     /// returns `NULL` inside a display-removal reconfiguration callback.
-    var cmuxStableDisplayKey: String? {
-        guard let displayID = cmuxDisplayID else { return nil }
-        return Self.cmuxStableDisplayKey(for: CGDirectDisplayID(displayID))
+    var breeStableDisplayKey: String? {
+        guard let displayID = breeDisplayID else { return nil }
+        return Self.breeStableDisplayKey(for: CGDirectDisplayID(displayID))
     }
 
     /// Pure resolution of a stable key from a `CGDirectDisplayID`, factored out so
     /// it can be exercised directly.
-    static func cmuxStableDisplayKey(for displayID: CGDirectDisplayID) -> String? {
+    static func breeStableDisplayKey(for displayID: CGDirectDisplayID) -> String? {
         if let uuidRef = CGDisplayCreateUUIDFromDisplayID(displayID)?.takeRetainedValue(),
            let uuidString = CFUUIDCreateString(nil, uuidRef) as String? {
             return "uuid:\(uuidString)"

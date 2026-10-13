@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 /// Async wire adapter for process diagnostics. Only topology collection visits MainActor.
@@ -35,7 +35,7 @@ extension TerminalController {
     #endif
     nonisolated func processTopPayload(windows: JSONValue, includeProcesses: Bool) async -> [String: JSONValue] {
         guard let windowsObject = windows.foundationObject as? [[String: Any]] else { return [:] }
-        let processSnapshot = await CmuxTopProcessSnapshot.captureCached(
+        let processSnapshot = await BreeTopProcessSnapshot.captureCached(
             includeProcessDetails: includeProcesses, maximumAge: 2
         )
         var windows = windowsObject

@@ -8,17 +8,17 @@ enum ControlSidebarAgentLifecycleRegistryScope: Sendable {
         homeDirectory: String = NSHomeDirectory(),
         environment: [String: String] = ProcessInfo.processInfo.environment,
         fileManager: FileManager = .default
-    ) -> CmuxVaultAgentRegistry {
+    ) -> BreeVaultAgentRegistry {
         switch self {
         case .project(let workingDirectory):
-            return CmuxVaultAgentRegistry.load(
+            return BreeVaultAgentRegistry.load(
                 homeDirectory: homeDirectory,
                 workingDirectory: workingDirectory,
                 environment: environment,
                 fileManager: fileManager
             )
         case .globalOnly:
-            return CmuxVaultAgentRegistry.load(
+            return BreeVaultAgentRegistry.load(
                 homeDirectory: homeDirectory,
                 environment: [:],
                 fileManager: fileManager

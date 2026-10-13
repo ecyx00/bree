@@ -1,4 +1,4 @@
-import CmuxCloud
+import BreeCloud
 import Foundation
 
 @MainActor
@@ -15,7 +15,7 @@ extension TerminalNotificationStore {
     }
 
     /// Marks read only the notifications recorded against the workspace itself,
-    /// with no surface and no panel, such as cmux's own memory-pressure alert.
+    /// with no surface and no panel, such as bree's own memory-pressure alert.
     /// Surface-scoped notifications, every manual or restored unread indicator,
     /// and in-flight policy work stay as they are, so reading the workspace's own
     /// notifications cannot swallow another pane's unread state.

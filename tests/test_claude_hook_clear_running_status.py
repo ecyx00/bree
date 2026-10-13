@@ -16,18 +16,18 @@ from pathlib import Path
 from fake_socket_env import cli_environment, unwrap_capability
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit:
         if os.path.exists(explicit) and os.access(explicit, os.X_OK):
             return explicit
-        raise RuntimeError(f"Configured cmux CLI is not executable: {explicit}")
+        raise RuntimeError(f"Configured bree CLI is not executable: {explicit}")
 
-    in_path = shutil.which("cmux")
+    in_path = shutil.which("bree")
     if in_path:
         return in_path
 
-    raise RuntimeError("Unable to find cmux CLI binary. Set CMUX_CLI_BIN.")
+    raise RuntimeError("Unable to find bree CLI binary. Set BREE_CLI_BIN.")
 
 
 class HookSocketServer:
@@ -38,8 +38,8 @@ class HookSocketServer:
         self.ready = threading.Event()
         self.stop = threading.Event()
         self.error: Exception | None = None
-        self.root = tempfile.TemporaryDirectory(prefix="cmux-claude-clear-")
-        self.socket_path = os.path.join(self.root.name, "cmux.sock")
+        self.root = tempfile.TemporaryDirectory(prefix="bree-claude-clear-")
+        self.socket_path = os.path.join(self.root.name, "bree.sock")
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.server: socket.socket | None = None
 
@@ -178,7 +178,7 @@ def run_claude_hook(
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            f"cmux claude-hook {subcommand} failed:\n"
+            f"bree claude-hook {subcommand} failed:\n"
             f"exit={proc.returncode}\nstdout={proc.stdout}\nstderr={proc.stderr}"
         )
 
@@ -205,7 +205,7 @@ def stored_lifecycle(state_path: Path, session_id: str) -> str | None:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
@@ -218,15 +218,15 @@ def main() -> int:
     with HookSocketServer(workspace_id=workspace_id, surface_id=surface_id) as server:
         state_path = Path(server.root.name) / "claude-hook-state.json"
         env = cli_environment(server.socket_path)
-        env["CMUX_WORKSPACE_ID"] = workspace_id
-        env["CMUX_SURFACE_ID"] = surface_id
-        env["CMUX_CLAUDE_HOOK_STATE_PATH"] = str(state_path)
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
+        env["BREE_WORKSPACE_ID"] = workspace_id
+        env["BREE_SURFACE_ID"] = surface_id
+        env["BREE_CLAUDE_HOOK_STATE_PATH"] = str(state_path)
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
         old_pid_env = env.copy()
-        old_pid_env["CMUX_CLAUDE_PID"] = "11111"
+        old_pid_env["BREE_CLAUDE_PID"] = "11111"
         clear_pid_env = env.copy()
-        clear_pid_env["CMUX_CLAUDE_PID"] = "22222"
+        clear_pid_env["BREE_CLAUDE_PID"] = "22222"
 
         run_claude_hook(
             cli_path,

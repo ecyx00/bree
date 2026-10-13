@@ -1,15 +1,15 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Darwin
 import Foundation
 import os
 
-nonisolated private let cliForwardingLogger = Logger(subsystem: "com.cmuxterm.app", category: "CLIForwarding")
+nonisolated private let cliForwardingLogger = Logger(subsystem: "com.bree.app", category: "CLIForwarding")
 
 enum CLIForwardingLaunchRouter {
-    private static let guardKey = "CMUX_CLI_FORWARDED"
+    private static let guardKey = "BREE_CLI_FORWARDED"
 
     /// Classifies a launch of the GUI binary via the pure policy in
-    /// CMUXAgentLaunch; this router keeps only the exec/exit glue.
+    /// BREEAgentLaunch; this router keeps only the exec/exit glue.
     static func forwardingDecision(
         arguments argv: [String],
         forwardingGuardIsSet: Bool
@@ -19,7 +19,7 @@ enum CLIForwardingLaunchRouter {
 
     /// If `argv` looks like a CLI invocation, exec the bundled CLI at
     /// `Contents/Resources/bin/bree` and never return. macOS-launch arguments
-    /// (`-psn_...`, other `-` flags) and `cmux://` URLs are left to the GUI.
+    /// (`-psn_...`, other `-` flags) and `bree://` URLs are left to the GUI.
     /// A CLI invocation that cannot be forwarded (the forwarding guard is
     /// already set) exits with an error instead of falling through to the GUI.
     static func forwardToBundledCLIIfNeeded(
@@ -73,7 +73,7 @@ enum CLIForwardingLaunchRouter {
         Darwin.exit(127)
     }
 
-    /// Delegates the pure argv classification to CMUXAgentLaunch.
+    /// Delegates the pure argv classification to BREEAgentLaunch.
     static func shouldForwardToBundledCLI(arguments argv: [String]) -> Bool {
         CLIForwardingDecision.shouldForwardToBundledCLI(arguments: argv)
     }

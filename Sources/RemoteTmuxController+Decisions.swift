@@ -22,7 +22,7 @@ extension RemoteTmuxController {
     /// that session. The new tab arrives via the `%window-add` notification (one
     /// source of truth), so the caller must NOT also create a local tab.
     ///
-    /// `placement` mirrors cmux's `newTabPosition` for the workspace tab strip so
+    /// `placement` mirrors bree's `newTabPosition` for the workspace tab strip so
     /// a remote new tab lands where a local one would (after the selected tab, or
     /// at the end), instead of wherever tmux's bare `new-window` picks (the lowest
     /// free index, which lands mid-list when the session has window-index gaps).
@@ -34,7 +34,7 @@ extension RemoteTmuxController {
     ///
     /// - Parameter workingDirectory: the directory the new tmux window should
     ///   start in (the active tab's cwd, resolved by the caller), so a new tab
-    ///   inherits the active tab's directory the way local cmux does. A
+    ///   inherits the active tab's directory the way local bree does. A
     ///   nil/blank/unsafe value, or a source panel that is not backed by a live
     ///   mirror window, omits `-c` and lets tmux pick its default-path.
     /// - Parameter focus: whether this request explicitly intends to select and
@@ -145,7 +145,7 @@ extension RemoteTmuxController {
     ///   current. (`'{end}'` is an alias for `$`, available since tmux 2.1.) Plain
     ///   `new-window` instead fills the lowest free index, landing mid-list when
     ///   the session has gaps from closed windows.
-    /// - id -> `new-window -d -a -t @id`: insert right after that window. cmux never
+    /// - id -> `new-window -d -a -t @id`: insert right after that window. bree never
     ///   `select-window`s the remote, so the selected tab's window is targeted by
     ///   id rather than relying on tmux's current window.
     ///

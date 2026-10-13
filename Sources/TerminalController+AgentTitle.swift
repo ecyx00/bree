@@ -1,6 +1,6 @@
-import CmuxCloud
+import BreeCloud
 import Bonsplit
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 /// Agent callbacks name stable projections through the Cloud authority boundary.

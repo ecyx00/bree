@@ -1,5 +1,5 @@
 import AppKit
-import CmuxTerminal
+import BreeTerminal
 import Foundation
 
 extension TerminalPanel {
@@ -23,7 +23,7 @@ extension TerminalPanel {
             }.value
             guard let self else { return }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "terminal.pasteLastScreenshot panel=\(self.id.uuidString.prefix(5)) " +
                 "found=\(screenshot == nil ? 0 : 1)"
             )

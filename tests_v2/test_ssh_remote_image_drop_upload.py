@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression: image drops into cmux ssh terminals upload to the remote host."""
+"""Regression: image drops into bree ssh terminals upload to the remote host."""
 
 from __future__ import annotations
 
@@ -18,17 +18,17 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
-DEFAULT_CMD_TIMEOUT = float(os.environ.get("CMUX_TEST_CMD_TIMEOUT", "60"))
-SLOW_CMD_TIMEOUT = float(os.environ.get("CMUX_TEST_SLOW_CMD_TIMEOUT", "300"))
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
+DEFAULT_CMD_TIMEOUT = float(os.environ.get("BREE_TEST_CMD_TIMEOUT", "60"))
+SLOW_CMD_TIMEOUT = float(os.environ.get("BREE_TEST_SLOW_CMD_TIMEOUT", "300"))
 
 
 def _must(condition: bool, message: str) -> None:
     if not condition:
-        raise cmuxError(message)
+        raise breeError(message)
 
 
 def _run(
@@ -46,27 +46,27 @@ def _run(
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as exc:
-        raise cmuxError(f"Command timed out after {timeout}s ({' '.join(cmd)})") from exc
+        raise breeError(f"Command timed out after {timeout}s ({' '.join(cmd)})") from exc
     if check and proc.returncode != 0:
         merged = f"{proc.stdout}\n{proc.stderr}".strip()
-        raise cmuxError(f"Command failed ({' '.join(cmd)}): {merged}")
+        raise breeError(f"Command failed ({' '.join(cmd)}): {merged}")
     return proc
 
 
 def _find_cli_binary() -> str:
-    env_cli = os.environ.get("CMUXTERM_CLI")
+    env_cli = os.environ.get("BREE_CLI")
     if env_cli and os.path.isfile(env_cli) and os.access(env_cli, os.X_OK):
         return env_cli
 
-    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/cmux-tests-v2/Build/Products/Debug/cmux")
+    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/bree-tests-v2/Build/Products/Debug/bree")
     if os.path.isfile(fixed) and os.access(fixed, os.X_OK):
         return fixed
 
-    candidates = glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/cmux"), recursive=True)
-    candidates += glob.glob("/tmp/cmux-*/Build/Products/Debug/cmux")
+    candidates = glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/bree"), recursive=True)
+    candidates += glob.glob("/tmp/bree-*/Build/Products/Debug/bree")
     candidates = [path for path in candidates if os.path.isfile(path) and os.access(path, os.X_OK)]
     if not candidates:
-        raise cmuxError("Could not locate cmux CLI binary; set CMUXTERM_CLI")
+        raise breeError("Could not locate bree CLI binary; set BREE_CLI")
     candidates.sort(key=lambda path: os.path.getmtime(path), reverse=True)
     return candidates[0]
 
@@ -113,10 +113,10 @@ def _wait_for_ssh(host: str, host_port: int, key_path: Path, timeout: float = 20
         if probe.returncode == 0 and "ready" in probe.stdout:
             return
         time.sleep(0.4)
-    raise cmuxError("Timed out waiting for SSH server in docker fixture")
+    raise breeError("Timed out waiting for SSH server in docker fixture")
 
 
-def _wait_remote_ready(client: cmux, workspace_id: str, timeout: float = 45.0) -> None:
+def _wait_remote_ready(client: bree, workspace_id: str, timeout: float = 45.0) -> None:
     deadline = time.time() + timeout
     last_status = {}
     while time.time() < deadline:
@@ -126,7 +126,7 @@ def _wait_remote_ready(client: cmux, workspace_id: str, timeout: float = 45.0) -
         if str(remote.get("state") or "") == "connected" and str(daemon.get("state") or "") == "ready":
             return
         time.sleep(0.25)
-    raise cmuxError(f"Remote did not become ready for {workspace_id}: {last_status}")
+    raise breeError(f"Remote did not become ready for {workspace_id}: {last_status}")
 
 
 def _run_cli_json(
@@ -136,9 +136,9 @@ def _run_cli_json(
     timeout: float | None = DEFAULT_CMD_TIMEOUT,
 ) -> dict:
     env = dict(os.environ)
-    env.pop("CMUX_WORKSPACE_ID", None)
-    env.pop("CMUX_SURFACE_ID", None)
-    env.pop("CMUX_TAB_ID", None)
+    env.pop("BREE_WORKSPACE_ID", None)
+    env.pop("BREE_SURFACE_ID", None)
+    env.pop("BREE_TAB_ID", None)
 
     try:
         proc = subprocess.run(
@@ -150,16 +150,16 @@ def _run_cli_json(
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as exc:
-        raise cmuxError(f"cmux {' '.join(args)} timed out after {timeout}s") from exc
+        raise breeError(f"bree {' '.join(args)} timed out after {timeout}s") from exc
     if proc.returncode != 0:
-        raise cmuxError(f"cmux {' '.join(args)} failed: {(proc.stdout + proc.stderr).strip()}")
+        raise breeError(f"bree {' '.join(args)} failed: {(proc.stdout + proc.stderr).strip()}")
     try:
         return json.loads(proc.stdout or "{}")
     except json.JSONDecodeError as exc:
-        raise cmuxError(f"Invalid JSON output for {' '.join(args)}: {proc.stdout!r} ({exc})") from exc
+        raise breeError(f"Invalid JSON output for {' '.join(args)}: {proc.stdout!r} ({exc})") from exc
 
 
-def _resolve_workspace_id(client: cmux, payload: dict) -> str:
+def _resolve_workspace_id(client: bree, payload: dict) -> str:
     workspace_id = str(payload.get("workspace_id") or "")
     if workspace_id:
         return workspace_id
@@ -173,18 +173,18 @@ def _resolve_workspace_id(client: cmux, payload: dict) -> str:
                 if resolved:
                     return resolved
 
-    raise cmuxError(f"Unable to resolve workspace_id from payload: {payload}")
+    raise breeError(f"Unable to resolve workspace_id from payload: {payload}")
 
 
-def _focused_surface_id(client: cmux) -> str:
+def _focused_surface_id(client: bree) -> str:
     ident = client.identify()
     surface_id = str((ident.get("focused") or {}).get("surface_id") or "")
     _must(bool(surface_id), f"Missing focused surface in identify payload: {ident}")
     return surface_id
 
 
-def _wait_for_remote_drop_paths(client: cmux, surface_id: str, expected_count: int, timeout: float = 20.0) -> list[str]:
-    pattern = re.compile(r"/tmp/cmux-drop-[0-9a-f-]+\.png")
+def _wait_for_remote_drop_paths(client: bree, surface_id: str, expected_count: int, timeout: float = 20.0) -> list[str]:
+    pattern = re.compile(r"/tmp/bree-drop-[0-9a-f-]+\.png")
     deadline = time.time() + timeout
     last = ""
     while time.time() < deadline:
@@ -197,7 +197,7 @@ def _wait_for_remote_drop_paths(client: cmux, surface_id: str, expected_count: i
         if len(remote_paths) >= expected_count:
             return remote_paths[:expected_count]
         time.sleep(0.25)
-    raise cmuxError(
+    raise breeError(
         f"Timed out waiting for {expected_count} remote drop paths in terminal text: {last[-1000:]!r}"
     )
 
@@ -212,9 +212,9 @@ def main() -> int:
     fixture_dir = repo_root / "tests" / "fixtures" / "ssh-remote"
     _must(fixture_dir.is_dir(), f"Missing docker fixture directory: {fixture_dir}")
 
-    temp_dir = Path(tempfile.mkdtemp(prefix="cmux-ssh-image-drop-"))
-    image_tag = f"cmux-ssh-image-drop:{secrets.token_hex(4)}"
-    container_name = f"cmux-ssh-image-drop-{secrets.token_hex(4)}"
+    temp_dir = Path(tempfile.mkdtemp(prefix="bree-ssh-image-drop-"))
+    image_tag = f"bree-ssh-image-drop:{secrets.token_hex(4)}"
+    container_name = f"bree-ssh-image-drop-{secrets.token_hex(4)}"
     workspace_id = ""
 
     try:
@@ -236,7 +236,7 @@ def main() -> int:
         host = "root@127.0.0.1"
         _wait_for_ssh(host, host_ssh_port, key_path)
 
-        with cmux(SOCKET_PATH) as client:
+        with bree(SOCKET_PATH) as client:
             payload = _run_cli_json(
                 cli,
                 [

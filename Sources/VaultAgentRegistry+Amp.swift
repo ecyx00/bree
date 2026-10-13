@@ -1,15 +1,15 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Foundation
 
-extension CmuxVaultAgentRegistration {
-    /// Amp's built-in Vault registration backed by cmux's managed hook store.
-    static var builtInAmp: CmuxVaultAgentRegistration {
-        CmuxVaultAgentRegistration(
+extension BreeVaultAgentRegistration {
+    /// Amp's built-in Vault registration backed by bree's managed hook store.
+    static var builtInAmp: BreeVaultAgentRegistration {
+        BreeVaultAgentRegistration(
             id: "amp",
             name: "Amp",
             iconAssetName: "AgentIcons/Amp",
-            detect: CmuxVaultAgentDetectRule(processName: "amp"),
-            sessionIdSource: .cmuxHookStore(.amp),
+            detect: BreeVaultAgentDetectRule(processName: "amp"),
+            sessionIdSource: .breeHookStore(.amp),
             resumeCommand: RegisteredAgentResumeKind.amp.commandTemplate,
             cwd: .preserve
         )

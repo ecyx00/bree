@@ -1,8 +1,8 @@
 import AppKit
-import CmuxFoundation
-import CmuxSettings
-import CmuxSettingsUI
-import CmuxSyntaxHighlighting
+import BreeFoundation
+import BreeSettings
+import BreeSettingsUI
+import BreeSyntaxHighlighting
 import SwiftUI
 
 @MainActor
@@ -407,7 +407,7 @@ extension SavingTextView {
     ///
     /// File Preview opens files up to `FilePreviewPanel.maximumLoadedTextBytes` (16 MB), which can
     /// be hundreds of thousands of lines. Selection responsiveness on that content is the reason
-    /// this configuration is centralized; see `manaflow-ai/cmux#4576`.
+    /// this configuration is centralized; see `ecyx00/bree#4576`.
     static func makeFilePreviewTextView(
         wordWrapSettings: FilePreviewWordWrapSettings = FilePreviewWordWrapSettings(defaults: .standard)
     ) -> SavingTextView {
@@ -416,7 +416,7 @@ extension SavingTextView {
         // A default `NSTextView()` is TextKit 2: selection/hit-testing then runs through
         // `NSTextSelectionNavigation`, whose work is O(N) in line-fragment count, so clicking or
         // drag-selecting in a large document pegs the main thread inside AppKit's modal
-        // mouse-tracking loop and freezes the whole app (`manaflow-ai/cmux#4576`, `#5255`).
+        // mouse-tracking loop and freezes the whole app (`ecyx00/bree#4576`, `#5255`).
         //
         // Merely *reading* `.layoutManager` afterward — the previous mitigation — only drops the
         // view to TextKit 2 *compatibility* mode: `textLayoutManager` stays non-nil and the slow
@@ -785,8 +785,8 @@ struct FilePreviewFormattedJSONView: View {
         VStack(spacing: 0) {
             if formatted == nil {
                 Text(String(localized: "filePreview.formatted.invalidJSON", defaultValue: "Not valid JSON. Showing source."))
-                    .cmuxFont(.caption)
-                    .foregroundStyle(.red)
+                    .scaledFont(.caption)
+                    .foregroundStyle(BreeChromePalette.currentSnapshot.signalError)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
@@ -869,7 +869,7 @@ struct PanelReadOnlyEditButton: View {
     var body: some View {
         Button(action: action) {
             Text(String(localized: "panel.readOnly.edit", defaultValue: "Read-only · Edit"))
-                .cmuxFont(size: 11, weight: .medium)
+                .scaledFont(size: 11, weight: .medium)
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)

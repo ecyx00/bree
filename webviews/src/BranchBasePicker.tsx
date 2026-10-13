@@ -39,10 +39,10 @@ export function branchPickerStateKey(picker: BranchPickerPayload): string {
 // `refsURL`/`regenerateURLTemplate` as ABSOLUTE URLs with the HTTP origin
 // (`http://127.0.0.1:<port>/...`) that was live when the page was generated.
 // After session-restore/app-restart the page is served through the custom
-// scheme (`cmux-diff-viewer://<token>/...`) and the HTTP port changes, so the
+// scheme (`bree-diff-viewer://<token>/...`) and the HTTP port changes, so the
 // embedded absolute URL points at a dead origin. Rebasing to a root-relative
 // path makes it resolve correctly under BOTH origins: the HTTP server routes
-// `/__cmux_diff_viewer_*` specially regardless of the token path segment, and
+// `/__bree_diff_viewer_*` specially regardless of the token path segment, and
 // the custom-scheme handler intercepts the same path under the token host.
 //
 // Uses a string strip rather than `new URL(...)`: the regenerate template
@@ -199,7 +199,7 @@ export function BranchBasePicker({
           setLoadState("idle");
         })
         .catch((error) => {
-          console.warn("cmux diff branch picker refs load failed", error);
+          console.warn("bree diff branch picker refs load failed", error);
           setLoadState("error");
         });
     }
@@ -243,7 +243,7 @@ export function BranchBasePicker({
         }
         onNavigate(result.value.url);
       }).catch((error) => {
-        console.warn("cmux diff branch picker regeneration failed", error);
+        console.warn("bree diff branch picker regeneration failed", error);
         setGeneratingRef(null);
         setRegenerationFailed(true);
         setLoadState("idle");

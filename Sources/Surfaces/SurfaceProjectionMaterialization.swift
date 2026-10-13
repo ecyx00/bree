@@ -1,4 +1,4 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// One provider operation that is currently creating a projection for a resource.

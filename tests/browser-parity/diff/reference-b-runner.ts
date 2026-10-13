@@ -1,12 +1,12 @@
 // Reference B side of the differential harness. Started by run.mjs
 // under reference B's bundled node; drives the installed reference runtime through
-// the user's reference client (cmux-browser-cli/scripts/cua-reference-client.ts)
+// the user's reference client (bree-browser-cli/scripts/cua-reference-client.ts)
 // within these limits:
 //
 // - approval covers one temporary origin (ORIGINS.primary, 127.0.0.1) and the
 //   disposable parity-upload.txt; every other origin a case touches is denied
 //   by the client and the denial is recorded as the outcome;
-// - every tab lives in the "🧪 cmux parity" session group and is closed after
+// - every tab lives in the "🧪 bree parity" session group and is closed after
 //   each case and in `finally`;
 // - no raw CDP, no history, no live sites.
 import fs from "node:fs";
@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const { loadCases, dialectSource, expand, prelude } = await import(path.join(here, "lib.mjs"));
-const clientPath = path.join(process.env.CMUX_BROWSER_CLI ?? path.join(os.homedir(), "fun/cmux-browser-cli"), "scripts/cua-reference-client.ts");
+const clientPath = path.join(process.env.BREE_BROWSER_CLI ?? path.join(os.homedir(), "fun/bree-browser-cli"), "scripts/cua-reference-client.ts");
 const { CuaReferenceClient } = await import(clientPath);
 
 const [input, output] = process.argv.slice(2);
@@ -63,7 +63,7 @@ for (const mode of ["ax", "legacy"]) {
   try {
     await c.initialize();
     c.authorizeLocalFixture(origins.primary, upload);
-    await c.js('var rb=await cua.getBrowser({id:"chrome"}); await rb.nameSession("🧪 cmux parity");');
+    await c.js('var rb=await cua.getBrowser({id:"chrome"}); await rb.nameSession("🧪 bree parity");');
     await c.js(`var PARITY_UPLOAD=${JSON.stringify(upload)};`);
     for (const k of group) {
       const t0 = Date.now();
@@ -71,7 +71,7 @@ for (const mode of ["ax", "legacy"]) {
       try {
         // A js call that runs past the tool's limit resets the kernel; set
         // the session up again when that happened.
-        await c.js(`if (typeof rb === "undefined") { globalThis.rb = await cua.getBrowser({id:"chrome"}); await rb.nameSession("🧪 cmux parity"); globalThis.PARITY_UPLOAD = ${JSON.stringify(upload)}; }`);
+        await c.js(`if (typeof rb === "undefined") { globalThis.rb = await cua.getBrowser({id:"chrome"}); await rb.nameSession("🧪 bree parity"); globalThis.PARITY_UPLOAD = ${JSON.stringify(upload)}; }`);
         if (k.custom?.["reference-b"]) {
           r = { value: await k.custom["reference-b"]({ c, origins, upload, prelude: prelude(origins) }) };
         } else {

@@ -1,10 +1,10 @@
-// `cmux browser repl mcp`: an MCP client handshake against the built CLI.
+// `bree browser repl mcp`: an MCP client handshake against the built CLI.
 // The CLI talks to a fake control socket that answers `browser.repl.eval`
 // and `browser.repl.reset` the way the app does, so no app is needed; the
 // test checks the JSON-RPC exchange and the socket calls each tool makes.
 //
-//   PARITY_CMUX_CLI=<built cmux CLI> node --test tests/browser-parity/unit/mcp.test.mjs
-// Skipped without PARITY_CMUX_CLI.
+//   PARITY_BREE_CLI=<built bree CLI> node --test tests/browser-parity/unit/mcp.test.mjs
+// Skipped without PARITY_BREE_CLI.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -15,7 +15,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { makeTestDir, removeTestDir, removeTestDirIfEmpty } from "../lib/test-dirs.mjs";
 
-const CLI = process.env.PARITY_CMUX_CLI;
+const CLI = process.env.PARITY_BREE_CLI;
 const PNG = Buffer.from("89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489", "hex").toString("base64");
 
 function fakeSocket(file, calls) {
@@ -24,7 +24,7 @@ function fakeSocket(file, calls) {
     lines.on("line", (line) => {
       let req;
       try {
-        // A CLI run inside cmux prefixes the request with its capability token.
+        // A CLI run inside bree prefixes the request with its capability token.
         req = JSON.parse(line.slice(Math.max(0, line.indexOf("{"))));
       } catch {
         conn.write("OK\n");
@@ -36,7 +36,7 @@ function fakeSocket(file, calls) {
       if (req.method === "browser.repl.eval") {
         const code = String(p.code);
         let output = [{ level: "log", text: `ran: ${code}` }];
-        if (code.includes("cmux-mcp-image:")) output = [{ level: "log", text: `cmux-mcp-image:${PNG}` }];
+        if (code.includes("bree-mcp-image:")) output = [{ level: "log", text: `bree-mcp-image:${PNG}` }];
         result = { ok: !code.includes("throw"), output, duration_ms: 3 };
         if (code.includes("throw")) result.error = "Error: boom";
       } else if (req.method === "browser.repl.reset") {
@@ -48,13 +48,13 @@ function fakeSocket(file, calls) {
   return new Promise((resolve) => server.listen(file, () => resolve(server)));
 }
 
-test("repl mcp: handshake, tools/list and each tool over the REPL socket methods", { skip: !CLI && "set PARITY_CMUX_CLI" }, async () => {
-  const dir = makeTestDir("cmux-mcp-");
+test("repl mcp: handshake, tools/list and each tool over the REPL socket methods", { skip: !CLI && "set PARITY_BREE_CLI" }, async () => {
+  const dir = makeTestDir("bree-mcp-");
   const socket = path.join(dir, "s.sock");
   const calls = [];
   const server = await fakeSocket(socket, calls);
-  const env = { ...process.env, CMUX_SOCKET_PATH: socket, CMUX_SOCKET: socket, CMUX_CLI_SENTRY_DISABLED: "1" };
-  delete env.CMUX_WORKSPACE_ID;
+  const env = { ...process.env, BREE_SOCKET_PATH: socket, BREE_SOCKET: socket, BREE_CLI_SENTRY_DISABLED: "1" };
+  delete env.BREE_WORKSPACE_ID;
   const child = spawn(CLI, ["browser", "repl", "mcp", "--session", "t1"], { env, stdio: ["pipe", "pipe", "pipe"] });
   let stderr = "";
   child.stderr.on("data", (d) => (stderr += d));
@@ -89,7 +89,7 @@ test("repl mcp: handshake, tools/list and each tool over the REPL socket methods
     assert.equal(init.jsonrpc, "2.0");
     assert.equal(init.result.protocolVersion, "2025-06-18");
     assert.ok(init.result.capabilities.tools);
-    assert.equal(init.result.serverInfo.name, "cmux-browser-repl");
+    assert.equal(init.result.serverInfo.name, "bree-browser-repl");
     child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
     // An unknown protocol version gets the newest supported one.
     assert.equal((await request("initialize", { protocolVersion: "1999-01-01" })).result.protocolVersion, "2025-06-18");
@@ -123,7 +123,7 @@ test("repl mcp: handshake, tools/list and each tool over the REPL socket methods
     const evals = calls.filter((c) => c.method === "browser.repl.eval");
     assert.equal(evals.length, 5);
     assert.ok(evals.every((c) => c.params.session === "t1"), "every tool runs in the --session");
-    assert.equal(evals.find((c) => c.params.code.includes("cmux-mcp-image:")).params.max_output, 0, "a screenshot is not cut by the output cap");
+    assert.equal(evals.find((c) => c.params.code.includes("bree-mcp-image:")).params.max_output, 0, "a screenshot is not cut by the output cap");
     assert.deepEqual(calls.filter((c) => c.method === "browser.repl.reset").map((c) => c.params.session), ["t1"]);
     assert.deepEqual(nonJSON, [], "stdout carries only JSON-RPC");
   } finally {
@@ -166,13 +166,13 @@ function startServer(args, env) {
   return { child, request, stop };
 }
 
-test("repl mcp: without --session each server process gets its own session", { skip: !CLI && "set PARITY_CMUX_CLI" }, async () => {
-  const dir = makeTestDir("cmux-mcp-");
+test("repl mcp: without --session each server process gets its own session", { skip: !CLI && "set PARITY_BREE_CLI" }, async () => {
+  const dir = makeTestDir("bree-mcp-");
   const socket = path.join(dir, "s.sock");
   const calls = [];
   const server = await fakeSocket(socket, calls);
-  const env = { ...process.env, CMUX_SOCKET_PATH: socket, CMUX_SOCKET: socket, CMUX_CLI_SENTRY_DISABLED: "1" };
-  delete env.CMUX_WORKSPACE_ID;
+  const env = { ...process.env, BREE_SOCKET_PATH: socket, BREE_SOCKET: socket, BREE_CLI_SENTRY_DISABLED: "1" };
+  delete env.BREE_WORKSPACE_ID;
   const servers = [startServer([], env), startServer([], env)];
   try {
     const sessions = [];

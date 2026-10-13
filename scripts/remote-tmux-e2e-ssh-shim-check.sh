@@ -1,6 +1,6 @@
 #!/bin/bash
 # Exercises scripts/remote-tmux-e2e-ssh-shim.sh through every ssh invocation
-# shape cmux's remote-tmux transport makes (RemoteTmuxSSHTransport /
+# shape bree's remote-tmux transport makes (RemoteTmuxSSHTransport /
 # RemoteTmuxHost), against a throwaway local tmux server — so shim regressions
 # surface here in seconds instead of inside a full UI-test cycle.
 #
@@ -35,12 +35,12 @@ check() { # name expected_exit actual_exit extra_ok(0/1)
   else note "$1" "FAIL (exit want=$2 got=$3 extra=${4:-0})"; FAIL=$((FAIL + 1)); fi
 }
 
-# The exact remote-command string cmux builds (RemoteTmuxHost.tmuxRemoteCommand):
+# The exact remote-command string bree builds (RemoteTmuxHost.tmuxRemoteCommand):
 # every token single-quoted, resolver script as $0-style /bin/sh -c payload.
-RESOLVER='cmux_tmux=""; if command -v tmux >/dev/null 2>&1; then cmux_tmux="$(command -v tmux)"; else for cmux_dir in "$HOME/.local/bin" "$HOME/bin" /opt/homebrew/bin /usr/local/bin /opt/local/bin /usr/pkg/bin /snap/bin /usr/bin /bin; do if [ -x "$cmux_dir/tmux" ]; then cmux_tmux="$cmux_dir/tmux"; break; fi; done; if [ -z "$cmux_tmux" ] && [ -x /usr/libexec/path_helper ]; then eval "$(/usr/libexec/path_helper -s 2>/dev/null)"; if command -v tmux >/dev/null 2>&1; then cmux_tmux="$(command -v tmux)"; fi; fi; fi; if [ -n "$cmux_tmux" ]; then exec "$cmux_tmux" "$@"; fi; exec tmux "$@"'
+RESOLVER='bree_tmux=""; if command -v tmux >/dev/null 2>&1; then bree_tmux="$(command -v tmux)"; else for bree_dir in "$HOME/.local/bin" "$HOME/bin" /opt/homebrew/bin /usr/local/bin /opt/local/bin /usr/pkg/bin /snap/bin /usr/bin /bin; do if [ -x "$bree_dir/tmux" ]; then bree_tmux="$bree_dir/tmux"; break; fi; done; if [ -z "$bree_tmux" ] && [ -x /usr/libexec/path_helper ]; then eval "$(/usr/libexec/path_helper -s 2>/dev/null)"; if command -v tmux >/dev/null 2>&1; then bree_tmux="$(command -v tmux)"; fi; fi; fi; if [ -n "$bree_tmux" ]; then exec "$bree_tmux" "$@"; fi; exec tmux "$@"'
 sq() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
 tmux_remote() { # args... -> the single remote-command string
-  local out; out="$(sq /bin/sh) $(sq -c) $(sq "$RESOLVER") $(sq cmux-remote-tmux)"
+  local out; out="$(sq /bin/sh) $(sq -c) $(sq "$RESOLVER") $(sq bree-remote-tmux)"
   for a in "$@"; do out="$out $(sq "$a")"; done
   printf '%s' "$out"
 }
@@ -74,7 +74,7 @@ check "6  display-message -p" 0 $?
 
 # 7. refresh-client -B probe MUST fail with classifiable stderr ("no current
 #    client") on stderr, nothing on stdout — pty would merge/blank these.
-OUT="$("$SHIM" "${CTL[@]}" -- fakehost "$(tmux_remote refresh-client -B 'cmux_probe::#{version}')" </dev/null 2>"$ERRF")"
+OUT="$("$SHIM" "${CTL[@]}" -- fakehost "$(tmux_remote refresh-client -B 'bree_probe::#{version}')" </dev/null 2>"$ERRF")"
 RC=$?; EXTRA=1
 [ "$RC" != 0 ] && grep -q "current client" "$ERRF" && [ -z "$OUT" ] && EXTRA=0
 check "7  refresh-client -B fails w/ stderr text" 1 "$([ "$RC" != 0 ] && echo 1 || echo 0)" "$EXTRA"

@@ -113,7 +113,7 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(a.check(json.loads(completed.stdout), "tests")["status"], "failed")
 
     def test_rejects_missing_or_unsupported_schema(self):
-        for version in (None, "cmux-verification/v2", 1):
+        for version in (None, "bree-verification/v2", 1):
             value = a.envelope()
             if version is None:
                 del value["schema_version"]

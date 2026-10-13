@@ -1,6 +1,6 @@
-# cmux CLI Contract
+# bree CLI Contract
 
-This document is the compatibility contract for migrating `CLI/cmux.swift` to
+This document is the compatibility contract for migrating `CLI/bree.swift` to
 Swift ArgumentParser. The migration should preserve command names, aliases,
 global flags, exit behavior, socket routing, and no-socket help behavior unless
 a PR explicitly calls out an intentional contract change.
@@ -12,9 +12,9 @@ localized.
 
 ## Migration Rules
 
-- Keep `cmux --help`, `cmux -h`, `cmux --version`, and `cmux -v` working without
-  connecting to the cmux socket.
-- Keep documented `cmux <command> --help` probes working without a socket where
+- Keep `bree --help`, `bree -h`, `bree --version`, and `bree -v` working without
+  connecting to the bree socket.
+- Keep documented `bree <command> --help` probes working without a socket where
   they already do.
 - Keep `--socket`, `--password`, and `--window` as global options before the
   command. Keep presentation options `--json` and `--id-format` accepted either
@@ -29,19 +29,19 @@ localized.
 
 | Form | Contract |
 | --- | --- |
-| `cmux <path>` | Open a directory or file parent in cmux through the app's file-open path, without requiring control-socket access. Relative paths resolve from the current working directory. |
-| `cmux [global-options] <command> [options]` | Run a named command. Presentation options may appear before or after the command. |
-| `cmux --help`, `cmux -h` | Print top-level usage without a socket. |
-| `cmux help` | Print top-level usage without a socket. Commands are listed once each under task groups: Start & Resume, Agents, Navigate & Arrange, Inspect, Customize, Automation, Browser, Remote, Diagnostics / Advanced. |
-| `cmux help <topic>` | Print one task group without a socket. Topics: `start`, `agents`, `navigate`, `inspect`, `customize`, `automation`, `browser`, `remote`, `diagnostics`. An unknown topic, or more than one argument, prints top-level usage. |
-| `cmux --version`, `cmux -v`, `cmux version` | Print version summary without a socket. |
+| `bree <path>` | Open a directory or file parent in bree through the app's file-open path, without requiring control-socket access. Relative paths resolve from the current working directory. |
+| `bree [global-options] <command> [options]` | Run a named command. Presentation options may appear before or after the command. |
+| `bree --help`, `bree -h` | Print top-level usage without a socket. |
+| `bree help` | Print top-level usage without a socket. Commands are listed once each under task groups: Start & Resume, Agents, Navigate & Arrange, Inspect, Customize, Automation, Browser, Remote, Diagnostics / Advanced. |
+| `bree help <topic>` | Print one task group without a socket. Topics: `start`, `agents`, `navigate`, `inspect`, `customize`, `automation`, `browser`, `remote`, `diagnostics`. An unknown topic, or more than one argument, prints top-level usage. |
+| `bree --version`, `bree -v`, `bree version` | Print version summary without a socket. |
 
 Global options:
 
 | Option | Contract |
 | --- | --- |
 | `--socket <path>` | Override the socket path for this invocation. |
-| `--password <value>` | Use an explicit socket password. Takes precedence over `CMUX_SOCKET_PASSWORD`. |
+| `--password <value>` | Use an explicit socket password. Takes precedence over `BREE_SOCKET_PASSWORD`. |
 | `--json` | Prefer machine-readable JSON output for commands that support it. |
 | `--id-format <refs\|uuids\|both>` | Select handle format in JSON and supported text output. |
 | `--window <id\|ref\|index>` | Route the command through a specific window when supported. |
@@ -50,56 +50,56 @@ Environment:
 
 | Variable | Contract |
 | --- | --- |
-| `CMUX_SOCKET_PATH` | Canonical socket path override. |
-| `CMUX_SOCKET` | Deprecated compatibility alias for `CMUX_SOCKET_PATH`. New scripts should use `CMUX_SOCKET_PATH`; if both variables are set and differ, the CLI fails before socket commands. |
-| `CMUX_SOCKET_PASSWORD` | Socket password fallback when `--password` is absent. |
-| `CMUX_WORKSPACE_ID` | Default workspace context inside cmux terminals. |
-| `CMUX_SURFACE_ID` | Default surface context inside cmux terminals. |
-| `CMUX_TAB_ID` | Default tab context for tab commands. |
+| `BREE_SOCKET_PATH` | Canonical socket path override. |
+| `BREE_SOCKET` | Deprecated compatibility alias for `BREE_SOCKET_PATH`. New scripts should use `BREE_SOCKET_PATH`; if both variables are set and differ, the CLI fails before socket commands. |
+| `BREE_SOCKET_PASSWORD` | Socket password fallback when `--password` is absent. |
+| `BREE_WORKSPACE_ID` | Default workspace context inside bree terminals. |
+| `BREE_SURFACE_ID` | Default surface context inside bree terminals. |
+| `BREE_TAB_ID` | Default tab context for tab commands. |
 
 ## Top-Level Commands
 
 | Command | Contract |
 | --- | --- |
 | `welcome` | Print the welcome screen. |
-| `sudo` | Run one command through the cmux privileged helper, prompting through the app rather than a terminal. Exits with the command's own exit code. |
+| `sudo` | Run one command through the bree privileged helper, prompting through the app rather than a terminal. Exits with the command's own exit code. |
 | `help` | Print top-level usage, or one task-focused group of commands with `help <topic>`. Works without a socket. |
 | `version` | Print the running CLI's version, build, and commit. Works without the app, a socket, or sign-in. |
-| `guide`, `--skill` | Print the same short Markdown guide to workspace, terminal, browser, and computer-use methods. Works without the app, a socket, network access, or sign-in. `--json` returns `{topic: "cmux", format: "markdown", content: "..."}`. |
+| `guide`, `--skill` | Print the same short Markdown guide to workspace, terminal, browser, and computer-use methods. Works without the app, a socket, network access, or sign-in. `--json` returns `{topic: "bree", format: "markdown", content: "..."}`. |
 | `docs` | Print canonical docs URLs, raw GitHub resources, and useful commands for a topic. |
-| `settings` | Open Settings, print cmux.json paths, or print settings docs. |
-| `config` | Validate cmux.json syntax, print config references, or reload config. |
+| `settings` | Open Settings, print bree.json paths, or print settings docs. |
+| `config` | Validate bree.json syntax, print config references, or reload config. |
 | `shortcuts` | Open Settings to Keyboard Shortcuts. |
-| `disable-browser` | Disable cmux browser creation and link interception until re-enabled. |
-| `enable-browser` | Re-enable cmux browser creation and link interception. |
-| `browser-status` | Print whether cmux browser creation and link interception are enabled. |
-| `socket-status` | Print effective automation socket mode and managed source without connecting to the socket; `--json` also reports configured mode, forced-value status, and socket-path observation (`live_enforcement` is intentionally `not_observed`). Works when the listener is off or cmux is not running. |
+| `disable-browser` | Disable bree browser creation and link interception until re-enabled. |
+| `enable-browser` | Re-enable bree browser creation and link interception. |
+| `browser-status` | Print whether bree browser creation and link interception are enabled. |
+| `socket-status` | Print effective automation socket mode and managed source without connecting to the socket; `--json` also reports configured mode, forced-value status, and socket-path observation (`live_enforcement` is intentionally `not_observed`). Works when the listener is off or bree is not running. |
 | `agent-hibernation` | Enable or disable routine Agent Hibernation. |
 | `restore` | Replace the CLI with a process restored from structured surface state. |
 | `fork` | Replace the CLI with a provider fork process restored from structured surface state. |
-| `restore-session` | Restore the previously saved cmux session; `--from <channel\|path>` reopens another install's saved session (full trust) or an exported file (untrusted: no automatic resume of custom commands, SSH, or environment from the file) as additional windows, and `--export <path> [--force]` writes this install's saved session to a file. Both require cmux to be running. |
-| `open` | Open files, directories, or URLs in cmux. Files and web pages take focus only when run interactively; run by an agent or script they open in the background. `--focus <true\|false>` and `--no-focus` override. |
+| `restore-session` | Restore the previously saved bree session; `--from <channel\|path>` reopens another install's saved session (full trust) or an exported file (untrusted: no automatic resume of custom commands, SSH, or environment from the file) as additional windows, and `--export <path> [--force]` writes this install's saved session to a file. Both require bree to be running. |
+| `open` | Open files, directories, or URLs in bree. Files and web pages take focus only when run interactively; run by an agent or script they open in the background. `--focus <true\|false>` and `--no-focus` override. |
 | `feed` | Open the keyboard-first Feed TUI or manage persisted Feed workstream history. |
 | `themes` | List, set, clear, or interactively pick Ghostty themes. |
-| `import` | Import font, colors, cursor, Option-as-Alt, padding, opacity/blur and scrollback from iTerm2, Terminal, Alacritty, Kitty, WezTerm or a Warp theme into cmux's own Ghostty config and a generated theme. With no terminal, lists detected terminals (and prompts in a TTY). `--dry-run` prints the diff without writing; writing asks for confirmation in a TTY and otherwise (scripts, pipes, `--json`) requires `--yes`; `--path <file>` overrides detection; `--json` prints the plan. Never writes `~/.config/ghostty/config` or the source terminal's files. Works without a running app. |
-| `claude-teams` | Launch Claude Code with cmux/tmux-style agent team integration. |
-| `codex-teams` | Launch Codex with cmux-managed subagent panes. |
+| `import` | Import font, colors, cursor, Option-as-Alt, padding, opacity/blur and scrollback from iTerm2, Terminal, Alacritty, Kitty, WezTerm or a Warp theme into bree's own Ghostty config and a generated theme. With no terminal, lists detected terminals (and prompts in a TTY). `--dry-run` prints the diff without writing; writing asks for confirmation in a TTY and otherwise (scripts, pipes, `--json`) requires `--yes`; `--path <file>` overrides detection; `--json` prints the plan. Never writes `~/.config/ghostty/config` or the source terminal's files. Works without a running app. |
+| `claude-teams` | Launch Claude Code with bree/tmux-style agent team integration. |
+| `codex-teams` | Launch Codex with bree-managed subagent panes. |
 | `omo` | Launch OpenCode with oh-my-openagent integration. |
-| `omx` | Launch Oh My Codex with cmux pane integration. |
-| `omc` | Launch Oh My Claude Code with cmux pane integration. |
-| `hooks` | Agent hook integrations under one namespace: `setup` and `uninstall` (both take an optional agent name), `help`, the per-agent `install` and `uninstall` actions (`cmux hooks codex install`), and the per-agent hook actions the installed hooks call back into. |
-| `setup-hooks`, `uninstall-hooks` | Compatibility aliases for `hooks setup` and `hooks uninstall`, kept for hook setup docs and scripts written before `cmux hooks`. |
+| `omx` | Launch Oh My Codex with bree pane integration. |
+| `omc` | Launch Oh My Claude Code with bree pane integration. |
+| `hooks` | Agent hook integrations under one namespace: `setup` and `uninstall` (both take an optional agent name), `help`, the per-agent `install` and `uninstall` actions (`bree hooks codex install`), and the per-agent hook actions the installed hooks call back into. |
+| `setup-hooks`, `uninstall-hooks` | Compatibility aliases for `hooks setup` and `hooks uninstall`, kept for hook setup docs and scripts written before `bree hooks`. |
 | `codex` | Compatibility alias for installing or uninstalling Codex hooks. |
 | `ping` | Check socket connectivity. |
 | `capabilities` | Print server capabilities as JSON. |
-| `events` | Stream reconnectable cmux events as newline-delimited JSON. |
-| `automation` | Manage config-backed event rules: `list`, `show <id>`, dry-run `test <id> --event <json>`, `enable`, `disable`, `logs`, and `reload`. Rules live in `~/.cmuxterm/automations.json`; actions are dispatched by the running app. |
-| `glaeda` | Emit one caller-neutral `glaeda-external-execution-request/v1` and validate/correlate one bounded Glaeda receipt. `request` and `observe` are local data operations and do not require a running cmux socket. They carry exact Git source plus caller correlation only; CMUX workspace/UI and provider placement stay outside the request. |
+| `events` | Stream reconnectable bree events as newline-delimited JSON. |
+| `automation` | Manage config-backed event rules: `list`, `show <id>`, dry-run `test <id> --event <json>`, `enable`, `disable`, `logs`, and `reload`. Rules live in `~/.bree/automations.json`; actions are dispatched by the running app. |
+| `glaeda` | Emit one caller-neutral `glaeda-external-execution-request/v1` and validate/correlate one bounded Glaeda receipt. `request` and `observe` are local data operations and do not require a running bree socket. They carry exact Git source plus caller correlation only; BREE workspace/UI and provider placement stay outside the request. |
 | `current` | Print bounded current-work facts (`--limit <1...200>`, `--json`). Read-only: it does not refresh machines, read transcripts, or change any work item. See [Glaeda execution exchange and current-work ownership](#glaeda-execution-exchange-and-current-work-ownership). |
-| `sessions [list]` | List saved agent session records without requiring a running cmux socket. Filters: `--agent <name>`, `--session <id>`, `--workspace <id>`, `--surface <id>`, `--cwd <text>`. Overrides: `--state-dir <path>`, `--codex-home <path>`. Text output defaults to 100 results; `--limit <n>` takes a positive integer and `--all` removes the limit. Supports `--json`. Records also report metadata for matching cmux-owned scratch roots (`scratch_owned`, byte count, file count, and root path); unmarked directories are never scanned. |
+| `sessions [list]` | List saved agent session records without requiring a running bree socket. Filters: `--agent <name>`, `--session <id>`, `--workspace <id>`, `--surface <id>`, `--cwd <text>`. Overrides: `--state-dir <path>`, `--codex-home <path>`. Text output defaults to 100 results; `--limit <n>` takes a positive integer and `--all` removes the limit. Supports `--json`. Records also report metadata for matching bree-owned scratch roots (`scratch_owned`, byte count, file count, and root path); unmarked directories are never scanned. |
 | `session-debug` | Alias for `sessions debug`, kept for older debug scripts. Works without a socket. |
-| `session restore [--list] [--session <id>]...` | Recover stopped Claude sessions from the agent journal. `--list` inspects candidates; repeatable `--session` selects exact ids. Without ids, restore acts only after an unexpected quit. Requires a running cmux, but help works without a socket. Each restored session opens in its own background workspace and resumes through its recorded launcher. |
-| `session move <session-id> --to <ssh-destination\|local>` | Move a stopped Claude Code session between this Mac and an SSH host and resume it there. Refuses while a Claude process for the session runs on either side. Carries the cwd's git checkout (a snapshot commit of the working tree on top of HEAD at `refs/agent-move/<id>`, HEAD on the same branch when it is safe, plus modified, deleted and untracked non-ignored files; adds a worktree when the repository exists on the destination but the path does not; refuses when the destination has its own uncommitted changes or its branch has commits HEAD lacks), then the transcript, its session directory, file history, and the project memory directory (merged both ways, newest wins, nothing deleted). When the destination home is not the same directory at the same path, paths under the home are mapped and the project is re-slugged. Opens a `cmux ssh` workspace (or a local workspace for `--to local`) that resumes the session with its recorded launcher (on a host, cmux-owned launchers such as `claude-teams` fall back to the plain agent command), and clears the old local surface's resume binding. `--from` defaults to where the last move put the session (`~/.cmuxterm/agent-moves/<id>.json`). Flags: `--name`, `--no-code`, `--port`, `--identity`, `--ssh-option`, `--no-focus`. |
+| `session restore [--list] [--session <id>]...` | Recover stopped Claude sessions from the agent journal. `--list` inspects candidates; repeatable `--session` selects exact ids. Without ids, restore acts only after an unexpected quit. Requires a running bree, but help works without a socket. Each restored session opens in its own background workspace and resumes through its recorded launcher. |
+| `session move <session-id> --to <ssh-destination\|local>` | Move a stopped Claude Code session between this Mac and an SSH host and resume it there. Refuses while a Claude process for the session runs on either side. Carries the cwd's git checkout (a snapshot commit of the working tree on top of HEAD at `refs/agent-move/<id>`, HEAD on the same branch when it is safe, plus modified, deleted and untracked non-ignored files; adds a worktree when the repository exists on the destination but the path does not; refuses when the destination has its own uncommitted changes or its branch has commits HEAD lacks), then the transcript, its session directory, file history, and the project memory directory (merged both ways, newest wins, nothing deleted). When the destination home is not the same directory at the same path, paths under the home are mapped and the project is re-slugged. Opens a `bree ssh` workspace (or a local workspace for `--to local`) that resumes the session with its recorded launcher (on a host, bree-owned launchers such as `claude-teams` fall back to the plain agent command), and clears the old local surface's resume binding. `--from` defaults to where the last move put the session (`~/.bree/agent-moves/<id>.json`). Flags: `--name`, `--no-code`, `--port`, `--identity`, `--ssh-option`, `--no-focus`. |
 | `auth`, `login`, `logout` | `auth <status\|login\|logout\|team>`, with `status` the default; `team` carries `list`, `use`, and `create`. Sign-in and sign-out run through the app, and `login` waits for the browser round trip. `login` and `logout` are top-level aliases for `auth login` and `auth logout`. |
 | `billing` | `billing checkout --plan <go\|pro\|max> [--no-open]` prints the plan's checkout URL and opens it in the browser. `--no-open` and `--json` print without opening. |
 | `ai-accounts` | Manage the team's uploaded AI provider accounts. `list` (alias `ls`) takes `--team <id>`; `upload <claude\|codex\|anthropic-key\|openai-key>` takes `--label`, `--team`, `--validate`, and, for the key providers only, `--key <value>` (otherwise `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is read from the invoking shell); `remove <id>` needs the account id. Any other provider name is rejected. |
@@ -115,7 +115,7 @@ Environment:
 | `resize-window` | Resize a window by handle, keeping its top-left corner fixed; prints the resulting frame size. With no `--width`/`--height`, reads the size without changing it. Does not steal focus. |
 | `window displays` | List connected displays (name, index, main flag). |
 | `window display <name\|index>` | Move the instance's window(s) onto a display by name (exact, substring) or index, preserving size. Does not steal focus. With `--window`, targets that window; otherwise moves all main windows. `--list` aliases `window displays`. |
-| `window default-display [<name>\|--clear]` | Set, show (no arg), or clear (`--clear`) the shared, cross-tag default display that DEBUG dev builds open new windows on, stored in `~/.config/cmux/cmux.json` under `app.devWindowDisplay`. No running app required; applied at window creation. Also settable in Debug > Debug Windows > Dev Window Display. |
+| `window default-display [<name>\|--clear]` | Set, show (no arg), or clear (`--clear`) the shared, cross-tag default display that DEBUG dev builds open new windows on, stored in `~/.config/bree/bree.json` under `app.devWindowDisplay`. No running app required; applied at window creation. Also settable in Debug > Debug Windows > Dev Window Display. |
 | `move-workspace-to-window` | Move a workspace into a target window. |
 | `reorder-workspace` | Reorder a workspace inside a window. |
 | `reorder-workspaces` | Atomically reorder workspaces inside pinned and unpinned groups. |
@@ -124,7 +124,7 @@ Environment:
 | `workspace-group` | Sidebar workspace group namespace: `list`, `create`, `rename`, `ungroup`, `delete`, `collapse`, `expand`, `pin`, `unpin`, `add`, `remove`, `set-anchor`, `set-color`, `set-icon`, `move`, `focus`, `new-workspace`. `delete` only closes the grouped workspaces when `--close-workspaces` is passed; without it, it ungroups them exactly like `ungroup`. Both accept `--remove-generated-anchor`. |
 | `todo` | Per-workspace checklist namespace: `add "text" [--state <pending\|in-progress\|completed>] [--origin <user\|agent>]`, `list`, `check <index\|id>`, `uncheck <index\|id>`, `start <index\|id>` (in-progress), `edit <index\|id> "text"`, `rm <index\|id>`, `clear`, `set ['<json>']` (atomic replace from a JSON item array, inline or piped on stdin), `open` (open or focus the workspace's todo pane). Targets the caller's workspace by default with `--workspace <id\|ref\|index>` override; `<index>` is the 1-based number printed by `todo list`. Items cap at 50 per workspace. See [Workspace todos](#workspace-todos). |
 | `comments` | Diff review comments namespace: `list` (alias `ls`) `[--repo <path>] [--all] [--json]` — read-only listing of review comments saved from the diff viewer for one git repository (default: the repository containing the current directory). Pending comments only by default; `--all` includes comments already delivered to an agent through a TextBox submission. Backed by the socket v2 method `comments.list`. |
-| `review` | Read local adversarial-review receipts from the repository Git metadata without connecting to the cmux socket. `list` enumerates runs newest first; `show [<id\|latest>]` prints one receipt; `findings [<id\|latest>] [--all]` prints surfaced findings and hides refuted/suppressed findings by default. All subcommands accept `--repo <path>` and `--json`. |
+| `review` | Read local adversarial-review receipts from the repository Git metadata without connecting to the bree socket. `list` enumerates runs newest first; `show [<id\|latest>]` prints one receipt; `findings [<id\|latest>] [--all]` prints surfaced findings and hides refuted/suppressed findings by default. All subcommands accept `--repo <path>` and `--json`. |
 | `vault` | Vault session-index namespace: `sessions [--agent <id>] [--folder <path>] [--limit <n>]` lists indexed agent sessions newest first; `search <query>` searches them with `agent:`/`repo:`/`ws:`/`before:`/`after:` operators. Backed by the socket v2 methods `vault.sessions` and `vault.search`; all support `--json`. |
 | `recover` | `recover [--query <text>] [--session <id>] [--limit <n>] [--focus]` discovers local Claude recovery records through `sr recover`; an exact `--session` creates a new workspace running `sr codex` with bounded continuation context. `--json` lists records without launching. |
 | `move-tab-to-new-workspace`, `detach-tab` | Move a tab or surface into a newly created workspace. `detach-tab` is an alias. |
@@ -135,9 +135,9 @@ Environment:
 | `mosh` | Open an SSH-backed workspace that uses Mosh as the interactive transport, while SSH stays the management lane. Takes the same arguments as `ssh`. |
 | `mosh-tmux` | Open a Mosh-backed workspace whose terminal creates or attaches to one named remote tmux session (`--session <name>`, default `main`), surviving workspace reconnect and session restore. Every other workspace and SSH bootstrap flag matches `mosh`; without Mosh on the host, the same tmux profile runs over SSH. |
 | `ssh-tmux` | Mirror a remote host's tmux sessions into the current window over SSH tmux control mode (`tmux -CC`): each session becomes a workspace, each window a tab, each pane a split. `ssh-tmux <destination> [--port <n>] [--identity <path>] [--name <title>] [--no-focus]`. Unlike `mosh-tmux`, which attaches one terminal to one session, this mirrors the whole server. |
-| `local-tmux` | Opt in to a user-owned local tmux server. `start`, `attach`, `list`, `status`, `detach`, `close`, and `cleanup` preserve and manage named sessions independently of the cmux GUI; `cleanup` previews stale records unless `--prune` is supplied. `list`, `status`, `detach`, `close`, `cleanup`, and `attach --headless` work without a running cmux control socket. This preserves live processes across cmux lifecycle events, not a machine shutdown or reboot; use a remote tmux owner for continuity while the Mac is offline. See [`docs/local-tmux.md`](local-tmux.md). |
+| `local-tmux` | Opt in to a user-owned local tmux server. `start`, `attach`, `list`, `status`, `detach`, `close`, and `cleanup` preserve and manage named sessions independently of the bree GUI; `cleanup` previews stale records unless `--prune` is supplied. `list`, `status`, `detach`, `close`, `cleanup`, and `attach --headless` work without a running bree control socket. This preserves live processes across bree lifecycle events, not a machine shutdown or reboot; use a remote tmux owner for continuity while the Mac is offline. See [`docs/local-tmux.md`](local-tmux.md). |
 | `tmux attach` | Compatibility alias for `local-tmux attach`. |
-| `local-zellij` | Opt in to zellij sessions in a private socket directory. `start`, `attach`, `list`, `status`, and `close` manage named sessions independently of the cmux GUI; clients attach with `--on-force-close detach`, so closing a surface detaches instead of ending the session. `list`, `status`, `close`, `start --detached`, and `attach --headless` work without a running cmux control socket. See [`docs/local-zellij.md`](local-zellij.md). |
+| `local-zellij` | Opt in to zellij sessions in a private socket directory. `start`, `attach`, `list`, `status`, and `close` manage named sessions independently of the bree GUI; clients attach with `--on-force-close detach`, so closing a surface detaches instead of ending the session. `list`, `status`, `close`, `start --detached`, and `attach --headless` work without a running bree control socket. See [`docs/local-zellij.md`](local-zellij.md). |
 | `remote-daemon-status` | Print bundled remote daemon version, asset, checksum, and cache status. |
 | `ssh-session-list` | List persisted SSH PTY sessions for one remote workspace or all remote workspaces. Supports `--json`. |
 | `ssh-session-attach` | Create a local terminal surface that reattaches to an existing persisted SSH PTY session. |
@@ -146,7 +146,7 @@ Environment:
 | `list-panes` | List panes in a workspace. |
 | `list-pane-surfaces` | List surfaces in a pane. |
 | `tree` | Print a window, workspace, pane, and surface tree. |
-| `top` | Print process/resource usage for cmux windows, workspaces, panes, and surfaces. |
+| `top` | Print process/resource usage for bree windows, workspaces, panes, and surfaces. |
 | `memory` | Print the app's own memory use separately from the recursive RSS of terminal child processes, so a heavy child process does not read as an app leak. |
 | `focus-pane` | Focus a pane. |
 | `new-pane` | Create a pane with terminal or browser content. `--command <text>` is accepted for terminal panes only; see [Initial terminal command](#initial-terminal-command). |
@@ -160,7 +160,7 @@ Environment:
 | `drag-surface-to-split` | Move a surface into a split direction. |
 | `refresh-surfaces` | Ask the app to refresh terminal surfaces. |
 | `surface-resume` | Read or change a surface's agent resume binding: `show` (the default, alias `get`), `set`, `clear`. `set` requires the command to run, as `--shell <command>` or `-- <argv...>`; a bare word after `--shell` is rejected rather than appended. Also spelled `surface resume`. |
-| `reload-config` | Ask cmux to reload configuration. |
+| `reload-config` | Ask bree to reload configuration. |
 | `surface-health` | Print terminal surface health information. |
 | `debug-terminals` | Print debug terminal state. |
 | `trigger-flash` | Trigger a visual flash on a workspace or surface. |
@@ -172,9 +172,9 @@ Environment:
 | `current-workspace` | Print current workspace information. |
 | `read-selection` | Read the active selection from a terminal, file preview, Markdown, or browser surface. Plain output includes available source context; `--json` returns the complete socket response. |
 | `read-screen` | Read terminal text from a surface. `--selection` is a text-only compatibility alias for `read-selection`. |
-| `record` | Record a cmux window or a region of one to an mp4 or gif (`window.record.*`). `start` returns a recording id and the output path, `stop` closes the clip, `status` reports progress, `note` adds a caption drawn into later frames, `list` shows the current and recent recordings. One recording at a time; a recording stops itself at `--max-seconds`. The clip appears at its path when the recording ends, so an existing file there is replaced only once there is a finished clip to replace it with, and a recording that never closes leaves the path alone. Local socket only: `window.record.*` is not on the `cmux ssh` relay allowlist. |
-| `shot`, `screenshot` | Screenshot a cmux window or a region of one to a png or a jpeg (`window.screenshot`). Prints the pixel size, the byte count and the output path. `--region` takes the same four window-point numbers as `cmux record --region`, `--caption` draws a caption into the image, and `--quality` applies to jpeg only. Only cmux's own windows are captured, so no Screen Recording permission is involved and this works in a Release build and inside CI. The image is encoded beside the output path and moved into place, so an existing file there is replaced only once there is a complete image to replace it with. Local socket only: `window.screenshot` is not on the `cmux ssh` relay allowlist. |
-| `send` | Send text to a terminal surface as keystrokes (`surface.send_text`). `--paste`, before the text, sends it unchanged through the Cmd+V paste path (`terminal.paste`) instead, like `cmux paste`. Without `--paste`, large multi-line text prints a hint on stderr recommending it. Refuses to type over an agent prompt draft or into an open dialog unless `--force` comes before the text; see [Draft guard](#draft-guard). |
+| `record` | Record a bree window or a region of one to an mp4 or gif (`window.record.*`). `start` returns a recording id and the output path, `stop` closes the clip, `status` reports progress, `note` adds a caption drawn into later frames, `list` shows the current and recent recordings. One recording at a time; a recording stops itself at `--max-seconds`. The clip appears at its path when the recording ends, so an existing file there is replaced only once there is a finished clip to replace it with, and a recording that never closes leaves the path alone. Local socket only: `window.record.*` is not on the `bree ssh` relay allowlist. |
+| `shot`, `screenshot` | Screenshot a bree window or a region of one to a png or a jpeg (`window.screenshot`). Prints the pixel size, the byte count and the output path. `--region` takes the same four window-point numbers as `bree record --region`, `--caption` draws a caption into the image, and `--quality` applies to jpeg only. Only bree's own windows are captured, so no Screen Recording permission is involved and this works in a Release build and inside CI. The image is encoded beside the output path and moved into place, so an existing file there is replaced only once there is a complete image to replace it with. Local socket only: `window.screenshot` is not on the `bree ssh` relay allowlist. |
+| `send` | Send text to a terminal surface as keystrokes (`surface.send_text`). `--paste`, before the text, sends it unchanged through the Cmd+V paste path (`terminal.paste`) instead, like `bree paste`. Without `--paste`, large multi-line text prints a hint on stderr recommending it. Refuses to type over an agent prompt draft or into an open dialog unless `--force` comes before the text; see [Draft guard](#draft-guard). |
 | `send-key` | Send one key to a terminal surface. Refuses to send into an open agent dialog unless `--force`. |
 | `agent message` | Send a message to the agent in another workspace or surface (`agent.message.send`). Delivered through the recipient's agent hooks, never as keystrokes. `--reply-to <id>` answers a received message; `-` reads the text from stdin. |
 | `agent inbox` | List agent messages newest first (`agent.message.list`); `--mark-read` marks the listed messages read. |
@@ -204,8 +204,8 @@ Environment:
 | `list-log` | List sidebar log entries. |
 | `sidebar-state` | Dump sidebar metadata state. |
 | `claude-hook` | Compatibility alias for Claude Code hook events from stdin JSON. |
-| `codex-hook` | Compatibility alias for Codex hook events from stdin JSON, kept for hooks installed before `cmux hooks`. Outside a cmux terminal, with no `CMUX_SURFACE_ID`/`CMUX_WORKSPACE_ID` and no `--surface`/`--workspace`, it prints `{}` and exits so an old installed hook cannot fail a shell. Hidden from help. |
-| `feed-hook` | Compatibility alias for Feed hook events from stdin JSON, kept for hooks installed before `cmux hooks`. Requires `--source <name>`. Outside a cmux terminal, with no `CMUX_SURFACE_ID`/`CMUX_WORKSPACE_ID` and no `--surface`/`--workspace`, it prints `{}` and exits so an old installed hook cannot fail a shell. Hidden from help. |
+| `codex-hook` | Compatibility alias for Codex hook events from stdin JSON, kept for hooks installed before `bree hooks`. Outside a bree terminal, with no `BREE_SURFACE_ID`/`BREE_WORKSPACE_ID` and no `--surface`/`--workspace`, it prints `{}` and exits so an old installed hook cannot fail a shell. Hidden from help. |
+| `feed-hook` | Compatibility alias for Feed hook events from stdin JSON, kept for hooks installed before `bree hooks`. Requires `--source <name>`. Outside a bree terminal, with no `BREE_SURFACE_ID`/`BREE_WORKSPACE_ID` and no `--surface`/`--workspace`, it prints `{}` and exits so an old installed hook cannot fail a shell. Hidden from help. |
 | `set-app-focus` | Override app focus state for tests. |
 | `simulate-app-active` | Trigger app-active handling for tests. |
 | `browser` | Run browser automation commands. |
@@ -226,7 +226,7 @@ Environment:
 | `__tmux-compat` | Internal tmux compatibility dispatcher. |
 | `report_pwd`, `report_git_branch` | Internal shell integration entrypoints that forward one piece of sidebar metadata from a terminal's shell hooks and print the app's reply. |
 | `simulate-sidebar-drag` | Internal test helper that replays a sidebar drag; requires `--window`, `--from`, and `--to`, with optional `--duration-ms` and `--steps`. |
-| `vm-tui-connect` | Internal helper that replaces itself with the cmux-tui client for one machine. Requires `--config <file>`, a one-shot JSON config it deletes as it reads. |
+| `vm-tui-connect` | Internal helper that replaces itself with the bree-tui client for one machine. Requires `--config <file>`, a one-shot JSON config it deletes as it reads. |
 | `__owned-process-supervisor` | Internal supervisor that spawns the executable named by its first argument with the rest of the line as that program's arguments, with the supervisor's own stdin inherited by the target. Its lease is the process that launched it: when that process exits, or the supervisor is sent `SIGTERM`, `SIGINT` or `SIGHUP`, it sends `SIGTERM` to the target's process group and `SIGKILL` one second later. Never run by hand. |
 | `__codex-teams-app-server-supervisor` | Internal supervisor for `codex-teams` app servers. Same spawn and group termination as `__owned-process-supervisor`, but the lease is the lifetime of its inherited descriptors rather than its parent process, so it holds its own stdin and opens `/dev/null` as the target's. Never run by hand. |
 | `__codex-teams-watch` | Internal watcher backing `codex-teams` panes. Requires `--workspace-id`, `--surface-id`, and `--app-server-url`; also takes `--codex-path`, `--launch-path`, `--max-auto-depth`, and `--owner-pid` (it exits with that process). |
@@ -239,45 +239,45 @@ Environment:
 | `__diff-viewer-refs` | Internal diff viewer helper listing candidate base refs for `--repo <path>`, with `--base`, `--token`, and `--suggested-only`. The repository must be in the diff viewer allow-list. |
 | `__diff-viewer-branch` | Internal diff viewer helper regenerating one branch comparison; requires `--group`, `--repo`, and `--base`, with an optional `--token`. |
 | `__debug-tmux-compat-env` | Internal debug probe printing the environment a tmux compatibility agent would be launched with, resolved against the socket this command was pointed at. |
-| `__cmux-sudo-runner` | Internal sudo broker entrypoint that runs one approved sudo manifest under its own process-tree deadline. Takes a request id and a base64 manifest, and checks that its parent is the enclosing app; exits 2 on any other argument shape. Only the broker invokes it. |
-| `__cmux-sudo-privileged-executor` | Internal sudo broker entrypoint re-entered as root after sudo authenticates. Takes exactly four arguments (reviewed byte count, absolute deadline, display name, control token) and exits 126 unless it is running as root. Only the broker invokes it. |
+| `__bree-sudo-runner` | Internal sudo broker entrypoint that runs one approved sudo manifest under its own process-tree deadline. Takes a request id and a base64 manifest, and checks that its parent is the enclosing app; exits 2 on any other argument shape. Only the broker invokes it. |
+| `__bree-sudo-privileged-executor` | Internal sudo broker entrypoint re-entered as root after sudo authenticates. Takes exactly four arguments (reviewed byte count, absolute deadline, display name, control token) and exits 126 unless it is running as root. Only the broker invokes it. |
 
 
 ## Glaeda execution exchange and current-work ownership
 
-`cmux glaeda` is an execution exchange seam, not another CMUX work database. A
+`bree glaeda` is an execution exchange seam, not another BREE work database. A
 complete transport-independent flow can look like this:
 
 ```sh
-cmux glaeda request \
-  --request-ref cmux:exec:42 \
-  --work-ref cmux:work:42 \
+bree glaeda request \
+  --request-ref bree:exec:42 \
+  --work-ref bree:work:42 \
   --repository owner/repo \
   --commit <commit> \
   --tree <tree> > request.json
 
 # Carry request.json through the selected transport and receive result.json.
 
-cmux glaeda observe \
+bree glaeda observe \
   --request request.json \
   --receipt result.json > observation.json
 
-cmux current --json
+bree current --json
 ```
 
 The observation is bounded correlation/evidence: request identity, the caller's
 `work_ref`, terminal state, and receipt digests. The caller that already owns
-the CMUX work item uses `work_ref` to associate that evidence with its existing
+the BREE work item uses `work_ref` to associate that evidence with its existing
 work lifecycle. `observe` does not create a workspace, work item, scheduler
-record, or placement decision, and `cmux current` does not ingest
+record, or placement decision, and `bree current` does not ingest
 `observation.json`.
 
-`cmux current --json` and **Find Work** continue to read the same bounded,
-read-only projection of work already owned by CMUX, as described in
+`bree current --json` and **Find Work** continue to read the same bounded,
+read-only projection of work already owned by BREE, as described in
 [Current work](current-work.md). When an existing owner records its normal
-lifecycle change, that ordinary CMUX projection reflects it. The execution
+lifecycle change, that ordinary BREE projection reflects it. The execution
 transport, machine placement, physical attempt, and recovery truth remain with
-their existing owners rather than being duplicated into a second CMUX ledger.
+their existing owners rather than being duplicated into a second BREE ledger.
 
 ## Draft Guard
 
@@ -285,11 +285,11 @@ Before writing, `send`, `send-panel` and `paste` (and `send --paste`) ask the
 app for `surface.input_state` and refuse when an agent's prompt holds text
 someone is typing, or when a question or permission dialog is open in an
 agent. `send-key` and `send-key-panel`, and `send` of text that only presses
-Enter, refuse only for an open dialog: `cmux send "text"` followed by
-`cmux send-key enter` leaves the sent text in the prompt, and the key has to
+Enter, refuse only for an open dialog: `bree send "text"` followed by
+`bree send-key enter` leaves the sent text in the prompt, and the key has to
 go through. Surfaces without an agent are never blocked. A refusal writes nothing, prints the reason on stderr
 and exits non-zero. `--force`, before the text or key, skips the check. When
-the app can't answer `surface.input_state` (an older build, or a `cmux ssh`
+the app can't answer `surface.input_state` (an older build, or a `bree ssh`
 relay, which doesn't forward it) the commands write as before.
 
 `surface.input_state` is a v2 worker-lane socket method. It takes
@@ -309,7 +309,7 @@ surface, and returns:
 ## Surface Selection Contract
 
 `surface.read_selection` is a v2 worker-lane socket method advertised by
-`system.capabilities` and printed by `cmux capabilities`. It accepts the usual
+`system.capabilities` and printed by `bree capabilities`. It accepts the usual
 surface routing selectors (`window_id`, `workspace_id`, `surface_id`,
 `terminal_id`, `tab_id`, and `pane_id`) without focusing a window, workspace,
 pane, or surface.
@@ -357,28 +357,28 @@ surfaces read the page selection, including editable text controls; password
 input selections are never exposed. Non-text file preview modes do not claim
 selection support.
 
-`cmux read-selection` prints available kind, file, line, or URL context followed
+`bree read-selection` prints available kind, file, line, or URL context followed
 by the selected text. A supported surface with no selection still exits zero and
-prints the explicit `Has selection: false` marker. `cmux read-selection --json`
-preserves the complete response for scripts. `cmux read-screen --selection`
+prints the explicit `Has selection: false` marker. `bree read-selection --json`
+preserves the complete response for scripts. `bree read-screen --selection`
 uses the same socket path but omits source metadata, and cannot be combined with
 `--scrollback` or `--lines`.
 
 Examples:
 
 ```bash
-cmux read-selection --surface surface:2
-cmux read-selection --surface surface:2 --json
-cmux read-screen --surface surface:2 --selection
-cmux rpc surface.read_selection '{"surface_id":"83F4E6A4-5246-4DB8-A412-9CE7B059FA6C"}'
+bree read-selection --surface surface:2
+bree read-selection --surface surface:2 --json
+bree read-screen --surface surface:2 --selection
+bree rpc surface.read_selection '{"surface_id":"83F4E6A4-5246-4DB8-A412-9CE7B059FA6C"}'
 ```
 
 ## Command Families
 
 Sessions output:
 
-`cmux sessions [list]` reads saved hook state from disk and never connects to a
-cmux socket. By default the listing includes records that are active for a
+`bree sessions [list]` reads saved hook state from disk and never connects to a
+bree socket. By default the listing includes records that are active for a
 workspace or surface, restorable, launch-backed, or transcript-backed. Passing
 `--all`, or any record filter (`--session`, `--workspace`, `--surface`,
 `--cwd`), includes every record that matches the filters. `--json` prints one
@@ -395,18 +395,18 @@ object with:
 
 Agent session recovery:
 
-`cmux session restore --list` asks the running app for journal-backed recovery
+`bree session restore --list` asks the running app for journal-backed recovery
 candidates, excluding sessions that are still running or already open. It lists
 the agent kind, session id, cwd, and resume command without opening a workspace.
 In JSON, records also include the prior workspace id and last-activity timestamp.
 
 Without `--list`, each repeatable `--session <id>` selects an exact candidate;
 explicit ids may be restored after a normal quit. Without an id, recovery runs
-only when the previous cmux exit was unclean. Each restored session opens in a
+only when the previous bree exit was unclean. Each restored session opens in a
 separate, unselected workspace titled from its cwd (or agent kind), then resumes
 through its recorded launcher. Some terminals start immediately; the remainder
 start on the workspace's first visit. Listing and recovery require a running
-cmux socket; `cmux session restore --help` does not.
+bree socket; `bree session restore --help` does not.
 
 Auth subcommands:
 
@@ -433,7 +433,7 @@ Surface catalog subcommands:
 | `surface ls [<machine>\|local] [--refresh] [--json]` | The surface catalog (This Mac and its paired devices). |
 | `surface tree [<machine>\|local] [--refresh] [--json]` | The same catalog rendered as a tree. |
 | `surface open <resource> [--workspace <id\|ref\|index>] [--pane <id\|ref>] [--left\|--right\|--up\|--down\|--tab] [--new] [--focus\|--no-focus] [--json]` | Put one surface in a pane through the single open path (`surface.project {resource, workspace_id?, pane_id?, direction?, placement?, reuse?, focus?}` → `{surface_id, workspace_id, reused, resource}`). `<resource>` is `<machine>/<kind>/<key>` from `surface ls --json` (`local/terminal/<uuid>`, `<m>/terminal/<term_…>`, `<m>/display/display:1`, `<m>/browser/port:<n>`). Reuses the pane already showing the resource unless `--new`; `--pane` + a side splits that pane on that side, `--tab` adds a tab to it, otherwise the workspace's focused pane; a local terminal moves to the destination (it is shown once). Prints `OK surface=… workspace=… resource=… [reused=true]`. |
-| `surface new-terminal --machine <id\|local> [--cwd <dir>] [--name <name>] [--remote-workspace <ws_…>] [--workspace <id\|ref\|index>] [--no-open] [--focus\|--no-focus] [--json] [-- <command...>]` | Create a terminal on a machine through its provider (`surface.new_terminal {machine, command?, cwd?, name?, remote_workspace_id?, open?, workspace_id?, …}` → `{resource, terminal_id, machine, remote_workspace_id, workspace_id?, surface_id?}`) and open it as a pane unless `--no-open`. Cloud terminals land in the machine's cmux-tui session (`--remote-workspace` picks the workspace); local ones are a new shell on This Mac. |
+| `surface new-terminal --machine <id\|local> [--cwd <dir>] [--name <name>] [--remote-workspace <ws_…>] [--workspace <id\|ref\|index>] [--no-open] [--focus\|--no-focus] [--json] [-- <command...>]` | Create a terminal on a machine through its provider (`surface.new_terminal {machine, command?, cwd?, name?, remote_workspace_id?, open?, workspace_id?, …}` → `{resource, terminal_id, machine, remote_workspace_id, workspace_id?, surface_id?}`) and open it as a pane unless `--no-open`. Cloud terminals land in the machine's bree-tui session (`--remote-workspace` picks the workspace); local ones are a new shell on This Mac. |
 
 Surface resume bindings (`surface resume` and `surface-resume`):
 
@@ -443,7 +443,7 @@ Surface resume bindings (`surface resume` and `surface-resume`):
 | `surface resume [show\|get] [--json] [--workspace <id\|ref\|index>] [--surface <id\|ref\|index>] [--window <id\|ref\|index>]` | Read the binding (`surface.resume.get`); `show` is the default and `get` is an alias. Plain output is the command, `No resume binding` if absent, or `null` if the public binding hides a private routed command. `--json` prints the public socket payload, including `resume_binding` and surface/workspace identifiers. |
 | `surface resume clear [--workspace <id\|ref\|index>] [--surface <id\|ref\|index>] [--window <id\|ref\|index>] [--checkpoint <id>\|--checkpoint-id <id>] [--source <source>]` | Clear the binding (`surface.resume.clear`). Optional checkpoint and source values guard the clear so a different binding is not removed; `--checkpoint-id` takes precedence over `--checkpoint`. The response includes `cleared` and the resulting `resume_binding`. |
 
-The selectors default to the caller's `CMUX_SURFACE_ID` or `CMUX_WORKSPACE_ID` when applicable; `--window` supplies context for refs and indexes. These bindings record how to resume a surface; `session restore` and `restore` perform recovery. `surface --help` and `surface-resume --help` print the same family help without a socket.
+The selectors default to the caller's `BREE_SURFACE_ID` or `BREE_WORKSPACE_ID` when applicable; `--window` supplies context for refs and indexes. These bindings record how to resume a surface; `session restore` and `restore` perform recovery. `surface --help` and `surface-resume --help` print the same family help without a socket.
 
 Remotes subcommands:
 
@@ -462,7 +462,7 @@ Theme subcommands:
 | `themes set <theme>` | Set the same theme for light and dark appearance. |
 | `themes set --light <theme>` | Set the light appearance theme. |
 | `themes set --dark <theme>` | Set the dark appearance theme. |
-| `themes clear` | Remove the cmux theme override. |
+| `themes clear` | Remove the bree theme override. |
 
 Workspace and tab action names:
 
@@ -478,16 +478,16 @@ shell spawned in it inherits.
 
 Setting them:
 
-- CLI: `cmux new-workspace --env KEY=VALUE [--env ...] [--env-file <path>]`
-  (and the same flags on `cmux workspace create`). `--env` is repeatable;
+- CLI: `bree new-workspace --env KEY=VALUE [--env ...] [--env-file <path>]`
+  (and the same flags on `bree workspace create`). `--env` is repeatable;
   `--env-file` reads `KEY=VALUE` lines (blank lines and `#` comments ignored, an
   optional leading `export ` stripped). When both are given, `--env` overrides a
   value from a file.
-- Project config (`cmux.json`): an `env` object on a workspace definition, e.g.
+- Project config (`bree.json`): an `env` object on a workspace definition, e.g.
   `{ "name": "Build", "cwd": ".", "env": { "AWS_PROFILE": "prod" } }`.
 - Socket: the `workspace_env` param on `workspace.create`.
 
-Inspecting them: `cmux workspace env [<handle>] [--mask] [--json]` prints the
+Inspecting them: `bree workspace env [<handle>] [--mask] [--json]` prints the
 configured set. `--mask` redacts the values so secrets are not echoed in full.
 The env set is intentionally omitted from `workspace list` output so a plain
 listing never leaks secrets.
@@ -507,9 +507,9 @@ Semantics:
   the variable is seeded). An explicit per-surface environment (a layout
   `surfaces[].env`, SSH startup env) overrides the workspace value for that
   surface.
-- **Protected `CMUX_*` variables.** Workspace env can never override the managed
-  variables cmux injects (e.g. `CMUX_WORKSPACE_ID`, `CMUX_SURFACE_ID`,
-  `CMUX_SOCKET_PATH`, `CMUX_SOCKET_PASSWORD`) or the terminal identity variables
+- **Protected `BREE_*` variables.** Workspace env can never override the managed
+  variables bree injects (e.g. `BREE_WORKSPACE_ID`, `BREE_SURFACE_ID`,
+  `BREE_SOCKET_PATH`, `BREE_SOCKET_PASSWORD`) or the terminal identity variables
   (`TERM`, `COLORTERM`, `TERM_PROGRAM`); those keys are protected at spawn time
   and silently win.
 - **Secrets.** Values may be secrets. They are never logged, are masked by
@@ -607,7 +607,7 @@ Browser subcommands:
 | `browser dialog` | Accept or dismiss dialogs. |
 | `browser download list` | List newest-first downloads for one browser surface; supports `--limit <1...25>` and JSON output. The response includes stable IDs, filenames, actual paths when known, status, bytes when known, and path existence. Listing is repeatable and does not consume `browser.download.wait`. |
 | `browser download [wait]` | Wait for or save a download, preserving the existing path and timeout options. |
-| `browser profiles` | List, add, rename, clear, or delete cmux browser profiles. `clear` refuses to wipe active profiles unless `--force` is passed. |
+| `browser profiles` | List, add, rename, clear, or delete bree browser profiles. `clear` refuses to wipe active profiles unless `--force` is passed. |
 | `browser import` | Open the browser import wizard. In detected coding-agent environments, defaults to non-interactive cookie import; pass `--interactive` to force the wizard. Non-interactive import supports `--from`, `--profile`, `--all-profiles`, `--to-profile`, `--create-profile`, and `--domain`. |
 | `browser cookies` | Get, set, or clear cookies; `set` accepts `--http-only` to keep the cookie hidden from page JavaScript. `clear` requires an explicit scope such as `--url`, `--domain`, `--name`, or `--all`, and returns the removed count as `cleared` in JSON output. |
 | `browser storage` | Get, set, or clear local/session storage. |
@@ -631,7 +631,7 @@ Browser subcommands:
 attestation still disagrees after its retry, `timeout` when capture cannot
 complete within its bounded budget or another capture is already in progress,
 and `internal_error` for other failures. Clients may retry `timeout` and
-`screenshot_mismatch`; cmux does not return the suspect image.
+`screenshot_mismatch`; bree does not return the suspect image.
 
 `browser viewport` changes the selected browser surface only. On WKWebView, the
 requested logical size becomes `window.innerWidth`/`window.innerHeight` and the
@@ -642,7 +642,7 @@ report `mode`, effective `width` and `height`, displayed size, `scale`,
 `presentation`, and `pane_resized`. `reset` reports the actual native CSS
 viewport, including the current page zoom.
 
-cmux bounds the combined viewport and page-zoom render geometry to 8192 points
+bree bounds the combined viewport and page-zoom render geometry to 8192 points
 per dimension and 33,554,432 points of area. If the current zoom would exceed
 that bound, `browser.viewport.set` leaves the current viewport unchanged and
 returns `invalid_params` with
@@ -658,8 +658,8 @@ Hook subcommands:
 
 | Command | Contract |
 | --- | --- |
-| `hooks setup` | Install hooks for all supported agents whose binaries are on `PATH`. Supports `--agent <name>`, positional agent filters such as `cmux hooks setup rovo`, and `--yes`. |
-| `hooks uninstall` | Remove hooks for all supported agents. Supports `--agent <name>`, positional agent filters such as `cmux hooks uninstall rovo`, and `--yes`. |
+| `hooks setup` | Install hooks for all supported agents whose binaries are on `PATH`. Supports `--agent <name>`, positional agent filters such as `bree hooks setup rovo`, and `--yes`. |
+| `hooks uninstall` | Remove hooks for all supported agents. Supports `--agent <name>`, positional agent filters such as `bree hooks uninstall rovo`, and `--yes`. |
 | `hooks <agent> install` | Install hooks for one supported agent. `opencode` also supports `--project` for the project-local Feed plugin. |
 | `hooks <agent> uninstall` | Remove hooks for one supported agent. |
 | `hooks claude <event>` | Handle Claude Code hook events. `claude-hook <event>` remains as the main-compatibility alias. |
@@ -667,7 +667,7 @@ Hook subcommands:
 | `hooks feed --source <agent>` | Convert agent hook events into Feed context. |
 | `hooks <agent> <event>` | Generic hook surface for `grok`, `opencode`, `pi`, `amp`, `cursor`, `gemini`, `kimi`, `rovodev`, `copilot`, `codebuddy`, `factory`, and `qoder`. |
 
-Kimi hook setup targets the config file `kimi doctor` reports. Without a reported path, it takes the first of `${KIMI_CODE_HOME:-~/.kimi-code}/config.toml` (Kimi Code CLI) and `${KIMI_SHARE_DIR:-~/.kimi}/config.toml` (Kimi CLI 1.49 and earlier) that already exists as a file, then the first whose directory exists, and the Kimi Code CLI path when neither directory exists. Setup refreshes, but never removes, a cmux marker block already present in the other location; `hooks kimi uninstall` removes the block from both.
+Kimi hook setup targets the config file `kimi doctor` reports. Without a reported path, it takes the first of `${KIMI_CODE_HOME:-~/.kimi-code}/config.toml` (Kimi Code CLI) and `${KIMI_SHARE_DIR:-~/.kimi}/config.toml` (Kimi CLI 1.49 and earlier) that already exists as a file, then the first whose directory exists, and the Kimi Code CLI path when neither directory exists. Setup refreshes, but never removes, a bree marker block already present in the other location; `hooks kimi uninstall` removes the block from both.
 
 Right sidebar commands:
 
@@ -699,7 +699,7 @@ Custom sidebar commands:
 
 | Command | Contract |
 | --- | --- |
-| `sidebar validate [name]` | Validate all custom sidebars, or one named sidebar, under `~/.config/cmux/sidebars`. |
+| `sidebar validate [name]` | Validate all custom sidebars, or one named sidebar, under `~/.config/bree/sidebars`. |
 | `sidebar reload [name]` | Validate all custom sidebars, then request a reload for every valid one. |
 | `sidebar select <name>` | Validate and activate one custom sidebar in the sidebar picker. |
 | `sidebar open <name>` | Validate and open one custom sidebar as a normal Bonsplit pane tab, preferring the right-side split from the focused surface. |
@@ -709,11 +709,11 @@ Docs topics:
 | Command | Contract |
 | --- | --- |
 | `docs` | List docs topics without a socket. |
-| `docs settings` | Print the configuration docs URL, raw schema URL, cmux.json paths, backup reminder, and reload command. |
+| `docs settings` | Print the configuration docs URL, raw schema URL, bree.json paths, backup reminder, and reload command. |
 | `docs shortcuts` | Print shortcut docs and raw shortcut data resources. |
 | `docs api` | Print API docs and raw CLI contract resources. |
 | `docs browser` | Print browser automation docs and raw browser skill resources. |
-| `docs capture` | Print the capture skill and command reference for `cmux shot` and `cmux record`. Aliases include `screenshot`, `shot`, `record` and `gif`. |
+| `docs capture` | Print the capture skill and command reference for `bree shot` and `bree record`. Aliases include `screenshot`, `shot`, `record` and `gif`. |
 | `docs agents` | Print agent integration docs and raw integration resources. |
 | `docs workflows` | Print the saved-layout lifecycle plus the shipped workflow-example catalog. `--json` exposes stable example ids, task-fit cues, created/configured surfaces, config files, primitives, requirements, instantiation/adaptation guidance, source recipe links, and save-as-layout steps without a socket. Aliases include `templates`, `presets`, `examples`, and `layouts`. |
 
@@ -721,35 +721,35 @@ Settings subcommands:
 
 | Command | Contract |
 | --- | --- |
-| `settings` | Open the Settings window, launching cmux if needed. |
+| `settings` | Open the Settings window, launching bree if needed. |
 | `settings open [target]` | Open Settings to an optional target section. |
-| `settings path` | Print cmux.json paths, docs URL, schema URL, backup reminder, and reload command without a socket. |
+| `settings path` | Print bree.json paths, docs URL, schema URL, backup reminder, and reload command without a socket. |
 | `settings docs` | Print the same output as `docs settings` without a socket. |
-| `settings <target>` | Open Settings to a target section. Supported aliases include `shortcuts`, `json`, `cmux-json`, `browser`, and `automation`. |
+| `settings <target>` | Open Settings to a target section. Supported aliases include `shortcuts`, `json`, `bree-json`, `browser`, and `automation`. |
 
 Config subcommands:
 
 | Command | Contract |
 | --- | --- |
-| `config doctor [--path <file>]`, `config check`, `config validate` | Validate JSONC syntax and semantic cmux.json constraints (recognized paths, value types, enums, bounds, nested values, and project/global scope). When `--path` is absent, default discovery checks the primary config, project-level `.bree/bree.json` or `cmux.json`, and legacy config files. `--path <file>` may be repeated; `--scope global\|project` overrides scope inference for explicit files. Exits 0 on success and 1 on any error. Supports `--json`. Works without a socket. |
-| `config path`, `config paths` | Print cmux.json paths, docs URL, schema URL, backup reminder, and reload command without a socket. |
+| `config doctor [--path <file>]`, `config check`, `config validate` | Validate JSONC syntax and semantic bree.json constraints (recognized paths, value types, enums, bounds, nested values, and project/global scope). When `--path` is absent, default discovery checks the primary config, project-level `.bree/bree.json` or `bree.json`, and legacy config files. `--path <file>` may be repeated; `--scope global\|project` overrides scope inference for explicit files. Exits 0 on success and 1 on any error. Supports `--json`. Works without a socket. |
+| `config path`, `config paths` | Print bree.json paths, docs URL, schema URL, backup reminder, and reload command without a socket. |
 | `config docs`, `config documentation` | Print the same output as `docs settings` without a socket. |
-| `config reload` | Ask the running cmux app to reload configuration. Requires a socket. |
+| `config reload` | Ask the running bree app to reload configuration. Requires a socket. |
 | `config get sidebar-font-size` | Print the effective sidebar text size. |
-| `config set sidebar-font-size <points>` | Write the sidebar text size to cmux's editable Ghostty config and reload the running app when available. |
+| `config set sidebar-font-size <points>` | Write the sidebar text size to bree's editable Ghostty config and reload the running app when available. |
 | `config sidebar-font-size [points]` | Get the sidebar text size, or set it when a point size is provided. |
 | `config get surface-tab-bar-font-size` | Print the effective workspace tab bar text size. |
-| `config set surface-tab-bar-font-size <points>` | Write the workspace tab bar text size to cmux's editable Ghostty config and reload the running app when available. |
+| `config set surface-tab-bar-font-size <points>` | Write the workspace tab bar text size to bree's editable Ghostty config and reload the running app when available. |
 | `config surface-tab-bar-font-size [points]` | Get the workspace tab bar text size, or set it when a point size is provided. |
 | `config get <key>`, `config set <key> <points>` | Generic get/set for `sidebar-font-size` and `surface-tab-bar-font-size`. |
-| `config get <setting.path>` | Print a setting's effective value: the cmux.json value; else the value stored by the Settings window (read from the cmux app's defaults), marked `(set in Settings, not cmux.json)`; else the schema default, marked `(default)`. Rejects paths the schema doesn't declare and non-setting sections (`actions`, `commands`, `ui`, `settingPresets`, ...). `--json` prints `path`, `file`, `value`, `configured`, `source` (`cmux.json`, `settings`, or `default`), and `default`. Works without a socket. |
-| `config set <setting.path> <value>` | Write one setting to `~/.config/cmux/cmux.json`. `<value>` is parsed as JSON; text that isn't JSON is stored as a string. The complete result is validated against the schema before anything is written, and comments and unrelated keys are kept. The running app applies the change through its file watcher. Works without a socket. |
-| `config unset <setting.path>` | Remove one setting from cmux.json, so the value stored by the Settings window, or else the default, applies. Same validation and preservation as `set`. |
-| `config toggle <setting.path>` | Flip a boolean setting, starting from the value cmux is using: the cmux.json value, else the Settings window's value, else the schema default. Refuses non-boolean settings. |
+| `config get <setting.path>` | Print a setting's effective value: the bree.json value; else the value stored by the Settings window (read from the bree app's defaults), marked `(set in Settings, not bree.json)`; else the schema default, marked `(default)`. Rejects paths the schema doesn't declare and non-setting sections (`actions`, `commands`, `ui`, `settingPresets`, ...). `--json` prints `path`, `file`, `value`, `configured`, `source` (`bree.json`, `settings`, or `default`), and `default`. Works without a socket. |
+| `config set <setting.path> <value>` | Write one setting to `~/.config/bree/bree.json`. `<value>` is parsed as JSON; text that isn't JSON is stored as a string. The complete result is validated against the schema before anything is written, and comments and unrelated keys are kept. The running app applies the change through its file watcher. Works without a socket. |
+| `config unset <setting.path>` | Remove one setting from bree.json, so the value stored by the Settings window, or else the default, applies. Same validation and preservation as `set`. |
+| `config toggle <setting.path>` | Flip a boolean setting, starting from the value bree is using: the bree.json value, else the Settings window's value, else the schema default. Refuses non-boolean settings. |
 | `config cycle <setting.path> <value> [value...]` | Move a setting to the value after its current one (found the same way as `toggle`), wrapping at the end; a value that isn't listed moves to the first. |
 | `config preset <name>` | Apply the partial settings object at `settingPresets.<name>` in one write. Nested objects merge key by key. |
 
-`config set|unset|toggle|cycle|preset` share one mutation path with `"type": "setting"` and `"type": "settingPreset"` actions. Paths split on every `.`, so a key that itself contains `.` (for example a `workspaceGroups.byCwd` entry for `~/src/app.web`) can't be addressed; such a path is refused with an error that says so, and the key has to be edited in cmux.json directly. `--json` prints `ok`, `file`, and `paths`, an array of `{path, changed, value}` objects (`value` is absent after an unset).
+`config set|unset|toggle|cycle|preset` share one mutation path with `"type": "setting"` and `"type": "settingPreset"` actions. Paths split on every `.`, so a key that itself contains `.` (for example a `workspaceGroups.byCwd` entry for `~/src/app.web`) can't be addressed; such a path is refused with an error that says so, and the key has to be edited in bree.json directly. `--json` prints `ok`, `file`, and `paths`, an array of `{path, changed, value}` objects (`value` is absent after an unset).
 
 `config doctor --json` outputs an object with `ok`, `error_count`,
 `findings`, `reload_command`, `docs_url`, and `schema_url`. Each finding includes
@@ -778,9 +778,9 @@ response frame is an `ack`; sequence resume metadata lives under `ack.resume` as
 carry a process-local monotonic `seq` and a stable `id` for dedupe. Clients
 should persist `seq` after processing each event and reconnect with that value.
 See [events.md](events.md) for the full protocol and event catalog. Every emitted event is also appended to
-`~/.cmuxterm/events.jsonl`, including model lifecycle events for window
+`~/.bree/events.jsonl`, including model lifecycle events for window
 creation, close, focus, key-window state, workspace selection, pane focus, and
-surface selection, focus, creation, or closure. The stream is bounded: cmux keeps
+surface selection, focus, creation, or closure. The stream is bounded: bree keeps
 4,096 replay events in memory, caps each encoded event frame at 16 KiB, closes
 slow subscribers after 1,024 pending events, and rotates `events.jsonl` with one
 16 MiB archive at `events.jsonl.1`.
@@ -790,11 +790,11 @@ slow subscribers after 1,024 pending events, and rotates `events.jsonl` with one
 The app never lets one control command block the others. Every accepted
 connection gets a real reply, and a stalled main thread turns into a
 structured error instead of a hung or `EPIPE` connection
-([#13369](https://github.com/manaflow-ai/cmux/issues/13369)):
+([#13369](https://github.com/ecyx00/bree/issues/13369)):
 
 | Reply | When | Client behavior |
 | --- | --- | --- |
-| `overloaded` (`data.retryable: true`, `data.retry_after_ms`, `data.reason`) | The connection pool had no live or pending slot (`pool_saturated`), the request waited longer than 15 s for a slot (`pending_expired`), too many unauthenticated peers were being read (`preauthorization_saturated`), the accept buffer between the listener and the pool was full (`accept_buffer_full`), or the app is stopping (`server_stopping`). The command never ran. | Direct control-socket requests retry within their response timeout, honoring `retry_after_ms`. Relay-backed requests (`cmux ssh`) surface the error without retrying. |
+| `overloaded` (`data.retryable: true`, `data.retry_after_ms`, `data.reason`) | The connection pool had no live or pending slot (`pool_saturated`), the request waited longer than 15 s for a slot (`pending_expired`), too many unauthenticated peers were being read (`preauthorization_saturated`), the accept buffer between the listener and the pool was full (`accept_buffer_full`), or the app is stopping (`server_stopping`). The command never ran. | Direct control-socket requests retry within their response timeout, honoring `retry_after_ms`. Relay-backed requests (`bree ssh`) surface the error without retrying. |
 | `timeout` (`data.stage: "main_actor"`, `data.deadline_ms: 10000`, `data.retryable`) | The command's hop onto the main thread did not complete within 10 s (for example the main thread is stalled in a modal dialog or a long synchronous turn). `retryable: true` means the hop was withdrawn before the command ran; `false` means it had started and its result is unknown. | Print the error; retry only when `retryable` is true. |
 
 The v1 line protocol reports the same conditions as
@@ -810,8 +810,8 @@ true`; the user approves it from the terminal's context menu or in
 ## Workspace todos
 
 Each workspace carries a persisted checklist plus a todo lifecycle status,
-shared by the sidebar row, the checklist popover, the todo pane, `cmux todo`
-/ `cmux workspace status`, and the `workspace.todo.*` / `workspace.status.*`
+shared by the sidebar row, the checklist popover, the todo pane, `bree todo`
+/ `bree workspace status`, and the `workspace.todo.*` / `workspace.status.*`
 socket verbs (all funnel through the same mutation entry points).
 
 Agent policy: the checklist and manual status pins belong to the user.
@@ -836,247 +836,247 @@ creation/`set` order and is what `todo list` prints and the wire returns;
 the sidebar/popover/pane rendering that floats unchecked items above
 completed ones is display-only and never reorders storage.
 
-`cmux todo set` atomically replaces the whole checklist from a JSON array of
+`bree todo set` atomically replaces the whole checklist from a JSON array of
 `{text, state?, id?, origin?}` objects (inline argument, or piped on stdin;
 also accepts `{"items": [...]}`). Items whose `id` matches an existing item
 keep that identity and its origin (state updates when given, else stays);
 other items are created (`origin` defaults to `user`, `state` to `pending`);
 existing items not named are removed. The whole replace is rejected — nothing
 mutated — if any text is empty after trimming or the array exceeds 50 items.
-The reply is the full resulting list payload. `cmux todo open` (socket:
+The reply is the full resulting list payload. `bree todo open` (socket:
 `workspace.todo.open`) opens or focuses the workspace's todo pane, so a
 script can drive the pane as a generic list surface:
 
 ```bash
 # Mirror a build script's step list into the workspace todo pane.
 ./plan-steps.sh --json |            # emits [{"text":"lint","state":"completed"}, ...]
-  cmux todo set
-cmux todo open
+  bree todo set
+bree todo open
 ```
 
-Re-running `cmux todo set` with the same `id`s updates text/state in place
+Re-running `bree todo set` with the same `id`s updates text/state in place
 (checkbox identity is stable), so a watcher loop can re-emit the full list on
 every tick without churning item identities.
 
 ## No-Socket Help Probes
 
 The following probes are executable contract checks. They must exit 0 and print
-the expected text without connecting to a cmux socket.
+the expected text without connecting to a bree socket.
 
 <!-- cli-contract-help-probes:start -->
-- `cmux --help` -> `cmux - control cmux via Unix socket`
-- `cmux --help` -> `open <path-or-url>...`
-- `cmux --help` -> `sessions [list] [options]`
-- `cmux --help` -> `session restore [--list] [--session <id>]...`
-- `cmux help` -> `cmux - control cmux via Unix socket`
-- `cmux --help` -> `Start & Resume:`
-- `cmux --help` -> `Diagnostics / Advanced:`
-- `cmux help start` -> `Start & Resume:`
-- `cmux help agents` -> `Agents:`
-- `cmux help navigate` -> `Navigate & Arrange:`
-- `cmux help inspect` -> `Inspect:`
-- `cmux help inspect` -> `review list [--repo <path>] [--json]`
-- `cmux help customize` -> `Customize:`
-- `cmux help automation` -> `Automation:`
-- `cmux help browser` -> `Browser:`
-- `cmux help remote` -> `Remote:`
-- `cmux help diagnostics` -> `Diagnostics / Advanced:`
-- `cmux help diagnostics` -> `socket-status [--json]`
-- `cmux help remote` -> `auth <status|login|logout|team>`
-- `cmux --help` -> `socket-status [--json]`
-- `cmux --help` -> `cmux help <start|agents|navigate|inspect|customize|automation|browser|remote|diagnostics>`
-- `cmux help --help` -> `Usage: cmux help [topic]`
-- `cmux help unknown-task-topic` -> `cmux - control cmux via Unix socket`
-- `cmux --help` -> `cmux guide | cmux --skill`
-- `cmux guide` -> `# cmux guide`
-- `cmux --skill` -> `# cmux guide`
-- `cmux guide --help` -> `Usage: cmux guide | cmux --skill [--json]`
-- `cmux --skill -h` -> `Usage: cmux guide | cmux --skill [--json]`
-- `cmux sessions --help` -> `Usage: cmux sessions list [options]`
-- `cmux ping --help` -> `Usage: cmux ping`
-- `cmux capabilities --help` -> `Usage: cmux capabilities`
-- `cmux events --help` -> `Usage: cmux events [options]`
-- `cmux glaeda --help` -> `Usage: cmux glaeda <request|observe> [options]`
-- `cmux auth --help` -> `Usage: cmux auth <status|login|logout|team>`
-- `cmux surface --help` -> `Usage: cmux surface ls [<machine>|local] [--refresh] [--json]`
-- `cmux surface --help` -> `cmux surface resume set [flags] -- <argv...>`
-- `cmux surface-resume --help` -> `cmux surface resume show [--json] [flags]`
-- `cmux remotes --help` -> `Usage: cmux remotes <list|add|remove> [options]`
-- `cmux remote --help` -> `Usage: cmux remotes <list|add|remove> [options]`
-- `cmux rpc --help` -> `Usage: cmux rpc <method> [json-params]`
-- `cmux comments --help` -> `Usage: cmux comments <subcommand> [options]`
-- `cmux bottom-panel --help` -> `Usage: cmux bottom-panel <open|close|toggle|status> [flags]`
-- `cmux attention --help` -> `Usage: cmux attention <list|clear> [id]`
-- `cmux quick-view --help` -> `Usage: cmux quick-view <open <path>|close|status> [flags]`
-- `cmux pins --help` -> `Usage: cmux pins <list|add <path>|remove <path>> [flags]`
-- `cmux review --help` -> `Usage: cmux review <subcommand> [options]`
-- `cmux vault --help` -> `Usage: cmux vault <subcommand> [options]`
-- `cmux help --help` -> `Usage: cmux help`
-- `cmux docs --help` -> `Usage: cmux docs [settings|shortcuts|api|browser|capture|agents|workflows|dock|managed-policies]`
-- `cmux docs` -> `Topics:`
-- `cmux docs settings` -> `Config files:`
-- `cmux docs capture` -> `capture: Screenshot or record a cmux window`
-- `cmux docs dock` -> `dock: Custom right-sidebar terminal controls`
-- `cmux settings --help` -> `Usage: cmux settings [open [target]|path|docs|<target>]`
-- `cmux settings path` -> `Config files:`
-- `cmux settings docs` -> `Config files:`
-- `cmux config --help` -> `Usage: cmux config <doctor|check|validate|path|paths|docs|documentation|reload|get|set|unset|toggle|cycle|preset|sidebar-font-size|surface-tab-bar-font-size>`
-- `cmux config path` -> `Config files:`
-- `cmux config docs` -> `Config files:`
-- `cmux welcome --help` -> `Usage: cmux welcome`
-- `cmux welcome` -> `Command Palette`
-- `cmux welcome` -> `Settings > Keyboard Shortcuts`
-- `cmux shortcuts --help` -> `Usage: cmux shortcuts`
-- `cmux disable-browser --help` -> `Usage: cmux disable-browser [--json]`
-- `cmux enable-browser --help` -> `Usage: cmux enable-browser [--json]`
-- `cmux browser-status --help` -> `Usage: cmux browser-status [--json]`
-- `cmux agent-hibernation --help` -> `Usage: cmux agent-hibernation <on|off> [--json]`
-- `cmux restore --help` -> `Usage: cmux restore [--surface <id|ref>] <kind> <checkpoint-id>`
-- `cmux fork --help` -> `Usage: cmux fork [--surface <id|ref>] <kind> <checkpoint-id>`
-- `cmux restore-session --help` -> `Usage: cmux restore-session`
-- `cmux session restore --help` -> `Usage: cmux session restore [--list] [--session <id>]...`
-- `cmux open --help` -> `Usage: cmux open <path-or-url>...`
-- `cmux feed --help` -> `Usage: cmux feed tui [--opentui|--legacy]`
-- `cmux hooks --help` -> `Usage: cmux hooks setup [agent] [--agent <name>] [--yes|-y]`
-- `cmux codex --help` -> `Usage: cmux codex <install-hooks|uninstall-hooks>`
-- `cmux themes --help` -> `Usage: cmux themes`
-- `cmux import --help` -> `Usage: cmux import`
-- `cmux omo --help` -> `Usage: cmux omo [opencode-args...]`
-- `cmux omx --help` -> `Usage: cmux omx [omx-args...]`
-- `cmux omc --help` -> `Usage: cmux omc [omc-args...]`
-- `cmux identify --help` -> `Usage: cmux identify`
-- `cmux list-windows --help` -> `Usage: cmux list-windows`
-- `cmux current-window --help` -> `Usage: cmux current-window`
-- `cmux new-window --help` -> `Usage: cmux new-window`
-- `cmux focus-window --help` -> `Usage: cmux focus-window --window <id|ref|index>`
-- `cmux close-window --help` -> `Usage: cmux close-window --window <id|ref|index>`
-- `cmux resize-window --help` -> `Usage: cmux resize-window --window <id|ref|index> [--width <points>] [--height <points>]`
-- `cmux move-workspace-to-window --help` -> `Usage: cmux move-workspace-to-window`
-- `cmux move-surface --help` -> `Usage: cmux move-surface`
-- `cmux split-off --help` -> `Usage: cmux split-off`
-- `cmux reorder-surface --help` -> `Usage: cmux reorder-surface`
-- `cmux reorder-workspace --help` -> `Usage: cmux reorder-workspace`
-- `cmux reorder-workspaces --help` -> `Usage: cmux reorder-workspaces`
-- `cmux workspace-action --help` -> `Usage: cmux workspace-action --action <name>`
-- `cmux move-tab-to-new-workspace --help` -> `Usage: cmux move-tab-to-new-workspace`
-- `cmux tab-action --help` -> `Usage: cmux tab-action --action <name>`
-- `cmux rename-tab --help` -> `Usage: cmux rename-tab`
-- `cmux new-workspace --help` -> `Usage: cmux new-workspace`
-- `cmux new-workspace --help` -> `--command <text>`
-- `cmux list-workspaces --help` -> `Usage: cmux list-workspaces`
-- `cmux ssh --help` -> `Usage: cmux ssh <destination>`
-- `cmux ssh --help` -> `--forward-agent`
-- `cmux ssh --help` -> `--transport <ssh|mosh>`
-- `cmux mosh --help` -> `Usage: cmux mosh <destination>`
-- `cmux mosh-tmux --help` -> `Usage: cmux mosh-tmux <destination>`
-- `cmux mosh-tmux --help` -> `--session <name>`
-- `cmux ssh --help` -> `--command <text>`
-- `cmux ssh --help` -> `--no-focus              Open it in the background`
-- `cmux ssh-session-list --help` -> `Usage: cmux ssh-session-list`
-- `cmux ssh-session-attach --help` -> `Usage: cmux ssh-session-attach --session-id <id>`
-- `cmux ssh-session-cleanup --help` -> `Usage: cmux ssh-session-cleanup`
-- `cmux new-split --help` -> `Usage: cmux new-split`
-- `cmux new-split --help` -> `--command <text>`
-- `cmux list-panes --help` -> `Usage: cmux list-panes`
-- `cmux list-pane-surfaces --help` -> `Usage: cmux list-pane-surfaces`
-- `cmux tree --help` -> `Usage: cmux tree`
-- `cmux top --help` -> `Usage: cmux top`
-- `cmux focus-pane --help` -> `Usage: cmux focus-pane`
-- `cmux new-pane --help` -> `Usage: cmux new-pane`
-- `cmux new-pane --help` -> `--command <text>`
-- `cmux new-surface --help` -> `Usage: cmux new-surface`
-- `cmux new-surface --help` -> `--command <text>`
-- `cmux close-surface --help` -> `Usage: cmux close-surface`
-- `cmux drag-surface-to-split --help` -> `Usage: cmux drag-surface-to-split`
-- `cmux refresh-surfaces --help` -> `Usage: cmux refresh-surfaces`
-- `cmux reload-config --help` -> `Usage: cmux reload-config`
-- `cmux surface-health --help` -> `Usage: cmux surface-health`
-- `cmux debug-terminals --help` -> `Usage: cmux debug-terminals`
-- `cmux trigger-flash --help` -> `Usage: cmux trigger-flash`
-- `cmux list-panels --help` -> `Usage: cmux list-panels`
-- `cmux focus-panel --help` -> `Usage: cmux focus-panel`
-- `cmux close-workspace --help` -> `Usage: cmux close-workspace`
-- `cmux select-workspace --help` -> `Usage: cmux select-workspace`
-- `cmux rename-workspace --help` -> `Usage: cmux rename-workspace`
-- `cmux rename-window --help` -> `Usage: cmux rename-workspace`
-- `cmux current-workspace --help` -> `Usage: cmux current-workspace`
-- `cmux capture-pane --help` -> `Usage: cmux capture-pane [--workspace <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>] [--scrollback] [--lines <n>]`
-- `cmux resize-pane --help` -> `Usage: cmux resize-pane [--pane <id|ref|index>] [--workspace <id|ref|index>] [--window <id|ref|index>] [-L|-R|-U|-D] [--amount <n>]`
-- `cmux pipe-pane --help` -> `Usage: cmux pipe-pane [--workspace <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>] [--command <shell-command> | <shell-command>]`
-- `cmux wait-for --help` -> `Usage: cmux wait-for [-S|--signal] <name> [--timeout <seconds>]`
-- `cmux swap-pane --help` -> `Usage: cmux swap-pane --pane <id|ref|index> --target-pane <id|ref|index> [--workspace <id|ref|index>] [--window <id|ref|index>] [--focus <true|false>]`
-- `cmux break-pane --help` -> `Usage: cmux break-pane [--workspace <id|ref|index>] [--pane <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>] [--focus <true|false>] [--no-focus]`
-- `cmux join-pane --help` -> `Usage: cmux join-pane --target-pane <id|ref|index> [--workspace <id|ref|index>] [--pane <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>] [--focus <true|false>] [--no-focus]`
-- `cmux next-window --help` -> `Usage: cmux next-window`
-- `cmux previous-window --help` -> `Usage: cmux previous-window`
-- `cmux last-window --help` -> `Usage: cmux last-window`
-- `cmux last-pane --help` -> `Usage: cmux last-pane`
-- `cmux find-window --help` -> `Usage: cmux find-window`
-- `cmux clear-history --help` -> `Usage: cmux clear-history`
-- `cmux set-hook --help` -> `Usage: cmux set-hook`
-- `cmux popup --help` -> `Usage: cmux popup`
-- `cmux bind-key --help` -> `Usage: cmux bind-key`
-- `cmux unbind-key --help` -> `Usage: cmux unbind-key`
-- `cmux copy-mode --help` -> `Usage: cmux copy-mode`
-- `cmux set-buffer --help` -> `Usage: cmux set-buffer`
-- `cmux paste-buffer --help` -> `Usage: cmux paste-buffer`
-- `cmux list-buffers --help` -> `Usage: cmux list-buffers`
-- `cmux respawn-pane --help` -> `Usage: cmux respawn-pane`
-- `cmux display-message --help` -> `Usage: cmux display-message`
-- `cmux read-screen --help` -> `Usage: cmux read-screen`
-- `cmux record --help` -> `Usage: cmux record [start] [flags]`
-- `cmux shot --help` -> `Usage: cmux shot [flags]`
-- `cmux send --help` -> `Usage: cmux send`
-- `cmux send-key --help` -> `Usage: cmux send-key`
-- `cmux agent message --help` -> `Usage: cmux agent message`
-- `cmux agent inbox --help` -> `Usage: cmux agent inbox`
-- `cmux agent messages --help` -> `Usage: cmux agent messages`
-- `cmux paste --help` -> `Usage: cmux paste`
-- `cmux send-panel --help` -> `Usage: cmux send-panel`
-- `cmux send-key-panel --help` -> `Usage: cmux send-key-panel`
-- `cmux notify --help` -> `Usage: cmux notify`
-- `cmux list-notifications --help` -> `Usage: cmux list-notifications`
-- `cmux dismiss-notification --help` -> `Usage: cmux dismiss-notification`
-- `cmux mark-notification-read --help` -> `Usage: cmux mark-notification-read`
-- `cmux open-notification --help` -> `Usage: cmux open-notification`
-- `cmux jump-to-unread --help` -> `Usage: cmux jump-to-unread`
-- `cmux clear-notifications --help` -> `Usage: cmux clear-notifications`
-- `cmux right-sidebar --help` -> `Usage: cmux right-sidebar <command> [flags]`
-- `cmux set-status --help` -> `Usage: cmux set-status`
-- `cmux clear-status --help` -> `Usage: cmux clear-status`
-- `cmux list-status --help` -> `Usage: cmux list-status`
-- `cmux set-progress --help` -> `Usage: cmux set-progress`
-- `cmux clear-progress --help` -> `Usage: cmux clear-progress`
-- `cmux log --help` -> `Usage: cmux log`
-- `cmux clear-log --help` -> `Usage: cmux clear-log`
-- `cmux list-log --help` -> `Usage: cmux list-log`
-- `cmux sidebar-state --help` -> `Usage: cmux sidebar-state`
-- `cmux set-app-focus --help` -> `Usage: cmux set-app-focus`
-- `cmux simulate-app-active --help` -> `Usage: cmux simulate-app-active`
-- `cmux claude-hook --help` -> `Usage: cmux claude-hook`
-- `cmux browser --help` -> `Usage: cmux browser`
-- `cmux help browser` -> `browser react-grab toggle [--surface <id>] [--return-to <terminal-surface>]`
-- `cmux help browser` -> `browser devtools toggle|console [--surface <id>]`
-- `cmux help browser` -> `browser focus-mode enter|exit|toggle [--surface <id>]`
-- `cmux help browser` -> `browser design-mode enable|disable|toggle|status [--surface <id>]`
-- `cmux help browser` -> `browser zoom in|out|reset|<factor> [--surface <id>]`
-- `cmux help browser` -> `browser history clear --force`
-- `cmux help browser` -> `browser console <list|clear>`
-- `cmux help browser` -> `browser errors <list|clear>`
-- `cmux browser --help` -> `screenshot [--out <path>] [--json]`
-- `cmux browser --help` -> `download list [--limit <1...25>] [--json]`
-- `cmux open-browser --help` -> `Legacy alias for 'cmux browser open'`
-- `cmux navigate --help` -> `Legacy alias for 'cmux browser navigate'`
-- `cmux browser-back --help` -> `Legacy alias for 'cmux browser back'`
-- `cmux browser-forward --help` -> `Legacy alias for 'cmux browser forward'`
-- `cmux browser-reload --help` -> `Legacy alias for 'cmux browser reload'`
-- `cmux get-url --help` -> `Legacy alias for 'cmux browser get-url'`
-- `cmux focus-webview --help` -> `Legacy alias for 'cmux browser focus-webview'`
-- `cmux is-webview-focused --help` -> `Legacy alias for 'cmux browser is-webview-focused'`
-- `cmux markdown --help` -> `Usage: cmux markdown open <path>`
+- `bree --help` -> `bree - control bree via Unix socket`
+- `bree --help` -> `open <path-or-url>...`
+- `bree --help` -> `sessions [list] [options]`
+- `bree --help` -> `session restore [--list] [--session <id>]...`
+- `bree help` -> `bree - control bree via Unix socket`
+- `bree --help` -> `Start & Resume:`
+- `bree --help` -> `Diagnostics / Advanced:`
+- `bree help start` -> `Start & Resume:`
+- `bree help agents` -> `Agents:`
+- `bree help navigate` -> `Navigate & Arrange:`
+- `bree help inspect` -> `Inspect:`
+- `bree help inspect` -> `review list [--repo <path>] [--json]`
+- `bree help customize` -> `Customize:`
+- `bree help automation` -> `Automation:`
+- `bree help browser` -> `Browser:`
+- `bree help remote` -> `Remote:`
+- `bree help diagnostics` -> `Diagnostics / Advanced:`
+- `bree help diagnostics` -> `socket-status [--json]`
+- `bree help remote` -> `auth <status|login|logout|team>`
+- `bree --help` -> `socket-status [--json]`
+- `bree --help` -> `bree help <start|agents|navigate|inspect|customize|automation|browser|remote|diagnostics>`
+- `bree help --help` -> `Usage: bree help [topic]`
+- `bree help unknown-task-topic` -> `bree - control bree via Unix socket`
+- `bree --help` -> `bree guide | bree --skill`
+- `bree guide` -> `# bree guide`
+- `bree --skill` -> `# bree guide`
+- `bree guide --help` -> `Usage: bree guide | bree --skill [--json]`
+- `bree --skill -h` -> `Usage: bree guide | bree --skill [--json]`
+- `bree sessions --help` -> `Usage: bree sessions list [options]`
+- `bree ping --help` -> `Usage: bree ping`
+- `bree capabilities --help` -> `Usage: bree capabilities`
+- `bree events --help` -> `Usage: bree events [options]`
+- `bree glaeda --help` -> `Usage: bree glaeda <request|observe> [options]`
+- `bree auth --help` -> `Usage: bree auth <status|login|logout|team>`
+- `bree surface --help` -> `Usage: bree surface ls [<machine>|local] [--refresh] [--json]`
+- `bree surface --help` -> `bree surface resume set [flags] -- <argv...>`
+- `bree surface-resume --help` -> `bree surface resume show [--json] [flags]`
+- `bree remotes --help` -> `Usage: bree remotes <list|add|remove> [options]`
+- `bree remote --help` -> `Usage: bree remotes <list|add|remove> [options]`
+- `bree rpc --help` -> `Usage: bree rpc <method> [json-params]`
+- `bree comments --help` -> `Usage: bree comments <subcommand> [options]`
+- `bree bottom-panel --help` -> `Usage: bree bottom-panel <open|close|toggle|status> [flags]`
+- `bree attention --help` -> `Usage: bree attention <list|clear> [id]`
+- `bree quick-view --help` -> `Usage: bree quick-view <open <path>|close|status> [flags]`
+- `bree pins --help` -> `Usage: bree pins <list|add <path>|remove <path>> [flags]`
+- `bree review --help` -> `Usage: bree review <subcommand> [options]`
+- `bree vault --help` -> `Usage: bree vault <subcommand> [options]`
+- `bree help --help` -> `Usage: bree help`
+- `bree docs --help` -> `Usage: bree docs [settings|shortcuts|api|browser|capture|agents|workflows|dock|managed-policies]`
+- `bree docs` -> `Topics:`
+- `bree docs settings` -> `Config files:`
+- `bree docs capture` -> `capture: Screenshot or record a bree window`
+- `bree docs dock` -> `dock: Custom right-sidebar terminal controls`
+- `bree settings --help` -> `Usage: bree settings [open [target]|path|docs|<target>]`
+- `bree settings path` -> `Config files:`
+- `bree settings docs` -> `Config files:`
+- `bree config --help` -> `Usage: bree config <doctor|check|validate|path|paths|docs|documentation|reload|get|set|unset|toggle|cycle|preset|sidebar-font-size|surface-tab-bar-font-size>`
+- `bree config path` -> `Config files:`
+- `bree config docs` -> `Config files:`
+- `bree welcome --help` -> `Usage: bree welcome`
+- `bree welcome` -> `Command Palette`
+- `bree welcome` -> `Settings > Keyboard Shortcuts`
+- `bree shortcuts --help` -> `Usage: bree shortcuts`
+- `bree disable-browser --help` -> `Usage: bree disable-browser [--json]`
+- `bree enable-browser --help` -> `Usage: bree enable-browser [--json]`
+- `bree browser-status --help` -> `Usage: bree browser-status [--json]`
+- `bree agent-hibernation --help` -> `Usage: bree agent-hibernation <on|off> [--json]`
+- `bree restore --help` -> `Usage: bree restore [--surface <id|ref>] <kind> <checkpoint-id>`
+- `bree fork --help` -> `Usage: bree fork [--surface <id|ref>] <kind> <checkpoint-id>`
+- `bree restore-session --help` -> `Usage: bree restore-session`
+- `bree session restore --help` -> `Usage: bree session restore [--list] [--session <id>]...`
+- `bree open --help` -> `Usage: bree open <path-or-url>...`
+- `bree feed --help` -> `Usage: bree feed tui [--opentui|--legacy]`
+- `bree hooks --help` -> `Usage: bree hooks setup [agent] [--agent <name>] [--yes|-y]`
+- `bree codex --help` -> `Usage: bree codex <install-hooks|uninstall-hooks>`
+- `bree themes --help` -> `Usage: bree themes`
+- `bree import --help` -> `Usage: bree import`
+- `bree omo --help` -> `Usage: bree omo [opencode-args...]`
+- `bree omx --help` -> `Usage: bree omx [omx-args...]`
+- `bree omc --help` -> `Usage: bree omc [omc-args...]`
+- `bree identify --help` -> `Usage: bree identify`
+- `bree list-windows --help` -> `Usage: bree list-windows`
+- `bree current-window --help` -> `Usage: bree current-window`
+- `bree new-window --help` -> `Usage: bree new-window`
+- `bree focus-window --help` -> `Usage: bree focus-window --window <id|ref|index>`
+- `bree close-window --help` -> `Usage: bree close-window --window <id|ref|index>`
+- `bree resize-window --help` -> `Usage: bree resize-window --window <id|ref|index> [--width <points>] [--height <points>]`
+- `bree move-workspace-to-window --help` -> `Usage: bree move-workspace-to-window`
+- `bree move-surface --help` -> `Usage: bree move-surface`
+- `bree split-off --help` -> `Usage: bree split-off`
+- `bree reorder-surface --help` -> `Usage: bree reorder-surface`
+- `bree reorder-workspace --help` -> `Usage: bree reorder-workspace`
+- `bree reorder-workspaces --help` -> `Usage: bree reorder-workspaces`
+- `bree workspace-action --help` -> `Usage: bree workspace-action --action <name>`
+- `bree move-tab-to-new-workspace --help` -> `Usage: bree move-tab-to-new-workspace`
+- `bree tab-action --help` -> `Usage: bree tab-action --action <name>`
+- `bree rename-tab --help` -> `Usage: bree rename-tab`
+- `bree new-workspace --help` -> `Usage: bree new-workspace`
+- `bree new-workspace --help` -> `--command <text>`
+- `bree list-workspaces --help` -> `Usage: bree list-workspaces`
+- `bree ssh --help` -> `Usage: bree ssh <destination>`
+- `bree ssh --help` -> `--forward-agent`
+- `bree ssh --help` -> `--transport <ssh|mosh>`
+- `bree mosh --help` -> `Usage: bree mosh <destination>`
+- `bree mosh-tmux --help` -> `Usage: bree mosh-tmux <destination>`
+- `bree mosh-tmux --help` -> `--session <name>`
+- `bree ssh --help` -> `--command <text>`
+- `bree ssh --help` -> `--no-focus              Open it in the background`
+- `bree ssh-session-list --help` -> `Usage: bree ssh-session-list`
+- `bree ssh-session-attach --help` -> `Usage: bree ssh-session-attach --session-id <id>`
+- `bree ssh-session-cleanup --help` -> `Usage: bree ssh-session-cleanup`
+- `bree new-split --help` -> `Usage: bree new-split`
+- `bree new-split --help` -> `--command <text>`
+- `bree list-panes --help` -> `Usage: bree list-panes`
+- `bree list-pane-surfaces --help` -> `Usage: bree list-pane-surfaces`
+- `bree tree --help` -> `Usage: bree tree`
+- `bree top --help` -> `Usage: bree top`
+- `bree focus-pane --help` -> `Usage: bree focus-pane`
+- `bree new-pane --help` -> `Usage: bree new-pane`
+- `bree new-pane --help` -> `--command <text>`
+- `bree new-surface --help` -> `Usage: bree new-surface`
+- `bree new-surface --help` -> `--command <text>`
+- `bree close-surface --help` -> `Usage: bree close-surface`
+- `bree drag-surface-to-split --help` -> `Usage: bree drag-surface-to-split`
+- `bree refresh-surfaces --help` -> `Usage: bree refresh-surfaces`
+- `bree reload-config --help` -> `Usage: bree reload-config`
+- `bree surface-health --help` -> `Usage: bree surface-health`
+- `bree debug-terminals --help` -> `Usage: bree debug-terminals`
+- `bree trigger-flash --help` -> `Usage: bree trigger-flash`
+- `bree list-panels --help` -> `Usage: bree list-panels`
+- `bree focus-panel --help` -> `Usage: bree focus-panel`
+- `bree close-workspace --help` -> `Usage: bree close-workspace`
+- `bree select-workspace --help` -> `Usage: bree select-workspace`
+- `bree rename-workspace --help` -> `Usage: bree rename-workspace`
+- `bree rename-window --help` -> `Usage: bree rename-workspace`
+- `bree current-workspace --help` -> `Usage: bree current-workspace`
+- `bree capture-pane --help` -> `Usage: bree capture-pane [--workspace <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>] [--scrollback] [--lines <n>]`
+- `bree resize-pane --help` -> `Usage: bree resize-pane [--pane <id|ref|index>] [--workspace <id|ref|index>] [--window <id|ref|index>] [-L|-R|-U|-D] [--amount <n>]`
+- `bree pipe-pane --help` -> `Usage: bree pipe-pane [--workspace <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>] [--command <shell-command> | <shell-command>]`
+- `bree wait-for --help` -> `Usage: bree wait-for [-S|--signal] <name> [--timeout <seconds>]`
+- `bree swap-pane --help` -> `Usage: bree swap-pane --pane <id|ref|index> --target-pane <id|ref|index> [--workspace <id|ref|index>] [--window <id|ref|index>] [--focus <true|false>]`
+- `bree break-pane --help` -> `Usage: bree break-pane [--workspace <id|ref|index>] [--pane <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>] [--focus <true|false>] [--no-focus]`
+- `bree join-pane --help` -> `Usage: bree join-pane --target-pane <id|ref|index> [--workspace <id|ref|index>] [--pane <id|ref|index>] [--surface <id|ref|index>] [--window <id|ref|index>] [--focus <true|false>] [--no-focus]`
+- `bree next-window --help` -> `Usage: bree next-window`
+- `bree previous-window --help` -> `Usage: bree previous-window`
+- `bree last-window --help` -> `Usage: bree last-window`
+- `bree last-pane --help` -> `Usage: bree last-pane`
+- `bree find-window --help` -> `Usage: bree find-window`
+- `bree clear-history --help` -> `Usage: bree clear-history`
+- `bree set-hook --help` -> `Usage: bree set-hook`
+- `bree popup --help` -> `Usage: bree popup`
+- `bree bind-key --help` -> `Usage: bree bind-key`
+- `bree unbind-key --help` -> `Usage: bree unbind-key`
+- `bree copy-mode --help` -> `Usage: bree copy-mode`
+- `bree set-buffer --help` -> `Usage: bree set-buffer`
+- `bree paste-buffer --help` -> `Usage: bree paste-buffer`
+- `bree list-buffers --help` -> `Usage: bree list-buffers`
+- `bree respawn-pane --help` -> `Usage: bree respawn-pane`
+- `bree display-message --help` -> `Usage: bree display-message`
+- `bree read-screen --help` -> `Usage: bree read-screen`
+- `bree record --help` -> `Usage: bree record [start] [flags]`
+- `bree shot --help` -> `Usage: bree shot [flags]`
+- `bree send --help` -> `Usage: bree send`
+- `bree send-key --help` -> `Usage: bree send-key`
+- `bree agent message --help` -> `Usage: bree agent message`
+- `bree agent inbox --help` -> `Usage: bree agent inbox`
+- `bree agent messages --help` -> `Usage: bree agent messages`
+- `bree paste --help` -> `Usage: bree paste`
+- `bree send-panel --help` -> `Usage: bree send-panel`
+- `bree send-key-panel --help` -> `Usage: bree send-key-panel`
+- `bree notify --help` -> `Usage: bree notify`
+- `bree list-notifications --help` -> `Usage: bree list-notifications`
+- `bree dismiss-notification --help` -> `Usage: bree dismiss-notification`
+- `bree mark-notification-read --help` -> `Usage: bree mark-notification-read`
+- `bree open-notification --help` -> `Usage: bree open-notification`
+- `bree jump-to-unread --help` -> `Usage: bree jump-to-unread`
+- `bree clear-notifications --help` -> `Usage: bree clear-notifications`
+- `bree right-sidebar --help` -> `Usage: bree right-sidebar <command> [flags]`
+- `bree set-status --help` -> `Usage: bree set-status`
+- `bree clear-status --help` -> `Usage: bree clear-status`
+- `bree list-status --help` -> `Usage: bree list-status`
+- `bree set-progress --help` -> `Usage: bree set-progress`
+- `bree clear-progress --help` -> `Usage: bree clear-progress`
+- `bree log --help` -> `Usage: bree log`
+- `bree clear-log --help` -> `Usage: bree clear-log`
+- `bree list-log --help` -> `Usage: bree list-log`
+- `bree sidebar-state --help` -> `Usage: bree sidebar-state`
+- `bree set-app-focus --help` -> `Usage: bree set-app-focus`
+- `bree simulate-app-active --help` -> `Usage: bree simulate-app-active`
+- `bree claude-hook --help` -> `Usage: bree claude-hook`
+- `bree browser --help` -> `Usage: bree browser`
+- `bree help browser` -> `browser react-grab toggle [--surface <id>] [--return-to <terminal-surface>]`
+- `bree help browser` -> `browser devtools toggle|console [--surface <id>]`
+- `bree help browser` -> `browser focus-mode enter|exit|toggle [--surface <id>]`
+- `bree help browser` -> `browser design-mode enable|disable|toggle|status [--surface <id>]`
+- `bree help browser` -> `browser zoom in|out|reset|<factor> [--surface <id>]`
+- `bree help browser` -> `browser history clear --force`
+- `bree help browser` -> `browser console <list|clear>`
+- `bree help browser` -> `browser errors <list|clear>`
+- `bree browser --help` -> `screenshot [--out <path>] [--json]`
+- `bree browser --help` -> `download list [--limit <1...25>] [--json]`
+- `bree open-browser --help` -> `Legacy alias for 'bree browser open'`
+- `bree navigate --help` -> `Legacy alias for 'bree browser navigate'`
+- `bree browser-back --help` -> `Legacy alias for 'bree browser back'`
+- `bree browser-forward --help` -> `Legacy alias for 'bree browser forward'`
+- `bree browser-reload --help` -> `Legacy alias for 'bree browser reload'`
+- `bree get-url --help` -> `Legacy alias for 'bree browser get-url'`
+- `bree focus-webview --help` -> `Legacy alias for 'bree browser focus-webview'`
+- `bree is-webview-focused --help` -> `Legacy alias for 'bree browser is-webview-focused'`
+- `bree markdown --help` -> `Usage: bree markdown open <path>`
 <!-- cli-contract-help-probes:end -->
 
-For `cmux restore`, `--surface [id|ref]` uses the caller when omitted.
+For `bree restore`, `--surface [id|ref]` uses the caller when omitted.
 
 ## No-Socket Negative Help Probes
 
@@ -1091,13 +1091,13 @@ The following probes must not print help. They protect argument forwarding after
 These are current contracts to preserve until a follow-up PR intentionally
 changes them:
 
-- `cmux version --help` currently prints the version summary because `version`
+- `bree version --help` currently prints the version summary because `version`
   is handled before subcommand help dispatch.
-- `cmux claude-teams --help` is handled by the command launcher, not by the
+- `bree claude-teams --help` is handled by the command launcher, not by the
   pre-socket help dispatcher.
-- `cmux codex-teams --help` is handled by the command launcher, not by the
+- `bree codex-teams --help` is handled by the command launcher, not by the
   pre-socket help dispatcher.
-- `cmux remote-daemon-status --help` currently prints status because the command
+- `bree remote-daemon-status --help` currently prints status because the command
   runs before subcommand help dispatch.
 
 ## ArgumentParser Migration Sequence
@@ -1105,7 +1105,7 @@ changes them:
 1. Keep this contract file and `tests/test_cli_contract_help.py` green.
 2. Add Swift ArgumentParser as a dependency without changing behavior.
 3. Introduce a parse-only facade that maps ArgumentParser command structs onto
-   existing `CMUXCLI` runner methods.
+   existing `BREECLI` runner methods.
 4. Move one command family at a time into small files, starting with no-socket
    commands (`version`, `themes`, hook installers), then socket commands, then
    browser and tmux compatibility.

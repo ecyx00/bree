@@ -1,6 +1,6 @@
-import CmuxAgentChat
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeAgentChat
+import BreeTerminal
+import BreeTerminalCore
 import Foundation
 
 /// Retains terminal render/tick notifications only while live prose streaming

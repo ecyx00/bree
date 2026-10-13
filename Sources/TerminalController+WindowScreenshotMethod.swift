@@ -1,12 +1,12 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import CoreGraphics
 import Foundation
 
 extension TerminalController {
     /// Socket-worker handler for `window.screenshot`.
     ///
-    /// A still of one of cmux's own windows, on the capture path recording
+    /// A still of one of bree's own windows, on the capture path recording
     /// already uses, so it needs no Screen Recording permission and ships in
     /// Release. The DEBUG `screenshot` command is a different thing: it can
     /// composite overlays and pick backends, and it is missing from every build

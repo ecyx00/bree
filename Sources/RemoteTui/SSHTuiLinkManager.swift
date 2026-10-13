@@ -1,7 +1,7 @@
-import CmuxCloud
-import CmuxCloudTui
+import BreeCloud
+import BreeCloudTui
 import Foundation
-import CmuxCore
+import BreeCore
 
 /// Owns one SSH carrier and shares it between native projections and control requests.
 actor SSHTuiLinkManager: RemoteTuiLinkManaging {

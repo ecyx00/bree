@@ -1,9 +1,9 @@
 import AppKit
-import CmuxWindowing
+import BreeWindowing
 
 extension AppDelegate {
     /// Reasserts the main-window visible-frame invariant after AppKit restores
-    /// window geometry outside cmux's launch and display-topology restore paths.
+    /// window geometry outside bree's launch and display-topology restore paths.
     @discardableResult
     func fitRestoredMainWindowFramesIfNeeded(
         windows: [NSWindow]? = nil,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render cmux view code to PNGs in seconds, without building the app.
+"""Render bree view code to PNGs in seconds, without building the app.
 
 A harness is a Swift file whose top-level code builds views and hands them to
 `UILab.render`. Its header names the app sources to compile with it:
@@ -9,7 +9,7 @@ A harness is a Swift file whose top-level code builds views and hands them to
 
 `source` paths are repo-relative; `shim` names a file in scripts/ui-lab/shims/
 standing in for an app type the sources use. Sources are compiled as one
-module with plain `swiftc` (their `import Cmux*` lines are dropped), so a
+module with plain `swiftc` (their `import Bree*` lines are dropped), so a
 harness can only pull in files without package or app dependencies beyond
 its shims. Keep view code that way when you want it here.
 
@@ -39,15 +39,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LAB = Path(__file__).resolve().parent
 DIRECTIVE = re.compile(r"^//\s*ui-lab:\s*(source|shim)\s+(\S+)\s*$")
-# `import CmuxFoo`, `@testable import CmuxFoo`, `import struct CmuxFoo.Bar`...
+# `import BreeFoo`, `@testable import BreeFoo`, `import struct BreeFoo.Bar`...
 # Blanked, not deleted, so compiler line numbers still match the real file.
 PACKAGE_IMPORT = re.compile(
     r"^[ \t]*(?:@\w+[ \t]+)*(?:(?:public|internal|package|private|fileprivate)[ \t]+)?"
-    r"import[ \t]+(?:(?:struct|class|enum|protocol|typealias|func|var|let|actor)[ \t]+)?Cmux\w*[^\n]*$",
+    r"import[ \t]+(?:(?:struct|class|enum|protocol|typealias|func|var|let|actor)[ \t]+)?Bree\w*[^\n]*$",
     re.M,
 )
 CACHE_DAYS = 14
-CACHE = Path(os.environ.get("CMUX_UI_LAB_CACHE", Path.home() / "Library/Caches/cmux-ui-lab"))
+CACHE = Path(os.environ.get("BREE_UI_LAB_CACHE", Path.home() / "Library/Caches/bree-ui-lab"))
 
 
 def inputs(harness: Path) -> list[Path]:
@@ -98,7 +98,7 @@ def build(harness: Path) -> Path:
         return binary
     prune_cache()
 
-    work = Path(tempfile.mkdtemp(prefix="cmux-ui-lab-"))
+    work = Path(tempfile.mkdtemp(prefix="bree-ui-lab-"))
     try:
         compiled = []
         for index, path in enumerate(files):
@@ -148,12 +148,12 @@ def render(harness: Path, out: Path) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("harness", type=Path)
-    parser.add_argument("--out", type=Path, help="default: $TMPDIR/cmux-ui-lab/<harness name>")
+    parser.add_argument("--out", type=Path, help="default: $TMPDIR/bree-ui-lab/<harness name>")
     parser.add_argument("--watch", action="store_true", help="re-render whenever an input changes")
     args = parser.parse_args(argv)
 
     harness = args.harness.resolve()
-    out = args.out or Path(tempfile.gettempdir()) / "cmux-ui-lab" / harness.stem
+    out = args.out or Path(tempfile.gettempdir()) / "bree-ui-lab" / harness.stem
     try:
         render(harness, out)
     except SystemExit as error:

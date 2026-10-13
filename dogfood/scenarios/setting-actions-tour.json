@@ -1,16 +1,16 @@
 {
   "paths": [
-    "Sources/CmuxConfig*",
-    "Sources/CmuxSettingActionRunner.swift",
+    "Sources/BreeConfig*",
+    "Sources/BreeSettingActionRunner.swift",
     "Sources/ContentView.swift",
     "Sources/Workspace.swift",
-    "Packages/macOS/CmuxSettings/*",
+    "Packages/macOS/BreeSettings/*",
     "dogfood/scenarios/setting-actions-tour.json"
   ],
   "launch": {
     "env": {
-      "HOME": "/tmp/cmux-setting-actions-tour",
-      "CFFIXED_USER_HOME": "/tmp/cmux-setting-actions-tour"
+      "HOME": "/tmp/bree-setting-actions-tour",
+      "CFFIXED_USER_HOME": "/tmp/bree-setting-actions-tour"
     }
   },
   "steps": [
@@ -18,7 +18,7 @@
       "socket": "workspace.create",
       "params": {
         "title": "Setting Actions",
-        "initial_input": "export HOME=/tmp/cmux-setting-actions-tour CFFIXED_USER_HOME=/tmp/cmux-setting-actions-tour; rm -f /tmp/cmux-setting-actions-tour/.config/cmux/cmux.json; mkdir -p ~/.config/cmux; printf '%s\\n' '{\"app\":{\"appearance\":\"light\",\"minimalMode\":false},\"actions\":{\"tour.appearance.dark\":{\"type\":\"setting\",\"path\":\"app.appearance\",\"set\":\"dark\",\"title\":\"Tour: Dark Appearance\",\"palette\":true},\"tour.presentation.minimal\":{\"type\":\"settingPreset\",\"preset\":\"tour.minimal\",\"title\":\"Tour: Minimal Presentation\",\"palette\":true}},\"settingPresets\":{\"tour.minimal\":{\"app\":{\"minimalMode\":true,\"appearance\":\"light\"}}}}' > ~/.config/cmux/cmux.json; cmux reload-config; clear; printf \"Setting actions and presets loaded from cmux.json\\n\"\n",
+        "initial_input": "export HOME=/tmp/bree-setting-actions-tour CFFIXED_USER_HOME=/tmp/bree-setting-actions-tour; rm -f /tmp/bree-setting-actions-tour/.config/bree/bree.json; mkdir -p ~/.config/bree; printf '%s\\n' '{\"app\":{\"appearance\":\"light\",\"minimalMode\":false},\"actions\":{\"tour.appearance.dark\":{\"type\":\"setting\",\"path\":\"app.appearance\",\"set\":\"dark\",\"title\":\"Tour: Dark Appearance\",\"palette\":true},\"tour.presentation.minimal\":{\"type\":\"settingPreset\",\"preset\":\"tour.minimal\",\"title\":\"Tour: Minimal Presentation\",\"palette\":true}},\"settingPresets\":{\"tour.minimal\":{\"app\":{\"minimalMode\":true,\"appearance\":\"light\"}}}}' > ~/.config/bree/bree.json; bree reload-config; clear; printf \"Setting actions and presets loaded from bree.json\\n\"\n",
         "focus": true
       },
       "save": "setup"
@@ -120,7 +120,7 @@
       "params": {
         "title": "CLI Config",
         "focus": true,
-        "initial_input": "clear; printf \"> cmux config get app.minimalMode\\n\"; cmux config get app.minimalMode; printf \"\\n> cmux config get app.appearance\\n\"; cmux config get app.appearance; printf \"\\n> cmux config set app.appearance dark\\n\"; cmux config set app.appearance dark; printf \"\\n> cmux config get app.appearance\\n\"; cmux config get app.appearance\n"
+        "initial_input": "clear; printf \"> bree config get app.minimalMode\\n\"; bree config get app.minimalMode; printf \"\\n> bree config get app.appearance\\n\"; bree config get app.appearance; printf \"\\n> bree config set app.appearance dark\\n\"; bree config set app.appearance dark; printf \"\\n> bree config get app.appearance\\n\"; bree config get app.appearance\n"
       },
       "save": "cli"
     },
@@ -134,7 +134,7 @@
       "tree": "cli-config-get-and-set-output"
     },
     {
-      "type": "rm -f /tmp/cmux-setting-actions-tour/.config/cmux/cmux.json; cmux reload-config; printf \"config restored\\n\"\n"
+      "type": "rm -f /tmp/bree-setting-actions-tour/.config/bree/bree.json; bree reload-config; printf \"config restored\\n\"\n"
     },
     {
       "wait": 1.0

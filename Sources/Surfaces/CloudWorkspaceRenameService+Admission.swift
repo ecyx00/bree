@@ -1,4 +1,4 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension CloudWorkspaceRenameService {

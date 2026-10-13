@@ -14,7 +14,7 @@ struct VaultAllSessionsBar: View {
     /// Cmd+Enter — resume the top search result.
     let onResumeTopResult: () -> Void
 
-    @Environment(\.cmuxGlobalFontMagnificationPercent) private var globalFontPercent
+    @Environment(\.breeGlobalFontMagnificationPercent) private var globalFontPercent
     @State private var viewMenuPresenter = VaultSessionViewMenuPresenter()
 
     private var searchFieldHeight: CGFloat {

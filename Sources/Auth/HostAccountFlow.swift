@@ -1,13 +1,13 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
-import CMUXAuthCore
-import CmuxAuthRuntime
-import CmuxSettingsUI
+import BREEAuthCore
+import BreeAuthRuntime
+import BreeSettingsUI
 import Foundation
 import Observation
 
-/// Adapts the shared ``CmuxAuthRuntime/AuthCoordinator`` and the macOS
-/// ``HostBrowserSignInFlow`` to the `CmuxSettingsUI` `AccountFlow` protocol so
+/// Adapts the shared ``BreeAuthRuntime/AuthCoordinator`` and the macOS
+/// ``HostBrowserSignInFlow`` to the `BreeSettingsUI` `AccountFlow` protocol so
 /// the `AccountSection` can drive sign-in / sign-out / team selection without
 /// depending on the auth packages.
 ///
@@ -173,7 +173,7 @@ final class HostAccountFlow: AccountFlow, AccountSignInFlow {
     @ObservationIgnored private var switchAttempt: Task<Bool, Never>?
 
     /// Signs out, then signs in again asking the hosted page to confirm the
-    /// account. The browser may still hold a cmux session; the page's chooser
+    /// account. The browser may still hold a bree session; the page's chooser
     /// offers "continue as" that account or a different one.
     func switchAccount() async {
         // Clicking again while a switch's window is open (it may be behind
@@ -216,7 +216,7 @@ final class HostAccountFlow: AccountFlow, AccountSignInFlow {
         // stale the user signs in again (full browser round trip).
     }
 
-    private static func identity(from user: CMUXAuthUser?) -> AccountIdentity? {
+    private static func identity(from user: BREEAuthUser?) -> AccountIdentity? {
         guard let user else { return nil }
         return AccountIdentity(
             id: user.id,

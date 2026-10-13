@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 
@@ -61,7 +61,7 @@ enum LocalTmuxRegistryError: Error, CustomStringConvertible {
 
 /// File-backed source of truth for opt-in local tmux sessions.
 ///
-/// The registry is deliberately separate from cmux's layout snapshot. Its
+/// The registry is deliberately separate from bree's layout snapshot. Its
 /// UUID remains stable when runtime workspace/surface IDs are regenerated, and
 /// its 0700/0600 boundary is the authentication boundary for headless clients.
 struct LocalTmuxSessionRegistry {
@@ -78,7 +78,7 @@ struct LocalTmuxSessionRegistry {
     /// same format under its own directory.
     static func live(
         directoryName: String = "local-tmux",
-        overrideVariable: String = "CMUX_LOCAL_TMUX_STATE_DIR",
+        overrideVariable: String = "BREE_LOCAL_TMUX_STATE_DIR",
         environment: [String: String] = ProcessInfo.processInfo.environment,
         fileManager: FileManager = .default
     ) -> LocalTmuxSessionRegistry {
@@ -93,7 +93,7 @@ struct LocalTmuxSessionRegistry {
             let home = environment["HOME"]
                 .flatMap { $0.hasPrefix("/") ? URL(fileURLWithPath: $0, isDirectory: true) : nil }
                 ?? fileManager.homeDirectoryForCurrentUser
-            root = CmuxIdentity.current
+            root = BreeIdentity.current
                 .dotDirectory(homeDirectory: home)
                 .appendingPathComponent(directoryName, isDirectory: true)
         }

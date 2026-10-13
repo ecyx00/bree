@@ -1,5 +1,5 @@
-import CmuxCore
-import CmuxFoundation
+import BreeCore
+import BreeFoundation
 import Darwin
 import Foundation
 

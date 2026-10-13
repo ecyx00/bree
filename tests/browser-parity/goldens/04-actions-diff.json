@@ -12,7 +12,7 @@
       "click #submit"
     ]
   },
-  "cmux": {
+  "bree": {
     "after-actions": "title: Parity Fixture\nurl: PRIMARY/\n- navigation \"Main\" [ref=e1]:\n  - link \"Home\" [ref=e2]\n  - link \"Docs\" [ref=e3]\n- main:\n  - heading \"Sign up\" [level=1]\n  - textbox \"Email\" [ref=e4] [placeholder=\"you@x.com\"]: \"me@x.com\"\n  - checkbox \"Accept terms\" [ref=e5] [checked]\n  - combobox \"Plan\" [ref=e6] [options: Free, Pro, Team]: \"Team\"\n  - textbox \"Bio\" [ref=e7]: \"hi\"\n  - button \"Create account\" [ref=e8] [focused]\n  - button \"Disabled\" [ref=e9] [disabled]\n  - list:\n    - listitem: \"One\"\n    - listitem: \"Two\"\n  - text: \"Plain bold text.\"\n  - img \"Logo\"\n  - button \"Far away\" [ref=e10]\n- text: \"Submitted me@x.com tos=true plan=Team\"",
     "small-change-prints-diff": true,
     "small-change": "title: ARIA Fixture\nurl: PRIMARY/aria.html\n# changes since the previous snapshot (+ added, - removed, ~ changed):\n  - main:\n~   - textbox \"Label for\" [ref=e15]: \"changed\"\n-   - heading \"Level three\" [level=3]\n+   - heading \"Level three renamed\" [level=3]",

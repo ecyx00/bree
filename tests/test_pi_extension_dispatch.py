@@ -11,11 +11,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-from claude_teams_test_utils import install_pi_extension, resolve_cmux_cli
+from claude_teams_test_utils import install_pi_extension, resolve_bree_cli
 
 
 # Fixtures exit at once while this is set, so priming runs none of their logic.
-PRIME_ENVIRONMENT_KEY = "CMUX_TEST_PRIME_EXEC"
+PRIME_ENVIRONMENT_KEY = "BREE_TEST_PRIME_EXEC"
 
 
 def prime_first_exec(path: Path) -> None:
@@ -71,15 +71,15 @@ def run_extension(
     bun: str,
     root: Path,
     extension_path: Path,
-    fake_cmux: Path,
+    fake_bree: Path,
     source: str,
     extra_env: dict[str, str],
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
-    env["CMUX_TEST_PI_EXTENSION_PATH"] = str(extension_path)
-    env["CMUX_PI_CMUX_BIN"] = str(fake_cmux)
-    env["CMUX_SURFACE_ID"] = "00000000-0000-0000-0000-000000008672"
-    env["CMUX_WORKSPACE_ID"] = "00000000-0000-0000-0000-000000008673"
+    env["BREE_TEST_PI_EXTENSION_PATH"] = str(extension_path)
+    env["BREE_PI_BREE_BIN"] = str(fake_bree)
+    env["BREE_SURFACE_ID"] = "00000000-0000-0000-0000-000000008672"
+    env["BREE_WORKSPACE_ID"] = "00000000-0000-0000-0000-000000008673"
     env.update(extra_env)
     return subprocess.run(
         [bun, "--eval", source],
@@ -99,13 +99,13 @@ def main() -> int:
         return 1
 
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except RuntimeError as exc:
         print(f"FAIL: {exc}")
         return 1
 
     del cli_path
-    with tempfile.TemporaryDirectory(prefix="cmux-pi-dispatch-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-pi-dispatch-") as td:
         root = Path(td)
         try:
             extension_path = install_pi_extension(root / "pi-agent")
@@ -117,30 +117,30 @@ def main() -> int:
 
 
 def check_responsiveness(bun: str, root: Path, extension_path: Path) -> int:
-    slow_log = root / "slow-cmux.log"
-    release_marker = root / "release-cmux"
-    slow_cmux = root / "slow-cmux"
+    slow_log = root / "slow-bree.log"
+    release_marker = root / "release-bree"
+    slow_bree = root / "slow-bree"
     make_executable(
-        slow_cmux,
+        slow_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
-printf 'start %s\n' "$*" >> "$CMUX_TEST_PI_DISPATCH_LOG"
+printf 'start %s\n' "$*" >> "$BREE_TEST_PI_DISPATCH_LOG"
 cat >/dev/null
 for _ in {1..100}; do
-  if [ -f "$CMUX_TEST_PI_RELEASE_MARKER" ]; then
-    printf 'end %s\n' "$*" >> "$CMUX_TEST_PI_DISPATCH_LOG"
-    printf 'temporary cmux failure\n' >&2
+  if [ -f "$BREE_TEST_PI_RELEASE_MARKER" ]; then
+    printf 'end %s\n' "$*" >> "$BREE_TEST_PI_DISPATCH_LOG"
+    printf 'temporary bree failure\n' >&2
     exit 42
   fi
   sleep 0.02
 done
-printf 'blocked %s\n' "$*" >> "$CMUX_TEST_PI_DISPATCH_LOG"
+printf 'blocked %s\n' "$*" >> "$BREE_TEST_PI_DISPATCH_LOG"
 exit 88
 """,
     )
     responsiveness_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({
@@ -173,7 +173,7 @@ const ctx = {
 };
 setTimeout(() => {
   contextStale = true;
-  writeFileSync(process.env.CMUX_TEST_PI_RELEASE_MARKER, "ready");
+  writeFileSync(process.env.BREE_TEST_PI_RELEASE_MARKER, "ready");
 }, 0);
 const first = beforeAgentStart({ prompt: "first" }, ctx);
 const second = beforeAgentStart({ prompt: "second" }, ctx);
@@ -183,11 +183,11 @@ await Promise.all([first, second]);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=slow_cmux,
+        fake_bree=slow_bree,
         source=responsiveness_source,
         extra_env={
-            "CMUX_TEST_PI_DISPATCH_LOG": str(slow_log),
-            "CMUX_TEST_PI_RELEASE_MARKER": str(release_marker),
+            "BREE_TEST_PI_DISPATCH_LOG": str(slow_log),
+            "BREE_TEST_PI_RELEASE_MARKER": str(release_marker),
         },
     )
     if responsive.returncode != 0:
@@ -216,28 +216,28 @@ def check_ui_lifecycle_handlers_return_immediately(
 ) -> int:
     lifecycle_log = root / "ui-lifecycle-latency.log"
     lifecycle_release = root / "ui-lifecycle-release"
-    lifecycle_cmux = root / "ui-lifecycle-latency-cmux"
+    lifecycle_bree = root / "ui-lifecycle-latency-bree"
     make_executable(
-        lifecycle_cmux,
+        lifecycle_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf 'start %s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_UI_LATENCY_LOG"
+printf 'start %s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_UI_LATENCY_LOG"
 for _ in {1..250}; do
-  if [ -f "$CMUX_TEST_PI_UI_RELEASE" ]; then break; fi
+  if [ -f "$BREE_TEST_PI_UI_RELEASE" ]; then break; fi
   sleep 0.02
 done
-if [ ! -f "$CMUX_TEST_PI_UI_RELEASE" ]; then
-  printf 'blocked %s\n' "$*" >> "$CMUX_TEST_PI_UI_LATENCY_LOG"
+if [ ! -f "$BREE_TEST_PI_UI_RELEASE" ]; then
+  printf 'blocked %s\n' "$*" >> "$BREE_TEST_PI_UI_LATENCY_LOG"
   exit 88
 fi
-printf 'end %s\n' "$*" >> "$CMUX_TEST_PI_UI_LATENCY_LOG"
+printf 'end %s\n' "$*" >> "$BREE_TEST_PI_UI_LATENCY_LOG"
 printf '{"workspace_id":"00000000-0000-0000-0000-000000008673","surface_id":"00000000-0000-0000-0000-000000008672","resume_binding":{"kind":"pi","checkpoint_id":"pi-ui-latency-session"}}\n'
 """,
     )
     lifecycle_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -264,9 +264,9 @@ await Promise.resolve(handlers.get("agent_end")({
   stopReason: "completed"
 }, ctx));
 console.log("lifecycle_handlers_returned");
-writeFileSync(process.env.CMUX_TEST_PI_UI_RELEASE, "ready");
+writeFileSync(process.env.BREE_TEST_PI_UI_RELEASE, "ready");
 
-const logPath = process.env.CMUX_TEST_PI_UI_LATENCY_LOG;
+const logPath = process.env.BREE_TEST_PI_UI_LATENCY_LOG;
 const deadline = performance.now() + 5000;
 while (performance.now() < deadline) {
   let text = "";
@@ -282,15 +282,15 @@ while (performance.now() < deadline) {
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=lifecycle_cmux,
+        fake_bree=lifecycle_bree,
         source=lifecycle_source,
         extra_env={
-            "CMUX_TEST_PI_UI_LATENCY_LOG": str(lifecycle_log),
-            "CMUX_TEST_PI_UI_RELEASE": str(lifecycle_release),
+            "BREE_TEST_PI_UI_LATENCY_LOG": str(lifecycle_log),
+            "BREE_TEST_PI_UI_RELEASE": str(lifecycle_release),
         },
     )
     if result.returncode != 0:
-        print("FAIL: Pi UI lifecycle handler awaited cmux subprocess work")
+        print("FAIL: Pi UI lifecycle handler awaited bree subprocess work")
         print(f"exit={result.returncode}")
         print(f"stdout={result.stdout.strip()}")
         print(f"stderr={result.stderr.strip()}")
@@ -347,19 +347,19 @@ def check_ui_dialogs_publish_needs_input(
 ) -> int:
     if "installPiUIDialogHooks" not in extension_path.read_text(encoding="utf-8"):
         return 0
-    dialog_log = root / "ui-dialog-cmux.log"
-    dialog_cmux = root / "ui-dialog-cmux"
+    dialog_log = root / "ui-dialog-bree.log"
+    dialog_bree = root / "ui-dialog-bree"
     make_executable(
-        dialog_cmux,
+        dialog_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload=\"$(cat)\"
-printf '%s|%s\\n' \"$*\" \"$payload\" >> \"$CMUX_TEST_PI_DIALOG_LOG\"
+printf '%s|%s\\n' \"$*\" \"$payload\" >> \"$BREE_TEST_PI_DIALOG_LOG\"
 printf '{}\\n'
 """,
     )
     dialog_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -384,9 +384,9 @@ await handlers.get("session_shutdown")({ reason: "dialog test" }, ctx);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=dialog_cmux,
+        fake_bree=dialog_bree,
         source=dialog_source,
-        extra_env={"CMUX_TEST_PI_DIALOG_LOG": str(dialog_log)},
+        extra_env={"BREE_TEST_PI_DIALOG_LOG": str(dialog_log)},
     )
     if result.returncode != 0:
         print(f"FAIL: Pi UI dialog harness failed: {result.stderr!r}")
@@ -404,8 +404,8 @@ await handlers.get("session_shutdown")({ reason: "dialog test" }, ctx);
         or calls.index(question[1]) > calls.index(response[1])
         or question_payloads[1].get("turn_id") != response_payload.get("turn_id")
         or question_payloads[0].get("turn_id") == response_payloads[1].get("turn_id")
-        or response_payloads[0].get("cmux_pi_idle_dialog") is not True
-        or response_payloads[1].get("cmux_pi_idle_dialog") is not False
+        or response_payloads[0].get("bree_pi_idle_dialog") is not True
+        or response_payloads[1].get("bree_pi_idle_dialog") is not False
         or any("Which option should I use?" in line for line in question)
     ):
         print(f"FAIL: Pi UI dialog did not bracket a needs-input lifecycle: {calls!r}")
@@ -420,19 +420,19 @@ def check_ui_dialog_rejection_publishes_response(
 ) -> int:
     if "installPiUIDialogHooks" not in extension_path.read_text(encoding="utf-8"):
         return 0
-    dialog_log = root / "ui-dialog-rejection-cmux.log"
-    dialog_cmux = root / "ui-dialog-rejection-cmux"
+    dialog_log = root / "ui-dialog-rejection-bree.log"
+    dialog_bree = root / "ui-dialog-rejection-bree"
     make_executable(
-        dialog_cmux,
+        dialog_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_DIALOG_REJECTION_LOG"
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_DIALOG_REJECTION_LOG"
 printf '{}\n'
 """,
     )
     dialog_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -455,9 +455,9 @@ await handlers.get("session_shutdown")({ reason: "dialog test" }, ctx);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=dialog_cmux,
+        fake_bree=dialog_bree,
         source=dialog_source,
-        extra_env={"CMUX_TEST_PI_DIALOG_REJECTION_LOG": str(dialog_log)},
+        extra_env={"BREE_TEST_PI_DIALOG_REJECTION_LOG": str(dialog_log)},
     )
     if result.returncode != 0:
         print(f"FAIL: Pi rejected-dialog harness failed: {result.stderr!r}")
@@ -476,9 +476,9 @@ def check_hot_path_defers_projection_and_reuses_launch_probes(
     root: Path,
     extension_path: Path,
 ) -> int:
-    fake_cmux = root / "hot-path-cmux"
+    fake_bree = root / "hot-path-bree"
     make_executable(
-        fake_cmux,
+        fake_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 cat >/dev/null
@@ -487,7 +487,7 @@ printf '{}\n'
     )
 
     projection_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -532,7 +532,7 @@ if (projectionCount !== 1) {
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=fake_cmux,
+        fake_bree=fake_bree,
         source=projection_source,
         extra_env={},
     )
@@ -569,18 +569,18 @@ if (projectionCount !== 1) {
     )
     launch_probe_source = """
 import { unlinkSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 process.argv.splice(
   0,
   process.argv.length,
   "/usr/bin/node",
-  process.env.CMUX_TEST_PI_PACKAGE_CLI
+  process.env.BREE_TEST_PI_PACKAGE_CLI
 );
 const firstArgv = mod.normalizedLaunchArgv();
 const firstSettled = mod.supportsAgentSettled();
-unlinkSync(process.env.CMUX_TEST_PI_BIN);
-unlinkSync(process.env.CMUX_TEST_PI_PACKAGE_JSON);
+unlinkSync(process.env.BREE_TEST_PI_BIN);
+unlinkSync(process.env.BREE_TEST_PI_PACKAGE_JSON);
 const secondArgv = mod.normalizedLaunchArgv();
 const secondSettled = mod.supportsAgentSettled();
 if (
@@ -595,13 +595,13 @@ if (
         bun=bun,
         root=root,
         extension_path=inspectable_extension,
-        fake_cmux=fake_cmux,
+        fake_bree=fake_bree,
         source=launch_probe_source,
         extra_env={
             "PATH": str(probe_bin),
-            "CMUX_TEST_PI_BIN": str(probe_pi),
-            "CMUX_TEST_PI_PACKAGE_CLI": str(package_cli),
-            "CMUX_TEST_PI_PACKAGE_JSON": str(package_json),
+            "BREE_TEST_PI_BIN": str(probe_pi),
+            "BREE_TEST_PI_PACKAGE_CLI": str(package_cli),
+            "BREE_TEST_PI_PACKAGE_JSON": str(package_json),
         },
     )
     if launch_probe.returncode != 0:
@@ -615,18 +615,18 @@ if (
 
 def check_completion_precedes_next_prompt(bun: str, root: Path, extension_path: Path) -> int:
     transition_log = root / "turn-transition.log"
-    transition_cmux = root / "turn-transition-cmux"
+    transition_bree = root / "turn-transition-bree"
     make_executable(
-        transition_cmux,
+        transition_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_TRANSITION_LOG"
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_TRANSITION_LOG"
 printf '{}\n'
 """,
     )
     transition_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -646,9 +646,9 @@ await handlers.get("session_shutdown")({ reason: "test complete" }, ctx);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=transition_cmux,
+        fake_bree=transition_bree,
         source=transition_source,
-        extra_env={"CMUX_TEST_PI_TRANSITION_LOG": str(transition_log)},
+        extra_env={"BREE_TEST_PI_TRANSITION_LOG": str(transition_log)},
     )
     if result.returncode != 0:
         print(f"FAIL: Pi turn-transition harness failed: {result.stderr!r}")
@@ -697,30 +697,30 @@ def check_cross_session_lifecycle_isolation(
 ) -> int:
     lifecycle_log = root / "cross-session-lifecycle.log"
     lifecycle_release = root / "cross-session-lifecycle-release"
-    lifecycle_cmux = root / "cross-session-lifecycle-cmux"
+    lifecycle_bree = root / "cross-session-lifecycle-bree"
     make_executable(
-        lifecycle_cmux,
+        lifecycle_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf 'start %s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_CROSS_LIFECYCLE_LOG"
+printf 'start %s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_CROSS_LIFECYCLE_LOG"
 if [[ "$payload" == *'"session_id":"pi-slow-session"'* ]] && [[ "$*" == *"prompt-submit"* ]]; then
   for _ in {1..250}; do
-    if [ -f "$CMUX_TEST_PI_CROSS_LIFECYCLE_RELEASE" ]; then break; fi
+    if [ -f "$BREE_TEST_PI_CROSS_LIFECYCLE_RELEASE" ]; then break; fi
     sleep 0.02
   done
-  if [ ! -f "$CMUX_TEST_PI_CROSS_LIFECYCLE_RELEASE" ]; then
-    printf 'blocked %s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_CROSS_LIFECYCLE_LOG"
+  if [ ! -f "$BREE_TEST_PI_CROSS_LIFECYCLE_RELEASE" ]; then
+    printf 'blocked %s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_CROSS_LIFECYCLE_LOG"
     exit 88
   fi
 fi
-printf 'end %s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_CROSS_LIFECYCLE_LOG"
+printf 'end %s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_CROSS_LIFECYCLE_LOG"
 printf '{}\n'
 """,
     )
     lifecycle_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -731,7 +731,7 @@ const context = (sessionId) => ({
 const slow = context("pi-slow-session");
 const healthy = context("pi-healthy-session");
 handlers.get("before_agent_start")({ prompt: "block session A" }, slow);
-const logPath = process.env.CMUX_TEST_PI_CROSS_LIFECYCLE_LOG;
+const logPath = process.env.BREE_TEST_PI_CROSS_LIFECYCLE_LOG;
 const slowStartDeadline = performance.now() + 5000;
 let sawSlowStart = false;
 while (performance.now() < slowStartDeadline) {
@@ -743,20 +743,20 @@ while (performance.now() < slowStartDeadline) {
   } catch (_) {}
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
-if (!sawSlowStart) throw new Error("slow session never entered cmux dispatch");
+if (!sawSlowStart) throw new Error("slow session never entered bree dispatch");
 await handlers.get("session_shutdown")({ reason: "session B complete" }, healthy);
-writeFileSync(process.env.CMUX_TEST_PI_CROSS_LIFECYCLE_RELEASE, "ready");
+writeFileSync(process.env.BREE_TEST_PI_CROSS_LIFECYCLE_RELEASE, "ready");
 await handlers.get("session_shutdown")({ reason: "session A complete" }, slow);
 """
     result = run_extension(
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=lifecycle_cmux,
+        fake_bree=lifecycle_bree,
         source=lifecycle_source,
         extra_env={
-            "CMUX_TEST_PI_CROSS_LIFECYCLE_LOG": str(lifecycle_log),
-            "CMUX_TEST_PI_CROSS_LIFECYCLE_RELEASE": str(lifecycle_release),
+            "BREE_TEST_PI_CROSS_LIFECYCLE_LOG": str(lifecycle_log),
+            "BREE_TEST_PI_CROSS_LIFECYCLE_RELEASE": str(lifecycle_release),
         },
     )
     if result.returncode != 0:
@@ -795,13 +795,13 @@ await handlers.get("session_shutdown")({ reason: "session A complete" }, slow);
 
 
 def check_panel_only_target_fails_closed(bun: str, root: Path, extension_path: Path) -> int:
-    marker = root / "panel-only-cmux-called"
-    fake_cmux = root / "panel-only-cmux"
+    marker = root / "panel-only-bree-called"
+    fake_bree = root / "panel-only-bree"
     make_executable(
-        fake_cmux,
+        fake_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
-touch "$CMUX_TEST_PI_PANEL_ONLY_MARKER"
+touch "$BREE_TEST_PI_PANEL_ONLY_MARKER"
 exit 91
 """,
     )
@@ -812,7 +812,7 @@ exit 91
         encoding="utf-8",
     )
     source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const delivered = await mod.sendHook(
   {},
@@ -828,41 +828,41 @@ if (delivered) throw new Error("panel-only hook was reported as delivered");
         bun=bun,
         root=root,
         extension_path=inspectable_extension,
-        fake_cmux=fake_cmux,
+        fake_bree=fake_bree,
         source=source,
         extra_env={
-            "CMUX_SURFACE_ID": "",
-            "CMUX_WORKSPACE_ID": "",
-            "CMUX_PANEL_ID": "00000000-0000-0000-0000-000000008674",
-            "CMUX_TEST_PI_PANEL_ONLY_MARKER": str(marker),
+            "BREE_SURFACE_ID": "",
+            "BREE_WORKSPACE_ID": "",
+            "BREE_PANEL_ID": "00000000-0000-0000-0000-000000008674",
+            "BREE_TEST_PI_PANEL_ONLY_MARKER": str(marker),
         },
     )
     if result.returncode != 0:
         print(f"FAIL: panel-only target was treated as delivered: {result.stderr!r}")
         return 1
     if marker.exists():
-        print("FAIL: panel-only target invoked the cmux CLI fallback")
+        print("FAIL: panel-only target invoked the bree CLI fallback")
         return 1
     return 0
 
 
 def check_feed_backlog(bun: str, root: Path, extension_path: Path) -> int:
-    backlog_log = root / "backlog-cmux.log"
+    backlog_log = root / "backlog-bree.log"
     backlog_release = root / "backlog-release"
-    backlog_cmux = root / "backlog-cmux"
+    backlog_bree = root / "backlog-bree"
     make_executable(
-        backlog_cmux,
+        backlog_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_BACKLOG_LOG"
-while [ ! -f "$CMUX_TEST_PI_BACKLOG_RELEASE" ]; do sleep 0.02; done
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_BACKLOG_LOG"
+while [ ! -f "$BREE_TEST_PI_BACKLOG_RELEASE" ]; do sleep 0.02; done
 printf '{}\n'
 """,
     )
     backlog_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -883,18 +883,18 @@ handlers.get("tool_execution_end")({
   result: { content: [{ type: "text", text: "terminal result" }] },
   isError: false
 }, ctx);
-setTimeout(() => writeFileSync(process.env.CMUX_TEST_PI_BACKLOG_RELEASE, "ready"), 100);
+setTimeout(() => writeFileSync(process.env.BREE_TEST_PI_BACKLOG_RELEASE, "ready"), 100);
 await handlers.get("before_agent_start")({ prompt: "after feed backlog" }, ctx);
 """
     backlog = run_extension(
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=backlog_cmux,
+        fake_bree=backlog_bree,
         source=backlog_source,
         extra_env={
-            "CMUX_TEST_PI_BACKLOG_LOG": str(backlog_log),
-            "CMUX_TEST_PI_BACKLOG_RELEASE": str(backlog_release),
+            "BREE_TEST_PI_BACKLOG_LOG": str(backlog_log),
+            "BREE_TEST_PI_BACKLOG_RELEASE": str(backlog_release),
         },
     )
     if backlog.returncode != 0:
@@ -917,24 +917,24 @@ await handlers.get("before_agent_start")({ prompt: "after feed backlog" }, ctx);
 
 
 def check_terminal_feed_compaction(bun: str, root: Path, extension_path: Path) -> int:
-    compaction_log = root / "terminal-compaction-cmux.log"
+    compaction_log = root / "terminal-compaction-bree.log"
     compaction_release = root / "terminal-compaction-release"
-    compaction_cmux = root / "terminal-compaction-cmux"
+    compaction_bree = root / "terminal-compaction-bree"
     make_executable(
-        compaction_cmux,
+        compaction_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_COMPACTION_LOG"
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_COMPACTION_LOG"
 if [[ "$payload" == *'"tool_call_id":"overflow-tool-0"'* ]]; then
-  while [ ! -f "$CMUX_TEST_PI_COMPACTION_RELEASE" ]; do sleep 0.02; done
+  while [ ! -f "$BREE_TEST_PI_COMPACTION_RELEASE" ]; do sleep 0.02; done
 fi
 printf '{}\n'
 """,
     )
     compaction_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -950,11 +950,11 @@ for (let index = 0; index < 10; index += 1) {
     isError: false
   }, context(index));
 }
-const logPath = process.env.CMUX_TEST_PI_COMPACTION_LOG;
+const logPath = process.env.BREE_TEST_PI_COMPACTION_LOG;
 while (!Bun.file(logPath).size) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
-writeFileSync(process.env.CMUX_TEST_PI_COMPACTION_RELEASE, "ready");
+writeFileSync(process.env.BREE_TEST_PI_COMPACTION_RELEASE, "ready");
 await handlers.get("agent_end")({
   messages: [{ role: "assistant", content: "done" }],
   stopReason: "completed"
@@ -964,11 +964,11 @@ await handlers.get("agent_end")({
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=compaction_cmux,
+        fake_bree=compaction_bree,
         source=compaction_source,
         extra_env={
-            "CMUX_TEST_PI_COMPACTION_LOG": str(compaction_log),
-            "CMUX_TEST_PI_COMPACTION_RELEASE": str(compaction_release),
+            "BREE_TEST_PI_COMPACTION_LOG": str(compaction_log),
+            "BREE_TEST_PI_COMPACTION_RELEASE": str(compaction_release),
         },
     )
     if compacted.returncode != 0:
@@ -984,7 +984,7 @@ await handlers.get("agent_end")({
     compacted_summaries = [
         summary
         for line in feed_calls
-        for summary in json.loads(line.split("|", 1)[1]).get("cmux_compacted_terminal_events", [])
+        for summary in json.loads(line.split("|", 1)[1]).get("bree_compacted_terminal_events", [])
     ]
     for summary in compacted_summaries:
         tool_id = summary.get("tool_call_id", "")
@@ -998,11 +998,11 @@ await handlers.get("agent_end")({
 
 
 def check_feed_payload_byte_bound(bun: str, root: Path, extension_path: Path) -> int:
-    payload_log = root / "bounded-payload-cmux.log"
+    payload_log = root / "bounded-payload-bree.log"
     payload_release = root / "bounded-payload-release"
-    payload_cmux = root / "bounded-payload-cmux"
+    payload_bree = root / "bounded-payload-bree"
     make_executable(
-        payload_cmux,
+        payload_bree,
         """#!/usr/bin/env python3
 import fcntl
 import os
@@ -1012,13 +1012,13 @@ import time
 
 args = " ".join(sys.argv[1:])
 payload = sys.stdin.read()
-with open(os.environ["CMUX_TEST_PI_PAYLOAD_LOG"], "a", encoding="utf-8") as stream:
+with open(os.environ["BREE_TEST_PI_PAYLOAD_LOG"], "a", encoding="utf-8") as stream:
     fcntl.flock(stream, fcntl.LOCK_EX)
     stream.write(f"{args}|{payload}\\n")
     stream.flush()
 
 if '"tool_call_id":"large-tool-0"' in payload:
-    release = pathlib.Path(os.environ["CMUX_TEST_PI_PAYLOAD_RELEASE"])
+    release = pathlib.Path(os.environ["BREE_TEST_PI_PAYLOAD_RELEASE"])
     while not release.exists():
         time.sleep(0.02)
 print("{}")
@@ -1026,7 +1026,7 @@ print("{}")
     )
     payload_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1060,11 +1060,11 @@ for (let index = 0; index < 10; index += 1) {
     isError: false
   }, ctx);
 }
-const logPath = process.env.CMUX_TEST_PI_PAYLOAD_LOG;
+const logPath = process.env.BREE_TEST_PI_PAYLOAD_LOG;
 while (!Bun.file(logPath).size) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
-writeFileSync(process.env.CMUX_TEST_PI_PAYLOAD_RELEASE, "ready");
+writeFileSync(process.env.BREE_TEST_PI_PAYLOAD_RELEASE, "ready");
 await handlers.get("agent_end")({
   messages: [{ role: "assistant", content: "done" }],
   stopReason: "completed"
@@ -1074,11 +1074,11 @@ await handlers.get("agent_end")({
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=payload_cmux,
+        fake_bree=payload_bree,
         source=payload_source,
         extra_env={
-            "CMUX_TEST_PI_PAYLOAD_LOG": str(payload_log),
-            "CMUX_TEST_PI_PAYLOAD_RELEASE": str(payload_release),
+            "BREE_TEST_PI_PAYLOAD_LOG": str(payload_log),
+            "BREE_TEST_PI_PAYLOAD_RELEASE": str(payload_release),
         },
     )
     if bounded.returncode != 0:
@@ -1112,19 +1112,19 @@ def check_numeric_tool_results_are_projected(
     root: Path,
     extension_path: Path,
 ) -> int:
-    numeric_log = root / "numeric-result-cmux.log"
-    numeric_cmux = root / "numeric-result-cmux"
+    numeric_log = root / "numeric-result-bree.log"
+    numeric_bree = root / "numeric-result-bree"
     make_executable(
-        numeric_cmux,
+        numeric_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_NUMERIC_RESULT_LOG"
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_NUMERIC_RESULT_LOG"
 printf '{}\n'
 """,
     )
     numeric_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1145,9 +1145,9 @@ await handlers.get("session_shutdown")({ reason: "quit" }, ctx);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=numeric_cmux,
+        fake_bree=numeric_bree,
         source=numeric_source,
-        extra_env={"CMUX_TEST_PI_NUMERIC_RESULT_LOG": str(numeric_log)},
+        extra_env={"BREE_TEST_PI_NUMERIC_RESULT_LOG": str(numeric_log)},
     )
     if numeric.returncode != 0:
         print(f"FAIL: numeric-result Pi harness failed: {numeric.stderr!r}")
@@ -1169,24 +1169,24 @@ await handlers.get("session_shutdown")({ reason: "quit" }, ctx);
 
 
 def check_cross_session_feed_ownership(bun: str, root: Path, extension_path: Path) -> int:
-    ownership_log = root / "cross-session-cmux.log"
+    ownership_log = root / "cross-session-bree.log"
     ownership_release = root / "cross-session-release"
-    ownership_cmux = root / "cross-session-cmux"
+    ownership_bree = root / "cross-session-bree"
     make_executable(
-        ownership_cmux,
+        ownership_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_OWNERSHIP_LOG"
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_OWNERSHIP_LOG"
 if [[ "$payload" == *'"tool_call_id":"session-a-tool-0"'* ]]; then
-  while [ ! -f "$CMUX_TEST_PI_OWNERSHIP_RELEASE" ]; do sleep 0.02; done
+  while [ ! -f "$BREE_TEST_PI_OWNERSHIP_RELEASE" ]; do sleep 0.02; done
 fi
 printf '{}\n'
 """,
     )
     ownership_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1210,11 +1210,11 @@ handlers.get("tool_execution_end")({
   result: { status: "failed" },
   isError: true
 }, sessionB);
-const logPath = process.env.CMUX_TEST_PI_OWNERSHIP_LOG;
+const logPath = process.env.BREE_TEST_PI_OWNERSHIP_LOG;
 while (!Bun.file(logPath).size) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
-writeFileSync(process.env.CMUX_TEST_PI_OWNERSHIP_RELEASE, "ready");
+writeFileSync(process.env.BREE_TEST_PI_OWNERSHIP_RELEASE, "ready");
 await handlers.get("agent_end")({
   messages: [{ role: "assistant", content: "session b done" }],
   stopReason: "completed"
@@ -1228,11 +1228,11 @@ await handlers.get("agent_end")({
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=ownership_cmux,
+        fake_bree=ownership_bree,
         source=ownership_source,
         extra_env={
-            "CMUX_TEST_PI_OWNERSHIP_LOG": str(ownership_log),
-            "CMUX_TEST_PI_OWNERSHIP_RELEASE": str(ownership_release),
+            "BREE_TEST_PI_OWNERSHIP_LOG": str(ownership_log),
+            "BREE_TEST_PI_OWNERSHIP_RELEASE": str(ownership_release),
         },
     )
     if ownership.returncode != 0:
@@ -1249,7 +1249,7 @@ await handlers.get("agent_end")({
         print(f"FAIL: terminal overflow lost session B routing ownership: {feed_payloads!r}")
         return 1
     for payload in feed_payloads:
-        summaries = payload.get("cmux_compacted_terminal_events", [])
+        summaries = payload.get("bree_compacted_terminal_events", [])
         if any(summary.get("session_id") != payload.get("session_id") for summary in summaries):
             print(f"FAIL: terminal overflow compacted events across sessions: {payload!r}")
             return 1
@@ -1271,24 +1271,24 @@ await handlers.get("agent_end")({
 
 
 def check_cross_session_feed_isolation(bun: str, root: Path, extension_path: Path) -> int:
-    isolation_log = root / "cross-session-isolation-cmux.log"
+    isolation_log = root / "cross-session-isolation-bree.log"
     isolation_release = root / "cross-session-isolation-release"
-    isolation_cmux = root / "cross-session-isolation-cmux"
+    isolation_bree = root / "cross-session-isolation-bree"
     make_executable(
-        isolation_cmux,
+        isolation_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_ISOLATION_LOG"
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_ISOLATION_LOG"
 if [[ "$payload" == *'"session_id":"pi-stalled-session-a"'* ]] && [[ "$*" == *"hooks feed"* ]]; then
-  while [ ! -f "$CMUX_TEST_PI_ISOLATION_RELEASE" ]; do sleep 0.02; done
+  while [ ! -f "$BREE_TEST_PI_ISOLATION_RELEASE" ]; do sleep 0.02; done
 fi
 printf '{}\n'
 """,
     )
     isolation_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1304,7 +1304,7 @@ handlers.get("tool_execution_end")({
   result: { status: "stalled" },
   isError: false
 }, sessionA);
-const logPath = process.env.CMUX_TEST_PI_ISOLATION_LOG;
+const logPath = process.env.BREE_TEST_PI_ISOLATION_LOG;
 while (!Bun.file(logPath).size) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
@@ -1318,7 +1318,7 @@ await handlers.get("agent_end")({
   messages: [{ role: "assistant", content: "session b done" }],
   stopReason: "completed"
 }, sessionB);
-writeFileSync(process.env.CMUX_TEST_PI_ISOLATION_RELEASE, "ready");
+writeFileSync(process.env.BREE_TEST_PI_ISOLATION_RELEASE, "ready");
 await handlers.get("agent_end")({
   messages: [{ role: "assistant", content: "session a done" }],
   stopReason: "completed"
@@ -1328,11 +1328,11 @@ await handlers.get("agent_end")({
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=isolation_cmux,
+        fake_bree=isolation_bree,
         source=isolation_source,
         extra_env={
-            "CMUX_TEST_PI_ISOLATION_LOG": str(isolation_log),
-            "CMUX_TEST_PI_ISOLATION_RELEASE": str(isolation_release),
+            "BREE_TEST_PI_ISOLATION_LOG": str(isolation_log),
+            "BREE_TEST_PI_ISOLATION_RELEASE": str(isolation_release),
         },
     )
     if isolation.returncode != 0:
@@ -1364,12 +1364,12 @@ def check_feed_ack_rehomes_cached_target(bun: str, root: Path, extension_path: P
     inspectable_extension = root / "feed-rehome-bree-session.ts"
     inspectable_extension.write_text(
         extension_path.read_text(encoding="utf-8")
-        + "\nexport { PiCmuxCommandDispatcher, surfaceTargetsFor };\n",
+        + "\nexport { PiBreeCommandDispatcher, surfaceTargetsFor };\n",
         encoding="utf-8",
     )
-    rehome_cmux = root / "feed-rehome-cmux"
+    rehome_bree = root / "feed-rehome-bree"
     make_executable(
-        rehome_cmux,
+        rehome_bree,
         f"""#!/usr/bin/env python3
 import json
 import sys
@@ -1384,9 +1384,9 @@ print(json.dumps({{
 """,
     )
     rehome_source = f"""
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
-const dispatcher = new mod.PiCmuxCommandDispatcher();
+const dispatcher = new mod.PiBreeCommandDispatcher();
 const sessionId = "pi-feed-rehome-session";
 const context = {{
   sessionId,
@@ -1419,7 +1419,7 @@ if (JSON.stringify(target) !== JSON.stringify(expected)) {{
         bun=bun,
         root=root,
         extension_path=inspectable_extension,
-        fake_cmux=rehome_cmux,
+        fake_bree=rehome_bree,
         source=rehome_source,
         extra_env={},
     )
@@ -1433,9 +1433,9 @@ def check_aggregate_feed_bound(bun: str, root: Path, extension_path: Path) -> in
     state_path = root / "aggregate-feed-state.json"
     lock_path = root / "aggregate-feed.lock"
     release_path = root / "aggregate-feed-release"
-    aggregate_cmux = root / "aggregate-feed-cmux"
+    aggregate_bree = root / "aggregate-feed-bree"
     make_executable(
-        aggregate_cmux,
+        aggregate_bree,
         """#!/usr/bin/env python3
 import fcntl
 import json
@@ -1445,9 +1445,9 @@ import sys
 import time
 
 sys.stdin.read()
-state_path = pathlib.Path(os.environ["CMUX_TEST_PI_AGGREGATE_STATE"])
-lock_path = pathlib.Path(os.environ["CMUX_TEST_PI_AGGREGATE_LOCK"])
-release_path = pathlib.Path(os.environ["CMUX_TEST_PI_AGGREGATE_RELEASE"])
+state_path = pathlib.Path(os.environ["BREE_TEST_PI_AGGREGATE_STATE"])
+lock_path = pathlib.Path(os.environ["BREE_TEST_PI_AGGREGATE_LOCK"])
+release_path = pathlib.Path(os.environ["BREE_TEST_PI_AGGREGATE_RELEASE"])
 
 def update(delta):
     with lock_path.open("a+", encoding="utf-8") as lock:
@@ -1472,9 +1472,9 @@ print("{}")
     )
     aggregate_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
-const statePath = process.env.CMUX_TEST_PI_AGGREGATE_STATE;
-const releasePath = process.env.CMUX_TEST_PI_AGGREGATE_RELEASE;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
+const statePath = process.env.BREE_TEST_PI_AGGREGATE_STATE;
+const releasePath = process.env.BREE_TEST_PI_AGGREGATE_RELEASE;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1523,12 +1523,12 @@ await waitForAggregateState(
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=aggregate_cmux,
+        fake_bree=aggregate_bree,
         source=aggregate_source,
         extra_env={
-            "CMUX_TEST_PI_AGGREGATE_STATE": str(state_path),
-            "CMUX_TEST_PI_AGGREGATE_LOCK": str(lock_path),
-            "CMUX_TEST_PI_AGGREGATE_RELEASE": str(release_path),
+            "BREE_TEST_PI_AGGREGATE_STATE": str(state_path),
+            "BREE_TEST_PI_AGGREGATE_LOCK": str(lock_path),
+            "BREE_TEST_PI_AGGREGATE_RELEASE": str(release_path),
         },
     )
     if result.returncode != 0:
@@ -1546,9 +1546,9 @@ await waitForAggregateState(
 
 def check_feed_failure_overflow_fails_closed(bun: str, root: Path, extension_path: Path) -> int:
     release_path = root / "feed-failure-overflow-release"
-    overflow_cmux = root / "feed-failure-overflow-cmux"
+    overflow_bree = root / "feed-failure-overflow-bree"
     make_executable(
-        overflow_cmux,
+        overflow_bree,
         """#!/usr/bin/env python3
 import os
 import pathlib
@@ -1556,7 +1556,7 @@ import sys
 import time
 
 sys.stdin.read()
-release_path = pathlib.Path(os.environ["CMUX_TEST_PI_FAILURE_OVERFLOW_RELEASE"])
+release_path = pathlib.Path(os.environ["BREE_TEST_PI_FAILURE_OVERFLOW_RELEASE"])
 while not release_path.exists():
     time.sleep(0.01)
 print("{}")
@@ -1565,14 +1565,14 @@ print("{}")
     inspectable_extension = root / "feed-failure-overflow-bree-session.ts"
     inspectable_extension.write_text(
         extension_path.read_text(encoding="utf-8")
-        + "\nexport { PiCmuxCommandDispatcher };\n",
+        + "\nexport { PiBreeCommandDispatcher };\n",
         encoding="utf-8",
     )
     overflow_source = """
 import { writeFileSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
-const dispatcher = new mod.PiCmuxCommandDispatcher();
+const dispatcher = new mod.PiBreeCommandDispatcher();
 let overflowFailureReported = false;
 for (let index = 0; index < 70; index += 1) {
   const sessionId = `pi-feed-failure-overflow-${index}`;
@@ -1594,7 +1594,7 @@ for (let index = 0; index < 70; index += 1) {
   });
 }
 await dispatcher.finishFeedForSession("pi-feed-failure-overflow-69");
-writeFileSync(process.env.CMUX_TEST_PI_FAILURE_OVERFLOW_RELEASE, "ready");
+writeFileSync(process.env.BREE_TEST_PI_FAILURE_OVERFLOW_RELEASE, "ready");
 if (!overflowFailureReported) throw new Error("dropped terminal Feed event was reported as delivered");
 await Promise.all(Array.from(
   { length: 34 },
@@ -1623,9 +1623,9 @@ if (recoveredFailureReported) throw new Error("Feed failure overflow did not rec
         bun=bun,
         root=root,
         extension_path=inspectable_extension,
-        fake_cmux=overflow_cmux,
+        fake_bree=overflow_bree,
         source=overflow_source,
-        extra_env={"CMUX_TEST_PI_FAILURE_OVERFLOW_RELEASE": str(release_path)},
+        extra_env={"BREE_TEST_PI_FAILURE_OVERFLOW_RELEASE": str(release_path)},
     )
     if result.returncode != 0:
         print(f"FAIL: Feed failure overflow did not fail closed: {result.stderr!r}")
@@ -1633,10 +1633,10 @@ if (recoveredFailureReported) throw new Error("Feed failure overflow did not rec
     return 0
 
 
-def make_feed_lifecycle_cmux(root: Path, name: str) -> Path:
-    cmux = root / name
+def make_feed_lifecycle_bree(root: Path, name: str) -> Path:
+    bree = root / name
     make_executable(
-        cmux,
+        bree,
         """#!/usr/bin/env python3
 import fcntl
 import os
@@ -1646,7 +1646,7 @@ import time
 
 args = " ".join(sys.argv[1:])
 payload = sys.stdin.read()
-log_path = os.environ["CMUX_TEST_PI_CANCELLATION_LOG"]
+log_path = os.environ["BREE_TEST_PI_CANCELLATION_LOG"]
 
 def log(message):
     with open(log_path, "a", encoding="utf-8") as stream:
@@ -1655,7 +1655,7 @@ def log(message):
 
 log(f"{args}|{payload}")
 
-lock_path = os.environ.get("CMUX_TEST_PI_COMPLETION_LOCK")
+lock_path = os.environ.get("BREE_TEST_PI_COMPLETION_LOCK")
 if "hooks feed" in args and "PostToolUse" in args and lock_path:
     with open(lock_path, "a", encoding="utf-8") as lock:
         try:
@@ -1677,14 +1677,14 @@ if "hooks feed" in args and "PreToolUse" in args:
 print("{}")
 """,
     )
-    return cmux
+    return bree
 
 
 def check_feed_cancellation(bun: str, root: Path, extension_path: Path) -> int:
-    cancellation_log = root / "cancellation-cmux.log"
-    cancellation_cmux = make_feed_lifecycle_cmux(root, "cancellation-cmux")
+    cancellation_log = root / "cancellation-bree.log"
+    cancellation_bree = make_feed_lifecycle_bree(root, "cancellation-bree")
     cancellation_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1699,7 +1699,7 @@ for (let index = 0; index < 10; index += 1) {
     args: { command: `echo ${index}` }
   }, ctx);
 }
-const logPath = process.env.CMUX_TEST_PI_CANCELLATION_LOG;
+const logPath = process.env.BREE_TEST_PI_CANCELLATION_LOG;
 while (!Bun.file(logPath).size) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
@@ -1710,9 +1710,9 @@ await new Promise((resolve) => setTimeout(resolve, 750));
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=cancellation_cmux,
+        fake_bree=cancellation_bree,
         source=cancellation_source,
-        extra_env={"CMUX_TEST_PI_CANCELLATION_LOG": str(cancellation_log)},
+        extra_env={"BREE_TEST_PI_CANCELLATION_LOG": str(cancellation_log)},
     )
     if cancellation.returncode != 0:
         print(f"FAIL: feed-cancellation harness failed: {cancellation.stderr!r}")
@@ -1727,12 +1727,12 @@ await new Promise((resolve) => setTimeout(resolve, 750));
 
 
 def check_lifecycle_backlog_shedding(bun: str, root: Path, extension_path: Path) -> int:
-    backlog_log = root / "lifecycle-backlog-cmux.log"
+    backlog_log = root / "lifecycle-backlog-bree.log"
     diagnostic_log = root / "lifecycle-backlog-diagnostics.log"
     release_marker = root / "lifecycle-backlog-release"
-    backlog_cmux = root / "lifecycle-backlog-cmux"
+    backlog_bree = root / "lifecycle-backlog-bree"
     make_executable(
-        backlog_cmux,
+        backlog_bree,
         """#!/usr/bin/env python3
 import os
 import sys
@@ -1740,16 +1740,16 @@ import time
 
 args = " ".join(sys.argv[1:])
 sys.stdin.read()
-with open(os.environ["CMUX_TEST_PI_BACKLOG_LOG"], "a", encoding="utf-8") as stream:
+with open(os.environ["BREE_TEST_PI_BACKLOG_LOG"], "a", encoding="utf-8") as stream:
     stream.write(args + "\\n")
 if "hooks pi session-start" in args:
-    while not os.path.exists(os.environ["CMUX_TEST_PI_BACKLOG_RELEASE"]):
+    while not os.path.exists(os.environ["BREE_TEST_PI_BACKLOG_RELEASE"]):
         time.sleep(0.01)
 print("{}")
 """,
     )
     backlog_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1758,7 +1758,7 @@ const ctx = {
   sessionManager: { getSessionId() { return "pi-lifecycle-backlog-session"; } }
 };
 handlers.get("session_start")({}, ctx);
-const logPath = process.env.CMUX_TEST_PI_BACKLOG_LOG;
+const logPath = process.env.BREE_TEST_PI_BACKLOG_LOG;
 while (!Bun.file(logPath).size) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
@@ -1770,19 +1770,19 @@ for (let index = 0; index < 60; index += 1) {
     isError: false
   }, ctx);
 }
-await Bun.write(process.env.CMUX_TEST_PI_BACKLOG_RELEASE, "release");
+await Bun.write(process.env.BREE_TEST_PI_BACKLOG_RELEASE, "release");
 await handlers.get("session_shutdown")({ reason: "reload" }, ctx);
 """
     result = run_extension(
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=backlog_cmux,
+        fake_bree=backlog_bree,
         source=backlog_source,
         extra_env={
-            "CMUX_TEST_PI_BACKLOG_LOG": str(backlog_log),
-            "CMUX_TEST_PI_BACKLOG_RELEASE": str(release_marker),
-            "CMUX_DEBUG_LOG": str(diagnostic_log),
+            "BREE_TEST_PI_BACKLOG_LOG": str(backlog_log),
+            "BREE_TEST_PI_BACKLOG_RELEASE": str(release_marker),
+            "BREE_DEBUG_LOG": str(diagnostic_log),
         },
     )
     if result.returncode != 0:
@@ -1810,11 +1810,11 @@ await handlers.get("session_shutdown")({ reason: "reload" }, ctx);
 
 
 def check_completion_order(bun: str, root: Path, extension_path: Path) -> int:
-    completion_cmux = make_feed_lifecycle_cmux(root, "completion-order-cmux")
-    completion_log = root / "completion-order-cmux.log"
-    completion_lock = root / "completion-order-cmux.lock"
+    completion_bree = make_feed_lifecycle_bree(root, "completion-order-bree")
+    completion_log = root / "completion-order-bree.log"
+    completion_lock = root / "completion-order-bree.lock"
     completion_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1830,7 +1830,7 @@ for (let index = 0; index < 4; index += 1) {
     args: { command: `echo ${index}` }
   }, ctx);
 }
-const logPath = process.env.CMUX_TEST_PI_CANCELLATION_LOG;
+const logPath = process.env.BREE_TEST_PI_CANCELLATION_LOG;
 async function readLog() {
   try {
     return await Bun.file(logPath).text();
@@ -1868,11 +1868,11 @@ while (performance.now() < completionDeadline) {
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=completion_cmux,
+        fake_bree=completion_bree,
         source=completion_source,
         extra_env={
-            "CMUX_TEST_PI_CANCELLATION_LOG": str(completion_log),
-            "CMUX_TEST_PI_COMPLETION_LOCK": str(completion_lock),
+            "BREE_TEST_PI_CANCELLATION_LOG": str(completion_log),
+            "BREE_TEST_PI_COMPLETION_LOCK": str(completion_lock),
         },
     )
     if completion.returncode != 0:
@@ -1909,9 +1909,9 @@ while (performance.now() < completionDeadline) {
 
 
 def check_terminal_feed_failure_emits_one_stop(bun: str, root: Path, extension_path: Path) -> int:
-    failure_cmux = root / "terminal-feed-failure-cmux"
+    failure_bree = root / "terminal-feed-failure-bree"
     make_executable(
-        failure_cmux,
+        failure_bree,
         """#!/usr/bin/env python3
 import os
 import pathlib
@@ -1919,7 +1919,7 @@ import sys
 
 args = " ".join(sys.argv[1:])
 payload = sys.stdin.read()
-log_path = pathlib.Path(os.environ["CMUX_TEST_PI_FAILURE_LOG"])
+log_path = pathlib.Path(os.environ["BREE_TEST_PI_FAILURE_LOG"])
 with log_path.open("a", encoding="utf-8") as stream:
     stream.write(f"{args}|{payload}\\n")
 
@@ -1931,7 +1931,7 @@ print("{}")
 """,
     )
     lifecycle_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1953,7 +1953,7 @@ await handlers.get("session_shutdown")({ reason: "quit" }, ctx);
 """
 
     shutdown_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -1980,11 +1980,11 @@ await handlers.get("session_shutdown")({ reason: "quit" }, ctx);
             bun=bun,
             root=root,
             extension_path=extension_path,
-            fake_cmux=failure_cmux,
+            fake_bree=failure_bree,
             source=source,
             extra_env={
-                "CMUX_TEST_PI_FAILURE_LOG": str(log_path),
-                "CMUX_DEBUG_LOG": str(diagnostic_log),
+                "BREE_TEST_PI_FAILURE_LOG": str(log_path),
+                "BREE_DEBUG_LOG": str(diagnostic_log),
             },
         )
         if result.returncode != 0:
@@ -2028,13 +2028,13 @@ def check_nonterminal_timeout_marks_dropped_completion(
     inspectable_extension = root / "inspectable-bree-session.ts"
     inspectable_extension.write_text(
         extension_path.read_text(encoding="utf-8")
-        + "\nexport { PiCmuxCommandDispatcher };\n",
+        + "\nexport { PiBreeCommandDispatcher };\n",
         encoding="utf-8",
     )
     timeout_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
-const dispatcher = new mod.PiCmuxCommandDispatcher();
+const dispatcher = new mod.PiBreeCommandDispatcher();
 const context = {
   sessionId: "pi-queued-completion-timeout-session",
   workspaceId: "00000000-0000-0000-0000-000000008673",
@@ -2068,7 +2068,7 @@ resolveActive({
   status: null,
   stdout: "",
   stderr: "",
-  error: new Error("cmux command timed out after 5000ms"),
+  error: new Error("bree command timed out after 5000ms"),
   reason: "timeout",
   timeoutMs: 5000,
   elapsedMs: 5000,
@@ -2088,7 +2088,7 @@ if (!completionFailed) {
         bun=bun,
         root=root,
         extension_path=inspectable_extension,
-        fake_cmux=Path("/usr/bin/true"),
+        fake_bree=Path("/usr/bin/true"),
         source=timeout_source,
         extra_env={},
     )
@@ -2103,11 +2103,11 @@ if (!completionFailed) {
 
 
 def check_completion_drain_deadline(bun: str, root: Path, extension_path: Path) -> int:
-    ordered_log = root / "completion-drain-order-cmux.log"
+    ordered_log = root / "completion-drain-order-bree.log"
     ordered_diagnostic_log = root / "completion-drain-order-diagnostics.log"
-    ordered_cmux = root / "completion-drain-order-cmux"
+    ordered_bree = root / "completion-drain-order-bree"
     make_executable(
-        ordered_cmux,
+        ordered_bree,
         """#!/usr/bin/env python3
 import os
 import sys
@@ -2115,7 +2115,7 @@ import time
 
 args = " ".join(sys.argv[1:])
 payload = sys.stdin.read()
-with open(os.environ["CMUX_TEST_PI_DRAIN_ORDER_LOG"], "a", encoding="utf-8") as stream:
+with open(os.environ["BREE_TEST_PI_DRAIN_ORDER_LOG"], "a", encoding="utf-8") as stream:
     stream.write(f"{args}|{payload}\\n")
     stream.flush()
 
@@ -2126,7 +2126,7 @@ print("{}")
 """,
     )
     ordered_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -2140,7 +2140,7 @@ handlers.get("tool_execution_end")({
   result: { content: [{ type: "text", text: "done" }] },
   isError: false
 }, ctx);
-const logPath = process.env.CMUX_TEST_PI_DRAIN_ORDER_LOG;
+const logPath = process.env.BREE_TEST_PI_DRAIN_ORDER_LOG;
 while (!Bun.file(logPath).size) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
@@ -2160,11 +2160,11 @@ console.log(`ordered_completion_ms=${performance.now() - startedAt}`);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=ordered_cmux,
+        fake_bree=ordered_bree,
         source=ordered_source,
         extra_env={
-            "CMUX_TEST_PI_DRAIN_ORDER_LOG": str(ordered_log),
-            "CMUX_DEBUG_LOG": str(ordered_diagnostic_log),
+            "BREE_TEST_PI_DRAIN_ORDER_LOG": str(ordered_log),
+            "BREE_DEBUG_LOG": str(ordered_diagnostic_log),
         },
     )
     if ordered.returncode != 0:
@@ -2213,11 +2213,11 @@ console.log(`ordered_completion_ms=${performance.now() - startedAt}`);
         print(f"FAIL: late successful terminal Feed result was marked failed: {ordered_diagnostics!r}")
         return 1
 
-    deadline_log = root / "completion-deadline-cmux.log"
+    deadline_log = root / "completion-deadline-bree.log"
     deadline_diagnostic_log = root / "completion-deadline-diagnostics.log"
-    deadline_cmux = root / "completion-deadline-cmux"
+    deadline_bree = root / "completion-deadline-bree"
     make_executable(
-        deadline_cmux,
+        deadline_bree,
         """#!/usr/bin/env python3
 import os
 import signal
@@ -2226,7 +2226,7 @@ import time
 
 args = " ".join(sys.argv[1:])
 payload = sys.stdin.read()
-with open(os.environ["CMUX_TEST_PI_DEADLINE_LOG"], "a", encoding="utf-8") as stream:
+with open(os.environ["BREE_TEST_PI_DEADLINE_LOG"], "a", encoding="utf-8") as stream:
     stream.write(f"{args}|{payload}\\n")
     stream.flush()
 
@@ -2242,7 +2242,7 @@ print("{}")
 """,
     )
     deadline_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -2256,7 +2256,7 @@ handlers.get("tool_execution_end")({
   result: { content: [{ type: "text", text: "done" }] },
   isError: false
 }, ctx);
-const logPath = process.env.CMUX_TEST_PI_DEADLINE_LOG;
+const logPath = process.env.BREE_TEST_PI_DEADLINE_LOG;
 while (!Bun.file(logPath).size) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
@@ -2276,11 +2276,11 @@ console.log(`completion_ms=${performance.now() - startedAt}`);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=deadline_cmux,
+        fake_bree=deadline_bree,
         source=deadline_source,
         extra_env={
-            "CMUX_TEST_PI_DEADLINE_LOG": str(deadline_log),
-            "CMUX_DEBUG_LOG": str(deadline_diagnostic_log),
+            "BREE_TEST_PI_DEADLINE_LOG": str(deadline_log),
+            "BREE_DEBUG_LOG": str(deadline_diagnostic_log),
         },
     )
     if deadline.returncode != 0:
@@ -2318,11 +2318,11 @@ console.log(`completion_ms=${performance.now() - startedAt}`);
 
 
 def check_timeout_serialization(bun: str, root: Path, extension_path: Path) -> int:
-    timeout_log = root / "timeout-cmux.log"
-    timeout_lock = root / "timeout-cmux.lock"
-    timeout_cmux = root / "timeout-cmux"
+    timeout_log = root / "timeout-bree.log"
+    timeout_lock = root / "timeout-bree.lock"
+    timeout_bree = root / "timeout-bree"
     make_executable(
-        timeout_cmux,
+        timeout_bree,
         """#!/usr/bin/env python3
 import fcntl
 import os
@@ -2332,14 +2332,14 @@ import time
 
 payload = sys.stdin.read()
 label = "first" if '"prompt":"first"' in payload else "second"
-log_path = os.environ["CMUX_TEST_PI_TIMEOUT_LOG"]
+log_path = os.environ["BREE_TEST_PI_TIMEOUT_LOG"]
 
 def log(message: str) -> None:
     with open(log_path, "a", encoding="utf-8") as stream:
         stream.write(f"{message} {label}\\n")
         stream.flush()
 
-with open(os.environ["CMUX_TEST_PI_TIMEOUT_LOCK"], "a", encoding="utf-8") as lock:
+with open(os.environ["BREE_TEST_PI_TIMEOUT_LOCK"], "a", encoding="utf-8") as lock:
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
@@ -2363,7 +2363,7 @@ with open(os.environ["CMUX_TEST_PI_TIMEOUT_LOCK"], "a", encoding="utf-8") as loc
 """,
     )
     timeout_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -2379,12 +2379,12 @@ await Promise.all([first, second]);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=timeout_cmux,
+        fake_bree=timeout_bree,
         source=timeout_source,
         extra_env={
-            "CMUX_TEST_PI_TIMEOUT_LOG": str(timeout_log),
-            "CMUX_TEST_PI_TIMEOUT_LOCK": str(timeout_lock),
-            "CMUX_PI_HOOK_TIMEOUT_MS": "1000",
+            "BREE_TEST_PI_TIMEOUT_LOG": str(timeout_log),
+            "BREE_TEST_PI_TIMEOUT_LOCK": str(timeout_lock),
+            "BREE_PI_HOOK_TIMEOUT_MS": "1000",
         },
     )
     if timed_out.returncode != 0:
@@ -2402,17 +2402,17 @@ await Promise.all([first, second]);
 
 
 def check_error_classification(bun: str, root: Path, extension_path: Path) -> int:
-    ambiguous_log = root / "ambiguous-cmux.log"
-    ambiguous_marker = root / "ambiguous-cmux-first-call"
-    ambiguous_cmux = root / "ambiguous-cmux"
+    ambiguous_log = root / "ambiguous-bree.log"
+    ambiguous_marker = root / "ambiguous-bree-first-call"
+    ambiguous_bree = root / "ambiguous-bree"
     make_executable(
-        ambiguous_cmux,
+        ambiguous_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$*" >> "$CMUX_TEST_PI_AMBIGUOUS_LOG"
+printf '%s\n' "$*" >> "$BREE_TEST_PI_AMBIGUOUS_LOG"
 cat >/dev/null
-if [ ! -f "$CMUX_TEST_PI_AMBIGUOUS_MARKER" ]; then
-  touch "$CMUX_TEST_PI_AMBIGUOUS_MARKER"
+if [ ! -f "$BREE_TEST_PI_AMBIGUOUS_MARKER" ]; then
+  touch "$BREE_TEST_PI_AMBIGUOUS_MARKER"
   printf 'Error: Surface not found\n' >&2
   exit 1
 fi
@@ -2420,7 +2420,7 @@ printf '{}\n'
 """,
     )
     ambiguous_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -2432,7 +2432,7 @@ const ctx = {
 };
 await handlers.get("before_agent_start")({ prompt: "first" }, ctx);
 await handlers.get("before_agent_start")({ prompt: "second" }, ctx);
-const logPath = process.env.CMUX_TEST_PI_AMBIGUOUS_LOG;
+const logPath = process.env.BREE_TEST_PI_AMBIGUOUS_LOG;
 const deadline = performance.now() + 5000;
 while (performance.now() < deadline) {
   try {
@@ -2441,18 +2441,18 @@ while (performance.now() < deadline) {
   await new Promise((resolve) => setTimeout(resolve, 10));
 }
 if (notificationCount !== 0) {
-  throw new Error(`routine cmux failure showed ${notificationCount} Pi warning toast(s)`);
+  throw new Error(`routine bree failure showed ${notificationCount} Pi warning toast(s)`);
 }
 """
     ambiguous = run_extension(
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=ambiguous_cmux,
+        fake_bree=ambiguous_bree,
         source=ambiguous_source,
         extra_env={
-            "CMUX_TEST_PI_AMBIGUOUS_LOG": str(ambiguous_log),
-            "CMUX_TEST_PI_AMBIGUOUS_MARKER": str(ambiguous_marker),
+            "BREE_TEST_PI_AMBIGUOUS_LOG": str(ambiguous_log),
+            "BREE_TEST_PI_AMBIGUOUS_MARKER": str(ambiguous_marker),
         },
     )
     if ambiguous.returncode != 0:
@@ -2467,19 +2467,19 @@ if (notificationCount !== 0) {
 
 
 def check_unserializable_feed(bun: str, root: Path, extension_path: Path) -> int:
-    feed_log = root / "unserializable-feed-cmux.log"
-    feed_cmux = root / "unserializable-feed-cmux"
+    feed_log = root / "unserializable-feed-bree.log"
+    feed_bree = root / "unserializable-feed-bree"
     make_executable(
-        feed_cmux,
+        feed_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_UNSERIALIZABLE_LOG"
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_UNSERIALIZABLE_LOG"
 printf '{}\n'
 """,
     )
     feed_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -2502,9 +2502,9 @@ await handlers.get("before_agent_start")({ prompt: "still routable" }, ctx);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=feed_cmux,
+        fake_bree=feed_bree,
         source=feed_source,
-        extra_env={"CMUX_TEST_PI_UNSERIALIZABLE_LOG": str(feed_log)},
+        extra_env={"BREE_TEST_PI_UNSERIALIZABLE_LOG": str(feed_log)},
     )
     if feed.returncode != 0:
         print(f"FAIL: unserializable feed escaped its best-effort boundary: {feed.stderr!r}")
@@ -2525,20 +2525,20 @@ await handlers.get("before_agent_start")({ prompt: "still routable" }, ctx);
 
 
 def check_explicit_surface_routing(bun: str, root: Path, extension_path: Path) -> int:
-    explicit_log = root / "explicit-surface-cmux.log"
-    explicit_cmux = root / "explicit-surface-cmux"
+    explicit_log = root / "explicit-surface-bree.log"
+    explicit_bree = root / "explicit-surface-bree"
     make_executable(
-        explicit_cmux,
+        explicit_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$*" >> "$CMUX_TEST_PI_EXPLICIT_LOG"
+printf '%s\n' "$*" >> "$BREE_TEST_PI_EXPLICIT_LOG"
 cat >/dev/null
 printf 'エラー: 対象を解決できません\n' >&2
 exit 69
 """,
     )
     explicit_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -2553,9 +2553,9 @@ await handlers.get("before_agent_start")({ prompt: "route after stale resume tar
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=explicit_cmux,
+        fake_bree=explicit_bree,
         source=explicit_source,
-        extra_env={"CMUX_TEST_PI_EXPLICIT_LOG": str(explicit_log)},
+        extra_env={"BREE_TEST_PI_EXPLICIT_LOG": str(explicit_log)},
     )
     if explicit.returncode != 0:
         print(f"FAIL: explicit-surface harness failed: {explicit.stderr!r}")
@@ -2576,13 +2576,13 @@ await handlers.get("before_agent_start")({ prompt: "route after stale resume tar
 
 
 def check_moved_surface_resume_target(bun: str, root: Path, extension_path: Path) -> int:
-    moved_log = root / "moved-surface-resume-cmux.log"
-    moved_cmux = root / "moved-surface-resume-cmux"
+    moved_log = root / "moved-surface-resume-bree.log"
+    moved_bree = root / "moved-surface-resume-bree"
     make_executable(
-        moved_cmux,
+        moved_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$*" >> "$CMUX_TEST_PI_MOVED_RESUME_LOG"
+printf '%s\n' "$*" >> "$BREE_TEST_PI_MOVED_RESUME_LOG"
 cat >/dev/null
 if [[ "$*" == *"hooks pi"* ]]; then
   printf '{"workspace_id":"00000000-0000-0000-0000-000000008674","surface_id":"00000000-0000-0000-0000-000000008672"}\n'
@@ -2592,7 +2592,7 @@ fi
 """,
     )
     moved_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -2607,9 +2607,9 @@ await handlers.get("session_shutdown")({ reason: "quit" }, ctx);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=moved_cmux,
+        fake_bree=moved_bree,
         source=moved_source,
-        extra_env={"CMUX_TEST_PI_MOVED_RESUME_LOG": str(moved_log)},
+        extra_env={"BREE_TEST_PI_MOVED_RESUME_LOG": str(moved_log)},
     )
     if moved.returncode != 0:
         print(f"FAIL: moved-surface resume harness failed: {moved.stderr!r}")
@@ -2637,14 +2637,14 @@ def check_failed_resume_clear_releases_session_runtime(
 ) -> int:
     log_path = root / "failed-resume-clear.log"
     diagnostic_log = root / "failed-resume-clear-diagnostics.log"
-    fake_cmux = root / "failed-resume-clear-cmux"
+    fake_bree = root / "failed-resume-clear-bree"
     make_executable(
-        fake_cmux,
+        fake_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 args="$*"
 cat >/dev/null
-printf '%s\n' "$args" >> "$CMUX_TEST_PI_FAILED_CLEAR_LOG"
+printf '%s\n' "$args" >> "$BREE_TEST_PI_FAILED_CLEAR_LOG"
 if [[ "$args" == *"hooks pi session-start"* ]]; then
   printf '{"workspace_id":"00000000-0000-0000-0000-000000008673","surface_id":"00000000-0000-0000-0000-000000008672"}\n'
 elif [[ "$args" == *"surface resume get"* ]]; then
@@ -2664,7 +2664,7 @@ fi
         encoding="utf-8",
     )
     source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -2674,8 +2674,8 @@ const ctx = {
 };
 await handlers.get("session_start")({}, ctx);
 await handlers.get("session_shutdown")({ reason: "done" }, ctx);
-process.env.CMUX_WORKSPACE_ID = "00000000-0000-0000-0000-000000009673";
-process.env.CMUX_SURFACE_ID = "00000000-0000-0000-0000-000000009672";
+process.env.BREE_WORKSPACE_ID = "00000000-0000-0000-0000-000000009673";
+process.env.BREE_SURFACE_ID = "00000000-0000-0000-0000-000000009672";
 await handlers.get("before_agent_start")({ prompt: "new target" }, ctx);
 
 const probeDispatcher = { releaseSession() {} };
@@ -2691,11 +2691,11 @@ if (mod.surfaceTargetsFor(probeDispatcher).has("probe-session")) {
         bun=bun,
         root=root,
         extension_path=inspectable_extension,
-        fake_cmux=fake_cmux,
+        fake_bree=fake_bree,
         source=source,
         extra_env={
-            "CMUX_TEST_PI_FAILED_CLEAR_LOG": str(log_path),
-            "CMUX_DEBUG_LOG": str(diagnostic_log),
+            "BREE_TEST_PI_FAILED_CLEAR_LOG": str(log_path),
+            "BREE_DEBUG_LOG": str(diagnostic_log),
         },
     )
     if result.returncode != 0:
@@ -2723,14 +2723,14 @@ if (mod.surfaceTargetsFor(probeDispatcher).has("probe-session")) {
 
 
 def check_runtime_isolation(bun: str, root: Path, extension_path: Path) -> int:
-    runtime_log = root / "runtime-isolation-cmux.log"
-    runtime_cmux = root / "runtime-isolation-cmux"
+    runtime_log = root / "runtime-isolation-bree.log"
+    runtime_bree = root / "runtime-isolation-bree"
     make_executable(
-        runtime_cmux,
+        runtime_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_RUNTIME_LOG"
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_RUNTIME_LOG"
 if [[ "$payload" == *'"session_id":"pi-runtime-stale"'* ]]; then
   printf 'エラー: 対象を解決できません\n' >&2
   exit 69
@@ -2739,7 +2739,7 @@ printf '{}\n'
 """,
     )
     runtime_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const staleHandlers = new Map();
 const healthyHandlers = new Map();
@@ -2772,9 +2772,9 @@ await Promise.all([
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=runtime_cmux,
+        fake_bree=runtime_bree,
         source=runtime_source,
-        extra_env={"CMUX_TEST_PI_RUNTIME_LOG": str(runtime_log)},
+        extra_env={"BREE_TEST_PI_RUNTIME_LOG": str(runtime_log)},
     )
     if runtime.returncode != 0:
         print(f"FAIL: runtime-isolation harness failed: {runtime.stderr!r}")
@@ -2794,14 +2794,14 @@ await Promise.all([
 
 
 def check_session_isolation_within_runtime(bun: str, root: Path, extension_path: Path) -> int:
-    session_log = root / "session-isolation-cmux.log"
-    session_cmux = root / "session-isolation-cmux"
+    session_log = root / "session-isolation-bree.log"
+    session_bree = root / "session-isolation-bree"
     make_executable(
-        session_cmux,
+        session_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 payload="$(cat)"
-printf '%s|%s\n' "$*" "$payload" >> "$CMUX_TEST_PI_SESSION_ISOLATION_LOG"
+printf '%s|%s\n' "$*" "$payload" >> "$BREE_TEST_PI_SESSION_ISOLATION_LOG"
 if [[ "$payload" == *'"session_id":"pi-session-stale"'* ]]; then
   printf 'stale surface\n' >&2
   exit 69
@@ -2810,7 +2810,7 @@ printf '{}\n'
 """,
     )
     session_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({ on(name, handler) { handlers.set(name, handler); } });
@@ -2839,9 +2839,9 @@ await handlers.get("session_shutdown")({ reason: "session isolation test" }, hea
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=session_cmux,
+        fake_bree=session_bree,
         source=session_source,
-        extra_env={"CMUX_TEST_PI_SESSION_ISOLATION_LOG": str(session_log)},
+        extra_env={"BREE_TEST_PI_SESSION_ISOLATION_LOG": str(session_log)},
     )
     if result.returncode != 0:
         print(f"FAIL: same-runtime session isolation harness failed: {result.stderr!r}")
@@ -2859,21 +2859,21 @@ await handlers.get("session_shutdown")({ reason: "session isolation test" }, hea
 
 
 def check_stale_surface(bun: str, root: Path, extension_path: Path) -> int:
-    stale_log = root / "stale-cmux.log"
-    stale_diagnostic_log = root / "stale-cmux-diagnostics.log"
-    stale_cmux = root / "stale-cmux"
+    stale_log = root / "stale-bree.log"
+    stale_diagnostic_log = root / "stale-bree-diagnostics.log"
+    stale_bree = root / "stale-bree"
     make_executable(
-        stale_cmux,
+        stale_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$*" >> "$CMUX_TEST_PI_STALE_LOG"
+printf '%s\n' "$*" >> "$BREE_TEST_PI_STALE_LOG"
 cat >/dev/null
 printf 'エラー: 対象を解決できません\n' >&2
 exit 69
 """,
     )
     stale_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const handlers = new Map();
 mod.default({
@@ -2899,11 +2899,11 @@ await handlers.get("session_shutdown")({ reason: "quit" }, ctx);
         bun=bun,
         root=root,
         extension_path=extension_path,
-        fake_cmux=stale_cmux,
+        fake_bree=stale_bree,
         source=stale_source,
         extra_env={
-            "CMUX_TEST_PI_STALE_LOG": str(stale_log),
-            "CMUX_DEBUG_LOG": str(stale_diagnostic_log),
+            "BREE_TEST_PI_STALE_LOG": str(stale_log),
+            "BREE_DEBUG_LOG": str(stale_diagnostic_log),
         },
     )
     if stale.returncode != 0:
@@ -2915,7 +2915,7 @@ await handlers.get("session_shutdown")({ reason: "quit" }, ctx);
 
     stale_calls = [line for line in stale_log.read_text(encoding="utf-8").splitlines() if line]
     if len(stale_calls) != 1:
-        print(f"FAIL: stale CMUX_SURFACE_ID was retried after its first permanent failure: {stale_calls!r}")
+        print(f"FAIL: stale BREE_SURFACE_ID was retried after its first permanent failure: {stale_calls!r}")
         return 1
     diagnostics = diagnostic_payloads(stale_diagnostic_log)
     command_failures = [
@@ -2943,19 +2943,19 @@ def check_concurrent_stale_surface_logs_once(
     inspectable_extension = root / "concurrent-stale-surface.ts"
     inspectable_extension.write_text(
         extension_path.read_text(encoding="utf-8")
-        + "\nexport { PiCmuxCommandDispatcher };\n",
+        + "\nexport { PiBreeCommandDispatcher };\n",
         encoding="utf-8",
     )
     source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
-process.env.CMUX_PI_CMUX_BIN = "/bin/sh";
-process.env.CMUX_DEBUG_LOG = process.env.CMUX_TEST_PI_CONCURRENT_STALE_DIAGNOSTIC_LOG;
-process.env.CMUX_PI_HOOK_TIMEOUT_MS = "5000";
+process.env.BREE_PI_BREE_BIN = "/bin/sh";
+process.env.BREE_DEBUG_LOG = process.env.BREE_TEST_PI_CONCURRENT_STALE_DIAGNOSTIC_LOG;
+process.env.BREE_PI_HOOK_TIMEOUT_MS = "5000";
 
 const iterations = 8;
 for (let index = 0; index < iterations; index += 1) {
-  const dispatcher = new mod.PiCmuxCommandDispatcher();
+  const dispatcher = new mod.PiBreeCommandDispatcher();
   const context = {
     sessionId: `pi-concurrent-stale-${index}`,
     cwd: "/tmp",
@@ -2981,10 +2981,10 @@ for (let index = 0; index < iterations; index += 1) {
         bun=bun,
         root=root,
         extension_path=inspectable_extension,
-        fake_cmux=Path("/bin/sh"),
+        fake_bree=Path("/bin/sh"),
         source=source,
         extra_env={
-            "CMUX_TEST_PI_CONCURRENT_STALE_DIAGNOSTIC_LOG": str(diagnostic_log),
+            "BREE_TEST_PI_CONCURRENT_STALE_DIAGNOSTIC_LOG": str(diagnostic_log),
         },
     )
     if result.returncode != 0:
@@ -3016,8 +3016,8 @@ def check_timeout_configuration_and_failure_telemetry(
     extension_path: Path,
 ) -> int:
     extension_text = extension_path.read_text(encoding="utf-8")
-    if "CMUX_PI_HOOK_TIMEOUT_MS" not in extension_text:
-        print("FAIL: generated Pi extension does not expose CMUX_PI_HOOK_TIMEOUT_MS")
+    if "BREE_PI_HOOK_TIMEOUT_MS" not in extension_text:
+        print("FAIL: generated Pi extension does not expose BREE_PI_HOOK_TIMEOUT_MS")
         return 1
     if "publishPiWorkspaceMetadata" in extension_text and "bree-pi-session-extension-marker v4" not in extension_text:
         print("FAIL: generated Pi extension did not advance its regeneration marker to v4")
@@ -3037,13 +3037,13 @@ def check_timeout_configuration_and_failure_telemetry(
     inspectable_extension = root / "timeout-telemetry-bree-session.ts"
     inspectable_extension.write_text(
         extension_text
-        + "\nexport { PiCmuxCommandDispatcher, piHookTimeoutMilliseconds, piCommandTimeoutMilliseconds, commandFailureReason, piHookName, createPiLifecycleQueue };\n",
+        + "\nexport { PiBreeCommandDispatcher, piHookTimeoutMilliseconds, piCommandTimeoutMilliseconds, commandFailureReason, piHookName, createPiLifecycleQueue };\n",
         encoding="utf-8",
     )
 
-    fake_cmux = root / "timeout-telemetry-cmux"
+    fake_bree = root / "timeout-telemetry-bree"
     make_executable(
-        fake_cmux,
+        fake_bree,
         """#!/usr/bin/env python3
 import sys
 import time
@@ -3060,9 +3060,9 @@ else:
     )
 
     diagnostic_log = root / "pi-hook-diagnostics.log"
-    missing_cmux = root / "missing-cmux"
+    missing_bree = root / "missing-bree"
     timeout_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 
 const parsingCases = [
@@ -3165,13 +3165,13 @@ if (boundedHookName.length > 128) {
   throw new Error(`hook name was not bounded: ${boundedHookName.length}`);
 }
 
-process.env.CMUX_PI_HOOK_TIMEOUT_MS = "80";
-process.env.CMUX_DEBUG_LOG = process.env.CMUX_TEST_PI_DIAGNOSTIC_LOG;
+process.env.BREE_PI_HOOK_TIMEOUT_MS = "80";
+process.env.BREE_DEBUG_LOG = process.env.BREE_TEST_PI_DIAGNOSTIC_LOG;
 const context = {
   sessionId: "pi-timeout-telemetry-session",
   cwd: "/tmp/pi-timeout-telemetry",
 };
-const dispatcher = new mod.PiCmuxCommandDispatcher();
+const dispatcher = new mod.PiBreeCommandDispatcher();
 const timedOut = await dispatcher.run(
   ["hooks", "pi", "session-start"],
   context.cwd,
@@ -3185,7 +3185,7 @@ if (timedOut.timeoutMs !== 80 || timedOut.elapsedMs < 1) {
   throw new Error(`timeout result omitted timing metadata: ${JSON.stringify(timedOut)}`);
 }
 
-process.env.CMUX_PI_HOOK_TIMEOUT_MS = "5000";
+process.env.BREE_PI_HOOK_TIMEOUT_MS = "5000";
 const nonzero = await dispatcher.run(
   ["hooks", "pi", "prompt-submit"],
   context.cwd,
@@ -3196,7 +3196,7 @@ if (nonzero.reason !== "nonzero-exit" || nonzero.status !== 23) {
   throw new Error(`nonzero child was misclassified: ${JSON.stringify(nonzero)}`);
 }
 
-process.env.CMUX_PI_CMUX_BIN = process.env.CMUX_TEST_PI_MISSING_CMUX;
+process.env.BREE_PI_BREE_BIN = process.env.BREE_TEST_PI_MISSING_BREE;
 const spawnError = await dispatcher.run(
   ["hooks", "pi", "stop"],
   context.cwd,
@@ -3207,7 +3207,7 @@ if (spawnError.reason !== "spawn-error" || spawnError.status !== null) {
   throw new Error(`spawn failure was misclassified: ${JSON.stringify(spawnError)}`);
 }
 
-const logPath = process.env.CMUX_TEST_PI_DIAGNOSTIC_LOG;
+const logPath = process.env.BREE_TEST_PI_DIAGNOSTIC_LOG;
 let diagnostics = [];
 const deadline = performance.now() + 3000;
 while (performance.now() < deadline) {
@@ -3241,11 +3241,11 @@ for (const [hookName, expected] of expectedFailures) {
         bun=bun,
         root=root,
         extension_path=inspectable_extension,
-        fake_cmux=fake_cmux,
+        fake_bree=fake_bree,
         source=timeout_source,
         extra_env={
-            "CMUX_TEST_PI_DIAGNOSTIC_LOG": str(diagnostic_log),
-            "CMUX_TEST_PI_MISSING_CMUX": str(missing_cmux),
+            "BREE_TEST_PI_DIAGNOSTIC_LOG": str(diagnostic_log),
+            "BREE_TEST_PI_MISSING_BREE": str(missing_bree),
         },
     )
     if result.returncode != 0:
@@ -3270,13 +3270,13 @@ def check_diagnostic_log_safety_and_routing(
     inspectable_extension = root / "diagnostic-log-bree-session.ts"
     inspectable_extension.write_text(
         extension_text
-        + "\nexport { PiCmuxCommandDispatcher, appendPiHookDiagnostic, piHookDiagnosticPath, runPiHookDiagnosticWrite, warn };\n",
+        + "\nexport { PiBreeCommandDispatcher, appendPiHookDiagnostic, piHookDiagnosticPath, runPiHookDiagnosticWrite, warn };\n",
         encoding="utf-8",
     )
 
-    fake_cmux = root / "diagnostic-log-cmux"
+    fake_bree = root / "diagnostic-log-bree"
     make_executable(
-        fake_cmux,
+        fake_bree,
         """#!/usr/bin/env bash
 set -euo pipefail
 cat >/dev/null
@@ -3305,27 +3305,27 @@ exit 23
     fifo_log = root / "diagnostic.fifo"
     os.mkfifo(fifo_log)
     socket_tag = f"pi-routing-{os.getpid()}"
-    socket_path_log = Path(f"/tmp/cmux-debug-{socket_tag}.log")
-    legacy_socket_log = Path(f"/tmp/cmux-debug-{socket_tag}-legacy.log")
-    shadow_socket_log = Path(f"/tmp/cmux-debug-{socket_tag}-shadow.log")
+    socket_path_log = Path(f"/tmp/bree-debug-{socket_tag}.log")
+    legacy_socket_log = Path(f"/tmp/bree-debug-{socket_tag}-legacy.log")
+    shadow_socket_log = Path(f"/tmp/bree-debug-{socket_tag}-shadow.log")
     for path in (socket_path_log, legacy_socket_log, shadow_socket_log):
         path.unlink(missing_ok=True)
 
     source = r"""
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 const failures = [];
 
-process.env.CMUX_DEBUG_LOG = process.env.CMUX_TEST_PI_BOUNDARY_LOG;
+process.env.BREE_DEBUG_LOG = process.env.BREE_TEST_PI_BOUNDARY_LOG;
 await mod.appendPiHookDiagnostic({
-  source: "cmux-pi-extension",
+  source: "bree-pi-extension",
   level: "warning",
   message: "boundary canary",
   hook_name: "boundary",
   reason: "test",
 });
-const boundaryText = readFileSync(process.env.CMUX_TEST_PI_BOUNDARY_LOG, "utf8");
+const boundaryText = readFileSync(process.env.BREE_TEST_PI_BOUNDARY_LOG, "utf8");
 const boundaryLines = boundaryText.split("\n").filter(Boolean);
 if (boundaryLines.length !== 2) {
   failures.push(`diagnostic append did not preserve a JSONL boundary: ${JSON.stringify(boundaryText)}`);
@@ -3340,18 +3340,18 @@ if (boundaryLines.length !== 2) {
   }
 }
 
-const home = process.env.CMUX_TEST_PI_ROUTING_HOME;
-const pointerFile = process.env.CMUX_TEST_PI_POINTER_FILE;
-const missingPointer = process.env.CMUX_TEST_PI_MISSING_POINTER;
-const fallbackLog = process.env.CMUX_TEST_PI_FALLBACK_LOG;
-const socketTag = process.env.CMUX_TEST_PI_SOCKET_TAG;
+const home = process.env.BREE_TEST_PI_ROUTING_HOME;
+const pointerFile = process.env.BREE_TEST_PI_POINTER_FILE;
+const missingPointer = process.env.BREE_TEST_PI_MISSING_POINTER;
+const fallbackLog = process.env.BREE_TEST_PI_FALLBACK_LOG;
+const socketTag = process.env.BREE_TEST_PI_SOCKET_TAG;
 const cases = [
   {
     label: "explicit",
     environment: {
       HOME: home,
-      CMUX_DEBUG_LOG: "~/explicit.log",
-      CMUX_SOCKET_PATH: `/tmp/cmux-debug-${socketTag}-shadow.sock`,
+      BREE_DEBUG_LOG: "~/explicit.log",
+      BREE_SOCKET_PATH: `/tmp/bree-debug-${socketTag}-shadow.sock`,
     },
     pointer: pointerFile,
     fallback: fallbackLog,
@@ -3359,17 +3359,17 @@ const cases = [
   },
   {
     label: "socket-path",
-    environment: { HOME: home, CMUX_SOCKET_PATH: `/tmp/cmux-debug-${socketTag}.sock` },
+    environment: { HOME: home, BREE_SOCKET_PATH: `/tmp/bree-debug-${socketTag}.sock` },
     pointer: pointerFile,
     fallback: fallbackLog,
-    expected: `/tmp/cmux-debug-${socketTag}.log`,
+    expected: `/tmp/bree-debug-${socketTag}.log`,
   },
   {
     label: "socket",
-    environment: { HOME: home, CMUX_SOCKET: `/tmp/cmux-debug-${socketTag}-legacy.sock` },
+    environment: { HOME: home, BREE_SOCKET: `/tmp/bree-debug-${socketTag}-legacy.sock` },
     pointer: pointerFile,
     fallback: fallbackLog,
-    expected: `/tmp/cmux-debug-${socketTag}-legacy.log`,
+    expected: `/tmp/bree-debug-${socketTag}-legacy.log`,
   },
   {
     label: "pointer",
@@ -3402,7 +3402,7 @@ for (const candidate of cases) {
 
 const pointerFifoRoute = mod.piHookDiagnosticPath(
   { HOME: home },
-  process.env.CMUX_TEST_PI_POINTER_FIFO,
+  process.env.BREE_TEST_PI_POINTER_FIFO,
   fallbackLog,
 );
 if (pointerFifoRoute !== fallbackLog) {
@@ -3411,7 +3411,7 @@ if (pointerFifoRoute !== fallbackLog) {
 
 const pointerSymlinkRoute = mod.piHookDiagnosticPath(
   { HOME: home },
-  process.env.CMUX_TEST_PI_POINTER_SYMLINK,
+  process.env.BREE_TEST_PI_POINTER_SYMLINK,
   fallbackLog,
 );
 if (pointerSymlinkRoute !== fallbackLog) {
@@ -3423,7 +3423,7 @@ if (routesMatched) {
     try { unlinkSync(candidate.expected); } catch (_) {}
     await mod.appendPiHookDiagnostic(
       {
-        source: "cmux-pi-extension",
+        source: "bree-pi-extension",
         level: "warning",
         message: "routing canary",
         hook_name: candidate.label,
@@ -3453,17 +3453,17 @@ if (routesMatched) {
   }
 }
 
-const symlinkLogTarget = process.env.CMUX_TEST_PI_SYMLINK_LOG_TARGET;
+const symlinkLogTarget = process.env.BREE_TEST_PI_SYMLINK_LOG_TARGET;
 const symlinkLogBefore = readFileSync(symlinkLogTarget, "utf8");
 await mod.appendPiHookDiagnostic(
   {
-    source: "cmux-pi-extension",
+    source: "bree-pi-extension",
     level: "warning",
     message: "symlink destination canary",
     hook_name: "symlink-destination",
     reason: "test",
   },
-  { CMUX_DEBUG_LOG: process.env.CMUX_TEST_PI_SYMLINK_LOG },
+  { BREE_DEBUG_LOG: process.env.BREE_TEST_PI_SYMLINK_LOG },
   missingPointer,
   fallbackLog,
 );
@@ -3472,8 +3472,8 @@ if (symlinkLogAfter !== symlinkLogBefore) {
   failures.push("diagnostic append followed a symlink destination");
 }
 
-process.env.CMUX_DEBUG_LOG = process.env.CMUX_TEST_PI_FIFO_LOG;
-const dispatcher = new mod.PiCmuxCommandDispatcher();
+process.env.BREE_DEBUG_LOG = process.env.BREE_TEST_PI_FIFO_LOG;
+const dispatcher = new mod.PiBreeCommandDispatcher();
 const context = {
   sessionId: "pi-diagnostic-fifo-session",
   cwd: "/tmp/pi-diagnostic-fifo",
@@ -3481,7 +3481,7 @@ const context = {
 await dispatcher.run(["hooks", "pi", "prompt-submit"], context.cwd, "{}", context);
 
 let notificationCount = 0;
-process.env.CMUX_DEBUG_LOG = process.env.CMUX_TEST_PI_INVALID_LOG_DESTINATION;
+process.env.BREE_DEBUG_LOG = process.env.BREE_TEST_PI_INVALID_LOG_DESTINATION;
 await Promise.resolve(mod.warn(
   { ui: { notify() { notificationCount += 1; } } },
   "failed append canary",
@@ -3518,21 +3518,21 @@ if (failures.length) throw new Error(failures.join("\n"));
             bun=bun,
             root=root,
             extension_path=inspectable_extension,
-            fake_cmux=fake_cmux,
+            fake_bree=fake_bree,
             source=source,
             extra_env={
-                "CMUX_TEST_PI_BOUNDARY_LOG": str(boundary_log),
-                "CMUX_TEST_PI_ROUTING_HOME": str(home),
-                "CMUX_TEST_PI_POINTER_FILE": str(pointer_file),
-                "CMUX_TEST_PI_POINTER_SYMLINK": str(pointer_symlink),
-                "CMUX_TEST_PI_POINTER_FIFO": str(pointer_fifo),
-                "CMUX_TEST_PI_MISSING_POINTER": str(missing_pointer),
-                "CMUX_TEST_PI_FALLBACK_LOG": str(fallback_log),
-                "CMUX_TEST_PI_FIFO_LOG": str(fifo_log),
-                "CMUX_TEST_PI_INVALID_LOG_DESTINATION": str(invalid_log_destination),
-                "CMUX_TEST_PI_SYMLINK_LOG": str(symlink_log),
-                "CMUX_TEST_PI_SYMLINK_LOG_TARGET": str(symlink_log_target),
-                "CMUX_TEST_PI_SOCKET_TAG": socket_tag,
+                "BREE_TEST_PI_BOUNDARY_LOG": str(boundary_log),
+                "BREE_TEST_PI_ROUTING_HOME": str(home),
+                "BREE_TEST_PI_POINTER_FILE": str(pointer_file),
+                "BREE_TEST_PI_POINTER_SYMLINK": str(pointer_symlink),
+                "BREE_TEST_PI_POINTER_FIFO": str(pointer_fifo),
+                "BREE_TEST_PI_MISSING_POINTER": str(missing_pointer),
+                "BREE_TEST_PI_FALLBACK_LOG": str(fallback_log),
+                "BREE_TEST_PI_FIFO_LOG": str(fifo_log),
+                "BREE_TEST_PI_INVALID_LOG_DESTINATION": str(invalid_log_destination),
+                "BREE_TEST_PI_SYMLINK_LOG": str(symlink_log),
+                "BREE_TEST_PI_SYMLINK_LOG_TARGET": str(symlink_log_target),
+                "BREE_TEST_PI_SOCKET_TAG": socket_tag,
             },
         )
     finally:
@@ -3594,7 +3594,7 @@ def run_checks(bun: str, root: Path, extension_path: Path) -> int:
             return 1
     wakeup = subprocess.run(
         [sys.executable, str(Path(__file__).with_name("test_pi_extension_wakeup.py"))],
-        env={**os.environ, "CMUX_TEST_PI_EXTENSION_PATH": str(extension_path)},
+        env={**os.environ, "BREE_TEST_PI_EXTENSION_PATH": str(extension_path)},
         check=False,
         timeout=30,
     )

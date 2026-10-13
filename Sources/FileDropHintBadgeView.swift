@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 
 @MainActor
 final class FileDropHintBadgeView: NSView {
@@ -94,14 +94,14 @@ final class FileDropHintBadgeView: NSView {
     func show(text: String, centeredIn targetBounds: CGRect, clippedTo bounds: CGRect, warning: Bool = false) {
         animationGeneration &+= 1
         label.stringValue = text
-        label.textColor = warning ? .systemRed : .labelColor
+        label.textColor = warning ? BreeChromePalette.currentSnapshot.ns.signalError : .labelColor
         label.maximumNumberOfLines = warning ? 0 : 1
         label.lineBreakMode = warning ? .byWordWrapping : .byClipping
         label.setContentCompressionResistancePriority(warning ? .defaultLow : .required, for: .horizontal)
         setAccessibilityElement(true)
         setAccessibilityRole(.staticText)
         setAccessibilityLabel(text)
-        let tint = warning ? NSColor.systemRed.withAlphaComponent(0.16) : Self.neutralBackgroundColor
+        let tint = warning ? BreeChromePalette.currentSnapshot.ns.signalError.withAlphaComponent(0.16) : Self.neutralBackgroundColor
         effectView.layer?.backgroundColor = tint.cgColor
         if effectView.responds(to: NSSelectorFromString("setTintColor:")) {
             effectView.perform(NSSelectorFromString("setTintColor:"), with: tint)

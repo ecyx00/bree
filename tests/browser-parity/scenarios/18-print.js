@@ -1,7 +1,7 @@
 // The last expression's value prints (awaited when it is a promise);
 // undefined prints nothing; snapshots print their tree or diff; images
 // print as a file path; display() and console.log format the same way.
-// oracle: skip (printing is cmux-defined)
+// oracle: skip (printing is bree-defined)
 // ---- cell session=p capture
 1 + 1
 // ---- cell session=p capture

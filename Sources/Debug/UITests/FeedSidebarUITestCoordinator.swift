@@ -59,7 +59,7 @@ final class FeedSidebarUITestCoordinator {
 
     func startIfNeeded() {
         guard !didStart,
-              let path = environment["CMUX_UI_TEST_FEED_SIDEBAR_RESULT_PATH"],
+              let path = environment["BREE_UI_TEST_FEED_SIDEBAR_RESULT_PATH"],
               !path.isEmpty else { return }
         didStart = true
         let changes = notificationCenter.notifications(
@@ -92,7 +92,7 @@ final class FeedSidebarUITestCoordinator {
 
     private func startPushIfNeeded(resultPath: String) {
         guard !didStartPush,
-              let requestId = environment["CMUX_UI_TEST_FEED_SIDEBAR_REQUEST_ID"]?
+              let requestId = environment["BREE_UI_TEST_FEED_SIDEBAR_REQUEST_ID"]?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
               !requestId.isEmpty else { return }
         didStartPush = true

@@ -7,7 +7,7 @@ struct TerminalTabAgentIconResolver {
     func assetName(forStatusKey statusKey: String) -> String? {
         let normalized = statusKey.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalized.isEmpty else { return nil }
-        return CmuxTaskManagerCodingAgentDefinition.builtIns.first { definition in
+        return BreeTaskManagerCodingAgentDefinition.builtIns.first { definition in
             definition.id == normalized
                 || definition.launchKinds.contains(normalized)
                 || definition.directBasenames.contains(normalized)

@@ -1,14 +1,14 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 /// Persists the user's diff viewer display preferences (layout plus the
-/// options-menu toggles) as a single JSON file shared with the `cmux` CLI.
+/// options-menu toggles) as a single JSON file shared with the `bree` CLI.
 ///
 /// The viewer webview saves changes through `DiffCommentsBridge`
 /// (`viewerPrefs.set`) and reads them back at boot (`viewerPrefs.get`); the
 /// CLI reads the same file when generating a viewer page so new diff panels
 /// open with the last-used layout (#5284). One file is the source of truth:
-/// page-local `localStorage` is only a fallback for pages opened outside cmux,
+/// page-local `localStorage` is only a fallback for pages opened outside bree,
 /// because generated viewer origins do not reliably persist web storage.
 final class DiffViewerPreferencesStore: @unchecked Sendable {
     static let shared = DiffViewerPreferencesStore()
@@ -27,8 +27,8 @@ final class DiffViewerPreferencesStore: @unchecked Sendable {
         self.fileURL = fileURL
     }
 
-    /// `~/Library/Application Support/cmux/diff-viewer/preferences.json`, the
-    /// path the CLI reads (`CMUX_DIFF_VIEWER_PREFS_PATH` overrides it there and
+    /// `~/Library/Application Support/bree/diff-viewer/preferences.json`, the
+    /// path the CLI reads (`BREE_DIFF_VIEWER_PREFS_PATH` overrides it there and
     /// here). Nil under automated tests so suites never touch the user's file.
     nonisolated static func defaultFileURL(
         environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -39,13 +39,13 @@ final class DiffViewerPreferencesStore: @unchecked Sendable {
         isRunningUnderAutomatedTests: Bool = SessionRestorePolicy.isRunningUnderAutomatedTests()
     ) -> URL? {
         guard !isRunningUnderAutomatedTests else { return nil }
-        if let override = environment["CMUX_DIFF_VIEWER_PREFS_PATH"]?
+        if let override = environment["BREE_DIFF_VIEWER_PREFS_PATH"]?
             .trimmingCharacters(in: .whitespacesAndNewlines), !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: false)
         }
         guard let appSupportDirectory else { return nil }
         return appSupportDirectory
-            .appendingPathComponent(CmuxIdentity.current.applicationSupportDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.applicationSupportDirectoryName, isDirectory: true)
             .appendingPathComponent("diff-viewer", isDirectory: true)
             .appendingPathComponent("preferences.json", isDirectory: false)
     }

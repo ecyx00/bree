@@ -20,7 +20,7 @@ final class WebSurfaceSelectionReader {
 
     private static let trackingBootstrapScript = """
     (() => {
-      const runtimeKey = '__cmuxSurfaceSelectionRuntime';
+      const runtimeKey = '__breeSurfaceSelectionRuntime';
       // A pre-existing page-owned value is never trusted. The first
       // at-document-start install wins; subsequent installs fail closed.
       if (Object.prototype.hasOwnProperty.call(globalThis, runtimeKey)) return false;
@@ -338,7 +338,7 @@ final class WebSurfaceSelectionReader {
             const targetWindow = targetDocument.defaultView;
             if (!targetWindow) return;
             // `selectionchange` is observational. WebKit emits a collapsed
-            // event before `blur` when native focus moves to another cmux
+            // event before `blur` when native focus moves to another bree
             // surface, so consulting `document.hasFocus()` here can erase a
             // valid snapshot before the focus handoff has settled. Concrete
             // page interactions (pointer/keyboard/select) and input events
@@ -416,7 +416,7 @@ final class WebSurfaceSelectionReader {
     private static let script = """
     return await (async () => {
       const readSelection = () => {
-        const runtime = globalThis.__cmuxSurfaceSelectionRuntime;
+        const runtime = globalThis.__breeSurfaceSelectionRuntime;
         if (!runtime || typeof runtime.read !== 'function') return null;
         const maxTextCharacters = \(SurfaceSelectionSnapshot.maximumTextBytes / 4);
         const unicodeSafeEnd = (value, offset) => {

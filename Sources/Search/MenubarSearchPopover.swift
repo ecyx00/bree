@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import SwiftUI
 
@@ -192,7 +192,7 @@ private struct GlobalSearchPaletteView: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
-                    .cmuxFont(size: 15, weight: .semibold)
+                    .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(.secondary)
                 TextField(
                     String(
@@ -202,7 +202,7 @@ private struct GlobalSearchPaletteView: View {
                     text: $model.query
                 )
                 .textFieldStyle(.plain)
-                .cmuxFont(size: 18, weight: .regular)
+                .scaledFont(size: 18, weight: .regular)
                 .focused($searchFieldFocused)
             }
             .padding(.horizontal, 18)
@@ -279,7 +279,7 @@ private struct GlobalSearchEmptyStateView: View {
 
     var body: some View {
         Text(title)
-            .cmuxFont(size: 14, weight: .medium)
+            .scaledFont(size: 14, weight: .medium)
             .foregroundStyle(.secondary)
     }
 }
@@ -293,27 +293,27 @@ private struct GlobalSearchResultRowView: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: row.systemImageName)
-                    .cmuxFont(size: 14, weight: .semibold)
+                    .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(isSelected ? .primary : .secondary)
                     .frame(width: 22, height: 22)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Text(row.title)
-                            .cmuxFont(size: 13, weight: .semibold)
+                            .scaledFont(size: 13, weight: .semibold)
                             .lineLimit(1)
                         Text(row.hit.kind.localizedLabel)
-                            .cmuxFont(size: 11, weight: .medium)
+                            .scaledFont(size: 11, weight: .medium)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                     Text(row.snippet)
-                        .cmuxFont(size: 12)
+                        .scaledFont(size: 12)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                     if !row.location.isEmpty {
                         Text(row.location)
-                            .cmuxFont(size: 11)
+                            .scaledFont(size: 11)
                             .foregroundStyle(.tertiary)
                             .lineLimit(1)
                     }
@@ -323,7 +323,7 @@ private struct GlobalSearchResultRowView: View {
 
                 if let shortcutLabel = row.shortcutLabel {
                     Text(shortcutLabel)
-                        .cmuxFont(size: 11, weight: .medium, design: .monospaced)
+                        .scaledFont(size: 11, weight: .medium, design: .monospaced)
                         .foregroundStyle(.secondary)
                         .frame(minWidth: 30, alignment: .trailing)
                 }
@@ -331,7 +331,7 @@ private struct GlobalSearchResultRowView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isSelected ? Color.accentColor.opacity(0.16) : Color.clear)
+            .background(isSelected ? BreeChromePalette.currentSnapshot.accentFill.opacity(0.16) : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -1,5 +1,5 @@
 import Bonsplit
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
 /// Transient workspace surface that owns the in-pane Stack sign-in state.
@@ -52,7 +52,7 @@ extension Workspace {
         }
 
         bindSurface(tabID, toPanelId: panel.id)
-        publishCmuxSurfaceCreated(
+        publishBreeSurfaceCreated(
             panel.id,
             paneId: paneID,
             kind: SurfaceKind.accountSignIn.rawValue,

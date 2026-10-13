@@ -1,9 +1,9 @@
 import AppKit
 
 extension GhosttyNSView {
-    /// Whether another process posted `event` rather than the keyboard or cmux.
+    /// Whether another process posted `event` rather than the keyboard or bree.
     ///
-    /// Hardware events carry source PID 0, and events cmux synthesizes carry
+    /// Hardware events carry source PID 0, and events bree synthesizes carry
     /// its own PID. Anything else was injected by another app, for example a
     /// dictation tool's global hotkey.
     static func isKeyEventPostedByAnotherProcess(
@@ -19,7 +19,7 @@ extension GhosttyNSView {
     /// and every Ghostty binding, instead of typing it into the terminal.
     ///
     /// Dictation tools can post their own hotkey (Cmd+Option+C while Option
-    /// is held as push-to-talk) into the focused app. Nothing in cmux handles
+    /// is held as push-to-talk) into the focused app. Nothing in bree handles
     /// that chord, so it would reach the program as a stray character. Only
     /// chords injected by another process are dropped; the same chord from
     /// the keyboard still reaches the terminal. Command chords without Option
@@ -29,7 +29,7 @@ extension GhosttyNSView {
         guard flags.contains(.command), flags.contains(.option),
               Self.isKeyEventPostedByAnotherProcess(event) else { return false }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "key.foreignCommandChord.drop keyCode=\(event.keyCode) " +
             "mods=\(flags.rawValue)"
         )

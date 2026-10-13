@@ -1,9 +1,9 @@
 import AppKit
-import CmuxBrowser
-import CmuxTerminal
+import BreeBrowser
+import BreeTerminal
 
 extension NSEvent {
-    var cmuxIsUndoRedoCommandEquivalent: Bool {
+    var breeIsUndoRedoCommandEquivalent: Bool {
         let normalizedFlags = modifierFlags
             .intersection(.deviceIndependentFlagsMask)
             .subtracting([.numericPad, .function, .capsLock])
@@ -14,7 +14,7 @@ extension NSEvent {
 }
 
 /// Identity of a key event currently being force-dispatched into a responder's
-/// `keyDown(with:)` by `NSWindow.cmux_performKeyEquivalent(with:)`.
+/// `keyDown(with:)` by `NSWindow.bree_performKeyEquivalent(with:)`.
 ///
 /// Forwarding keyDown can re-enter `performKeyEquivalent` with the same event
 /// while the dispatch is still on the stack: WebKit replays unhandled keys
@@ -22,14 +22,14 @@ extension NSEvent {
 /// re-enters `performKeyEquivalent`. Without a replay guard at the dispatch
 /// chokepoint the same event ping-pongs between the swizzle and the focused
 /// responder until the main-thread stack overflows
-/// (https://github.com/manaflow-ai/cmux/issues/5887).
+/// (https://github.com/ecyx00/bree/issues/5887).
 ///
 /// Identity is the event's stable field tuple rather than object identity so
 /// the guard still holds if AppKit/WebKit re-deliver the event as an equal
 /// copy. Key autorepeat produces distinct events (fresh timestamps), so
 /// repeat typing is never throttled. The dispatching window's number is part
 /// of the identity so windows cannot suppress each other's dispatches.
-private struct CmuxForceDispatchedKeyEventIdentity: Hashable {
+private struct BreeForceDispatchedKeyEventIdentity: Hashable {
     let windowNumber: Int
     let eventType: UInt
     let keyCode: UInt16
@@ -42,31 +42,31 @@ private struct CmuxForceDispatchedKeyEventIdentity: Hashable {
 /// before `keyDown(with:)` and removed when the dispatch unwinds, so WebKit's
 /// legitimate replay of an unhandled key (which arrives after the original
 /// dispatch has fully unwound) is still force-dispatched normally.
-private var cmuxInFlightForceDispatchedKeyEventIdentities = Set<CmuxForceDispatchedKeyEventIdentity>()
+private var breeInFlightForceDispatchedKeyEventIdentities = Set<BreeForceDispatchedKeyEventIdentity>()
 
 extension NSApplication {
     /// Routes undo and redo before AppKit can invoke the shared window undo
     /// manager, whose registrations may belong to a view that was closed.
-    func cmuxRouteApplicationUndoRedoCommandEquivalent(_ event: NSEvent) -> Bool {
+    func breeRouteApplicationUndoRedoCommandEquivalent(_ event: NSEvent) -> Bool {
         let window = event.window
             ?? AppDelegate.shared?.shortcutRoutingActiveWindow
             ?? keyWindow
             ?? mainWindow
-        return window?.cmuxRouteApplicationUndoRedoCommandEquivalent(event) == true
+        return window?.breeRouteApplicationUndoRedoCommandEquivalent(event) == true
     }
 }
 
 extension NSWindow {
-    /// Routes an application undo or redo command through the focused cmux
+    /// Routes an application undo or redo command through the focused bree
     /// surface, keeping AppKit's shared window undo stack out of the path.
-    func cmuxRouteApplicationUndoRedoCommandEquivalent(_ event: NSEvent) -> Bool {
-        guard event.cmuxIsUndoRedoCommandEquivalent else { return false }
+    func breeRouteApplicationUndoRedoCommandEquivalent(_ event: NSEvent) -> Bool {
+        guard event.breeIsUndoRedoCommandEquivalent else { return false }
 
-        let terminalView = firstResponder.cmuxTerminalKeyEquivalentOwningGhosttyView()
+        let terminalView = firstResponder.breeTerminalKeyEquivalentOwningGhosttyView()
         let webView = firstResponder.flatMap {
-            NSWindow.cmuxOwningWebViewForKeyRouting(for: $0, in: self, event: event)
-        } ?? firstResponder.flatMap { cmuxOwningUndoableWebView(for: $0) }
-        return cmuxRouteUndoRedoCommandEquivalentAwayFromAppKit(
+            NSWindow.breeOwningWebViewForKeyRouting(for: $0, in: self, event: event)
+        } ?? firstResponder.flatMap { breeOwningUndoableWebView(for: $0) }
+        return breeRouteUndoRedoCommandEquivalentAwayFromAppKit(
             event,
             terminalView: terminalView,
             webView: webView,
@@ -74,27 +74,27 @@ extension NSWindow {
         )
     }
 
-    func cmuxRouteUndoRedoCommandEquivalentAwayFromAppKit(
+    func breeRouteUndoRedoCommandEquivalentAwayFromAppKit(
         _ event: NSEvent,
         terminalView: GhosttyNSView?,
-        webView: CmuxUndoableWebView?,
+        webView: BreeUndoableWebView?,
         webKitKeyDownReentry: Bool
     ) -> Bool {
-        guard event.cmuxIsUndoRedoCommandEquivalent,
-              !cmuxFirstResponderPreservesLocalUndoRedo,
-              !cmuxIsLikelyWebInspectorResponder(firstResponder) else {
+        guard event.breeIsUndoRedoCommandEquivalent,
+              !breeFirstResponderPreservesLocalUndoRedo,
+              !breeIsLikelyWebInspectorResponder(firstResponder) else {
             return false
         }
         if let terminalView {
             if terminalView.performKeyEquivalentAfterMenuMiss(with: event) {
 #if DEBUG
-                cmuxDebugLog("  -> undo/redo routed to terminal before AppKit menu")
+                breeDebugLog("  -> undo/redo routed to terminal before AppKit menu")
 #endif
                 return true
             }
-            if cmuxForceDispatchKeyDownOnce(event, to: terminalView, reason: "terminal undo/redo") {
+            if breeForceDispatchKeyDownOnce(event, to: terminalView, reason: "terminal undo/redo") {
 #if DEBUG
-                cmuxDebugLog("  -> undo/redo keyDown fallback routed to terminal")
+                breeDebugLog("  -> undo/redo keyDown fallback routed to terminal")
 #endif
                 return true
             }
@@ -103,19 +103,19 @@ extension NSWindow {
         if let webView {
             if webKitKeyDownReentry {
 #if DEBUG
-                cmuxDebugLog("  -> undo/redo browser reentry suppressed before AppKit menu")
+                breeDebugLog("  -> undo/redo browser reentry suppressed before AppKit menu")
 #endif
                 return true
             }
             if webView.performKeyEquivalent(with: event) {
 #if DEBUG
-                cmuxDebugLog("  -> undo/redo routed to browser before AppKit menu")
+                breeDebugLog("  -> undo/redo routed to browser before AppKit menu")
 #endif
                 return true
             }
-            if cmuxForceDispatchKeyDownOnce(event, to: webView, reason: "browser undo/redo") {
+            if breeForceDispatchKeyDownOnce(event, to: webView, reason: "browser undo/redo") {
 #if DEBUG
-                cmuxDebugLog("  -> undo/redo keyDown fallback routed to browser")
+                breeDebugLog("  -> undo/redo keyDown fallback routed to browser")
 #endif
                 return true
             }
@@ -124,13 +124,13 @@ extension NSWindow {
             // editable AppKit responders and Web Inspector are exempted above.
             return true
         }
-        // No cmux surface owns an application-level undo operation here. Do
+        // No bree surface owns an application-level undo operation here. Do
         // not expose the shared window stack to an unknown target: it can
         // contain an edit command whose view was already torn down.
         return true
     }
 
-    private var cmuxFirstResponderPreservesLocalUndoRedo: Bool {
+    private var breeFirstResponderPreservesLocalUndoRedo: Bool {
         guard let responder = firstResponder else { return false }
         if let textView = responder as? NSTextView {
             return textView.isEditable || textView.isFieldEditor
@@ -142,7 +142,7 @@ extension NSWindow {
     }
 
     /// Single chokepoint for every direct `keyDown(with:)` force-dispatch made
-    /// by `cmux_performKeyEquivalent(with:)`.
+    /// by `bree_performKeyEquivalent(with:)`.
     ///
     /// Dispatches `event` into `target`'s `keyDown(with:)` unless the same
     /// event is already being force-dispatched lower on this window's call
@@ -150,29 +150,29 @@ extension NSWindow {
     /// `false` back must decline the event (fall through to default AppKit
     /// handling) instead of dispatching themselves; re-dispatching the same
     /// in-flight event is the infinite key-routing loop from
-    /// https://github.com/manaflow-ai/cmux/issues/5887.
-    func cmuxForceDispatchKeyDownOnce(
+    /// https://github.com/ecyx00/bree/issues/5887.
+    func breeForceDispatchKeyDownOnce(
         _ event: NSEvent,
         to target: NSResponder,
         reason: @autoclosure () -> String
     ) -> Bool {
-        let identity = CmuxForceDispatchedKeyEventIdentity(
+        let identity = BreeForceDispatchedKeyEventIdentity(
             windowNumber: self.windowNumber,
             eventType: event.type.rawValue,
             keyCode: event.keyCode,
             modifierFlags: event.modifierFlags.rawValue,
             timestamp: event.timestamp
         )
-        guard !cmuxInFlightForceDispatchedKeyEventIdentities.contains(identity) else {
+        guard !breeInFlightForceDispatchedKeyEventIdentities.contains(identity) else {
 #if DEBUG
-            cmuxDebugLog("  → \(reason()) reentry; declining force-dispatch of in-flight key event")
+            breeDebugLog("  → \(reason()) reentry; declining force-dispatch of in-flight key event")
 #endif
             return false
         }
-        cmuxInFlightForceDispatchedKeyEventIdentities.insert(identity)
-        defer { cmuxInFlightForceDispatchedKeyEventIdentities.remove(identity) }
+        breeInFlightForceDispatchedKeyEventIdentities.insert(identity)
+        defer { breeInFlightForceDispatchedKeyEventIdentities.remove(identity) }
 #if DEBUG
-        cmuxDebugLog("  → \(reason()) routed to firstResponder.keyDown")
+        breeDebugLog("  → \(reason()) routed to firstResponder.keyDown")
 #endif
         target.keyDown(with: event)
         return true

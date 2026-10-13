@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 /// Main-actor owner of the durable, chronological notification feed.
@@ -149,14 +149,14 @@ final class NotificationFeedHistoryStore {
             return nil
         }
         let bundleID = bundleIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedBundleID = bundleID?.isEmpty == false ? bundleID! : "com.cmuxterm.app"
+        let resolvedBundleID = bundleID?.isEmpty == false ? bundleID! : "com.bree.app"
         let safeBundleID = resolvedBundleID.replacingOccurrences(
             of: "[^A-Za-z0-9._-]",
             with: "_",
             options: .regularExpression
         )
         return resolvedAppSupport
-            .appendingPathComponent(CmuxIdentity.current.applicationSupportDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.applicationSupportDirectoryName, isDirectory: true)
             .appendingPathComponent(
                 "notification-feed-history-\(safeBundleID).json",
                 isDirectory: false

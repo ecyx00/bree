@@ -1,10 +1,10 @@
-import CmuxFoundation
-import CmuxNotifications
+import BreeFoundation
+import BreeNotifications
 import SwiftUI
 import Foundation
 import Bonsplit
 import AppKit
-import CmuxAppKitSupportUI
+import BreeAppKitSupportUI
 
 /// View that renders the appropriate panel view based on panel type
 struct PanelContentView: View {
@@ -155,8 +155,8 @@ struct PanelContentView: View {
                 )
             }
         case .extensionBrowser:
-            if let extensionBrowserPanel = panel as? CMUXSidebarExtensionBrowserPanel {
-                CMUXSidebarExtensionBrowserPanelView(
+            if let extensionBrowserPanel = panel as? BREESidebarExtensionBrowserPanel {
+                BREESidebarExtensionBrowserPanelView(
                     panel: extensionBrowserPanel,
                     onRequestPanelFocus: onRequestPanelFocus
                 )
@@ -222,14 +222,14 @@ struct PanelFilePathHeader<TrailingContent: View>: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            CmuxSystemSymbolImage(
+            BreeSystemSymbolImage(
                 systemName: iconSystemName,
                 pointSize: RightSidebarChromeMetrics.contentIconFrameSize,
                 tint: .secondary
             )
             .frame(width: RightSidebarChromeMetrics.contentIconFrameSize)
             Text(filePath)
-                .cmuxFont(size: 11, design: .monospaced)
+                .scaledFont(size: 11, design: .monospaced)
                 .foregroundStyle(Color(nsColor: foregroundColor).opacity(0.68))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -274,7 +274,7 @@ struct PanelHeaderIconGlyph: View {
     let systemName: String
 
     var body: some View {
-        CmuxSystemSymbolImage(
+        BreeSystemSymbolImage(
             systemName: systemName,
             pointSize: RightSidebarChromeMetrics.headerIconSize,
             tint: .secondary

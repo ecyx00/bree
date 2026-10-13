@@ -2,7 +2,7 @@ import CoreGraphics
 import Foundation
 @preconcurrency import ScreenCaptureKit
 
-/// One captured frame of one of cmux's own windows.
+/// One captured frame of one of bree's own windows.
 ///
 /// Unchecked because it carries a `CGImage`, which the capture does not keep
 /// or mutate after handing it over.
@@ -13,13 +13,13 @@ struct OwnWindowFrame: @unchecked Sendable {
     let pointPixelScale: Double
 }
 
-/// Captures a single frame of a cmux window, with no Screen Recording permission.
+/// Captures a single frame of a bree window, with no Screen Recording permission.
 ///
 /// Shared by the recorder, which samples it on a schedule, and
 /// `window.screenshot`, which takes one frame and writes it. The current-process
 /// query is what makes the permission unnecessary, and it is also what makes
 /// this safe to ship in Release: it cannot reach another application's windows
-/// even on a Mac where cmux was granted Screen Recording.
+/// even on a Mac where bree was granted Screen Recording.
 struct OwnWindowFrameCapture {
     enum Failure: Error, Equatable {
         case unsupportedSystem
@@ -65,7 +65,7 @@ struct OwnWindowFrameCapture {
     /// resolves it and throws it away.
     func resolveFilter() async throws -> SCContentFilter {
         if #available(macOS 14.4, *) {
-            // The current-process query captures cmux's own windows without
+            // The current-process query captures bree's own windows without
             // Screen Recording permission, and cannot reach another app's
             // windows even if that permission was granted.
             let content: SCShareableContent

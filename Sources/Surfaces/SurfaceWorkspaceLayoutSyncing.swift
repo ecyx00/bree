@@ -1,4 +1,4 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// A provider that can record a native workspace's split tree on its machine.

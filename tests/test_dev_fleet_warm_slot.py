@@ -33,8 +33,8 @@ def git(repo: Path, *args: str) -> str:
 
 def fake_env(toolchain=TOOLCHAIN_A):
     env = os.environ.copy()
-    env["CMUX_WARM_SLOT_TOOLCHAIN_JSON"] = json.dumps(toolchain)
-    env["CMUX_WARM_SLOT_ALLOW_FAKE_TOOLCHAIN"] = "1"
+    env["BREE_WARM_SLOT_TOOLCHAIN_JSON"] = json.dumps(toolchain)
+    env["BREE_WARM_SLOT_ALLOW_FAKE_TOOLCHAIN"] = "1"
     return env
 
 
@@ -52,7 +52,7 @@ def derived_data_command(code=0):
     program = (
         "import os,sys;"
         "from pathlib import Path;"
-        "p=Path(os.environ['CMUX_DERIVED_DATA']);"
+        "p=Path(os.environ['BREE_DERIVED_DATA']);"
         "p.mkdir(parents=True, exist_ok=True);"
         "(p/'fixture.bin').write_bytes(b'x'*4096);"
         "print('SwiftCompile fixture', flush=True);"
@@ -670,7 +670,7 @@ class WarmSlotTest(unittest.TestCase):
         program = (
             "import os,subprocess,sys;"
             "from pathlib import Path;"
-            "p=Path(os.environ['CMUX_DERIVED_DATA']);"
+            "p=Path(os.environ['BREE_DERIVED_DATA']);"
             "p.mkdir(parents=True, exist_ok=True);"
             "(p/'fixture.bin').write_bytes(b'x');"
             "subprocess.Popen([sys.executable,'-c','import time; time.sleep(30)']);"

@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CMUXAgentLaunch
+import BreeFoundation
+import BREEAgentLaunch
 import Foundation
 
 enum RestorableAgentKind: Codable, Hashable, Sendable {
@@ -68,12 +68,12 @@ enum RestorableAgentKind: Codable, Hashable, Sendable {
         case "kimi": self = .kimi
         case "ollama": self = .ollama
         default:
-            guard CmuxVaultAgentRegistration.isValidID(value) else { return nil }
+            guard BreeVaultAgentRegistration.isValidID(value) else { return nil }
             self = .custom(value)
         }
     }
 
-    init?(persistedRawValue rawValue: String, registration: CmuxVaultAgentRegistration?) {
+    init?(persistedRawValue rawValue: String, registration: BreeVaultAgentRegistration?) {
         guard let kind = RestorableAgentKind(rawValue: rawValue) else { return nil }
         guard let registration,
               registration.id == kind.rawValue,
@@ -198,13 +198,13 @@ enum RestorableAgentKind: Codable, Hashable, Sendable {
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> URL {
         let directory: URL
-        if let override = environment["CMUX_AGENT_HOOK_STATE_DIR"]?
+        if let override = environment["BREE_AGENT_HOOK_STATE_DIR"]?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !override.isEmpty {
             directory = URL(fileURLWithPath: NSString(string: override).expandingTildeInPath, isDirectory: true)
         } else {
             directory = URL(fileURLWithPath: homeDirectory, isDirectory: true)
-                .appendingPathComponent(CmuxIdentity.current.dotDirectoryName, isDirectory: true)
+                .appendingPathComponent(BreeIdentity.current.dotDirectoryName, isDirectory: true)
         }
         return directory.appendingPathComponent(hookStoreFilename, isDirectory: false)
     }

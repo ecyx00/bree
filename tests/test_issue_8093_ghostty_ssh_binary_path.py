@@ -35,8 +35,8 @@ def _run_wrapper(
     env.update(
         {
             "GHOSTTY_BIN": str(helper),
-            # Reproduce cmux's GUI executable directory. No `ghostty` binary
-            # exists here because cmux embeds GhosttyKit in its own executable.
+            # Reproduce bree's GUI executable directory. No `ghostty` binary
+            # exists here because bree embeds GhosttyKit in its own executable.
             "GHOSTTY_BIN_DIR": str(helper.parents[2] / "MacOS"),
             "GHOSTTY_SHELL_FEATURES": features,
             "GHOSTTY_TEST_LOG": str(log),
@@ -100,10 +100,10 @@ def _run_wrapper(
 
 
 def main() -> None:
-    with tempfile.TemporaryDirectory(prefix="cmux-issue-8093-") as raw_tmp:
+    with tempfile.TemporaryDirectory(prefix="bree-issue-8093-") as raw_tmp:
         tmp = Path(raw_tmp)
-        contents = tmp / "cmux.app/Contents"
-        helper = contents / "Resources/bin/cmux-ghostty-cli"
+        contents = tmp / "bree.app/Contents"
+        helper = contents / "Resources/bin/bree-ghostty-cli"
         helper.parent.mkdir(parents=True)
         (contents / "MacOS").mkdir(parents=True)
         helper.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$GHOSTTY_TEST_LOG"\n')

@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// Shared 6×6 status circle used by full Vault rows and their popovers.

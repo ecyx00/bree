@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Managed SSH must keep a cmux-tui-owned workload alive across selection.
+"""Managed SSH must keep a bree-tui-owned workload alive across selection.
 
-Requires a launched tagged app, its bundled CLI in CMUXTERM_CLI, CMUX_TAG,
-CMUX_SOCKET_PATH, and a disposable Linux SSH fixture in CMUX_SSH_TEST_HOST.
-The fixture needs python3 and a compatible cmux-tui installation. No default
+Requires a launched tagged app, its bundled CLI in BREE_CLI, BREE_TAG,
+BREE_SOCKET_PATH, and a disposable Linux SSH fixture in BREE_SSH_TEST_HOST.
+The fixture needs python3 and a compatible bree-tui installation. No default
 socket, GUI automation, or customer process arguments are used.
 """
 
@@ -18,7 +18,7 @@ import shlex
 import subprocess
 import time
 
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
 WORKLOAD = r'''
@@ -32,8 +32,8 @@ while pid > 1:
     fields = root.joinpath('stat').read_text().rsplit(')', 1)[1].split()
     pid = int(fields[1])
 print('@' + token + ':pid=' + str(os.getpid()), flush=True)
-print('@' + token + ':tui=' + str(int('cmux-tui' in owners)), flush=True)
-print('@' + token + ':legacy=' + str(int('cmuxd-remote' in owners)), flush=True)
+print('@' + token + ':tui=' + str(int('bree-tui' in owners)), flush=True)
+print('@' + token + ':legacy=' + str(int('breed-remote' in owners)), flush=True)
 for line in sys.stdin:
     request = line.strip()
     if request == token + ':quit':
@@ -50,21 +50,21 @@ for line in sys.stdin:
 
 
 def main():
-    tag = os.environ['CMUX_TAG']
+    tag = os.environ['BREE_TAG']
     assert re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)+', tag), 'Use an isolated dev tag'
-    socket_path = os.environ['CMUX_SOCKET_PATH']
-    assert socket_path == f'/tmp/cmux-debug-{tag}.sock', 'Socket must match the tag'
-    cli = Path(os.environ['CMUXTERM_CLI']).resolve(strict=True)
-    host = os.environ['CMUX_SSH_TEST_HOST']
+    socket_path = os.environ['BREE_SOCKET_PATH']
+    assert socket_path == f'/tmp/bree-debug-{tag}.sock', 'Socket must match the tag'
+    cli = Path(os.environ['BREE_CLI']).resolve(strict=True)
+    host = os.environ['BREE_SSH_TEST_HOST']
     token = secrets.token_hex(4)
-    evidence = {'tag': tag, 'socket': socket_path, 'selections': [], 'head': os.environ.get('CMUX_TEST_SHA'), 'workload_token': token}
+    evidence = {'tag': tag, 'socket': socket_path, 'selections': [], 'head': os.environ.get('BREE_TEST_SHA'), 'workload_token': token}
     environment = {key: value for key, value in os.environ.items() if key not in {
-        'CMUX_SOCKET', 'CMUX_SOCKET_PASSWORD', 'CMUX_WORKSPACE_ID',
-        'CMUX_SURFACE_ID', 'CMUX_TAB_ID', 'CMUX_PANEL_ID', 'CMUXD_UNIX_PATH',
+        'BREE_SOCKET', 'BREE_SOCKET_PASSWORD', 'BREE_WORKSPACE_ID',
+        'BREE_SURFACE_ID', 'BREE_TAB_ID', 'BREE_PANEL_ID', 'BREED_UNIX_PATH',
     }}
-    lock_path = Path('/tmp/cmux-issue-wave/gui-proof.lock')
+    lock_path = Path('/tmp/bree-issue-wave/gui-proof.lock')
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open('a') as lock, cmux(socket_path) as client:
+    with lock_path.open('a') as lock, bree(socket_path) as client:
         fcntl.flock(lock, fcntl.LOCK_EX)
         raw_call = client._call
         def call_with_backpressure(method, params=None, timeout_s=20.0):
@@ -72,7 +72,7 @@ def main():
             while True:
                 try:
                     return raw_call(method, params, timeout_s)
-                except cmuxError as error:
+                except breeError as error:
                     if not str(error).startswith('rate_limited:') or time.monotonic() >= deadline:
                         raise
                     retry = re.search(r"retry_after_ms['\"]?: (\d+)", str(error))
@@ -83,7 +83,7 @@ def main():
             identity = client._call('system.identify')
             assert identity['socket_path'] == socket_path, identity
             bundle = Path(identity['app_bundle_path']).resolve(strict=True)
-            assert bundle.name == f'cmux DEV {tag}.app', bundle
+            assert bundle.name == f'Bree Dev {tag}.app', bundle
             with (bundle / 'Contents/Info.plist').open('rb') as file:
                 metadata = plistlib.load(file)
             assert identity['bundle_identifier'] == metadata['CFBundleIdentifier'], identity
@@ -115,11 +115,11 @@ def main():
             command = shlex.join(['python3', '-u', '-c', WORKLOAD, token])
             arguments = ['ssh', host, '--window', window, '--no-focus',
                          '--name', f'ssh-tui-selection-{token}', '--command', command]
-            if os.environ.get('CMUX_SSH_TEST_PORT'):
-                arguments += ['--port', os.environ['CMUX_SSH_TEST_PORT']]
-            if os.environ.get('CMUX_SSH_TEST_IDENTITY'):
-                arguments += ['--identity', os.environ['CMUX_SSH_TEST_IDENTITY']]
-            ssh_options = json.loads(os.environ.get('CMUX_SSH_TEST_OPTIONS_JSON', '[]'))
+            if os.environ.get('BREE_SSH_TEST_PORT'):
+                arguments += ['--port', os.environ['BREE_SSH_TEST_PORT']]
+            if os.environ.get('BREE_SSH_TEST_IDENTITY'):
+                arguments += ['--identity', os.environ['BREE_SSH_TEST_IDENTITY']]
+            ssh_options = json.loads(os.environ.get('BREE_SSH_TEST_OPTIONS_JSON', '[]'))
             assert isinstance(ssh_options, list) and all(isinstance(item, str) for item in ssh_options)
             for option in ssh_options:
                 arguments += ['--ssh-option', option]
@@ -131,7 +131,7 @@ def main():
             evidence['ssh_result'] = {'status': result.returncode, 'stderr': result.stderr}
             if result.returncode:
                 evidence['catalog'] = client._call('surface.catalog', {})
-            assert result.returncode == 0, f'cmux ssh failed (status {result.returncode})'
+            assert result.returncode == 0, f'bree ssh failed (status {result.returncode})'
             created = json.loads(result.stdout)
             workspace = created['workspace_id']
             surfaces = client._call('surface.list', {'workspace_id': workspace})['surfaces']
@@ -141,7 +141,7 @@ def main():
             pid = wait_line(surface, prefix + r':pid=(\d+)').group(1)
             tui = wait_line(surface, prefix + r':tui=([01])').group(1)
             legacy = wait_line(surface, prefix + r':legacy=([01])').group(1)
-            evidence['ownership'] = {'pid': pid, 'cmux_tui': tui, 'cmuxd_remote': legacy}
+            evidence['ownership'] = {'pid': pid, 'bree_tui': tui, 'breed_remote': legacy}
             assert (tui, legacy) == ('1', '0'), evidence['ownership']
             for sequence in range(6):
                 mutate('workspace.select', {'workspace_id': control})
@@ -172,7 +172,7 @@ def main():
                     'render_before': before_render, 'render_after': after_render})
             old_pid = pid
             replacement_token = secrets.token_hex(4)
-            replacement_directory = '/tmp/cmux-ssh-respawn-' + token
+            replacement_directory = '/tmp/bree-ssh-respawn-' + token
             mutate('surface.send_text', {
                 'workspace_id': workspace, 'surface_id': surface,
                 'text': token + ':mkdir=' + replacement_directory + '\n',
@@ -196,7 +196,7 @@ def main():
                 'text': token + ':ping=after-respawn\n'})
             wait_line(surface, prefix + ':pong=after-respawn:pid=' + new_pid)
             evidence['respawn'] = {'response': response, 'old_pid': old_pid, 'new_pid': new_pid,
-                'cmux_tui': 1, 'cmuxd_remote': 0, 'cwd': replacement_directory,
+                'bree_tui': 1, 'breed_remote': 0, 'cwd': replacement_directory,
                 'result': 'same surface, replaced remote workload, bidirectional input verified'}
             evidence['result'] = 'selection and native provider respawn verified'
 

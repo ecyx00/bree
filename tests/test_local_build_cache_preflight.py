@@ -386,8 +386,8 @@ class PreflightTests(unittest.TestCase):
         fake.chmod(0o755)
         trace = self.root / "args"
         env = dict(os.environ, PATH=str(self.root)+os.pathsep+os.environ['PATH'], TRACE=str(trace),
-                   CMUX_SOURCE_PACKAGES_DIR=str(self.root/'glaeda-managed'), RELOAD_LOG=str(self.root/'reload.log'),
-                   GITHUB_ACTIONS="false", CMUX_LOCAL_CACHE_PREFLIGHT="1")
+                   BREE_SOURCE_PACKAGES_DIR=str(self.root/'glaeda-managed'), RELOAD_LOG=str(self.root/'reload.log'),
+                   GITHUB_ACTIONS="false", BREE_LOCAL_CACHE_PREFLIGHT="1")
         subprocess.run(["bash", "-c", "set -euo pipefail\n"+hook], env=env, cwd=self.repo, check=True)
         self.assertIn(str(self.root/'glaeda-managed'), trace.read_text().splitlines())
         self.assertIn("--local-only", trace.read_text().splitlines())

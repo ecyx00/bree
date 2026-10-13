@@ -46,7 +46,7 @@ test("loadViewerPrefs prefers the native bridge reply", async () => {
   (globalThis as any).window = {
     webkit: {
       messageHandlers: {
-        cmuxDiffComments: {
+        breeDiffComments: {
           postMessage: async (message: any) => {
             expect(message.method).toBe("viewerPrefs.get");
             return { ok: true, value: { preferences: { layout: "unified", wordDiffs: true, junk: 1 } } };
@@ -61,18 +61,18 @@ test("loadViewerPrefs prefers the native bridge reply", async () => {
 
 test("loadViewerPrefs falls back to localStorage when the bridge is unavailable", async () => {
   const storage = makeStorage();
-  storage.setItem("cmux.diffViewer.options", JSON.stringify({ layout: "split", wordWrap: true }));
+  storage.setItem("bree.diffViewer.options", JSON.stringify({ layout: "split", wordWrap: true }));
   (globalThis as any).window = { localStorage: storage };
   expect(await loadViewerPrefs()).toEqual({ layout: "split", wordWrap: true });
 });
 
 test("loadViewerPrefs falls back to localStorage when the bridge rejects", async () => {
   const storage = makeStorage();
-  storage.setItem("cmux.diffViewer.options", JSON.stringify({ lineNumbers: false }));
+  storage.setItem("bree.diffViewer.options", JSON.stringify({ lineNumbers: false }));
   (globalThis as any).window = {
     webkit: {
       messageHandlers: {
-        cmuxDiffComments: {
+        breeDiffComments: {
           postMessage: async () => ({ ok: false, error: { code: "not_allowed" } }),
         },
       },
@@ -84,19 +84,19 @@ test("loadViewerPrefs falls back to localStorage when the bridge rejects", async
 
 test("loadViewerPrefs honors the legacy layout-only localStorage key", async () => {
   const storage = makeStorage();
-  storage.setItem("cmux.diffViewer.layout", "split");
+  storage.setItem("bree.diffViewer.layout", "split");
   (globalThis as any).window = { localStorage: storage };
   expect(await loadViewerPrefs()).toEqual({ layout: "split" });
 });
 
 test("saveViewerPrefs posts to the bridge and merges into localStorage", async () => {
   const storage = makeStorage();
-  storage.setItem("cmux.diffViewer.options", JSON.stringify({ wordWrap: true }));
+  storage.setItem("bree.diffViewer.options", JSON.stringify({ wordWrap: true }));
   let posted: any = null;
   (globalThis as any).window = {
     webkit: {
       messageHandlers: {
-        cmuxDiffComments: {
+        breeDiffComments: {
           postMessage: async (message: any) => {
             posted = message;
             return { ok: true, value: {} };
@@ -109,7 +109,7 @@ test("saveViewerPrefs posts to the bridge and merges into localStorage", async (
   saveViewerPrefs({ layout: "unified" });
   expect(posted.method).toBe("viewerPrefs.set");
   expect(posted.params).toEqual({ preferences: { layout: "unified" } });
-  expect(JSON.parse(storage.getItem("cmux.diffViewer.options")!)).toEqual({
+  expect(JSON.parse(storage.getItem("bree.diffViewer.options")!)).toEqual({
     layout: "unified",
     wordWrap: true,
   });

@@ -6,7 +6,7 @@ emit("pushed-url", page.url());
 emit("pushed-title", await page.title());
 await page.waitForURL(/step=2/);
 emit("wait-url", page.url());
-emitCmux("snapshot-url", (await snapshot()).tree.split("\n")[1].replace(/^url: /, "") === page.url());
+emitBree("snapshot-url", (await snapshot()).tree.split("\n")[1].replace(/^url: /, "") === page.url());
 await page.locator("#later").click();
 await page.waitForSelector("#late");
 emit("late", await page.locator("#late").textContent());

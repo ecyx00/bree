@@ -84,7 +84,7 @@ function generateShim(target, fallback, pointerPath) {
 
 function cleanEnvironment(home) {
   const environment = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("CMUX_")),
+    Object.entries(process.env).filter(([key]) => !key.startsWith("BREE_")),
   );
   environment.HOME = home;
   environment.PATH = "/usr/bin:/bin";
@@ -97,14 +97,14 @@ function makeBundle(root, appName, output) {
   fs.mkdirSync(path.dirname(cli), { recursive: true });
   fs.writeFileSync(
     path.join(app, "Contents", "Info.plist"),
-    "<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict><key>CFBundleIdentifier</key><string>com.cmuxterm.app.debug.test</string></dict></plist>",
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?><plist version=\"1.0\"><dict><key>CFBundleIdentifier</key><string>com.bree.app.debug.test</string></dict></plist>",
   );
   writeExecutable(cli, `#!/bin/sh\nprintf '%s\\n' '${output}'\n`);
   return cli;
 }
 
 function makeTaggedBundle(root, tag, output) {
-  return makeBundle(root, `cmux DEV ${tag}`, output);
+  return makeBundle(root, `Bree Dev ${tag}`, output);
 }
 
 function runShim(shim, environment, args = ["ping"]) {
@@ -122,19 +122,19 @@ sanitize_path() {
 }
 ${markerDerivationSource()}
 derive_socket_marker_names "$1" "$2"
-printf '%s\\n%s\\n' "$CMUX_RELOAD_MARKER_NAME" "$CMUX_RELOAD_TMP_MARKER"
+printf '%s\\n%s\\n' "$BREE_RELOAD_MARKER_NAME" "$BREE_RELOAD_TMP_MARKER"
 `;
   const result = spawnSync(
     "bash",
-    ["-c", script, "reload-marker-variant-test", "com.example.cmux", "custom-tag"],
+    ["-c", script, "reload-marker-variant-test", "com.example.bree", "custom-tag"],
     { cwd: repoRoot, encoding: "utf8" },
   );
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.equal(result.stdout, "last-socket-path\n/tmp/cmux-last-socket-path\n");
+  assert.equal(result.stdout, "last-socket-path\n/tmp/bree-last-socket-path\n");
 });
 
 test("reload pointer publication waits for the shared ownership lock", async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-pointer-lock-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-pointer-lock-"));
   const pointer = path.join(root, "last-cli-path");
   const lockPath = `${pointer}.lock`;
   let holder;
@@ -186,14 +186,14 @@ test("reload pointer publication waits for the shared ownership lock", async () 
 });
 
 test("tag-state publication stays behind the same-tag ownership lock", async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-tag-state-lock-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-tag-state-lock-"));
   const socketPath = path.join(root, "tag.sock");
   const lockPath = `${socketPath}.lock`;
   const marker = path.join(root, "state", "dev-tag-last-socket-path");
   const legacyMarker = path.join(root, "legacy", "dev-tag-last-socket-path");
   const tmpMarker = path.join(root, "tmp-last-socket-path");
   const pointer = path.join(root, "last-cli-path");
-  const cliPath = path.join(root, "cmux DEV tag.app", "Contents", "Resources", "bin", "bree");
+  const cliPath = path.join(root, "Bree Dev tag.app", "Contents", "Resources", "bin", "bree");
   fs.mkdirSync(path.dirname(marker), { recursive: true });
   fs.mkdirSync(path.dirname(legacyMarker), { recursive: true });
   fs.mkdirSync(path.dirname(cliPath), { recursive: true });
@@ -260,7 +260,7 @@ test("tag-state publication stays behind the same-tag ownership lock", async () 
 });
 
 test("reload socket probe treats a bounded probe timeout as protected", async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-probe-timeout-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-probe-timeout-"));
   const fakeBin = path.join(root, "bin");
   const socketPath = path.join(root, "probe.sock");
   fs.mkdirSync(fakeBin, { recursive: true });
@@ -296,7 +296,7 @@ test("reload socket probe treats a bounded probe timeout as protected", async ()
 });
 
 test("reload tag-state liveness probe bounds a full Unix-socket backlog", async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-wedged-socket-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-wedged-socket-"));
   const socketPath = path.join(root, "wedged.sock");
   const marker = path.join(root, "marker");
   const legacyMarker = path.join(root, "legacy-marker");
@@ -366,11 +366,11 @@ test("reload tag-state liveness probe bounds a full Unix-socket backlog", async 
 });
 
 test("reload shim skips a stale pointer target and falls through to stable CLI", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-shim-stale-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-shim-stale-"));
   try {
     const pointer = path.join(root, "last-cli-path");
-    const shim = path.join(root, "cmux");
-    const fallback = path.join(root, "stable-cmux");
+    const shim = path.join(root, "bree");
+    const fallback = path.join(root, "stable-bree");
     const taggedCLI = makeTaggedBundle(root, "shim-stale", "tagged");
     writeExecutable(fallback, "#!/bin/sh\nprintf 'stable\\n'\n");
     fs.writeFileSync(pointer, `${taggedCLI}\n`, { mode: 0o600 });
@@ -385,9 +385,9 @@ test("reload shim skips a stale pointer target and falls through to stable CLI",
 });
 
 test("reload shim delegates to a pointer target only while its socket is live", async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-shim-live-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-shim-live-"));
   const tag = `shim-live-${crypto.randomUUID()}`;
-  const socketPath = `/tmp/cmux-debug-${tag}.sock`;
+  const socketPath = `/tmp/bree-debug-${tag}.sock`;
   let server;
   try {
     try { fs.unlinkSync(socketPath); } catch {}
@@ -398,8 +398,8 @@ test("reload shim delegates to a pointer target only while its socket is live", 
     await once(server, "listening");
 
     const pointer = path.join(root, "last-cli-path");
-    const shim = path.join(root, "cmux");
-    const fallback = path.join(root, "stable-cmux");
+    const shim = path.join(root, "bree");
+    const fallback = path.join(root, "stable-bree");
     const taggedCLI = makeTaggedBundle(root, tag, "tagged");
     writeExecutable(fallback, "#!/bin/sh\nprintf 'stable\\n'\n");
     fs.writeFileSync(pointer, `${taggedCLI}\n`, { mode: 0o600 });
@@ -419,19 +419,19 @@ test("reload shim delegates to a pointer target only while its socket is live", 
 });
 
 test("reload shim does not let an explicit socket use a stale pointer", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-shim-explicit-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-shim-explicit-"));
   try {
     const pointer = path.join(root, "last-cli-path");
-    const shim = path.join(root, "cmux");
-    const fallback = path.join(root, "stable-cmux");
+    const shim = path.join(root, "bree");
+    const fallback = path.join(root, "stable-bree");
     const taggedCLI = makeTaggedBundle(root, "shim-explicit", "tagged");
-    writeExecutable(fallback, "#!/bin/sh\nprintf 'stable:%s\\n' \"$CMUX_SOCKET_PATH\"\n");
+    writeExecutable(fallback, "#!/bin/sh\nprintf 'stable:%s\\n' \"$BREE_SOCKET_PATH\"\n");
     fs.writeFileSync(pointer, `${taggedCLI}\n`, { mode: 0o600 });
     generateShim(shim, fallback, pointer);
 
     const environment = cleanEnvironment(root);
     const pinnedSocket = path.join(root, "pinned.sock");
-    environment.CMUX_SOCKET_PATH = pinnedSocket;
+    environment.BREE_SOCKET_PATH = pinnedSocket;
     const result = runShim(shim, environment);
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout.trim(), `stable:${pinnedSocket}`);
@@ -441,17 +441,17 @@ test("reload shim does not let an explicit socket use a stale pointer", () => {
 });
 
 test("reload shim preserves a non-reload-managed bundled CLI", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-shim-bundled-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-shim-bundled-"));
   try {
     const pointer = path.join(root, "last-cli-path");
-    const shim = path.join(root, "cmux");
-    const fallback = path.join(root, "stable-cmux");
-    const bundledCLI = makeBundle(root, "cmux NIGHTLY", "nightly");
+    const shim = path.join(root, "bree");
+    const fallback = path.join(root, "stable-bree");
+    const bundledCLI = makeBundle(root, "bree NIGHTLY", "nightly");
     writeExecutable(fallback, "#!/bin/sh\nprintf 'stable\\n'\n");
     generateShim(shim, fallback, pointer);
 
     const environment = cleanEnvironment(root);
-    environment.CMUX_BUNDLED_CLI_PATH = bundledCLI;
+    environment.BREE_BUNDLED_CLI_PATH = bundledCLI;
     const result = runShim(shim, environment);
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout.trim(), "nightly");
@@ -461,17 +461,17 @@ test("reload shim preserves a non-reload-managed bundled CLI", () => {
 });
 
 test("reload shim falls through when a reload-managed bundled CLI is dead", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-shim-bundled-dead-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-shim-bundled-dead-"));
   try {
     const pointer = path.join(root, "last-cli-path");
-    const shim = path.join(root, "cmux");
-    const fallback = path.join(root, "stable-cmux");
+    const shim = path.join(root, "bree");
+    const fallback = path.join(root, "stable-bree");
     const bundledCLI = makeTaggedBundle(root, `shim-dead-${crypto.randomUUID()}`, "tagged");
     writeExecutable(fallback, "#!/bin/sh\nprintf 'stable\\n'\n");
     generateShim(shim, fallback, pointer);
 
     const environment = cleanEnvironment(root);
-    environment.CMUX_BUNDLED_CLI_PATH = bundledCLI;
+    environment.BREE_BUNDLED_CLI_PATH = bundledCLI;
     const result = runShim(shim, environment);
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.stdout.trim(), "stable");
@@ -481,9 +481,9 @@ test("reload shim falls through when a reload-managed bundled CLI is dead", () =
 });
 
 test("reload shim keeps an explicit --socket pinned even when the pointer target is live", async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cmux-reload-shim-explicit-flag-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bree-reload-shim-explicit-flag-"));
   const tag = `shim-explicit-live-${crypto.randomUUID()}`;
-  const socketPath = `/tmp/cmux-debug-${tag}.sock`;
+  const socketPath = `/tmp/bree-debug-${tag}.sock`;
   let server;
   try {
     try { fs.unlinkSync(socketPath); } catch {}
@@ -494,8 +494,8 @@ test("reload shim keeps an explicit --socket pinned even when the pointer target
     await once(server, "listening");
 
     const pointer = path.join(root, "last-cli-path");
-    const shim = path.join(root, "cmux");
-    const fallback = path.join(root, "stable-cmux");
+    const shim = path.join(root, "bree");
+    const fallback = path.join(root, "stable-bree");
     const taggedCLI = makeTaggedBundle(root, tag, "tagged");
     writeExecutable(fallback, "#!/bin/sh\nprintf 'stable:%s\\n' \"$2\"\n");
     fs.writeFileSync(pointer, `${taggedCLI}\n`, { mode: 0o600 });

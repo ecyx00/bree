@@ -1,8 +1,8 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
-import CMUXAgentLaunch
-import CmuxWorkspaces
+import BREEAgentLaunch
+import BreeWorkspaces
 import Darwin
 import os
 
@@ -35,7 +35,7 @@ enum TerminalStartupShellQuoting {
     }
 }
 
-/// Which syntax family the user's interactive shell parses. Everything cmux
+/// Which syntax family the user's interactive shell parses. Everything bree
 /// generates is POSIX; nushell is the one supported login shell that cannot
 /// parse it (see ``NushellTypedShellCommand``).
 enum TerminalStartupShellDialect: Equatable {
@@ -43,8 +43,8 @@ enum TerminalStartupShellDialect: Equatable {
     case nushell
 
     /// Maps a shell executable path to its dialect by basename. Everything
-    /// except `nu` is treated as POSIX: every other login shell cmux supports
-    /// (zsh/bash/fish/csh/dash/ksh) parses the POSIX command strings cmux
+    /// except `nu` is treated as POSIX: every other login shell bree supports
+    /// (zsh/bash/fish/csh/dash/ksh) parses the POSIX command strings bree
     /// generates.
     static func forShellPath(_ shell: String?) -> TerminalStartupShellDialect {
         guard let shell = shell?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -54,22 +54,22 @@ enum TerminalStartupShellDialect: Equatable {
         return URL(fileURLWithPath: shell).lastPathComponent == "nu" ? .nushell : .posix
     }
 
-    /// Dialect of the login shell cmux spawns terminal surfaces with — the
+    /// Dialect of the login shell bree spawns terminal surfaces with — the
     /// same `$SHELL` fallback chain the spawn path uses.
     static var loginShell: TerminalStartupShellDialect {
         forShellPath(ProcessInfo.processInfo.environment["SHELL"])
     }
 
     /// Dialect for input typed into a remote host's shell after attach.
-    /// cmux does not (yet) know the remote login shell — the SSH bootstrap
+    /// bree does not (yet) know the remote login shell — the SSH bootstrap
     /// resolves `$SHELL` on the host at runtime and nothing reports it back —
-    /// so remote input stays POSIX, which is what cmux has always sent to
+    /// so remote input stays POSIX, which is what bree has always sent to
     /// remotes. If the bootstrap ever reports the remote shell, this is the
     /// single seam to replace with real detection.
     static let remoteHost: TerminalStartupShellDialect = .posix
 }
 
-/// Final rendering step for cmux-generated POSIX one-liners that get typed
+/// Final rendering step for bree-generated POSIX one-liners that get typed
 /// into (or pasted into) the user's interactive shell. POSIX shells receive
 /// the command verbatim; nushell receives it delegated through `/bin/sh`.
 /// Launcher-script inputs (`/bin/zsh '<script>'`) parse in every supported
@@ -78,7 +78,7 @@ struct TerminalStartupTypedShellCommand {
     /// Dialect of the shell that will parse the rendered input.
     let dialect: TerminalStartupShellDialect
 
-    /// Defaults to the login shell cmux spawns local surfaces with; pass
+    /// Defaults to the login shell bree spawns local surfaces with; pass
     /// ``TerminalStartupShellDialect/remoteHost`` when the input is typed
     /// into a remote host's shell instead.
     init(dialect: TerminalStartupShellDialect = .loginShell) {
@@ -102,7 +102,7 @@ enum TerminalStartupWorkingDirectoryPrefix {
         guard let workingDirectory = normalized(workingDirectory) else { return nil }
         let quoted = TerminalStartupShellQuoting.singleQuoted(workingDirectory)
         // No POSIX `{ …; }` grouping: this runs verbatim in the user's login shell
-        // (cmux spawns via `/usr/bin/login → $SHELL`), which may be fish — fish has no
+        // (bree spawns via `/usr/bin/login → $SHELL`), which may be fish — fish has no
         // brace grouping and errors before the agent launches (issue #6285). `&&`/`||`
         // are a left-associative, equal-precedence AND-OR list in sh/bash/zsh/fish, so
         // `cd … || [ ! -d … ] && cmd` == `(cd || test) && cmd` in every shell.
@@ -390,7 +390,7 @@ enum AgentResumeCommandBuilder {
         sessionId: String,
         launchCommand: AgentLaunchCommandSnapshot?,
         workingDirectory: String?,
-        registrationOverride: CmuxVaultAgentRegistration? = nil,
+        registrationOverride: BreeVaultAgentRegistration? = nil,
         includeWorkingDirectoryPrefix: Bool = true,
         observedPermissionMode: String? = nil
     ) -> String? {
@@ -413,7 +413,7 @@ enum AgentResumeCommandBuilder {
         launchCommand: AgentLaunchCommandSnapshot?,
         resolvedWorkingDirectory: String?,
         discardRecordedCwdOptions: Bool,
-        registrationOverride: CmuxVaultAgentRegistration? = nil,
+        registrationOverride: BreeVaultAgentRegistration? = nil,
         includeWorkingDirectoryPrefix: Bool = true,
         observedPermissionMode: String? = nil
     ) -> String? {
@@ -449,7 +449,7 @@ enum AgentResumeCommandBuilder {
             discardRecordedCwdOptions: discardRecordedCwdOptions,
             externalLauncher: externalLauncher,
             // A wrapper that re-execs the agent by name never receives the shim token below, so
-            // keep the shim reachable on PATH or the wrapped agent resumes without cmux hooks.
+            // keep the shim reachable on PATH or the wrapped agent resumes without bree hooks.
             wrappedAgentShimEnvironmentKey: externalLauncher.flatMap { launcher in
                 launcher.includesAgentExecutable
                     ? nil
@@ -465,7 +465,7 @@ enum AgentResumeCommandBuilder {
     /// (`launcherArguments` is the launcher argv followed by the agent's own
     /// resume arguments). Applies the same launch environment replay and
     /// wrapper-shim routing as ``resumeShellCommand(kind:sessionId:launchCommand:workingDirectory:registrationOverride:includeWorkingDirectoryPrefix:observedPermissionMode:)``,
-    /// so the launcher re-execs the agent with the recorded config and cmux hooks.
+    /// so the launcher re-execs the agent with the recorded config and bree hooks.
     static func launcherResumeShellCommand(
         kind: RestorableAgentKind,
         sessionId: String,
@@ -499,7 +499,7 @@ enum AgentResumeCommandBuilder {
         sessionId: String,
         launchCommand: AgentLaunchCommandSnapshot?,
         workingDirectory: String?,
-        registrationOverride: CmuxVaultAgentRegistration? = nil,
+        registrationOverride: BreeVaultAgentRegistration? = nil,
         includeWorkingDirectoryPrefix: Bool = true,
         observedPermissionMode: String? = nil
     ) -> String? {
@@ -534,7 +534,7 @@ enum AgentResumeCommandBuilder {
         kind: RestorableAgentKind,
         launchCommand: AgentLaunchCommandSnapshot?,
         workingDirectory: String?,
-        customRegistration: CmuxVaultAgentRegistration?,
+        customRegistration: BreeVaultAgentRegistration?,
         includeWorkingDirectoryPrefix: Bool,
         discardRecordedCwdOptions: Bool,
         externalLauncher: AgentExternalLauncher? = nil,
@@ -594,7 +594,7 @@ enum AgentResumeCommandBuilder {
         commandParts.append(contentsOf: wrappedAgentParts)
         let sanitizedCommandParts = commandParts
         // Render managed-agent executables as wrapper shim tokens so the
-        // executed command routes through cmux's provider wrapper
+        // executed command routes through bree's provider wrapper
         // (re-injecting the agent hooks) even when an `env`-prefixed invocation
         // would otherwise bypass the shell integration's PATH shim / shell
         // function and hit the user's real binary. Without this, an auto-resumed
@@ -602,7 +602,7 @@ enum AgentResumeCommandBuilder {
         // marks it live, so the iOS GUI stays read-only.
         // The token is POSIX-only, so token-bearing commands are wrapped in
         // `/bin/sh -c '…'` to parse consistently from any user's login shell.
-        // https://github.com/manaflow-ai/cmux/issues/5639
+        // https://github.com/ecyx00/bree/issues/5639
         let managedProviderKind = managedProviderKind(
             kind: kind,
             customRegistration: customRegistration
@@ -657,7 +657,7 @@ enum AgentResumeCommandBuilder {
     private static func launchEnvironmentParts(
         kind: RestorableAgentKind,
         launchCommand: AgentLaunchCommandSnapshot?,
-        customRegistration: CmuxVaultAgentRegistration?
+        customRegistration: BreeVaultAgentRegistration?
     ) -> [String] {
         var environment = launchCommand?.environment ?? [:]
         if let managedProviderKind = managedProviderKind(
@@ -684,8 +684,8 @@ enum AgentResumeCommandBuilder {
         // for wrapper routing, but a plain resume command already names that
         // executable directly. Only a path the launch itself captured (a routed
         // Subrouter restore keeps the real binary behind the wrapper) is replayed.
-        if launchCommand?.environment?["CMUX_CUSTOM_CODEX_PATH"] == nil {
-            selectedEnvironment.removeValue(forKey: "CMUX_CUSTOM_CODEX_PATH")
+        if launchCommand?.environment?["BREE_CUSTOM_CODEX_PATH"] == nil {
+            selectedEnvironment.removeValue(forKey: "BREE_CUSTOM_CODEX_PATH")
         }
         let piFamilyUsesCapturedPath = kind == .pi
             || kind.customAgentID == "pi"
@@ -704,9 +704,9 @@ enum AgentResumeCommandBuilder {
             }
         }
         if !preservedClaudeAuthSelectionEnvironmentKeys.isEmpty {
-            environmentParts.append("CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV=1")
+            environmentParts.append("BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV=1")
             environmentParts.append(
-                "CMUX_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS=\(preservedClaudeAuthSelectionEnvironmentKeys.joined(separator: ","))"
+                "BREE_PRESERVE_CLAUDE_AUTH_SELECTION_ENV_KEYS=\(preservedClaudeAuthSelectionEnvironmentKeys.joined(separator: ","))"
             )
         }
         return environmentParts
@@ -714,7 +714,7 @@ enum AgentResumeCommandBuilder {
 
     private static func managedProviderKind(
         kind: RestorableAgentKind,
-        customRegistration: CmuxVaultAgentRegistration?
+        customRegistration: BreeVaultAgentRegistration?
     ) -> String? {
         if case .custom = kind {
             return customRegistration?.registeredResumeKind?.rawValue
@@ -727,7 +727,7 @@ enum AgentResumeCommandBuilder {
         sessionId: String,
         launchCommand: AgentLaunchCommandSnapshot?,
         workingDirectory: String?,
-        customRegistration: CmuxVaultAgentRegistration?,
+        customRegistration: BreeVaultAgentRegistration?,
         observedPermissionMode: String? = nil
     ) -> [String]? {
         agentResumeArguments(
@@ -764,8 +764,8 @@ enum AgentResumeCommandBuilder {
             homeDirectory: NSHomeDirectory(),
             workingDirectory: workingDirectory ?? launchCommand?.workingDirectory,
             layout: AgentExternalLauncherRegistry.ConfigLayout(
-                globalRelativePath: ".config/\(CmuxIdentity.current.configDirectoryName)/\(CmuxIdentity.current.configFileName)",
-                projectRelativePaths: CmuxIdentity.current.projectConfigCandidates(in: "/x").map { String($0.dropFirst("/x/".count)) }
+                globalRelativePath: ".config/\(BreeIdentity.current.configDirectoryName)/\(BreeIdentity.current.configFileName)",
+                projectRelativePaths: BreeIdentity.current.projectConfigCandidates(in: "/x").map { String($0.dropFirst("/x/".count)) }
             ),
             sanitize: { try JSONCParser.preprocess(data: $0) }
         ).resolvedLauncher(id: launcherID, kind: kind.rawValue)
@@ -776,7 +776,7 @@ enum AgentResumeCommandBuilder {
         sessionId: String,
         launchCommand: AgentLaunchCommandSnapshot?,
         workingDirectory: String?,
-        customRegistration: CmuxVaultAgentRegistration?,
+        customRegistration: BreeVaultAgentRegistration?,
         observedPermissionMode: String? = nil
     ) -> [String]? {
         let resumeArgv = AgentResumeArgv()
@@ -825,7 +825,7 @@ enum AgentResumeCommandBuilder {
         sessionId: String,
         launchCommand: AgentLaunchCommandSnapshot?,
         workingDirectory: String?,
-        customRegistration: CmuxVaultAgentRegistration?,
+        customRegistration: BreeVaultAgentRegistration?,
         observedPermissionMode: String? = nil
     ) -> [String]? {
         let customTemplate = customRegistration?.forkCommand.map { command in
@@ -860,7 +860,7 @@ enum AgentResumeCommandBuilder {
     }
 
     private static func customResumeArguments(
-        registration: CmuxVaultAgentRegistration,
+        registration: BreeVaultAgentRegistration,
         sessionId: String,
         launchCommand: AgentLaunchCommandSnapshot?,
         workingDirectory: String?
@@ -876,7 +876,7 @@ enum AgentResumeCommandBuilder {
 
     private static func customTemplateArguments(
         template: String,
-        registration: CmuxVaultAgentRegistration,
+        registration: BreeVaultAgentRegistration,
         sessionId: String,
         launchCommand: AgentLaunchCommandSnapshot?,
         workingDirectory: String?
@@ -939,7 +939,7 @@ struct SessionRestorableAgentSnapshot: Codable, Sendable {
     var sessionId: String
     var workingDirectory: String?
     var launchCommand: AgentLaunchCommandSnapshot?
-    var registration: CmuxVaultAgentRegistration? = nil
+    var registration: BreeVaultAgentRegistration? = nil
     /// Last hook-observed permission mode; re-applied as `--permission-mode` on
     /// user-owned claude resume/fork when no explicit launch flag covers it.
     var permissionMode: String? = nil; var hadActivePromptTurn: Bool? = nil
@@ -1020,7 +1020,7 @@ struct SessionRestorableAgentSnapshot: Codable, Sendable {
     /// `dialect` describes the shell that will parse the returned input. Local
     /// surfaces type into the user's login shell (`.loginShell` default);
     /// remote workspaces type into the remote host's shell after attach, which
-    /// cmux treats as POSIX regardless of the local `$SHELL` — pass `.posix`
+    /// bree treats as POSIX regardless of the local `$SHELL` — pass `.posix`
     /// there so a local nushell login never leaks `^/bin/sh -c "…"` to a
     /// remote zsh/bash.
     private func startupInput(
@@ -1614,12 +1614,12 @@ struct RestorableAgentSessionIndex: Sendable {
     ///
     /// Quit-time persistence cannot synchronously reload every hook store, but it also must not
     /// trust a TTL-cached PID after exit, exec, PID reuse, or a session-changing relaunch. A cached
-    /// running entry stays live only when its exact process generation, cmux scope, executable,
+    /// running entry stays live only when its exact process generation, bree scope, executable,
     /// invocation mode, and explicit session argument still match.
     func revalidatingCachedProcesses(
-        against processSnapshot: CmuxTopProcessSnapshot,
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments? = {
-            CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
+        against processSnapshot: BreeTopProcessSnapshot,
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments? = {
+            BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
         },
         processIdentityProvider: (Int) -> AgentPIDProcessIdentity? = {
             guard $0 > 0, $0 <= Int(Int32.max) else { return nil }
@@ -1685,8 +1685,8 @@ struct RestorableAgentSessionIndex: Sendable {
             let currentPanelProcessIDs: Set<Int> = processLiveness == .running
                 ? Set(entry.processIDs.filter { processID in
                     guard let process = processSnapshot.process(pid: processID) else { return false }
-                    return process.cmuxWorkspaceID == key.workspaceId
-                        && process.cmuxSurfaceID == key.panelId
+                    return process.breeWorkspaceID == key.workspaceId
+                        && process.breeSurfaceID == key.panelId
                 }).union(confirmedAgentProcessIDs)
                 : []
             let currentProcessIdentities = Dictionary(uniqueKeysWithValues:
@@ -1742,7 +1742,7 @@ struct RestorableAgentSessionIndex: Sendable {
         homeDirectory: String = NSHomeDirectory(),
         fileManager: FileManager = .default
     ) -> RestorableAgentSessionIndex {
-        let registry = CmuxVaultAgentRegistry.load(homeDirectory: homeDirectory, fileManager: fileManager)
+        let registry = BreeVaultAgentRegistry.load(homeDirectory: homeDirectory, fileManager: fileManager)
         return load(
             homeDirectory: homeDirectory,
             fileManager: fileManager,
@@ -1753,12 +1753,12 @@ struct RestorableAgentSessionIndex: Sendable {
     static func load(
         homeDirectory: String,
         fileManager: FileManager,
-        registry: CmuxVaultAgentRegistry,
+        registry: BreeVaultAgentRegistry,
         detectedSnapshots: [PanelKey: ProcessDetectedSnapshotEntry],
         hibernationProcessScopes: [PanelKey: HibernationProcessScope] = [:],
         environment: [String: String] = ProcessInfo.processInfo.environment,
-        processArgumentsProvider: @escaping (Int) -> CmuxTopProcessArguments? = {
-            CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
+        processArgumentsProvider: @escaping (Int) -> BreeTopProcessArguments? = {
+            BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
         },
         processPresenceProvider: @escaping (Int) -> PIDPresence = {
             guard $0 > 0, $0 <= Int(Int32.max) else { return .absent }
@@ -1780,7 +1780,7 @@ struct RestorableAgentSessionIndex: Sendable {
         let codexHomeResolver = CodexHomeResolver()
         let cachedAgentProcessValidator = CachedAgentProcessIdentityValidator()
         let builtInKindIDs = Set(RestorableAgentKind.allCases.map(\.rawValue))
-        let hookKinds: [(kind: RestorableAgentKind, registration: CmuxVaultAgentRegistration?)] =
+        let hookKinds: [(kind: RestorableAgentKind, registration: BreeVaultAgentRegistration?)] =
             RestorableAgentKind.allCases.map { (kind: $0, registration: nil) }
             + registry.registrations.compactMap { registration in
                 builtInKindIDs.contains(registration.id)
@@ -2174,7 +2174,7 @@ struct RestorableAgentSessionIndex: Sendable {
                 let recordedProcessID = effectiveRecord.pid
                 let currentProcessArguments = recordedProcessID.flatMap(processArgumentsProvider)
                 let currentProcessIdentity = recordedProcessID.flatMap(processIdentityProvider)
-                let processArgumentsForRecord: (Int) -> CmuxTopProcessArguments? = { candidatePID in
+                let processArgumentsForRecord: (Int) -> BreeTopProcessArguments? = { candidatePID in
                     guard candidatePID == recordedProcessID else {
                         return processArgumentsProvider(candidatePID)
                     }
@@ -2709,7 +2709,7 @@ struct RestorableAgentSessionIndex: Sendable {
 
     /// Drops launch captures that cannot describe this agent kind: a capture
     /// inherited from a different agent's session (codex started under claude
-    /// carries claude's `CMUX_AGENT_LAUNCH_*`) or the hook dispatch shell's own
+    /// carries claude's `BREE_AGENT_LAUNCH_*`) or the hook dispatch shell's own
     /// argv. Resume/fork then fall back to the kind's bare verbs instead of
     /// rendering the foreign binary. Existing poisoned records heal on load.
     private static func trustedLaunchCommand(
@@ -2987,7 +2987,7 @@ struct RestorableAgentSessionIndex: Sendable {
         return false
     }
 
-    /// The directory cmux must `cd` into to resume or fork this session.
+    /// The directory bree must `cd` into to resume or fork this session.
     ///
     /// Many agents store their session under a directory derived from the cwd the session was
     /// *launched* in (Claude `projects/<encode(cwd)>/`, plus the Grok/Pi/Gemini/Cursor/Qoder
@@ -3001,7 +3001,7 @@ struct RestorableAgentSessionIndex: Sendable {
     private static func restorableWorkingDirectory(
         for record: RestorableAgentHookSessionRecord,
         kind: RestorableAgentKind,
-        registration: CmuxVaultAgentRegistration?,
+        registration: BreeVaultAgentRegistration?,
         fileManager: FileManager,
         lookup: ClaudeTranscriptLookupCache,
         codexCwdLookup: CodexSessionCwdLookupCache
@@ -3591,7 +3591,7 @@ struct RestorableAgentSessionIndex: Sendable {
         processID: Int,
         recordedProcessIdentity: AgentPIDProcessIdentity?,
         currentProcessIdentity: AgentPIDProcessIdentity?,
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments?,
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments?,
         processPresenceProvider: (Int) -> PIDPresence,
         validator: CachedAgentProcessIdentityValidator,
         hermesSessionValidation: CachedAgentProcessIdentityValidator.HermesSessionValidation = .cachedSnapshot
@@ -3612,7 +3612,7 @@ struct RestorableAgentSessionIndex: Sendable {
             // absence proves that the recorded generation exited.
             return processPresenceProvider(processID) == .absent ? .mismatches : .unknown
         }
-        guard process.matchesCMUXScope(workspaceId: workspaceId, surfaceId: panelId) else {
+        guard process.matchesBREEScope(workspaceId: workspaceId, surfaceId: panelId) else {
             return .mismatches
         }
         return validator.currentProcess(
@@ -3778,7 +3778,7 @@ struct DeferredAgentResumeRestore: Sendable {
     }
 }
 
-private extension CmuxTopProcessArguments {
+private extension BreeTopProcessArguments {
     func environmentUUID(forKey key: String) -> UUID? {
         guard let rawValue = environment[key]?.trimmingCharacters(in: .whitespacesAndNewlines),
               !rawValue.isEmpty else {

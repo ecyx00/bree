@@ -1,12 +1,12 @@
-import CmuxCloud
-import CmuxFoundation
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeFoundation
+import BreeSurfaceCatalogModel
 import Foundation
-import CmuxCore
-import CmuxWorkspaces
+import BreeCore
+import BreeWorkspaces
 import Darwin
-import CmuxNotifications
-import CmuxSidebar
+import BreeNotifications
+import BreeSidebar
 
 extension Workspace {
     struct DetachedAgentRuntimeState {

@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import WebKit
 
 /// Receives events for one REPL session: `(name, payload)`; the payload
@@ -10,7 +10,7 @@ typealias BrowserReplTabEventSink = @MainActor (_ name: String, _ payload: [Stri
 ///
 /// `BrowserPanel`'s UI and download delegates consult this registry: in a tab
 /// a session created, dialogs, file choosers, popups and downloads are routed
-/// to the session instead of cmux's native UI. A user's tab that a session
+/// to the session instead of bree's native UI. A user's tab that a session
 /// only drives keeps that UI for every event the session has no handler for
 /// (``BrowserReplTabOwnership``). Panels without an attachment keep their
 /// normal behavior.
@@ -315,7 +315,7 @@ final class BrowserReplTabAttachment {
         return sessionID
     }
 
-    /// Whether `event` goes to a session instead of cmux's UI.
+    /// Whether `event` goes to a session instead of bree's UI.
     func routesToSessions(_ event: BrowserReplTabEvent) -> Bool {
         recipient(for: event) != nil
     }
@@ -389,7 +389,7 @@ final class BrowserReplTabAttachment {
             return
         }
         releaseRenderHost()
-        guard !webView.cmuxIsElementFullscreenActiveOrTransitioning else {
+        guard !webView.breeIsElementFullscreenActiveOrTransitioning else {
             return
         }
         // A shown tab keeps its pane's size, so the page does not reflow.
@@ -538,7 +538,7 @@ final class BrowserReplTabAttachment {
 
     /// Whether the creating session granted `permission` (`camera`,
     /// `microphone`, `geolocation`, `notifications`). Grants apply only to
-    /// tabs the session created; a user's tab keeps cmux's own answer.
+    /// tabs the session created; a user's tab keeps bree's own answer.
     func grants(_ permission: String) -> Bool {
         contextOptions.permissions.contains(permission)
     }
@@ -627,7 +627,7 @@ final class BrowserReplTabAttachment {
         mouseState.reset()
         let dragState = drag
         drag = nil
-        guard let webView = panel?.webView as? CmuxWebView else { return }
+        guard let webView = panel?.webView as? BreeWebView else { return }
         webView.cancelPendingAutomationContextMenus()
         webView.automationDragCapture = nil
         if webView.window != nil {
@@ -693,7 +693,7 @@ final class BrowserReplTabAttachment {
         guard let webView = panel?.webView, webView !== instrumentedWebView, isAttached else { return }
         uninstrument()
         // A web view after the first is a replacement (a restore of a page
-        // cmux unloaded, a crash recovery): its frames have new ids.
+        // bree unloaded, a crash recovery): its frames have new ids.
         let isReplacement = hasInstrumentedWebView
         hasInstrumentedWebView = true
         instrumentedWebView = webView
@@ -923,7 +923,7 @@ final class BrowserReplTabAttachment {
         // depend on the controller.
         configuration.userContentController = WKUserContentController()
         BrowserPanel.configureWebViewConfiguration(configuration, websiteDataStore: panel.websiteDataStore)
-        let webView = CmuxWebView(frame: .zero, configuration: configuration, host: CmuxWebViewAppHost())
+        let webView = BreeWebView(frame: .zero, configuration: configuration, host: BreeWebViewAppHost())
         webView.allowsBackForwardNavigationGestures = true
         webView.pageZoom = panel.webView.pageZoom
         webView.underPageBackgroundColor = GhosttyBackgroundTheme.currentColor()
@@ -998,7 +998,7 @@ final class BrowserReplTabAttachment {
     /// Downloads reported to a session, by id, with that session.
     private var sessionDownloads: [String: String] = [:]
 
-    /// Whether download `id` went to a session. Those stay in cmux's
+    /// Whether download `id` went to a session. Those stay in bree's
     /// temporary download directory, so `download.path()` can read them;
     /// every other download takes the user's normal path.
     func keepsDownloadInTemporaryDirectory(id: String) -> Bool {
@@ -1037,7 +1037,7 @@ final class BrowserReplTabAttachment {
 /// in other worlds still see `null`. Without the SPI the world is a plain
 /// named world and closed roots stay hidden.
 enum BrowserReplAgentWorld {
-    static let name = "cmux-agent"
+    static let name = "bree-agent"
 
     @MainActor static let world = WKContentWorld.browserReplWorld(seeingClosedShadowRoots: name)
 }
@@ -1045,7 +1045,7 @@ enum BrowserReplAgentWorld {
 /// Receives console and page error reports from the page telemetry script.
 @MainActor
 final class BrowserReplConsoleMessageHandler: NSObject, WKScriptMessageHandler {
-    static let name = "cmuxReplConsole"
+    static let name = "breeReplConsole"
 
     private let emit: (String, [String: Any]) -> Void
 
@@ -1081,7 +1081,7 @@ final class BrowserReplConsoleMessageHandler: NSObject, WKScriptMessageHandler {
 /// document-start script installs itself only while this handler exists.
 @MainActor
 final class BrowserReplAgentPresenceHandler: NSObject, WKScriptMessageHandler {
-    static let name = "cmuxReplAgent"
+    static let name = "breeReplAgent"
 
     func userContentController(
         _ userContentController: WKUserContentController,

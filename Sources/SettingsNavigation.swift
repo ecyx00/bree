@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 enum SettingsNavigationTarget: String, CaseIterable, Identifiable {
@@ -134,7 +134,7 @@ enum SettingsNavigationTarget: String, CaseIterable, Identifiable {
 }
 
 enum SettingsNavigationRequest {
-    static let notificationName = Notification.Name("cmux.settings.navigate")
+    static let notificationName = Notification.Name("bree.settings.navigate")
     private static let targetKey = "target"
     private static let anchorKey = "anchor"
     private static let highlightKey = "highlight"

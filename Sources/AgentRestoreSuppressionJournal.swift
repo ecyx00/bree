@@ -1,4 +1,4 @@
-import CmuxAgentJournal
+import BreeAgentJournal
 import Foundation
 
 /// Records duplicate-restore suppression without changing sidebar lifecycle.
@@ -30,7 +30,7 @@ struct AgentRestoreSuppressionJournal: Sendable {
             sessionId: sessionID,
             workspaceId: workspaceID.uuidString,
             surfaceId: surfaceID.uuidString,
-            nativeEvent: "cmux_restore_suppressed_live_owner",
+            nativeEvent: "bree_restore_suppressed_live_owner",
             detail: "duplicate restore suppressed; live owner pid=\(processID)"
         )
         guard draft.validationProblem() == nil else {

@@ -1,4 +1,4 @@
-import CmuxWorkspaces
+import BreeWorkspaces
 
 extension SidebarWorkspaceSnapshotBuilder.Snapshot {
     struct ContextMenuImmediateFields: Equatable {

@@ -24,7 +24,7 @@ export function useCommentsBootstrap(
       })
       .catch((error) => {
         if (active) {
-          console.warn("cmux diff comments load failed", error);
+          console.warn("bree diff comments load failed", error);
         }
       });
     return () => {

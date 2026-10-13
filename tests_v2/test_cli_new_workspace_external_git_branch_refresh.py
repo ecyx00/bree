@@ -14,55 +14,55 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
 def _resolve_socket_path() -> str:
-    socket_path = os.environ.get("CMUX_SOCKET_PATH", "").strip()
+    socket_path = os.environ.get("BREE_SOCKET_PATH", "").strip()
     if not socket_path:
-        raise cmuxError("CMUX_SOCKET_PATH is required (expected /tmp/cmux-debug-<tag>.sock)")
-    if not re.fullmatch(r"/tmp/cmux-debug-[^/]+\.sock", socket_path):
-        raise cmuxError(f"CMUX_SOCKET_PATH must be a tagged debug socket, got: {socket_path!r}")
+        raise breeError("BREE_SOCKET_PATH is required (expected /tmp/bree-debug-<tag>.sock)")
+    if not re.fullmatch(r"/tmp/bree-debug-[^/]+\.sock", socket_path):
+        raise breeError(f"BREE_SOCKET_PATH must be a tagged debug socket, got: {socket_path!r}")
     return socket_path
 
 
 def _must(cond: bool, msg: str) -> None:
     if not cond:
-        raise cmuxError(msg)
+        raise breeError(msg)
 
 
 def _find_cli_binary() -> str:
-    env_cli = os.environ.get("CMUXTERM_CLI")
+    env_cli = os.environ.get("BREE_CLI")
     if env_cli and os.path.isfile(env_cli) and os.access(env_cli, os.X_OK):
         return env_cli
 
-    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/cmux-tests-v2/Build/Products/Debug/cmux")
+    fixed = os.path.expanduser("~/Library/Developer/Xcode/DerivedData/bree-tests-v2/Build/Products/Debug/bree")
     if os.path.isfile(fixed) and os.access(fixed, os.X_OK):
         return fixed
 
     candidates = glob.glob(
-        os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/cmux"),
+        os.path.expanduser("~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug/bree"),
         recursive=True,
     )
-    candidates += glob.glob("/tmp/cmux-*/Build/Products/Debug/cmux")
+    candidates += glob.glob("/tmp/bree-*/Build/Products/Debug/bree")
     candidates = [p for p in candidates if os.path.isfile(p) and os.access(p, os.X_OK)]
     if not candidates:
-        raise cmuxError("Could not locate cmux CLI binary; set CMUXTERM_CLI")
+        raise breeError("Could not locate bree CLI binary; set BREE_CLI")
     candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
     return candidates[0]
 
 
 def _run_cli(cli: str, socket_path: str, args: list[str]) -> str:
     env = dict(os.environ)
-    env.pop("CMUX_WORKSPACE_ID", None)
-    env.pop("CMUX_SURFACE_ID", None)
-    env.pop("CMUX_TAB_ID", None)
+    env.pop("BREE_WORKSPACE_ID", None)
+    env.pop("BREE_SURFACE_ID", None)
+    env.pop("BREE_TAB_ID", None)
 
     cmd = [cli, "--socket", socket_path] + args
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False, env=env)
     if proc.returncode != 0:
         merged = f"{proc.stdout}\n{proc.stderr}".strip()
-        raise cmuxError(f"CLI failed ({' '.join(cmd)}): {merged}")
+        raise breeError(f"CLI failed ({' '.join(cmd)}): {merged}")
     return (proc.stdout or "").strip()
 
 
@@ -97,7 +97,7 @@ def _wait_for_sidebar_branch(
             return state
         time.sleep(0.1)
 
-    raise cmuxError(
+    raise breeError(
         f"Timed out waiting for branch {expected_branch!r} on workspace {workspace}. "
         f"Last sidebar-state: {last_state!r}"
     )
@@ -115,14 +115,14 @@ def _create_git_repo(root: Path) -> Path:
         stderr=subprocess.DEVNULL,
     )
     subprocess.run(
-        ["git", "config", "user.name", "cmux-test"],
+        ["git", "config", "user.name", "bree-test"],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
     subprocess.run(
-        ["git", "config", "user.email", "cmux-test@example.com"],
+        ["git", "config", "user.email", "bree-test@example.com"],
         cwd=repo,
         check=True,
         stdout=subprocess.DEVNULL,
@@ -149,18 +149,18 @@ def _create_git_repo(root: Path) -> Path:
 def main() -> int:
     try:
         socket_path = _resolve_socket_path()
-    except cmuxError as exc:
+    except breeError as exc:
         print(f"SKIP: {exc}")
         return 0
 
     cli = _find_cli_binary()
-    temp_root = Path(tempfile.mkdtemp(prefix="cmux_issue_915_external_git_"))
+    temp_root = Path(tempfile.mkdtemp(prefix="bree_issue_915_external_git_"))
     created_workspace: str | None = None
 
     try:
         repo_path = _create_git_repo(temp_root)
 
-        with cmux(socket_path) as client:
+        with bree(socket_path) as client:
             baseline_workspace = client.current_workspace()
 
             created = _run_cli(cli, socket_path, ["new-workspace", "--cwd", str(repo_path)])

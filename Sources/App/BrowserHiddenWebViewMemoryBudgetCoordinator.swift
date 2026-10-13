@@ -1,11 +1,11 @@
-import CmuxBrowser
+import BreeBrowser
 import Darwin
 import Foundation
 import WebKit
 
 /// Keeps the memory held by hidden browser panes under the configured budget
 /// by discarding the pane hidden longest first, like a Chrome tab discard
-/// (https://github.com/manaflow-ai/cmux/issues/15069). Runs on each memory
+/// (https://github.com/ecyx00/bree/issues/15069). Runs on each memory
 /// monitor sample; the timer policy stays opt-in.
 @MainActor
 final class BrowserHiddenWebViewMemoryBudgetCoordinator {
@@ -16,8 +16,8 @@ final class BrowserHiddenWebViewMemoryBudgetCoordinator {
 
     init(
         policyDefaults: UserDefaults = .standard,
-        processIdentifier: @escaping @MainActor (WKWebView) -> Int? = { CmuxWebContentProcessIdentifier.pid(for: $0) },
-        footprintBytes: @escaping (Int) -> UInt64? = { CmuxTopProcessSnapshot.resourceUsage(for: $0)?.ri_phys_footprint },
+        processIdentifier: @escaping @MainActor (WKWebView) -> Int? = { BreeWebContentProcessIdentifier.pid(for: $0) },
+        footprintBytes: @escaping (Int) -> UInt64? = { BreeTopProcessSnapshot.resourceUsage(for: $0)?.ri_phys_footprint },
         browserPanels: @escaping @MainActor () -> [BrowserPanel]
     ) {
         self.policyDefaults = policyDefaults
@@ -51,7 +51,7 @@ final class BrowserHiddenWebViewMemoryBudgetCoordinator {
             return count + (discarded ? 1 : 0)
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.discard.budget budgetBytes=\(planner.budgetBytes) " +
             "hiddenBytes=\(plan.hiddenFootprintBytes) " +
             "remainingBytes=\(plan.remainingHiddenFootprintBytes) " +

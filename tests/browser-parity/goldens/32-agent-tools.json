@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "markdown": "[Home](PRIMARY/index.html) [Docs](PRIMARY/aria.html)\n\n## Related\n\n[States](PRIMARY/states.html)\n\n# Field notes\n\nPlain text with **bold**, *emphasis*, `code()` and a [relative link](PRIMARY/aria.html?from=notes).\n\nbut this span shows\n\n- Alpha\n- Beta\n  1. Beta one\n  2. Beta two\n\n| Name | Score |\n| --- | --- |\n| Ada | 9 |\n| Linus \\| Torvalds | 7 |\n\n```\nline one\n  indented line\n```\n\n> Quoted words.\n\nMore\n\n## Shadow heading\n\nShadow paragraph with slotted text.\n\n## Frame note\n\nText inside the cross-origin frame.\n\nFrame password Frame field\n\n### Lamp\n\n$19.00[View](PRIMARY/aria.html?p=lamp)\n\n- home\n- light\n\n### Desk\n\n$120.00[View](PRIMARY/aria.html?p=desk)\n\n- office\n\n### Chair\n\n$75.50[View](PRIMARY/aria.html?p=chair)\n\nUsername Password API key One-time code Sign in\n\nSigned out\n\nPlan `Pro`\n\nChoose fruit\n\nlog line 1\n\nlog line 2\n\nlog line 3\n\nlog line 4\n\nlog line 5\n\nlog line 6\n\nlog line 7\n\nlog line 8\n\nlog line 9\n\nlog line 10\n\nlog line 11\n\nlog line 12\n\nlog line 13\n\nlog line 14\n\nlog line 15\n\nlog line 16\n\nlog line 17\n\nlog line 18\n\nlog line 19\n\nlog line 20\n\nlog line 21\n\nlog line 22\n\nlog line 23\n\nlog line 24\n\nlog line 25\n\nlog line 26\n\nlog line 27\n\nlog line 28\n\nlog line 29\n\nlog line 30\n\nlog line 31\n\nlog line 32\n\nlog line 33\n\nlog line 34\n\nlog line 35\n\nlog line 36\n\nlog line 37\n\nlog line 38\n\nlog line 39\n\nlog line 40\n\nlog line 41\n\nlog line 42\n\nlog line 43\n\nlog line 44\n\nlog line 45\n\nlog line 46\n\nlog line 47\n\nlog line 48\n\nlog line 49\n\nlog line 50\n\nlog line 51\n\nlog line 52\n\nlog line 53\n\nlog line 54\n\nlog line 55\n\nlog line 56\n\nlog line 57\n\nlog line 58\n\nlog line 59\n\nlog line 60\n\n[Download the report](PRIMARY/download.txt)\n\n[Peer page](PEER/aria.html?linked) Go to peer by script\n\nDeep anchor text at the bottom.\n\nFooter words\n",
     "markdown-main-chunk": "# Field notes\n\nPlain text with **bold**, *emphasis*, `code()` and a [relative link](PRIMARY/aria.html?from=notes).\n\nbut this span shows\n\n- Alpha\n- Beta\n  1. Beta one\n  2. Beta two\n\n| Name | Score |\n| --- | --- |\n| Ada | 9 |\n| Linus \\| Torvalds | 7 |\n\n```\nline one\n  indented line\n```\n\n<!-- characters 0 to 300 of 1,708; continue with page.markdown({ start: 300, maxChars: 300, main: true }) -->\n",
     "markdown-main-next": [
@@ -143,8 +143,8 @@
     "highlight": 3,
     "search-duckduckgo": [
       {
-        "title": "cmux - terminal for agents",
-        "url": "https://example.com/cmux",
+        "title": "bree - terminal for agents",
+        "url": "https://example.com/bree",
         "snippet": "A Ghostty-based macOS terminal with vertical tabs."
       },
       {
@@ -155,8 +155,8 @@
     ],
     "search-bing": [
       {
-        "title": "cmux on Bing",
-        "url": "https://example.com/cmux",
+        "title": "bree on Bing",
+        "url": "https://example.com/bree",
         "snippet": "Terminal with notifications for agents."
       }
     ],

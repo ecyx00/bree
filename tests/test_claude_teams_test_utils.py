@@ -9,17 +9,17 @@ import socket
 import tempfile
 from pathlib import Path
 
-from claude_teams_test_utils import FOCUSED_WORKSPACE_ID, focused_cmux_server
+from claude_teams_test_utils import FOCUSED_WORKSPACE_ID, focused_bree_server
 
 
 def main() -> int:
-    with tempfile.TemporaryDirectory(prefix="cmux-overlong-socket-hint-") as temp_dir:
-        socket_path_hint = Path(temp_dir) / ("nested-segment-" * 12) / "focused-cmux.sock"
+    with tempfile.TemporaryDirectory(prefix="bree-overlong-socket-hint-") as temp_dir:
+        socket_path_hint = Path(temp_dir) / ("nested-segment-" * 12) / "focused-bree.sock"
         if len(os.fsencode(socket_path_hint)) < 200:
             print(f"FAIL: test socket hint was not deliberately overlong: {socket_path_hint}")
             return 1
 
-        with focused_cmux_server(socket_path_hint) as (live_socket_path, requests):
+        with focused_bree_server(socket_path_hint) as (live_socket_path, requests):
             if Path(live_socket_path) == socket_path_hint:
                 print("FAIL: focused server tried to bind the overlong caller path")
                 return 1
@@ -47,7 +47,7 @@ def main() -> int:
             print(f"FAIL: focused socket was not cleaned up: {live_socket_path}")
             return 1
 
-    print("PASS: focused cmux test server owns a short socket for overlong caller paths")
+    print("PASS: focused bree test server owns a short socket for overlong caller paths")
     return 0
 
 

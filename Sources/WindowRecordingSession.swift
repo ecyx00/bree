@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import CoreGraphics
 import Foundation
 import ScreenCaptureKit
@@ -15,7 +15,7 @@ enum WindowRecordingSessionError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unsupportedSystem:
-            "recording a cmux window needs macOS 14.4 or later"
+            "recording a bree window needs macOS 14.4 or later"
         case .windowGone:
             "the window is no longer available"
         case .captureTimedOut:
@@ -100,7 +100,7 @@ struct WindowRecordingStatus: Sendable {
     }
 }
 
-/// One in-flight recording of one of cmux's own windows.
+/// One in-flight recording of one of bree's own windows.
 ///
 /// Frames are sampled with ScreenCaptureKit's screenshot API on a schedule
 /// instead of through a live `SCStream`: the same permission-free own-process

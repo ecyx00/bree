@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 /// Enforces live relay ownership before returning a reported TTY target.

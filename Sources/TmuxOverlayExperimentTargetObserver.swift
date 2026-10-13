@@ -9,7 +9,7 @@ import Observation
 /// their own unread ring. ``TmuxOverlayExperimentSettings/target(defaults:)``
 /// costs two CFPreferences lookups per call, and those lookups were the
 /// innermost frames of the main-thread hangs Sentry groups as
-/// CMUXTERM-MACOS-1SKP (#15439). Reading ``target`` is a stored-property
+/// BREE-MACOS-1SKP (#15439). Reading ``target`` is a stored-property
 /// read, and views that read it update when either key changes.
 @MainActor
 @Observable

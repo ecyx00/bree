@@ -53,5 +53,5 @@ func confirmDeleteWorkspaceGroup(groupName: String, memberCount: Int) -> Bool {
     if let cancelButton = alert.buttons.dropFirst().first {
         cancelButton.keyEquivalent = "\u{1b}"
     }
-    return alert.runCmuxModal() == .alertFirstButtonReturn
+    return alert.runBreeModal() == .alertFirstButtonReturn
 }

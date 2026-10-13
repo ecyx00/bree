@@ -1,12 +1,12 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeTerminal
+import BreeTerminalCore
 import GhosttyKit
 import os
 
 nonisolated private let runtimeClipboardLogger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "com.cmuxterm.app",
+    subsystem: Bundle.main.bundleIdentifier ?? "com.bree.app",
     category: "RuntimeClipboard"
 )
 
@@ -170,10 +170,10 @@ extension GhosttyApp {
             }
 
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "terminal.clipboard.read surface=\(callbackContext.surfaceId.uuidString.prefix(5)) " +
                 "types=\(pasteboardTypeDescription) " +
-                "prepared=\(preparedContent.cmuxDebugDescription)"
+                "prepared=\(preparedContent.breeDebugDescription)"
             )
 #endif
 
@@ -241,7 +241,7 @@ extension GhosttyApp {
                                 return requestTerminalSurface.owningWorkspace()
                             }
                             guard let workspace else {
-                                finish(.failure(NSError(domain: "cmux.remote.paste", code: 3)))
+                                finish(.failure(NSError(domain: "bree.remote.paste", code: 3)))
                                 preparationService.cleanupTransferredTemporaryFiles(
                                     .fileURLs(fileURLs)
                                 )
@@ -262,7 +262,7 @@ extension GhosttyApp {
                             guard MainActor.assumeIsolated({
                                 requestSurfaceIdentity.matches(requestTerminalSurface)
                             }) else {
-                                finish(.failure(NSError(domain: "cmux.remote.paste", code: 4)))
+                                finish(.failure(NSError(domain: "bree.remote.paste", code: 4)))
                                 preparationService.cleanupTransferredTemporaryFiles(
                                     .fileURLs(fileURLs)
                                 )
@@ -315,7 +315,7 @@ extension GhosttyApp {
                             }
                             if shouldPresentFailure {
 #if DEBUG
-                                cmuxDebugLog(
+                                breeDebugLog(
                                     "terminal.remotePasteUpload.failed " +
                                     "surface=\(callbackContext.surfaceId.uuidString.prefix(5))"
                                 )

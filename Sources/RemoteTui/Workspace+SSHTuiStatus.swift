@@ -1,7 +1,7 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
-import CmuxCore
+import BreeCore
 
 extension Workspace {
     /// CLI status is derived from the same carrier and graph as native panes.
@@ -21,7 +21,7 @@ extension Workspace {
         }
         let resources = catalog.authoritativeSnapshot.resources(on: machine)
         return [
-            "enabled": true, "backend": "cmux-tui", "transport": "ssh", "terminal_transport": "ssh",
+            "enabled": true, "backend": "bree-tui", "transport": "ssh", "terminal_transport": "ssh",
             "machine": machine.rawValue, "state": state, "connected": connected,
             "destination": configuration.destination, "port": configuration.port ?? NSNull(),
             "has_identity_file": configuration.identityFile != nil, "has_ssh_options": !configuration.sshOptions.isEmpty,
@@ -29,10 +29,10 @@ extension Workspace {
             "terminal_tmux_session": configuration.terminalProfile.tmuxSessionName ?? NSNull(),
             "remote_workspace_id": cloudVMBinding?.remoteWorkspaceID ?? NSNull(),
             "active_terminal_sessions": catalog.projections.filter { $0.workspaceID == id && $0.resource.machine == machine }.count,
-            "daemon": ["state": connected ? "ready" : state, "name": "cmux-tui"],
+            "daemon": ["state": connected ? "ready" : state, "name": "bree-tui"],
             "detail": info?.linkError ?? remoteConnectionDetail ?? NSNull(),
             "detected_ports": resources.compactMap(\.port), "forwarded_ports": [Int](), "conflicted_ports": [Int](),
-            "proxy": ["state": "on_demand", "transport": "cmux-tui"],
+            "proxy": ["state": "on_demand", "transport": "bree-tui"],
         ]
     }
 }

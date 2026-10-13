@@ -1,6 +1,6 @@
-import CmuxCloud
-import CmuxFoundation
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeFoundation
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension SurfaceCatalog {
@@ -58,7 +58,7 @@ extension SurfaceCatalog {
         }
 
         let directURL = provider.info.privateAddress.map {
-            CmuxInternalHostnames().directPortURL(privateAddress: $0, port: port)
+            BreeInternalHostnames().directPortURL(privateAddress: $0, port: port)
         }
         if var existing = resources[id] {
             // A machine address can be assigned after the first catalog pass.
@@ -69,7 +69,7 @@ extension SurfaceCatalog {
                 upsert(existing)
             }
         } else {
-            upsert(CmuxTuiSnapshotParser.portBrowser(machine: machine, port: port, directURL: directURL))
+            upsert(BreeTuiSnapshotParser.portBrowser(machine: machine, port: port, directURL: directURL))
         }
         return try await project(
             id,
@@ -159,8 +159,8 @@ extension SurfaceCatalog {
         var result = refreshed
         for candidate in snapshot.resources(on: machine)
         where candidate.id.isForwardedPort
-            && !CmuxTuiSnapshotParser.internalPorts.contains(candidate.id.forwardedPort ?? -1)
-            && (!displayPortsOwned || !CmuxTuiSnapshotParser.displayPorts.contains(candidate.id.forwardedPort ?? -1))
+            && !BreeTuiSnapshotParser.internalPorts.contains(candidate.id.forwardedPort ?? -1)
+            && (!displayPortsOwned || !BreeTuiSnapshotParser.displayPorts.contains(candidate.id.forwardedPort ?? -1))
             && !refreshedIDs.contains(candidate.id) {
             let wasAddedDuringRefresh = !previousIDs.contains(candidate.id)
             let remainsProjected = projectedResourceIDs.contains(candidate.id)
@@ -171,7 +171,7 @@ extension SurfaceCatalog {
     }
 }
 
-extension CmuxTuiSurfaceProvider {
+extension BreeTuiSurfaceProvider {
     /// Classifies the authenticated loopback route, excluding provider-owned display ports.
     nonisolated static func portScan(
         from result: VMExecResult,
@@ -179,7 +179,7 @@ extension CmuxTuiSurfaceProvider {
         displayPortsOwned: Bool = false
     ) -> CloudPortScanResult? {
         guard result.exitCode == 0, let scan = CloudPortScanResult(socketListing: result.stdout) else { return nil }
-        let excluded = displayPortsOwned ? CmuxTuiSnapshotParser.displayPorts : []
+        let excluded = displayPortsOwned ? BreeTuiSnapshotParser.displayPorts : []
         return CloudPortScanResult(
             ports: scan.ports.filter { !excluded.contains($0) },
             loopbackOnlyPorts: scan.loopbackOnlyPorts.filter { !excluded.contains($0) },
@@ -212,8 +212,8 @@ extension CmuxTuiSurfaceProvider {
                 .filter {
                     $0.id.machine == machine
                         && $0.id.isForwardedPort
-                        && !CmuxTuiSnapshotParser.internalPorts.contains($0.id.forwardedPort ?? -1)
-                        && (!displayPortsOwned || !CmuxTuiSnapshotParser.displayPorts.contains($0.id.forwardedPort ?? -1))
+                        && !BreeTuiSnapshotParser.internalPorts.contains($0.id.forwardedPort ?? -1)
+                        && (!displayPortsOwned || !BreeTuiSnapshotParser.displayPorts.contains($0.id.forwardedPort ?? -1))
                 }
                 .map { ($0.id, $0) }
         )
@@ -223,7 +223,7 @@ extension CmuxTuiSurfaceProvider {
                 if let port = resource.id.forwardedPort {
                     refreshed.port = port
                     refreshed.url = privateAddress.map {
-                        CmuxInternalHostnames().directPortURL(privateAddress: $0, port: port)
+                        BreeInternalHostnames().directPortURL(privateAddress: $0, port: port)
                     }
                 }
                 return refreshed
@@ -234,7 +234,7 @@ extension CmuxTuiSurfaceProvider {
         return scannedPorts
             .filter { (port: Int) in
                 (1...65_535).contains(port) && seen.insert(port).inserted
-                    && (!displayPortsOwned || !CmuxTuiSnapshotParser.displayPorts.contains(port))
+                    && (!displayPortsOwned || !BreeTuiSnapshotParser.displayPorts.contains(port))
             }
             .sorted(by: <)
             .map { (port: Int) -> SurfaceResource in
@@ -242,18 +242,18 @@ extension CmuxTuiSurfaceProvider {
                 if var existing = previous[id] {
                     existing.port = port
                     existing.url = privateAddress.map {
-                        CmuxInternalHostnames().directPortURL(privateAddress: $0, port: port)
+                        BreeInternalHostnames().directPortURL(privateAddress: $0, port: port)
                     }
                     return existing
                 }
                 let directURL = privateAddress.map {
-                    CmuxInternalHostnames().directPortURL(privateAddress: $0, port: port)
+                    BreeInternalHostnames().directPortURL(privateAddress: $0, port: port)
                 }
-                return CmuxTuiSnapshotParser.portBrowser(machine: machine, port: port, directURL: directURL)
+                return BreeTuiSnapshotParser.portBrowser(machine: machine, port: port, directURL: directURL)
             }
     }
 
-    /// Reconciles a valid cmux-tui snapshot with the machine-level port pool.
+    /// Reconciles a valid bree-tui snapshot with the machine-level port pool.
     ///
     /// A daemon browser whose URL points at localhost is another view of the
     /// machine port, not a second resource. It is folded into the canonical
@@ -313,14 +313,14 @@ extension CmuxTuiSurfaceProvider {
             }
 
             var canonical = priorPorts[id]
-                ?? CmuxTuiSnapshotParser.portBrowser(machine: resource.machine, port: port)
+                ?? BreeTuiSnapshotParser.portBrowser(machine: resource.machine, port: port)
             canonical.id = id
             canonical.port = port
             // A fresh private address wins. If the address is absent, clear the
             // direct URL so an address withdrawal cannot leave a stale link in
             // the catalog; the provider endpoint cache remains independent.
             if let privateAddress {
-                canonical.url = CmuxInternalHostnames().directPortURL(privateAddress: privateAddress, port: port)
+                canonical.url = BreeInternalHostnames().directPortURL(privateAddress: privateAddress, port: port)
             } else {
                 canonical.url = nil
             }
@@ -358,7 +358,7 @@ extension CmuxTuiSurfaceProvider {
         // canonical resource is already in `parsedResources`; if it replaced a
         // pooled port, the pooled copy was removed above. Display de-duplication
         // remains the parser's existing invariant.
-        return CmuxTuiSnapshotParser.mergingDisplays(pool: remainingPool, parsed: parsedResources)
+        return BreeTuiSnapshotParser.mergingDisplays(pool: remainingPool, parsed: parsedResources)
     }
 
     /// Adds a browser's daemon view metadata to a canonical port resource while

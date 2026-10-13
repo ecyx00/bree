@@ -1,4 +1,4 @@
-// cmux browser REPL page agent.
+// bree browser REPL page agent.
 //
 // Installed by the driver into every frame's isolated "agent" world. It owns
 // this frame's part of the snapshot tree, the ref table, element handles, and
@@ -10,16 +10,16 @@
 //   (() => {
 //     const module = {};
 //     <vendor/playwright-injected.js>
-//     const __cmuxInjectedScriptFactory = module.exports.InjectedScript;
+//     const __breeInjectedScriptFactory = module.exports.InjectedScript;
 //     <page-agent.js>
 //   })();
 //
-// The agent is stored on globalThis under Symbol.for("cmux.browserRepl.agent")
+// The agent is stored on globalThis under Symbol.for("bree.browserRepl.agent")
 // as a non-enumerable property. Runtime code reaches it with
-// `globalThis[Symbol.for("cmux.browserRepl.agent")]`.
+// `globalThis[Symbol.for("bree.browserRepl.agent")]`.
 (function (global, injectedFactory, ariaCaches) {
   "use strict";
-  const KEY = Symbol.for("cmux.browserRepl.agent");
+  const KEY = Symbol.for("bree.browserRepl.agent");
   if (global[KEY]) return;
 
   const document = global.document;
@@ -1171,7 +1171,7 @@
   let overlay = null;
   function annotate(refs) {
     clearAnnotations();
-    const host = document.createElement("cmux-annotations");
+    const host = document.createElement("bree-annotations");
     host.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:2147483647;display:block";
     const root = host.attachShadow({ mode: "closed" });
     let drawn = 0;
@@ -1240,7 +1240,7 @@
   };
   Object.defineProperty(global, KEY, { value: agent, enumerable: false, configurable: true, writable: false });
   // The Swift driver resolves handles for input.setFiles through this name.
-  Object.defineProperty(global, "__cmuxPageAgent", {
+  Object.defineProperty(global, "__breePageAgent", {
     value: { resolveHandle: (id) => handleElement(id) },
     enumerable: false,
     configurable: true,
@@ -1248,7 +1248,7 @@
   });
 })(
   globalThis,
-  typeof __cmuxInjectedScriptFactory !== "undefined" ? __cmuxInjectedScriptFactory : null,
+  typeof __breeInjectedScriptFactory !== "undefined" ? __breeInjectedScriptFactory : null,
   // Playwright's role, name and hidden-state caches (its own snapshot and
   // getByRole turn them on while the DOM cannot change). The install recipe
   // puts the injected script's top-level functions in this scope.

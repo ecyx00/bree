@@ -1,7 +1,7 @@
 import AppKit
 import CoreGraphics
 
-/// Picks the cmux window a recording films, and validates its identifier.
+/// Picks the bree window a recording films, and validates its identifier.
 ///
 /// The same preference order as the debug screenshot command's
 /// `WindowScreenshotWindowSelector`, kept separate because that one is a

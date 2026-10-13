@@ -1,4 +1,4 @@
-import CmuxAuthRuntime
+import BreeAuthRuntime
 import Foundation
 
 /// The result of preparing an authenticated browser navigation.

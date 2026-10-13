@@ -7,7 +7,7 @@ struct WorkspaceLoadingArguments {
     let window: String?
 }
 
-extension CMUXCLI {
+extension BREECLI {
     func validateWorkspaceLoadingCommandBeforeSocket(
         command: String,
         commandArgs: [String]
@@ -129,7 +129,7 @@ extension CMUXCLI {
         )
     }
 
-    /// `cmux workspace loading <on|off> [--id <name>]` toggles the workspace's
+    /// `bree workspace loading <on|off> [--id <name>]` toggles the workspace's
     /// loading spinner via the reserved `manual` lifecycle namespace.
     func runWorkspaceLoading(
         commandArgs: [String],

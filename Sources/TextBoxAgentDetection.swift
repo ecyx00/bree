@@ -1,4 +1,4 @@
-import CmuxAgentChat
+import BreeAgentChat
 import Foundation
 
 enum TextBoxAgentDetection: CaseIterable {
@@ -177,7 +177,7 @@ enum TextBoxAgentDetection: CaseIterable {
         environment: [String: String]
     ) -> Bool {
         guard self == .ollama else { return true }
-        return CmuxTaskManagerCodingAgentDefinition.matchingDefinition(
+        return BreeTaskManagerCodingAgentDefinition.matchingDefinition(
             processName: arguments.first ?? "",
             processPath: arguments.first,
             arguments: arguments,
@@ -209,7 +209,7 @@ enum TextBoxAgentDetection: CaseIterable {
         guard !tokens.isEmpty else { return false }
         let resolved = Self.resolvedCommandSegment(tokens)
         guard let executable = resolved.arguments.first else { return false }
-        if let matched = CmuxTaskManagerCodingAgentDefinition.matchingDefinition(
+        if let matched = BreeTaskManagerCodingAgentDefinition.matchingDefinition(
             processName: executable,
             processPath: executable,
             arguments: resolved.arguments,

@@ -155,7 +155,7 @@ def main(argv=None):
     capability_path = root / "Sources/TerminalController+Capabilities.swift"
     capability_text = capability_path.read_text(encoding="utf-8")
     simulator_path = root / (
-        "Packages/macOS/CmuxControlSocket/Sources/CmuxControlSocket/Wire/"
+        "Packages/macOS/BreeControlSocket/Sources/BreeControlSocket/Wire/"
         "ControlCommandExecutionPolicy+Simulator.swift"
     )
     simulator_text = simulator_path.read_text(encoding="utf-8") if simulator_path.exists() else ""
@@ -166,7 +166,7 @@ def main(argv=None):
         "Sources/TerminalController.swift",
         "Sources/Cloud",
         "Sources/Surfaces",
-        "Packages/macOS/CmuxControlSocket/Sources/CmuxControlSocket/Coordinator",
+        "Packages/macOS/BreeControlSocket/Sources/BreeControlSocket/Coordinator",
     ):
         path = root / relative
         paths = [path] if path.is_file() else sorted(path.rglob("*.swift"))

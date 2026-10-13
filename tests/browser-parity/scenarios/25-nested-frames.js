@@ -19,13 +19,13 @@ const s = await snapshot();
 const ref = s.tree.match(/button "Deep button" \[ref=(\w+)\]/)[1];
 await page.locator(ref).click();
 emit("deep-ref-click", await page.frameLocator("#l1").frameLocator("#l2").frameLocator("#l3").locator("#deep").textContent());
-// ---- cell cmux-only
+// ---- cell bree-only
 await page.goto(`${PRIMARY}/nest-top.html`);
 const l3 = page.frameLocator("#l1").frameLocator("#l2").frameLocator("#l3");
 await l3.getByRole("button", { name: "Deep button" }).waitFor();
 const s = await snapshot();
-emitCmux("full", s.tree.replace(/"level one"/, ""));
+emitBree("full", s.tree.replace(/"level one"/, ""));
 await l3.getByRole("button", { name: "Closed shadow button" }).click();
-emitCmux("closed-in-frame-click", await l3.getByRole("button", { name: /closed clicked/ }).textContent());
+emitBree("closed-in-frame-click", await l3.getByRole("button", { name: /closed clicked/ }).textContent());
 const closedRef = (await snapshot()).tree.match(/button "closed clicked true" \[ref=(\w+)\]/);
-emitCmux("closed-in-frame-ref", !!closedRef);
+emitBree("closed-in-frame-ref", !!closedRef);

@@ -14,8 +14,8 @@ import uuid
 
 sys.dont_write_bytecode = True
 loader = importlib.machinery.SourceFileLoader(
-    "cmux_display", str(Path(__file__).resolve().parents[1] /
-                        "tests/fixtures/cmux-display"))
+    "bree_display", str(Path(__file__).resolve().parents[1] /
+                        "tests/fixtures/bree-display"))
 spec = importlib.util.spec_from_loader(loader.name, loader)
 display = importlib.util.module_from_spec(spec)
 loader.exec_module(display)
@@ -126,7 +126,7 @@ class CloudDisplayCatalogTests(unittest.TestCase):
                 displays = sorted({env["DISPLAY"] for env in environments})
                 self.assertEqual(displays, [":2", ":3"])
                 by_display = {env["DISPLAY"]: env for env in environments}
-                self.assertNotEqual(by_display[":2"]["CMUX_DESKTOP_RUNTIME_DIR"], by_display[":3"]["CMUX_DESKTOP_RUNTIME_DIR"])
+                self.assertNotEqual(by_display[":2"]["BREE_DESKTOP_RUNTIME_DIR"], by_display[":3"]["BREE_DESKTOP_RUNTIME_DIR"])
                 self.assertNotEqual(by_display[":2"]["DBUS_SESSION_BUS_ADDRESS"], by_display[":3"]["DBUS_SESSION_BUS_ADDRESS"])
                 for env in by_display.values():
                     self.assertNotIn("NOTIFY_SOCKET", env)
@@ -208,7 +208,7 @@ class CloudDisplayCatalogTests(unittest.TestCase):
         process(102, *websockify, "[::]:6902", "127.0.0.1:5902")
         process(103, *websockify, "127.0.0.1:6903", "127.0.0.1:5903")
         process(104, *websockify, "[::]:6901", "127.0.0.1:5901")
-        process(105, "/usr/bin/python3", "/home/cmux/.cmux/cmux-display", "serve")
+        process(105, "/usr/bin/python3", "/home/bree/.bree/bree-display", "serve")
 
         pids = display.DisplayService.untracked_websockify_pids(2, proc=proc)
 
@@ -275,7 +275,7 @@ class CloudDisplayCatalogTests(unittest.TestCase):
         service = display.DisplayService(self.catalog(), self.root / "runtime")
 
         def pgrep(command, **_options):
-            if "cmux\\-display\\-2\\-openbox" in command[-1]:
+            if "bree\\-display\\-2\\-openbox" in command[-1]:
                 return "12345\n"
             raise display.subprocess.CalledProcessError(1, command)
 
@@ -289,7 +289,7 @@ class CloudDisplayCatalogTests(unittest.TestCase):
         source.write_text("#!/bin/sh\n")
         runtime = self.root / "runtime" / "2"
         scoped = service.scoped_component_path("openbox", str(source), 2, runtime)
-        self.assertEqual(Path(scoped).name, "cmux-display-2-openbox")
+        self.assertEqual(Path(scoped).name, "bree-display-2-openbox")
         self.assertTrue(Path(scoped).exists())
 
     def test_start_failure_retains_resource_and_replay_receipt(self):

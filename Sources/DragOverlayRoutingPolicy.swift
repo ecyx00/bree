@@ -1,7 +1,7 @@
 import AppKit
 import Bonsplit
 import Foundation
-import CmuxTerminal
+import BreeTerminal
 
 enum FileDropResolvedBehavior: Equatable {
     case text
@@ -192,9 +192,9 @@ enum FileDropTextDropController {
 
 enum DragOverlayRoutingPolicy {
     static let bonsplitTabTransferType = NSPasteboard.PasteboardType("com.splittabbar.tabtransfer")
-    static let filePreviewTransferType = NSPasteboard.PasteboardType("com.cmux.filepreview.transfer")
+    static let filePreviewTransferType = NSPasteboard.PasteboardType("com.bree.filepreview.transfer")
     /// A Cloud tree row (a catalog resource: terminal, screen, or browser) dragged into the main view.
-    static let surfaceResourceTransferType = NSPasteboard.PasteboardType("com.cmux.surface-resource")
+    static let surfaceResourceTransferType = NSPasteboard.PasteboardType("com.bree.surface-resource")
     static let sidebarTabReorderType = NSPasteboard.PasteboardType(SidebarTabDragPayload.typeIdentifier)
 
     static func hasBonsplitTabTransfer(_ pasteboardTypes: [NSPasteboard.PasteboardType]?) -> Bool {
@@ -279,7 +279,7 @@ enum DragOverlayRoutingPolicy {
             ) != nil
         }
         // A payload with only a file URL is an external/Finder-style drop. Its
-        // native drag session, rather than cmux's internal capability registry,
+        // native drag session, rather than bree's internal capability registry,
         // owns liveness.
         return hasFileURL(types)
     }

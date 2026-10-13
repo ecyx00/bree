@@ -1,12 +1,12 @@
 import AppKit
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 /// Review station actions for one finished agent turn: open its start->end diff
 /// in the existing diff viewer, and hand pooled review comments back to the agent.
 @MainActor
 enum AgentTurnReview {
-    /// Spawns `cmux diff --range <start>..<end>` (the same CLI path as the Open Diff
+    /// Spawns `bree diff --range <start>..<end>` (the same CLI path as the Open Diff
     /// Viewer shortcut) and marks the record reviewed. Git runs in that child process.
     @discardableResult
     static func openDiff(_ record: AgentTurnRecord, workspaceId: UUID, store: WorkspaceActivityStore) -> Bool {
@@ -33,10 +33,10 @@ enum AgentTurnReview {
         }
         process.arguments = arguments
         var environment = ProcessInfo.processInfo.environment
-        environment["CMUX_SOCKET_PATH"] = socketPath
-        environment["CMUX_BUNDLED_CLI_PATH"] = cliURL.path
-        environment["CMUX_WORKSPACE_ID"] = workspaceId.uuidString
-        environment.removeValue(forKey: "CMUX_SOCKET")
+        environment["BREE_SOCKET_PATH"] = socketPath
+        environment["BREE_BUNDLED_CLI_PATH"] = cliURL.path
+        environment["BREE_WORKSPACE_ID"] = workspaceId.uuidString
+        environment.removeValue(forKey: "BREE_SOCKET")
         process.environment = environment
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice

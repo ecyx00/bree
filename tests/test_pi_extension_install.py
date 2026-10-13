@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: the generated Pi extension is importable and emits cmux hook calls.
+Regression test: the generated Pi extension is importable and emits bree hook calls.
 """
 
 from __future__ import annotations
@@ -20,14 +20,14 @@ from claude_teams_test_utils import (
     FOCUSED_SURFACE_ID,
     FOCUSED_WORKSPACE_ID,
     install_pi_extension,
-    resolve_cmux_cli,
+    resolve_bree_cli,
 )
 
 NONBLOCKING_LOCK_TIMEOUT_SECONDS = 5.0
 
 
 # Fixtures exit at once while this is set, so priming runs none of their logic.
-PRIME_ENVIRONMENT_KEY = "CMUX_TEST_PRIME_EXEC"
+PRIME_ENVIRONMENT_KEY = "BREE_TEST_PRIME_EXEC"
 
 
 def prime_first_exec(path: Path) -> None:
@@ -35,7 +35,7 @@ def prime_first_exec(path: Path) -> None:
 
     The first exec of every newly written file blocks while syspolicyd assesses
     it, one file at a time across the whole machine: about 0.2 s on an idle Mac
-    and seconds on a loaded shared mini. The fake cmux runs first inside the
+    and seconds on a loaded shared mini. The fake bree runs first inside the
     import check's 5 s waits, which must time only the extension's hooks.
     """
     subprocess.run(
@@ -133,12 +133,12 @@ def main() -> int:
         return 0
 
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-pi-extension-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-pi-extension-") as td:
         root = Path(td)
         config_dir = root / "pi-agent"
         try:
@@ -151,7 +151,7 @@ def main() -> int:
         env["PI_CODING_AGENT_DIR"] = str(config_dir)
         extension_text = extension_path.read_text(encoding="utf-8")
         if "bree-pi-session-extension-marker" not in extension_text:
-            print(f"FAIL: expected cmux marker in {extension_path}")
+            print(f"FAIL: expected bree marker in {extension_path}")
             return 1
 
         if "@earendil-works/pi-coding-agent" not in extension_text:
@@ -170,8 +170,8 @@ def main() -> int:
         refresh_env["HOME"] = str(isolated_home)
         refresh_env["CFFIXED_USER_HOME"] = str(isolated_home)
         refresh_env["PI_CODING_AGENT_DIR"] = str(config_dir)
-        refresh_env["CMUX_WORKSPACE_ID"] = FOCUSED_WORKSPACE_ID
-        refresh_env["CMUX_SURFACE_ID"] = FOCUSED_SURFACE_ID
+        refresh_env["BREE_WORKSPACE_ID"] = FOCUSED_WORKSPACE_ID
+        refresh_env["BREE_SURFACE_ID"] = FOCUSED_SURFACE_ID
         refresh_command = [
             cli_path,
             "--socket",
@@ -205,7 +205,7 @@ def main() -> int:
             print("FAIL: Pi refresh fixture unexpectedly connected to its missing socket")
             return 1
         if extension_path.read_text(encoding="utf-8") != extension_text:
-            print("FAIL: Pi session-start did not refresh the stale cmux-managed extension")
+            print("FAIL: Pi session-start did not refresh the stale bree-managed extension")
             return 1
 
         extension_path.write_text("", encoding="utf-8")
@@ -230,7 +230,7 @@ def main() -> int:
             encoding="utf-8",
         )
         lock_path = extension_path.parent / ".bree-session.lock"
-        replacement = "// user replacement without the cmux ownership marker\n"
+        replacement = "// user replacement without the bree ownership marker\n"
         with lock_path.open("a", encoding="utf-8") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             blocked_refresh = subprocess.Popen(
@@ -377,27 +377,27 @@ def main() -> int:
         legacy_pi = legacy_bin_dir / "pi"
         legacy_pi.symlink_to(legacy_cli)
 
-        fake_cmux = root / "fake-cmux"
-        fake_args_log = root / "fake-cmux-args.log"
-        fake_stdin_log = root / "fake-cmux-stdin.log"
-        fake_env_log = root / "fake-cmux-env.log"
+        fake_bree = root / "fake-bree"
+        fake_args_log = root / "fake-bree-args.log"
+        fake_stdin_log = root / "fake-bree-stdin.log"
+        fake_env_log = root / "fake-bree-env.log"
         fake_binding = root / "fake-surface-binding.json"
         make_executable(
-            fake_cmux,
+            fake_bree,
             """#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$*" >> "$CMUX_TEST_PI_ARGS_LOG"
+printf '%s\n' "$*" >> "$BREE_TEST_PI_ARGS_LOG"
 payload="$(cat)"
-printf '%s\n' "$payload" >> "$CMUX_TEST_PI_STDIN_LOG"
+printf '%s\n' "$payload" >> "$BREE_TEST_PI_STDIN_LOG"
 {
-  printf 'kind=%s\n' "${CMUX_AGENT_LAUNCH_KIND-}"
-  printf 'cwd=%s\n' "${CMUX_AGENT_LAUNCH_CWD-}"
-  printf 'argv=%s\n' "${CMUX_AGENT_LAUNCH_ARGV_B64-}"
+  printf 'kind=%s\n' "${BREE_AGENT_LAUNCH_KIND-}"
+  printf 'cwd=%s\n' "${BREE_AGENT_LAUNCH_CWD-}"
+  printf 'argv=%s\n' "${BREE_AGENT_LAUNCH_ARGV_B64-}"
   if [ -n "${OPENAI_API_KEY-}" ]; then printf 'OPENAI_API_KEY=present\n'; fi
   if [ -n "${ANTHROPIC_AUTH_TOKEN-}" ]; then printf 'ANTHROPIC_AUTH_TOKEN=present\n'; fi
   if [ -n "${CUSTOM_PASSWORD-}" ]; then printf 'CUSTOM_PASSWORD=present\n'; fi
   if [ -n "${AMP_API_KEY-}" ]; then printf 'AMP_API_KEY=present\n'; fi
-  if [ -n "${CMUX_LEAK_TOKEN-}" ]; then printf 'CMUX_LEAK_TOKEN=present\n'; fi
+  if [ -n "${BREE_LEAK_TOKEN-}" ]; then printf 'BREE_LEAK_TOKEN=present\n'; fi
   if [ -n "${DATABASE_URL-}" ]; then printf 'DATABASE_URL=present\n'; fi
   if [ -n "${DB_PASS-}" ]; then printf 'DB_PASS=present\n'; fi
   if [ -n "${SENTRY_DSN-}" ]; then printf 'SENTRY_DSN=present\n'; fi
@@ -405,8 +405,8 @@ printf '%s\n' "$payload" >> "$CMUX_TEST_PI_STDIN_LOG"
   if [ -n "${CLOUDFLARE_AUTH_KEY-}" ]; then printf 'CLOUDFLARE_AUTH_KEY=present\n'; fi
   if [ -n "${STRIPE_SK-}" ]; then printf 'STRIPE_SK=present\n'; fi
   if [ -n "${SLACK_WEBHOOK_URL-}" ]; then printf 'SLACK_WEBHOOK_URL=present\n'; fi
-  if [ -n "${CMUX_TEST_PI_TOKEN-}" ]; then printf 'CMUX_TEST_PI_TOKEN=present\n'; fi
-} >> "$CMUX_TEST_PI_ENV_LOG"
+  if [ -n "${BREE_TEST_PI_TOKEN-}" ]; then printf 'BREE_TEST_PI_TOKEN=present\n'; fi
+} >> "$BREE_TEST_PI_ENV_LOG"
 case "$*" in
   *"hooks pi notification"*)
     if printf '%s' "$payload" | grep -q 'pi-session-notification-fails'; then
@@ -416,12 +416,12 @@ case "$*" in
     printf '{}\n'
     ;;
   *"hooks pi session-start"*)
-    printf '{"resume_binding":{"kind":"pi","checkpoint_id":"pi-session-test","source":"agent-hook","auto_resume":true,"approval_policy":"auto"}}\n' > "$CMUX_TEST_PI_BINDING_FILE"
+    printf '{"resume_binding":{"kind":"pi","checkpoint_id":"pi-session-test","source":"agent-hook","auto_resume":true,"approval_policy":"auto"}}\n' > "$BREE_TEST_PI_BINDING_FILE"
     printf '{"workspace_id":"workspace-pi-test","surface_id":"surface-pi-test"}\n'
     ;;
   *"surface resume get"*)
-    if [ -f "$CMUX_TEST_PI_BINDING_FILE" ]; then
-      cat "$CMUX_TEST_PI_BINDING_FILE"
+    if [ -f "$BREE_TEST_PI_BINDING_FILE" ]; then
+      cat "$BREE_TEST_PI_BINDING_FILE"
     else
       printf '{"resume_binding":null}\n'
     fi
@@ -436,11 +436,11 @@ case "$*" in
       fi
       previous="$token"
     done
-    printf '{"resume_binding":{"kind":"pi","checkpoint_id":"%s","source":"agent-hook","command":"pi --session %s"}}\n' "$checkpoint_id" "$checkpoint_id" > "$CMUX_TEST_PI_BINDING_FILE"
+    printf '{"resume_binding":{"kind":"pi","checkpoint_id":"%s","source":"agent-hook","command":"pi --session %s"}}\n' "$checkpoint_id" "$checkpoint_id" > "$BREE_TEST_PI_BINDING_FILE"
     printf '{"ok":true}\n'
     ;;
   *"surface resume clear"*)
-    rm -f "$CMUX_TEST_PI_BINDING_FILE"
+    rm -f "$BREE_TEST_PI_BINDING_FILE"
     printf '{"ok":true}\n'
     ;;
   *)
@@ -452,30 +452,30 @@ esac
 
         check_env = env.copy()
         for key in (
-            "CMUX_AGENT_LAUNCH_ARGV_B64",
-            "CMUX_AGENT_LAUNCH_CWD",
-            "CMUX_AGENT_LAUNCH_EXECUTABLE",
-            "CMUX_AGENT_LAUNCH_KIND",
+            "BREE_AGENT_LAUNCH_ARGV_B64",
+            "BREE_AGENT_LAUNCH_CWD",
+            "BREE_AGENT_LAUNCH_EXECUTABLE",
+            "BREE_AGENT_LAUNCH_KIND",
         ):
             check_env.pop(key, None)
         check_env["PATH"] = str(bin_dir) + os.pathsep + check_env.get("PATH", "")
-        check_env["CMUX_TEST_PI_EXTENSION_PATH"] = str(extension_path)
-        check_env["CMUX_SURFACE_ID"] = "surface-pi-test"
-        check_env["CMUX_WORKSPACE_ID"] = "workspace-pi-test"
-        check_env["CMUX_PI_CMUX_BIN"] = str(fake_cmux)
-        check_env["CMUX_TEST_PI_ARGS_LOG"] = str(fake_args_log)
-        check_env["CMUX_TEST_PI_STDIN_LOG"] = str(fake_stdin_log)
-        check_env["CMUX_TEST_PI_ENV_LOG"] = str(fake_env_log)
-        check_env["CMUX_TEST_PI_BINDING_FILE"] = str(fake_binding)
-        check_env["CMUX_TEST_PI_MODERN_SCRIPT_PATH"] = str(modern_cli)
-        check_env["CMUX_TEST_PI_LEGACY_SCRIPT_PATH"] = str(legacy_pi)
-        check_env["CMUX_TEST_PI_UNKNOWN_SCRIPT_PATH"] = str(root / "unknown-bin" / "pi")
-        check_env["CMUX_TEST_PI_MALFORMED_SCRIPT_PATH"] = str(malformed_cli)
+        check_env["BREE_TEST_PI_EXTENSION_PATH"] = str(extension_path)
+        check_env["BREE_SURFACE_ID"] = "surface-pi-test"
+        check_env["BREE_WORKSPACE_ID"] = "workspace-pi-test"
+        check_env["BREE_PI_BREE_BIN"] = str(fake_bree)
+        check_env["BREE_TEST_PI_ARGS_LOG"] = str(fake_args_log)
+        check_env["BREE_TEST_PI_STDIN_LOG"] = str(fake_stdin_log)
+        check_env["BREE_TEST_PI_ENV_LOG"] = str(fake_env_log)
+        check_env["BREE_TEST_PI_BINDING_FILE"] = str(fake_binding)
+        check_env["BREE_TEST_PI_MODERN_SCRIPT_PATH"] = str(modern_cli)
+        check_env["BREE_TEST_PI_LEGACY_SCRIPT_PATH"] = str(legacy_pi)
+        check_env["BREE_TEST_PI_UNKNOWN_SCRIPT_PATH"] = str(root / "unknown-bin" / "pi")
+        check_env["BREE_TEST_PI_MALFORMED_SCRIPT_PATH"] = str(malformed_cli)
         check_env["OPENAI_API_KEY"] = "openai-secret-should-not-leak"
         check_env["ANTHROPIC_AUTH_TOKEN"] = "anthropic-secret-should-not-leak"
         check_env["CUSTOM_PASSWORD"] = "password-should-not-leak"
         check_env["AMP_API_KEY"] = "amp-secret-should-not-leak"
-        check_env["CMUX_LEAK_TOKEN"] = "cmux-secret-should-not-leak"
+        check_env["BREE_LEAK_TOKEN"] = "bree-secret-should-not-leak"
         check_env["DATABASE_URL"] = "postgres://user:password@example.invalid/db"
         check_env["DB_PASS"] = "db-pass-should-not-leak"
         check_env["SENTRY_DSN"] = "https://public:private@example.invalid/1"
@@ -483,9 +483,9 @@ esac
         check_env["CLOUDFLARE_AUTH_KEY"] = "cloudflare-key-should-not-leak"
         check_env["STRIPE_SK"] = "stripe-secret-should-not-leak"
         check_env["SLACK_WEBHOOK_URL"] = "https://hooks.slack.invalid/secret"
-        check_env["CMUX_TEST_PI_TOKEN"] = "test-token-should-not-leak"
+        check_env["BREE_TEST_PI_TOKEN"] = "test-token-should-not-leak"
         check_source = """
-const extensionPath = process.env.CMUX_TEST_PI_EXTENSION_PATH;
+const extensionPath = process.env.BREE_TEST_PI_EXTENSION_PATH;
 const mod = await import(extensionPath);
 if (typeof mod.default !== "function") throw new Error("missing default export");
 const handlers = new Map();
@@ -511,7 +511,7 @@ process.argv.splice(
   0,
   process.argv.length,
   "/opt/homebrew/bin/node",
-  process.env.CMUX_TEST_PI_MODERN_SCRIPT_PATH,
+  process.env.BREE_TEST_PI_MODERN_SCRIPT_PATH,
   "--model",
   "anthropic/claude-sonnet-4-5"
 );
@@ -525,7 +525,7 @@ const ctx = {
 };
 async function completionHookCount() {
   // Count observable completion commands so lifecycle timing is tested without source inspection.
-  const path = process.env.CMUX_TEST_PI_ARGS_LOG;
+  const path = process.env.BREE_TEST_PI_ARGS_LOG;
   if (!path || !Bun.file(path).size) return 0;
   const lines = (await Bun.file(path).text()).split("\\n");
   return lines.filter((line) => line.includes("hooks pi notification") || line.includes("hooks pi stop")).length;
@@ -539,7 +539,7 @@ async function waitForCompletionHookCount(expectedCount) {
   throw new Error(`timed out waiting for ${expectedCount} completion hooks`);
 }
 async function waitForFeedEvent(eventName, expectedCount) {
-  const path = process.env.CMUX_TEST_PI_ARGS_LOG;
+  const path = process.env.BREE_TEST_PI_ARGS_LOG;
   const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
     const lines = path && Bun.file(path).size
@@ -552,7 +552,7 @@ async function waitForFeedEvent(eventName, expectedCount) {
   throw new Error(`timed out waiting for ${expectedCount} ${eventName} Feed events`);
 }
 async function waitForArgument(fragment) {
-    const path = process.env.CMUX_TEST_PI_ARGS_LOG;
+    const path = process.env.BREE_TEST_PI_ARGS_LOG;
     const deadline = Date.now() + 5000;
     while (Date.now() < deadline) {
       const lines = path && Bun.file(path).size
@@ -566,7 +566,7 @@ async function waitForArgument(fragment) {
 await handlers.get("session_start")({}, ctx);
 await handlers.get("before_agent_start")({ prompt: "hello pi" }, ctx);
 await waitForArgument("hooks pi prompt-submit");
-const sessionStartBinding = JSON.parse(await Bun.file(process.env.CMUX_TEST_PI_BINDING_FILE).text()).resume_binding;
+const sessionStartBinding = JSON.parse(await Bun.file(process.env.BREE_TEST_PI_BINDING_FILE).text()).resume_binding;
 if (sessionStartBinding?.auto_resume !== true || sessionStartBinding?.approval_policy !== "auto") {
   throw new Error(`Pi session-start downgraded its resume binding: ${JSON.stringify(sessionStartBinding)}`);
 }
@@ -703,7 +703,7 @@ await handlers.get("agent_end")({
       role: "assistant",
       content: "partial response",
       stopReason: "stop",
-      cmuxSuppressNotification: true
+      breeSuppressNotification: true
     }
   ]
 }, immediateSubmitCtx);
@@ -734,7 +734,7 @@ completionCount += 1;
 if (await completionHookCount() !== completionCount) throw new Error("interrupted shutdown did not emit one stop");
 await handlers.get("agent_settled")({}, interruptedCtx);
 if (await completionHookCount() !== completionCount) throw new Error("late settlement emitted completion after shutdown");
-process.env.CMUX_PI_HOOKS_DISABLED = "1";
+process.env.BREE_PI_HOOKS_DISABLED = "1";
 const disabledCompletionCount = await completionHookCount();
 const disabledCtx = {
   cwd: "/tmp/pi-project",
@@ -746,7 +746,7 @@ const disabledCtx = {
 await handlers.get("session_start")({}, disabledCtx);
 await handlers.get("session_shutdown")({ reason: "disabled" }, disabledCtx);
 if (await completionHookCount() !== disabledCompletionCount) throw new Error("hooks-disabled mode emitted completion hooks");
-delete process.env.CMUX_PI_HOOKS_DISABLED;
+delete process.env.BREE_PI_HOOKS_DISABLED;
 const notificationFailureCtx = {
   cwd: "/tmp/pi-project",
   isIdle() { return true; },
@@ -774,7 +774,7 @@ process.argv.splice(
   0,
   process.argv.length,
   "/opt/homebrew/bin/node",
-  process.env.CMUX_TEST_PI_LEGACY_SCRIPT_PATH
+  process.env.BREE_TEST_PI_LEGACY_SCRIPT_PATH
 );
 const legacyCtx = {
   cwd: "/tmp/pi-project",
@@ -796,7 +796,7 @@ process.argv.splice(
   0,
   process.argv.length,
   "/opt/homebrew/bin/node",
-  process.env.CMUX_TEST_PI_UNKNOWN_SCRIPT_PATH
+  process.env.BREE_TEST_PI_UNKNOWN_SCRIPT_PATH
 );
 const unknownCtx = {
   cwd: "/tmp/pi-project",
@@ -818,7 +818,7 @@ process.argv.splice(
   0,
   process.argv.length,
   "/opt/homebrew/bin/node",
-  process.env.CMUX_TEST_PI_MALFORMED_SCRIPT_PATH
+  process.env.BREE_TEST_PI_MALFORMED_SCRIPT_PATH
 );
 const malformedCtx = {
   cwd: "/tmp/pi-project",
@@ -929,7 +929,7 @@ await waitForCompletionHookCount(completionCount);
             if completion_events != ["Stop"]:
                 print(f"FAIL: interrupted Pi turn emitted a completion notification for {session_id}: {completion_events!r}")
                 return 1
-            if completion_payloads[0].get("cmux_notification_routed") is not True:
+            if completion_payloads[0].get("bree_notification_routed") is not True:
                 print(
                     f"FAIL: interrupted Pi stop did not suppress the native notification fallback for {session_id}: "
                     f"{completion_payloads[0]!r}"
@@ -956,7 +956,7 @@ await waitForCompletionHookCount(completionCount);
         if stop_payload.get("turn_id") != prompt_turn_id:
             print(f"FAIL: stop payload did not reuse prompt turn_id, prompt={prompt_payload!r}, stop={stop_payload!r}")
             return 1
-        if stop_payload.get("cmux_notification_routed") is not True:
+        if stop_payload.get("bree_notification_routed") is not True:
             print(f"FAIL: successful Pi completion notification did not mark stop as routed: {stop_payload!r}")
             return 1
         fallback_stop_payload = next(
@@ -971,7 +971,7 @@ await waitForCompletionHookCount(completionCount);
         if fallback_stop_payload is None:
             print(f"FAIL: notification failure session did not send a stop payload, got {payloads!r}")
             return 1
-        if fallback_stop_payload.get("cmux_notification_routed") is True:
+        if fallback_stop_payload.get("bree_notification_routed") is True:
             print(
                 "FAIL: failed Pi completion notification still suppressed native notification fallback, "
                 f"got {fallback_stop_payload!r}"
@@ -1017,7 +1017,7 @@ await waitForCompletionHookCount(completionCount);
         if interrupted_stop_payload is None:
             print(f"FAIL: interrupted session shutdown did not send stop payload, got {payloads!r}")
             return 1
-        if interrupted_stop_payload.get("cmux_notification_routed") is True:
+        if interrupted_stop_payload.get("bree_notification_routed") is True:
             print(
                 "FAIL: interrupted session shutdown suppressed native notification fallback, "
                 f"got {interrupted_stop_payload!r}"
@@ -1124,7 +1124,7 @@ await waitForCompletionHookCount(completionCount);
                 "ANTHROPIC_AUTH_TOKEN",
                 "CUSTOM_PASSWORD",
                 "AMP_API_KEY",
-                "CMUX_LEAK_TOKEN",
+                "BREE_LEAK_TOKEN",
                 "DATABASE_URL",
                 "DB_PASS",
                 "SENTRY_DSN",
@@ -1132,7 +1132,7 @@ await waitForCompletionHookCount(completionCount);
                 "CLOUDFLARE_AUTH_KEY",
                 "STRIPE_SK",
                 "SLACK_WEBHOOK_URL",
-                "CMUX_TEST_PI_TOKEN",
+                "BREE_TEST_PI_TOKEN",
             ]
             if f"{name}=present" in env_log
         ]
@@ -1158,7 +1158,7 @@ await waitForCompletionHookCount(completionCount);
             print(f"FAIL: extension captured wrong Pi launch argv; expected {expected_argv!r}, got {decoded_argv!r}")
             return 1
 
-    print("PASS: generated Pi extension installs and emits cmux hooks")
+    print("PASS: generated Pi extension installs and emits bree hooks")
     return 0
 
 

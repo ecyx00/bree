@@ -1,4 +1,4 @@
-import CmuxTerminal
+import BreeTerminal
 
 /// One copied PWD action crossing from Ghostty's PTY callback to the main actor.
 /// SAFETY: construction fixes every strong field. The weak AppKit references

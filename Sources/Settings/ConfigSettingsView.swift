@@ -1,16 +1,16 @@
 import AppKit
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import SwiftUI
 
 struct ConfigSettingsView: View {
     @Environment(\.breePalette) private var palette
     static let windowID = "config-editor"
 
-    @State private var configSource: ConfigSource = .cmux
+    @State private var configSource: ConfigSource = .bree
     @State private var snapshots: [ConfigSource: ConfigSourceSnapshot] = [:]
-    @State private var cmuxDraft = ""
-    @State private var cmuxLastLoadedContents = ""
+    @State private var breeDraft = ""
+    @State private var breeLastLoadedContents = ""
     @State private var statusMessage = ""
     @State private var statusIsError = false
 
@@ -18,15 +18,15 @@ struct ConfigSettingsView: View {
         snapshots[configSource] ?? configSource.snapshot(environment: .live())
     }
 
-    private var hasUnsavedCmuxChanges: Bool {
-        cmuxDraft != cmuxLastLoadedContents
+    private var hasUnsavedBreeChanges: Bool {
+        breeDraft != breeLastLoadedContents
     }
 
     private var currentBannerText: String? {
         switch configSource {
-        case .cmux:
+        case .bree:
             return String(
-                localized: "settings.config.banner.cmux",
+                localized: "settings.config.banner.bree",
                 defaultValue: "This is the Bree Ghostty config selected for this build. Edit it here, then Save to reload Bree."
             )
         case .synced:
@@ -78,11 +78,11 @@ struct ConfigSettingsView: View {
             }
 
             Group {
-                if configSource == .cmux {
-                    ConfigSettingsTextView(text: $cmuxDraft, isEditable: true)
+                if configSource == .bree {
+                    ConfigSettingsTextView(text: $breeDraft, isEditable: true)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .background(editorBackground)
-                        .accessibilityIdentifier("ConfigSettingsCmuxEditor")
+                        .accessibilityIdentifier("ConfigSettingsBreeEditor")
                 } else {
                     ConfigSettingsTextView(text: .constant(currentSnapshot.contents), isEditable: false)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -125,13 +125,13 @@ struct ConfigSettingsView: View {
                 .controlSize(.small)
 
                 Button(String(localized: "settings.config.action.save", defaultValue: "Save")) {
-                    saveCmuxConfig()
+                    saveBreeConfig()
                 }
                 .buttonStyle(.breeProminent)
                 .tint(palette.accentFill)
                 .foregroundStyle(palette.surfaceBase)
                 .controlSize(.small)
-                .disabled(configSource != .cmux || !hasUnsavedCmuxChanges)
+                .disabled(configSource != .bree || !hasUnsavedBreeChanges)
             }
         }
         .padding(16)
@@ -144,14 +144,14 @@ struct ConfigSettingsView: View {
             }
         )
         .onAppear {
-            refreshSnapshots(preserveCmuxDraft: false)
+            refreshSnapshots(preserveBreeDraft: false)
         }
         .onChange(of: configSource) { _ in
             statusMessage = ""
             statusIsError = false
         }
         .onReceive(NotificationCenter.default.publisher(for: .ghosttyConfigDidReload)) { _ in
-            refreshSnapshots(preserveCmuxDraft: true)
+            refreshSnapshots(preserveBreeDraft: true)
         }
     }
 
@@ -181,19 +181,19 @@ struct ConfigSettingsView: View {
     }
 
     private func configureWindow(_ window: NSWindow) {
-        window.identifier = NSUserInterfaceItemIdentifier("cmux.configEditor")
+        window.identifier = NSUserInterfaceItemIdentifier("bree.configEditor")
         window.minSize = NSSize(width: 700, height: 500)
         window.tabbingMode = .disallowed
         window.animationBehavior = .utilityWindow
         // The Config editor is a top-level peer window, not a floating
         // inspector: clicking the main window must be able to raise it above
-        // the editor (https://github.com/manaflow-ai/cmux/issues/5081).
-        window.adoptCmuxPeerWindowLevel()
+        // the editor (https://github.com/ecyx00/bree/issues/5081).
+        window.adoptBreePeerWindowLevel()
         window.collectionBehavior.insert(.fullScreenAuxiliary)
     }
 
-    private func refreshSnapshots(preserveCmuxDraft: Bool) {
-        let wasDirty = hasUnsavedCmuxChanges
+    private func refreshSnapshots(preserveBreeDraft: Bool) {
+        let wasDirty = hasUnsavedBreeChanges
         let environment = ConfigSourceEnvironment.live()
         let newSnapshots = Dictionary(
             uniqueKeysWithValues: ConfigSource.allCases.map { source in
@@ -202,15 +202,15 @@ struct ConfigSettingsView: View {
         )
         snapshots = newSnapshots
 
-        let latestCmuxContents = newSnapshots[.cmux]?.contents ?? ""
-        if !preserveCmuxDraft || !wasDirty {
-            cmuxDraft = latestCmuxContents
+        let latestBreeContents = newSnapshots[.bree]?.contents ?? ""
+        if !preserveBreeDraft || !wasDirty {
+            breeDraft = latestBreeContents
         }
-        cmuxLastLoadedContents = latestCmuxContents
+        breeLastLoadedContents = latestBreeContents
     }
 
     private func reloadFromDisk() {
-        refreshSnapshots(preserveCmuxDraft: false)
+        refreshSnapshots(preserveBreeDraft: false)
         let completion: GhosttyApp.ConfigurationReloadCompletion = {
             statusMessage = String(
                 localized: "settings.config.status.reloaded",
@@ -238,13 +238,13 @@ struct ConfigSettingsView: View {
         }
     }
 
-    private func saveCmuxConfig() {
+    private func saveBreeConfig() {
         let environment = ConfigSourceEnvironment.live()
 
         do {
-            try environment.writeCmuxConfigContents(cmuxDraft)
-            cmuxLastLoadedContents = cmuxDraft
-            refreshSnapshots(preserveCmuxDraft: true)
+            try environment.writeBreeConfigContents(breeDraft)
+            breeLastLoadedContents = breeDraft
+            refreshSnapshots(preserveBreeDraft: true)
             let completion:
                 GhosttyApp.ConfigurationReloadCompletion = {
                     statusMessage = String(
@@ -293,12 +293,12 @@ struct ConfigSettingsView: View {
     }
 
     private func openCurrentSourceInEditor() {
-        guard let url = materializedCmuxConfigURL() else { return }
+        guard let url = materializedBreeConfigURL() else { return }
         PreferredEditorService(defaults: .standard).open(url)
     }
 
     private func revealCurrentSourceInFinder() {
-        guard let url = materializedCmuxConfigURL() else { return }
+        guard let url = materializedBreeConfigURL() else { return }
         if FileManager.default.fileExists(atPath: url.path) {
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } else {
@@ -306,10 +306,10 @@ struct ConfigSettingsView: View {
         }
     }
 
-    private func materializedCmuxConfigURL() -> URL? {
+    private func materializedBreeConfigURL() -> URL? {
         let environment = ConfigSourceEnvironment.live()
         do {
-            return try environment.materializeCmuxConfigFileIfNeeded()
+            return try environment.materializeBreeConfigFileIfNeeded()
         } catch {
             NSSound.beep()
             statusMessage = String(
@@ -432,8 +432,8 @@ private struct ConfigSettingsTextView: NSViewRepresentable {
 private extension ConfigSource {
     var localizedTitle: String {
         switch self {
-        case .cmux:
-            return String(localized: "settings.config.source.cmux", defaultValue: "Bree")
+        case .bree:
+            return String(localized: "settings.config.source.bree", defaultValue: "Bree")
         case .synced:
             return String(localized: "settings.config.source.synced", defaultValue: "synced")
         }

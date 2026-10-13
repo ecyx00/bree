@@ -4,9 +4,9 @@
 // run one at a time with a short gap, since bursts make Google show a CAPTCHA.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
-  const { URLSearchParams } = root.CmuxBrowserRepl.core;
+  const { URLSearchParams } = root.BreeBrowserRepl.core;
   const GAP_MS = 1200;
 
   const DATED = /^(\d+ (?:seconds?|minutes?|hours?|days?|weeks?|months?|years?) ago|[A-Z][a-z]{2} \d{1,2}, \d{4})\s+[\u2014-]\s+/;
@@ -126,7 +126,7 @@
           if (limit > 10) q.set("num", String(limit));
           if (options.safeSearch) q.set("safe", options.safeSearch === "off" ? "off" : "active");
           if (options.time) q.set("tbs", `qdr:${times[options.time]}`);
-          const captcha = () => new S.SiteError("captcha", "googleSearch.search: Google showed a CAPTCHA (unusual traffic). cmux does not solve CAPTCHAs; open https://www.google.com/search with tabs.open() and let the user answer it, then retry.");
+          const captcha = () => new S.SiteError("captcha", "googleSearch.search: Google showed a CAPTCHA (unusual traffic). bree does not solve CAPTCHAs; open https://www.google.com/search with tabs.open() and let the user answer it, then retry.");
           const run = async () => {
             const wait = last + GAP_MS - t.now();
             if (wait > 0) await t.sleep(wait);

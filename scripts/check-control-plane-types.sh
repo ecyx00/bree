@@ -6,7 +6,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-SWIFT_COMMITTED="Packages/Shared/CmuxIrxTransport/Sources/CmuxIrxTransport/ControlPlane/CtlWireModels.swift"
+SWIFT_COMMITTED="Packages/Shared/BreeIrxTransport/Sources/BreeIrxTransport/ControlPlane/CtlWireModels.swift"
 TS_COMMITTED="workers/presence/src/generated/controlPlane.ts"
 
 TMP="$(mktemp -d)"

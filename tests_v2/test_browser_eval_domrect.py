@@ -6,15 +6,15 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
 def _must(condition: bool, message: str) -> None:
     if not condition:
-        raise cmuxError(message)
+        raise breeError(message)
 
 
 def _value(payload: dict):
@@ -40,7 +40,7 @@ def _assert_rect(value, label: str) -> None:
         )
 
 
-def _expect_eval_error(client: cmux, surface_id: str, script: str) -> None:
+def _expect_eval_error(client: bree, surface_id: str, script: str) -> None:
     try:
         client._call(
             "browser.eval",
@@ -49,15 +49,15 @@ def _expect_eval_error(client: cmux, surface_id: str, script: str) -> None:
                 "script": script,
             },
         )
-    except cmuxError as exc:
+    except breeError as exc:
         _must("js_error" in str(exc), f"Expected a normal JavaScript error: {exc}")
         return
-    raise cmuxError("Expected browser.eval to return a normal evaluation error")
+    raise breeError("Expected browser.eval to return a normal evaluation error")
 
 
 def main() -> int:
     surface_id = ""
-    with cmux(SOCKET_PATH) as client:
+    with bree(SOCKET_PATH) as client:
         try:
             opened = client._call("browser.open_split", {"url": "about:blank"}) or {}
             surface_id = str(opened.get("surface_id") or "")
@@ -157,7 +157,7 @@ def main() -> int:
             undefined = client._call(
                 "browser.eval", {"surface_id": surface_id, "script": "undefined"},
             ) or {}
-            _must(_value(undefined) == {"__cmux_t": "undefined", "__cmux_v": None}, f"Undefined changed: {undefined}")
+            _must(_value(undefined) == {"__bree_t": "undefined", "__bree_v": None}, f"Undefined changed: {undefined}")
             null = client._call(
                 "browser.eval", {"surface_id": surface_id, "script": "null"},
             ) or {}
@@ -179,7 +179,7 @@ def main() -> int:
             if surface_id:
                 try:
                     client._call("surface.close", {"surface_id": surface_id})
-                except (cmuxError, OSError):
+                except (breeError, OSError):
                     pass
 
     print("PASS: browser.eval bridges DOMRect values and preserves normal values/errors")

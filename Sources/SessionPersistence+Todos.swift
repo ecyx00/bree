@@ -1,4 +1,4 @@
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
 /// Right-sidebar panel snapshot stored with adjacent todo persistence helpers, extracted from `SessionPersistence.swift`, which sits at its file-length budget.

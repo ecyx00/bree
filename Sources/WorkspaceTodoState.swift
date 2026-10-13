@@ -1,5 +1,5 @@
 import Combine
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
 /// The workspace-owned todo state: the manual task-status override and the

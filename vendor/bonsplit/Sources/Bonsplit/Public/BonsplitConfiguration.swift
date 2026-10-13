@@ -513,10 +513,8 @@ extension BonsplitConfiguration {
             public var hoverFill: RGBA
             public var pressedFill: RGBA
             public var selectedQuiet: RGBA
-            /// Selected-tab underline and drop indicator.
+            /// Selected-tab underline, drop indicator and unread badge fill (the ivory accent).
             public var activeIndicator: RGBA
-            /// Unread badge (always drawn with its own dot glyph).
-            public var signalInfo: RGBA
 
             public init(
                 surfaceRaised: RGBA,
@@ -527,8 +525,7 @@ extension BonsplitConfiguration {
                 hoverFill: RGBA,
                 pressedFill: RGBA,
                 selectedQuiet: RGBA,
-                activeIndicator: RGBA,
-                signalInfo: RGBA
+                activeIndicator: RGBA
             ) {
                 self.surfaceRaised = surfaceRaised
                 self.surfaceBase = surfaceBase
@@ -539,7 +536,6 @@ extension BonsplitConfiguration {
                 self.pressedFill = pressedFill
                 self.selectedQuiet = selectedQuiet
                 self.activeIndicator = activeIndicator
-                self.signalInfo = signalInfo
             }
         }
 

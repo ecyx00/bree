@@ -6,7 +6,7 @@ struct AboutLicenseContent {
 
     init(
         bundle: Bundle,
-        repositoryURL: URL = URL(string: "https://github.com/manaflow-ai/cmux")!
+        repositoryURL: URL = URL(string: "https://github.com/ecyx00/bree")!
     ) {
         self.bundle = bundle
         self.repositoryURL = repositoryURL
@@ -62,7 +62,7 @@ struct AboutLicenseContent {
         correspondingSourceURL(
             version: bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
             bundleIdentifier: bundle.bundleIdentifier,
-            commit: bundle.object(forInfoDictionaryKey: "CMUXCommit") as? String
+            commit: bundle.object(forInfoDictionaryKey: "BREECommit") as? String
         )
     }
 
@@ -71,7 +71,7 @@ struct AboutLicenseContent {
         bundleIdentifier: String?,
         commit: String?
     ) -> URL {
-        if bundleIdentifier == "com.cmuxterm.app", let version = normalized(version) {
+        if bundleIdentifier == "com.bree.app", let version = normalized(version) {
             return repositoryURL
                 .appendingPathComponent("tree", isDirectory: true)
                 .appendingPathComponent("v\(version)")

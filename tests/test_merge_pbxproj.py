@@ -111,7 +111,7 @@ def run(base, ours, theirs):
             paths[name] = path
         result = subprocess.run(
             [sys.executable, str(DRIVER), str(paths["O"]), str(paths["A"]), str(paths["B"]),
-             "cmux.xcodeproj/project.pbxproj"],
+             "bree.xcodeproj/project.pbxproj"],
             capture_output=True,
             text=True,
         )
@@ -341,7 +341,7 @@ def test_missing_input_leaves_an_explicit_conflict_in_ours():
 
         result = subprocess.run(
             [sys.executable, str(DRIVER), str(base), str(ours), str(theirs),
-             "cmux.xcodeproj/project.pbxproj"],
+             "bree.xcodeproj/project.pbxproj"],
             capture_output=True,
             text=True,
         )
@@ -389,7 +389,7 @@ def test_a_real_git_merge_leaves_markers_and_unmerged_stages():
     """Git does not provide its own conflict text after a custom driver fails."""
     with tempfile.TemporaryDirectory() as directory:
         repo = Path(directory)
-        project_path = repo / "cmux.xcodeproj" / "project.pbxproj"
+        project_path = repo / "bree.xcodeproj" / "project.pbxproj"
 
         def git(*args, check=True):
             return subprocess.run(
@@ -403,7 +403,7 @@ def test_a_real_git_merge_leaves_markers_and_unmerged_stages():
         git("config", "merge.pbxproj.driver",
             f"{sys.executable} {DRIVER} %O %A %B %P")
         (repo / ".gitattributes").write_text(
-            "cmux.xcodeproj/project.pbxproj merge=pbxproj\n", encoding="utf-8"
+            "bree.xcodeproj/project.pbxproj merge=pbxproj\n", encoding="utf-8"
         )
         project_path.parent.mkdir()
         project_path.write_text(project(["Alpha.swift"], settings="5.0"), encoding="utf-8")

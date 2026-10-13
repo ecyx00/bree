@@ -1,6 +1,6 @@
 import AppKit
-import CMUXAgentLaunch
-import CmuxFoundation
+import BREEAgentLaunch
+import BreeFoundation
 import SwiftUI
 
 /// Routes key presses to the Attention list while the notifications popover
@@ -177,7 +177,7 @@ struct AttentionCenterView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            CmuxSystemSymbolImage(
+            BreeSystemSymbolImage(
                 systemName: "checkmark.circle",
                 pointSize: 30,
                 weight: .light,
@@ -310,9 +310,17 @@ struct AttentionCenterView: View {
 }
 
 extension AttentionCenterView {
-    /// Newest pending permission request per surface from the Feed, joined the
-    /// same way as the last output. Only the in-app row reads it.
     fileprivate func loadPendingTools() async {
+        let byPanel = await AttentionPendingTool.loadByPanel()
+        if byPanel != pendingToolByPanel { pendingToolByPanel = byPanel }
+    }
+}
+
+extension AttentionPendingTool {
+    /// Newest pending permission request per surface from the Feed, joined through the
+    /// hook-session store. Read by the Attention Center rows and the Board.
+    @MainActor
+    static func loadByPanel() async -> [UUID: AttentionPendingTool] {
         var latest: [String: (date: Date, tool: AttentionPendingTool)] = [:]
         for item in FeedCoordinator.shared.snapshot(pendingOnly: true) {
             guard case .permissionRequest(_, let toolName, let toolInputJSON, _) = item.payload,
@@ -321,10 +329,7 @@ extension AttentionCenterView {
             if let existing = latest[item.workstreamId], existing.date >= item.createdAt { continue }
             latest[item.workstreamId] = (item.createdAt, tool)
         }
-        guard !latest.isEmpty else {
-            if !pendingToolByPanel.isEmpty { pendingToolByPanel = [:] }
-            return
-        }
+        guard !latest.isEmpty else { return [:] }
         let targets = await FeedCoordinator.shared.resolveTargets(for: Array(latest.keys))
         var byPanel: [UUID: AttentionPendingTool] = [:]
         for (workstreamId, target) in targets {
@@ -332,7 +337,7 @@ extension AttentionCenterView {
                 byPanel[panelId] = entry.tool
             }
         }
-        if byPanel != pendingToolByPanel { pendingToolByPanel = byPanel }
+        return byPanel
     }
 }
 
@@ -342,7 +347,7 @@ enum AttentionStyle {
     static func symbol(for state: AttentionState?, palette: BreeChromePalette) -> (name: String, tint: Color) {
         switch state {
         case .thermal: return ("thermometer.high", palette.signalError)
-        case .running: return ("circle.fill", palette.signalInfo)
+        case .running: return ("arrow.triangle.2.circlepath", palette.textSecondary)
         case .needsInput: return ("circle.lefthalf.filled", palette.signalAttention)
         case .failed: return ("exclamationmark.circle.fill", palette.signalError)
         case .done: return ("checkmark.circle.fill", palette.signalSuccess)
@@ -394,7 +399,7 @@ private struct AttentionRowView: View {
     var body: some View {
         let symbol = AttentionStyle.symbol(for: item.state, palette: palette)
         HStack(alignment: .top, spacing: 8) {
-            CmuxSystemSymbolImage(systemName: symbol.name, pointSize: 12, weight: .regular, tint: symbol.tint)
+            BreeSystemSymbolImage(systemName: symbol.name, pointSize: 12, weight: .regular, tint: symbol.tint)
                 .frame(width: 16, height: 18)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
@@ -429,9 +434,9 @@ private struct AttentionRowView: View {
                         .truncationMode(.middle)
                 }
                 if let risk = item.riskNote {
-                    Text(risk)
+                    (Text(Image(systemName: "exclamationmark.triangle.fill")) + Text(" " + risk))
                         .breeFont(.secondary, weight: .medium)
-                        .foregroundColor(palette.signalAttention)
+                        .foregroundColor(palette.signalError)
                         .lineLimit(1)
                 }
                 if let output = item.lastOutput {
@@ -443,7 +448,7 @@ private struct AttentionRowView: View {
             }
             if AttentionSnooze.canSnooze(item), isHovering || item.isSnoozed {
                 Button(action: onSnoozeToggle) {
-                    CmuxSystemSymbolImage(
+                    BreeSystemSymbolImage(
                         systemName: item.isSnoozed ? "bell" : "bell.slash",
                         pointSize: 10,
                         weight: .regular,
@@ -457,7 +462,7 @@ private struct AttentionRowView: View {
             }
             if item.changedCount > 0 {
                 Button(action: onToggleExpanded) {
-                    CmuxSystemSymbolImage(
+                    BreeSystemSymbolImage(
                         systemName: isExpanded ? "chevron.down" : "chevron.right",
                         pointSize: 10,
                         weight: .regular,
@@ -532,7 +537,7 @@ private struct AttentionFileRowView: View {
     var body: some View {
         let url = URL(fileURLWithPath: entry.path)
         HStack(spacing: 8) {
-            CmuxSystemSymbolImage(systemName: symbolName, pointSize: 11, weight: .regular, tint: secondaryText)
+            BreeSystemSymbolImage(systemName: symbolName, pointSize: 11, weight: .regular, tint: secondaryText)
                 .frame(width: 16, height: 16)
                 .accessibilityHidden(true)
             Text(url.lastPathComponent)

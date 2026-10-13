@@ -1,5 +1,5 @@
-import CmuxAppKitSupportUI
-import CmuxFoundation
+import BreeAppKitSupportUI
+import BreeFoundation
 import SwiftUI
 
 /// Value-only SwiftUI environment forwarded into each independently hosted table cell.
@@ -26,12 +26,12 @@ struct SidebarWorkspaceTableEnvironmentSnapshot {
 #if DEBUG
         content
             .environment(\.colorScheme, colorScheme)
-            .environment(\.cmuxGlobalFontMagnificationPercent, globalFontMagnificationPercent)
+            .environment(\.breeGlobalFontMagnificationPercent, globalFontMagnificationPercent)
             .environment(\.sidebarLazyContractProbe, lazyContractProbe)
 #else
         content
             .environment(\.colorScheme, colorScheme)
-            .environment(\.cmuxGlobalFontMagnificationPercent, globalFontMagnificationPercent)
+            .environment(\.breeGlobalFontMagnificationPercent, globalFontMagnificationPercent)
 #endif
     }
 }

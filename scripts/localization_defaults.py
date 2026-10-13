@@ -24,16 +24,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 ALLOWLIST = "scripts/localization-default-mismatches.json"
 # Test targets and fixtures use catalog keys with their own default text on
-# purpose; vendored and generated trees are not cmux copy.
+# purpose; vendored and generated trees are not bree copy.
 SKIP_DIRS = frozenset((
     ".build", ".git", "DerivedData", "Examples", "Prototypes", "Tests", "artifacts",
-    "cmuxCLITestSupport", "cmuxCLITests", "cmuxTests", "cmuxUITests", "experiments",
+    "breeCLITestSupport", "breeCLITests", "breeTests", "breeUITests", "experiments",
     "node_modules", "scripts", "tests", "tests_v2", "vendor",
 ))
 
 
 def load_changes_module():
-    spec = importlib.util.spec_from_file_location("cmux_localize_changes", ROOT / "scripts/localize_changes.py")
+    spec = importlib.util.spec_from_file_location("bree_localize_changes", ROOT / "scripts/localize_changes.py")
     if spec is None or spec.loader is None:
         raise RuntimeError("unable to load scripts/localize_changes.py")
     module = importlib.util.module_from_spec(spec)

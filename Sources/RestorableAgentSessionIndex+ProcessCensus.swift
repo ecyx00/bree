@@ -11,19 +11,19 @@ extension RestorableAgentSessionIndex {
         homeDirectory: String = NSHomeDirectory(),
         fileManager: FileManager = .default
     ) async -> RestorableAgentSessionIndex {
-        let snapshot = await CmuxTopProcessSnapshot.capture(includeProcessDetails: true, includeResources: false)
+        let snapshot = await BreeTopProcessSnapshot.capture(includeProcessDetails: true, includeResources: false)
         return loadIncludingProcessDetectedSnapshotsSynchronously(
             processSnapshot: snapshot, homeDirectory: homeDirectory,
             fileManager: fileManager
         )
     }
     static func loadIncludingProcessDetectedSnapshotsSynchronously(
-        processSnapshot: CmuxTopProcessSnapshot,
+        processSnapshot: BreeTopProcessSnapshot,
         homeDirectory: String = NSHomeDirectory(),
         fileManager: FileManager = .default
     ) -> RestorableAgentSessionIndex {
         guard processSnapshot.captureIsAvailable, processSnapshot.enumerationIsComplete, !Task.isCancelled else { return .unavailable }
-        let registry = CmuxVaultAgentRegistry.load(homeDirectory: homeDirectory, fileManager: fileManager)
+        let registry = BreeVaultAgentRegistry.load(homeDirectory: homeDirectory, fileManager: fileManager)
         let detectedSnapshots = processDetectedSnapshots(
             registry: registry,
             fileManager: fileManager,

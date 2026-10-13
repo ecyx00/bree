@@ -1,11 +1,11 @@
-import CmuxCloudTui
-import CmuxTerminal
-import CmuxTerminalSharing
-import CmuxTerminalSizing
+import BreeCloudTui
+import BreeTerminal
+import BreeTerminalSharing
+import BreeTerminalSizing
 import Foundation
 
 /// The Mac as a participant of a Cloud terminal (docs/shared-terminal-sizing.md):
-/// it forwards itself to the cmux-tui host and receives the host's size state
+/// it forwards itself to the bree-tui host and receives the host's size state
 /// and detach events. Daemons without `shared-sizing-v1` keep the legacy claim
 /// path.
 @MainActor

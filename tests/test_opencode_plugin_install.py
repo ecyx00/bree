@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 
 
 def make_executable(path: Path, content: str) -> None:
@@ -28,12 +28,12 @@ def main() -> int:
         return 0
 
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-opencode-plugin-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-opencode-plugin-") as td:
         root = Path(td)
         config_dir = root / "opencode"
         config_dir.mkdir(parents=True, exist_ok=True)
@@ -78,7 +78,7 @@ def main() -> int:
             print(f"FAIL: expected feed plugin at {feed_plugin_path}")
             return 1
         if "bree-feed-plugin-marker" not in feed_plugin_path.read_text(encoding="utf-8"):
-            print(f"FAIL: expected cmux feed marker in {feed_plugin_path}")
+            print(f"FAIL: expected bree feed marker in {feed_plugin_path}")
             return 1
 
         try:
@@ -97,10 +97,10 @@ def main() -> int:
             == "bree-session"
         ]
         if stale:
-            print(f"FAIL: expected stale cmux plugin registrations removed, got {plugins!r}")
+            print(f"FAIL: expected stale bree plugin registrations removed, got {plugins!r}")
             return 1
         if "./plugins" not in plugins:
-            print(f"FAIL: expected local cmux session plugin registration, got {plugins!r}")
+            print(f"FAIL: expected local bree session plugin registration, got {plugins!r}")
             return 1
         if "oh-my-opencode" not in plugins or ["existing-plugin", {"enabled": True}] not in plugins:
             print(f"FAIL: installer did not preserve existing plugin entries: {plugins!r}")
@@ -127,46 +127,46 @@ def main() -> int:
                 print(debug_output[-4000:])
                 return 1
             if f"file://{plugin_path}" not in debug_output:
-                print("FAIL: opencode did not auto-load cmux session plugin file")
+                print("FAIL: opencode did not auto-load bree session plugin file")
                 print(debug_output[-4000:])
                 return 1
 
-        fake_cmux = root / "fake-cmux"
-        fake_args_log = root / "fake-cmux-args.log"
-        fake_stdin_log = root / "fake-cmux-stdin.log"
-        fake_env_log = root / "fake-cmux-env.log"
-        plugin_copy_path = config_dir / "plugins" / "cmux-session-copy.js"
+        fake_bree = root / "fake-bree"
+        fake_args_log = root / "fake-bree-args.log"
+        fake_stdin_log = root / "fake-bree-stdin.log"
+        fake_env_log = root / "fake-bree-env.log"
+        plugin_copy_path = config_dir / "plugins" / "bree-session-copy.js"
         shutil.copyfile(plugin_path, plugin_copy_path)
         make_executable(
-            fake_cmux,
+            fake_bree,
             """#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\\n' "$*" >> "$FAKE_CMUX_ARGS_LOG"
-cat >> "$FAKE_CMUX_STDIN_LOG"
-printf '\\n---\\n' >> "$FAKE_CMUX_STDIN_LOG"
+printf '%s\\n' "$*" >> "$FAKE_BREE_ARGS_LOG"
+cat >> "$FAKE_BREE_STDIN_LOG"
+printf '\\n---\\n' >> "$FAKE_BREE_STDIN_LOG"
 {
-  printf 'kind=%s\\n' "${CMUX_AGENT_LAUNCH_KIND-}"
-  printf 'cwd=%s\\n' "${CMUX_AGENT_LAUNCH_CWD-}"
-  printf 'argv=%s\\n' "${CMUX_AGENT_LAUNCH_ARGV_B64-}"
-} >> "$FAKE_CMUX_ENV_LOG"
+  printf 'kind=%s\\n' "${BREE_AGENT_LAUNCH_KIND-}"
+  printf 'cwd=%s\\n' "${BREE_AGENT_LAUNCH_CWD-}"
+  printf 'argv=%s\\n' "${BREE_AGENT_LAUNCH_ARGV_B64-}"
+} >> "$FAKE_BREE_ENV_LOG"
 """,
         )
 
         check_env = env.copy()
-        check_env["CMUX_TEST_OPENCODE_PLUGIN_PATH"] = str(plugin_path)
-        check_env["CMUX_TEST_OPENCODE_PLUGIN_COPY_PATH"] = str(plugin_copy_path)
-        check_env["CMUX_SURFACE_ID"] = "surface-opencode-test"
-        check_env["CMUX_OPENCODE_CMUX_BIN"] = str(fake_cmux)
-        check_env["FAKE_CMUX_ARGS_LOG"] = str(fake_args_log)
-        check_env["FAKE_CMUX_STDIN_LOG"] = str(fake_stdin_log)
-        check_env["FAKE_CMUX_ENV_LOG"] = str(fake_env_log)
+        check_env["BREE_TEST_OPENCODE_PLUGIN_PATH"] = str(plugin_path)
+        check_env["BREE_TEST_OPENCODE_PLUGIN_COPY_PATH"] = str(plugin_copy_path)
+        check_env["BREE_SURFACE_ID"] = "surface-opencode-test"
+        check_env["BREE_OPENCODE_BREE_BIN"] = str(fake_bree)
+        check_env["FAKE_BREE_ARGS_LOG"] = str(fake_args_log)
+        check_env["FAKE_BREE_STDIN_LOG"] = str(fake_stdin_log)
+        check_env["FAKE_BREE_ENV_LOG"] = str(fake_env_log)
         check_source = """
-const pluginPath = process.env.CMUX_TEST_OPENCODE_PLUGIN_PATH;
-const pluginCopyPath = process.env.CMUX_TEST_OPENCODE_PLUGIN_COPY_PATH;
+const pluginPath = process.env.BREE_TEST_OPENCODE_PLUGIN_PATH;
+const pluginCopyPath = process.env.BREE_TEST_OPENCODE_PLUGIN_COPY_PATH;
 const mod = await import(pluginPath);
 const duplicateMod = await import(pluginCopyPath);
-if (typeof mod.CMUXSessionRestore !== "function") {
-  throw new Error("missing CMUXSessionRestore export");
+if (typeof mod.BREESessionRestore !== "function") {
+  throw new Error("missing BREESessionRestore export");
 }
 if (!mod.default || typeof mod.default.setup !== "function") {
   throw new Error("missing V2 default setup export");
@@ -189,12 +189,12 @@ const idleContext = {
     }
   }
 };
-const v1Hooks = await mod.CMUXSessionRestore({ directory: "/tmp/opencode-project" });
+const v1Hooks = await mod.BREESessionRestore({ directory: "/tmp/opencode-project" });
 if (!v1Hooks || typeof v1Hooks.event !== "function") {
   throw new Error("missing V1 event hook");
 }
 const hooks = await mod.default.setup(idleContext);
-const duplicateHooks = await duplicateMod.CMUXSessionRestore({ directory: "/tmp/opencode-project" });
+const duplicateHooks = await duplicateMod.BREESessionRestore({ directory: "/tmp/opencode-project" });
 if (!duplicateHooks || typeof duplicateHooks.event === "function") {
   throw new Error("V1 duplicate plugin returned event hook");
 }

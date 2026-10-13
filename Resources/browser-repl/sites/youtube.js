@@ -5,14 +5,14 @@
 // on and the page fetches the caption URL the player requested.
 (function (root) {
   "use strict";
-  const S = root.CmuxBrowserRepl && root.CmuxBrowserRepl.sites;
+  const S = root.BreeBrowserRepl && root.BreeBrowserRepl.sites;
   if (!S) return;
-  const { URL, URLSearchParams } = root.CmuxBrowserRepl.core;
+  const { URL, URLSearchParams } = root.BreeBrowserRepl.core;
   const ORIGIN = "https://www.youtube.com";
   // Caption URLs come from page data and are fetched with the session's
   // cookies: only https on YouTube's caption hosts (api.js, shared with
   // page.exportContent). Page functions get the host list as an argument.
-  const { youtubeCaptionURL: captionURL, YOUTUBE_CAPTION_HOSTS: CAPTION_HOSTS } = root.CmuxBrowserRepl.api;
+  const { youtubeCaptionURL: captionURL, YOUTUBE_CAPTION_HOSTS: CAPTION_HOSTS } = root.BreeBrowserRepl.api;
 
   function videoId(input, name) {
     const s = String(input || "").trim();
@@ -62,7 +62,7 @@
   // captureStart hooks XHR body getters and fetch in the page world and turns captions on
   // in the muted player; captureRead returns what the player received;
   // captureStop restores the page and returns the caption URLs it saw.
-  const CAPTURE = "Symbol.for('cmux.sites.youtube.capture')";
+  const CAPTURE = "Symbol.for('bree.sites.youtube.capture')";
   const captureStart = new Function("arg", `
     const player = document.getElementById("movie_player");
     if (!player || typeof player.getVideoData !== "function") return { error: "the YouTube player did not load" };

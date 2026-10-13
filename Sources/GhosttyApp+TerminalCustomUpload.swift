@@ -1,6 +1,6 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
-import CmuxTerminalCore
+import BreeTerminalCore
 
 extension GhosttyApp {
     @MainActor
@@ -41,7 +41,7 @@ extension GhosttyApp {
                         if outcome == .unavailable { NSSound.beep() }
                     }
 #if DEBUG
-                    cmuxDebugLog("terminal.remotePasteUpload.customFailed surface=\(callbackContext.surfaceId.uuidString.prefix(5))")
+                    breeDebugLog("terminal.remotePasteUpload.customFailed surface=\(callbackContext.surfaceId.uuidString.prefix(5))")
 #endif
                 }
                 guard shouldDeliverResult else {

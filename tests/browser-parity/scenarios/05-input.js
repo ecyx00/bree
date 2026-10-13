@@ -34,16 +34,16 @@ await page.keyboard.type(" typed");
 emit("editor", await page.locator("#editor").textContent());
 emit("trusted-types", await page.evaluate(() => [...new Set(window.__log.filter((e) => e.trusted).map((e) => e.type))].sort()));
 emit("untrusted-events", await page.evaluate(() => window.__summary().filter((l) => l.includes("UNTRUSTED"))));
-// ---- cell session=input cmux-only
+// ---- cell session=input bree-only
 // page.elementAt has no Playwright counterpart.
 const canvasBox = await page.locator("#canvas").boundingBox();
 const hit = await page.elementAt(canvasBox.x + 10, canvasBox.y + 10);
 // Form-control metrics differ between WebKit builds, so the box is compared
 // with the locator's box instead of absolute coordinates.
 const sameBox = ["x", "y", "width", "height"].every((k) => Math.abs(hit.box[k] - canvasBox[k]) < 0.5);
-emitCmux("element-at-canvas", { ref: hit.ref, role: hit.role, name: hit.name, sameBox });
+emitBree("element-at-canvas", { ref: hit.ref, role: hit.role, name: hit.name, sameBox });
 const btn = await page.locator("#dbl").boundingBox();
 const at = await page.elementAt(btn.x + 2, btn.y + 2);
-emitCmux("element-at-button", { role: at.role, name: at.name });
+emitBree("element-at-button", { role: at.role, name: at.name });
 await page.locator(at.ref).click();
-emitCmux("element-at-ref-clicks", await page.evaluate(() => window.__summary().filter((l) => l === "click #dbl").length));
+emitBree("element-at-ref-clicks", await page.evaluate(() => window.__summary().filter((l) => l === "click #dbl").length));

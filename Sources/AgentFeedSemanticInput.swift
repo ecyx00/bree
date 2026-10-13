@@ -1,6 +1,6 @@
-import CMUXAgentLaunch
-import CmuxAgentJournal
-import CmuxFoundation
+import BREEAgentLaunch
+import BreeAgentJournal
+import BreeFoundation
 import Foundation
 
 /// An immutable Feed handoff. JSON normalization happens on the journal worker.

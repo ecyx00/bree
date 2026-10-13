@@ -3,7 +3,7 @@ import { errorsBetter as errBetter } from "../lib.mjs";
 // snapshot, fetch, fs, ...) and reference B's browser, tabs, user and snapshot
 // (AXAPI) members.
 const LAB = "/diff/lab.html";
-const REF_CMUX = (label, role = "button") => `((s) => (s.match(new RegExp('${role} "${label}"[^\\\\n]*?\\\\[ref=(\\\\w+)\\\\]')) || [])[1])`;
+const REF_BREE = (label, role = "button") => `((s) => (s.match(new RegExp('${role} "${label}"[^\\\\n]*?\\\\[ref=(\\\\w+)\\\\]')) || [])[1])`;
 const IDX_CG = (label, role = "button") => `((s) => { const m = s.match(new RegExp("^\\\\s*(\\\\d+) ${role} ${label}", "m")); return m ? Number(m[1]) : null; })`;
 
 export default [
@@ -115,10 +115,10 @@ return { bad: await E(() => agent.browsers.get("")), session: typeof chrome.brow
     id: "session.name-docs",
     members: ["reference-b:Browser.nameSession", "reference-b:Browser.documentation", "reference-b:Agent.documentation", "reference-b:Documentation.get"],
     path: LAB,
-    code: `const named = await session.name("🧪 cmux parity");
+    code: `const named = await session.name("🧪 bree parity");
 const guide = session.guide();
 return { named: typeof named, docs: typeof guide === "string" && guide.length > 1000, empty: await E(() => session.name(" ")) };`,
-    "reference-b": `const named = await b.nameSession("🧪 cmux parity");
+    "reference-b": `const named = await b.nameSession("🧪 bree parity");
 const docs = await b.documentation();
 const topic = await E(() => agent.documentation.get("screenshots"));
 const missing = await E(() => agent.documentation.get("nope-doc"));
@@ -132,7 +132,7 @@ return { named: typeof named, docs: typeof docs === "string" && docs.length > 10
     id: "tabs.keep-deliverable",
     members: ["reference-b:Tab.markDeliverable", "reference-b:Tab.markHandoff"],
     custom: {
-      async cmux(ctx) {
+      async bree(ctx) {
         const code = `${ctx.wrap({ path: null, code: `const p = await tabs.open(U("/diff/lab.html")); await p.keep(); return p.id;` })}`;
         const r = await ctx.repl(code);
         const id = r.value;
@@ -153,11 +153,11 @@ return { named: typeof named, docs: typeof docs === "string" && docs.length > 10
     members: ["reference-a:snapshot", "reference-a:snapshot.ref", "reference-b:AXAPI.get", "reference-b:Tab.ax", "reference-b:AXAPI.click"],
     path: LAB,
     code: `const s = String((await snapshot()).tree);
-const ref = ${REF_CMUX("Action")}(s);
+const ref = ${REF_BREE("Action")}(s);
 await page.locator(ref).click();
 return { heading: s.includes("Diff lab"), frame: s.includes("Frame action"), shadow: s.includes("Shadow action"), offscreen: s.includes("Far away"), typed: s.includes("initial"), clicked: await page.locator("#status").innerText() };`,
     "reference-a": `const s = String((await snapshot(page)).tree);
-const ref = ${REF_CMUX("Action")}(s);
+const ref = ${REF_BREE("Action")}(s);
 await page.locator(ref).click();
 return { heading: s.includes("Diff lab"), frame: s.includes("Frame action"), shadow: s.includes("Shadow action"), offscreen: s.includes("Far away"), typed: s.includes("initial"), clicked: await page.locator("#status").innerText() };`,
     "reference-b": `const s = await t.ax.get("state", { disableDiffing: true });
@@ -180,7 +180,7 @@ return { button: s.includes("Action"), listText: s.includes("Second"), smaller: 
 const s = full;
 return { button: s.includes("Action"), listText: s.includes("Second"), smaller: true };`,
     referenceBMode: "legacy",
-    // Reference A's interactive tree keeps list text; cmux keeps controls and the
+    // Reference A's interactive tree keeps list text; bree keeps controls and the
     // outline. Both keep the controls and shrink the tree.
     compare: { "reference-a": ["button", "smaller"], "reference-b": ["button"] },
     expect: { button: true, listText: false, smaller: true },
@@ -352,11 +352,11 @@ return { abs: path.isAbsolute(dir), back, join: path.join("a", "b", "..", "c.txt
     id: "print.display-console",
     members: ["reference-a:display", "reference-a:console"],
     custom: {
-      async cmux(ctx) {
+      async bree(ctx) {
         const r = await ctx.cli(["browser", "repl", "--eval", "-"], "console.log('plain', 1); display({ a: 1 }); ({ last: true })");
         return { log: r.out.includes("plain 1"), display: /\{ a: 1 \}/.test(r.out), autoPrint: /last: true/.test(r.out) };
       },
-      async "cmux-dev"(ctx) {
+      async "bree-dev"(ctx) {
         const out = [];
         const code = "console.log('plain', 1); display({ a: 1 }); ({ last: true })";
         const dev = await import("../../lib/dev-driver.mjs");

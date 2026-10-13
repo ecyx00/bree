@@ -1,7 +1,7 @@
 import AppKit
 import Bonsplit
-import CmuxControlSocket
-import CmuxWorkspaces
+import BreeControlSocket
+import BreeWorkspaces
 import Foundation
 
 /// The system-domain witnesses: the byte-faithful bodies of the former
@@ -310,7 +310,7 @@ extension TerminalController: ControlSystemContext {
             // Count what restore will actually open: crash-diagnostic windows
             // are dropped and the window count is capped.
             let windowCount = min(
-                SessionPersistencePolicy.pruningCmuxCrashDiagnosticWindows(from: snapshot)
+                SessionPersistencePolicy.pruningBreeCrashDiagnosticWindows(from: snapshot)
                     .snapshot?.windows.count ?? 0,
                 SessionPersistencePolicy.maxWindowsPerSnapshot
             )
@@ -504,7 +504,7 @@ extension TerminalController: ControlSystemContext {
         }
 
         // Int64 → Int is lossless on 64-bit macOS.
-        let sequence = Int(max(0, CmuxEventBus.shared.latestSequence))
+        let sequence = Int(max(0, BreeEventBus.shared.latestSequence))
         let selectedWorkspaceId = tabManager.selectedTabId
         let workspaces = tabManager.tabs.enumerated().map { index, workspace in
             extensionSidebarWorkspaceRow(
@@ -554,7 +554,7 @@ extension TerminalController: ControlSystemContext {
             latestNotificationText: latestNotificationText,
             latestConversationMessage: workspace.latestConversationMessage,
             latestSubmittedMessage: workspace.latestSubmittedMessage,
-            latestSubmittedAtISO: workspace.latestSubmittedAt.map(CmuxEventBus.isoTimestamp),
+            latestSubmittedAtISO: workspace.latestSubmittedAt.map(BreeEventBus.isoTimestamp),
             listeningPorts: workspace.listeningPorts,
             panelDirectories: workspace.sidebarFilesystemDirectoriesInDisplayOrder(),
             gitBranches: workspace.sidebarGitBranchesInDisplayOrder().map {

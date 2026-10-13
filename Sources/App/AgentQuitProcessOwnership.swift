@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 
 /// Quit may signal this app's descendants, never a PID inferred from a writer lock.

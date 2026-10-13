@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CmuxSettings
+import BreeFoundation
+import BreeSettings
 import SwiftUI
 
 /// Scrollable, grouped list of every settings-visible keyboard shortcut and its
@@ -11,7 +11,7 @@ import SwiftUI
 /// `Action.label` for the localized display name, and
 /// `Action.displayedShortcutString(for: KeyboardShortcutSettings.shortcut(for:))`
 /// for the formatted key-cap string of the effective binding. Category grouping
-/// reuses the `CmuxSettings.ShortcutAction.group` metadata by mapping each
+/// reuses the `BreeSettings.ShortcutAction.group` metadata by mapping each
 /// action through its shared raw value.
 ///
 /// Snapshot-boundary rule: the `LazyVStack`/`ForEach` below only ever receives
@@ -24,7 +24,7 @@ struct AllShortcutsPopover: View {
 
     var body: some View {
         // Reading the observer's revision keeps the popover reactive to live
-        // binding edits (Settings recorder, external cmux.json changes).
+        // binding edits (Settings recorder, external bree.json changes).
         let _ = shortcutObserver.revision
         let sections = Self.makeSections()
         VStack(alignment: .leading, spacing: 0) {
@@ -51,7 +51,7 @@ struct AllShortcutsPopover: View {
 
     private var header: some View {
         Text(String(localized: "settings.section.keyboardShortcuts", defaultValue: "Keyboard Shortcuts"))
-            .cmuxFont(size: 13, weight: .semibold)
+            .scaledFont(size: 13, weight: .semibold)
             .padding(.horizontal, 12)
             .padding(.top, 12)
             .padding(.bottom, 8)
@@ -146,17 +146,17 @@ private struct ShortcutDiscoveryRowView: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(model.label)
-                .cmuxFont(size: 12)
+                .scaledFont(size: 12)
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 8)
             if model.isUnassigned {
                 Text(model.keys)
-                    .cmuxFont(size: 11, design: .rounded)
+                    .scaledFont(size: 11, design: .rounded)
                     .foregroundStyle(.tertiary)
             } else {
                 Text(model.keys)
-                    .cmuxFont(size: 12, weight: .medium, design: .rounded)
+                    .scaledFont(size: 12, weight: .medium, design: .rounded)
                     .monospacedDigit()
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
@@ -185,7 +185,7 @@ private struct ShortcutDiscoverySectionHeader: View {
 
     var body: some View {
         Text(title)
-            .cmuxFont(size: 11, weight: .semibold)
+            .scaledFont(size: 11, weight: .semibold)
             .foregroundStyle(.secondary)
             .padding(.horizontal, 12)
             .padding(.top, 10)

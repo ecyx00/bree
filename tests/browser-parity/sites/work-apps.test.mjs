@@ -186,8 +186,8 @@ test("signed out: each API reports not_signed_in", async () => {
     assert.match(await o.error('sites.notion.search("x")'), /not signed in to Notion/);
     assert.match(await o.error('sites.linear.viewer()'), /not signed in to Linear/);
     // The account's site list is read first, from Atlassian's home site.
-    assert.match(await o.error('sites.jira.me({ site: "acme" })'), /jira\.me: the cmux browser is not signed in to Atlassian/);
-    assert.match(await o.error('sites.github.issue("acme/private#7")'), /github: the cmux browser is not signed in/);
+    assert.match(await o.error('sites.jira.me({ site: "acme" })'), /jira\.me: the bree browser is not signed in to Atlassian/);
+    assert.match(await o.error('sites.github.issue("acme/private#7")'), /github: the bree browser is not signed in/);
     assert.match(await o.error('sites.slack.search("T01ACME", "x")'), /slack search\.messages: invalid_auth|not signed in/);
   } finally {
     await out.close();

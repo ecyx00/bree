@@ -29,7 +29,7 @@ FORMAT = re.compile(
     r"%%|%(?:\d+\$)?#@[^@]+@|%(?:\d+\$)?[-+ #0']*(?:\d+|\*(?:\d+\$)?)?"
     r"(?:\.(?:\d+|\*(?:\d+\$)?))?(?:hh|ll|[hlLqjzt])?[diouxXfFeEgGaAcCsSp@]"
 )
-MARKER = re.compile(r"\bTODO\b|(?i:\b(?:TRANSLATE_ME|MACHINE_TRANSLATION)\b|__CMUX_TOKEN_\d+__|<translated>)")
+MARKER = re.compile(r"\bTODO\b|(?i:\b(?:TRANSLATE_ME|MACHINE_TRANSLATION)\b|__BREE_TOKEN_\d+__|<translated>)")
 BIDI = re.compile("[\u202a-\u202e\u2066-\u2069]")
 
 

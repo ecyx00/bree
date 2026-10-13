@@ -13,12 +13,12 @@ enum AppHostProcessReceipt {
 
     private static func createIfRequired() -> Int32 {
         let environment = ProcessInfo.processInfo.environment
-        guard environment["CMUX_APP_HOST_ISOLATION_REQUIRED"] == "1" else { return -1 }
+        guard environment["BREE_APP_HOST_ISOLATION_REQUIRED"] == "1" else { return -1 }
         guard
-            let receiptDirectory = environment["CMUX_APP_HOST_RECEIPT_DIR"],
+            let receiptDirectory = environment["BREE_APP_HOST_RECEIPT_DIR"],
             !receiptDirectory.isEmpty,
             !receiptDirectory.contains(where: { $0.isNewline }),
-            let key = environment["CMUX_APP_HOST_KEY"],
+            let key = environment["BREE_APP_HOST_KEY"],
             key.utf8.count == 12,
             key.utf8.allSatisfy({ (48 ... 57).contains($0) || (97 ... 102).contains($0) }),
             let executablePath = Bundle.main.executableURL?.resolvingSymlinksInPath().path,

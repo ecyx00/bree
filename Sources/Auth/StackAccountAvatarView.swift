@@ -1,6 +1,6 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
+import BreeAppKitSupportUI
+import BreeFoundation
 import SwiftUI
 
 /// Displays the Stack profile image with an initial-based fallback.
@@ -12,7 +12,7 @@ import SwiftUI
 /// the hosted view; those go blank after a while on Intel Macs running
 /// macOS 15.
 struct StackAccountAvatarView: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     let avatarURL: URL?
     let displayName: String
     let email: String
@@ -26,8 +26,8 @@ struct StackAccountAvatarView: View {
     static let fallbackSymbolName = "person.crop.circle.fill"
 
     /// Builds the renderer request for a decoded profile picture.
-    static func hostedRequest(image: NSImage, size: CGFloat) -> CmuxResolvedIconRequest {
-        CmuxResolvedIconRequest(
+    static func hostedRequest(image: NSImage, size: CGFloat) -> BreeResolvedIconRequest {
+        BreeResolvedIconRequest(
             source: .image(image),
             size: NSSize(width: size, height: size),
             fallbackSource: .systemSymbol(
@@ -50,13 +50,13 @@ struct StackAccountAvatarView: View {
             if let avatarURL {
                 if let loadedAvatar, loadedAvatar.url == avatarURL {
                     if let image = loadedAvatar.image {
-                        CmuxResolvedIconImage(request: Self.hostedRequest(image: image, size: size))
+                        BreeResolvedIconImage(request: Self.hostedRequest(image: image, size: size))
                             .frame(width: size, height: size)
                     } else {
                         fallback
                     }
                 } else if let loadingSystemName {
-                    CmuxSystemSymbolImage(
+                    BreeSystemSymbolImage(
                         systemName: loadingSystemName,
                         pointSize: size,
                         weight: .regular,
@@ -87,10 +87,10 @@ struct StackAccountAvatarView: View {
             Circle().fill(fallbackForegroundColor.opacity(0.18))
             if let initial {
                 Text(verbatim: initial)
-                    .cmuxFont(size: max(8, size * 0.4), weight: .semibold)
+                    .scaledFont(size: max(8, size * 0.4), weight: .semibold)
                     .foregroundStyle(fallbackForegroundColor)
             } else {
-                CmuxSystemSymbolImage(
+                BreeSystemSymbolImage(
                     systemName: "person.fill",
                     pointSize: max(8, size * 0.45),
                     weight: .medium,
@@ -101,7 +101,7 @@ struct StackAccountAvatarView: View {
     }
 
     private var fallbackForegroundColor: Color {
-        loadingSystemName == nil ? cmuxAccent.color : Color(nsColor: .secondaryLabelColor)
+        loadingSystemName == nil ? breeAccent.color : Color(nsColor: .secondaryLabelColor)
     }
 
     private var initial: String? {

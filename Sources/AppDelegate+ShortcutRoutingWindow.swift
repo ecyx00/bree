@@ -1,5 +1,5 @@
 import AppKit
-import CmuxTerminal
+import BreeTerminal
 import ObjectiveC
 
 /// A key routed before portal mount retains its pane as the release owner.
@@ -54,7 +54,7 @@ extension AppDelegate {
             }
             if contextForMainWindow(window) != nil
                 || isMainTerminalWindow(window)
-                || cmuxWindowShouldOwnCloseShortcut(window) {
+                || breeWindowShouldOwnCloseShortcut(window) {
                 return window
             }
             debugShortcutRoutingFocusedWindowOverrideForTesting.window = nil

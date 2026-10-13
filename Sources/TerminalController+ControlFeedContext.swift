@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 /// The feed-domain (workstream) witnesses are the byte-faithful bodies of the

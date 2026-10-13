@@ -35,7 +35,7 @@ describe("markdown viewer renders untrusted markdown without active content", ()
     ["javascript links", '[x](javascript:alert(1)) <a href="JaVaScRiPt:alert(1)">y</a> <a href="jav&#x09;ascript:alert(1)">z</a> <a href="vbscript:x">v</a>'],
     ["data URL navigation", '<a href="data:text/html,<script>alert(1)</script>">x</a>'],
     ["form controls", '<form action="https://x"><button formaction="javascript:alert(1)">b</button><input type=text autofocus onfocus=alert(1)></form>'],
-    ["host-owned attributes", '<img data-cmux-remote-src="https%3A%2F%2Fexample.com%2Fa.png" src="x.png"><span class="cmux-remote-image-placeholder">fake</span>'],
+    ["host-owned attributes", '<img data-bree-remote-src="https%3A%2F%2Fexample.com%2Fa.png" src="x.png"><span class="bree-remote-image-placeholder">fake</span>'],
   ];
 
   for (const [name, payload] of payloads) {
@@ -44,9 +44,9 @@ describe("markdown viewer renders untrusted markdown without active content", ()
       const content = render(payload);
       expect(unsafeNodes(content)).toEqual([]);
       expect(
-        content.querySelector("svg, math, form, button, iframe, object, embed, noscript, template, [data-cmux-remote-src]"),
+        content.querySelector("svg, math, form, button, iframe, object, embed, noscript, template, [data-bree-remote-src]"),
       ).toBeNull();
-      expect(content.querySelector(".cmux-remote-image-placeholder")).toBeNull();
+      expect(content.querySelector(".bree-remote-image-placeholder")).toBeNull();
     });
   }
 
@@ -57,7 +57,7 @@ describe("markdown viewer renders untrusted markdown without active content", ()
     );
     expect(unsafeNodes(content)).toEqual([]);
     expect(content.querySelector("svg, script, animate, a")).toBeNull();
-    const img = content.querySelector("img.cmux-inline-svg");
+    const img = content.querySelector("img.bree-inline-svg");
     expect(img).not.toBeNull();
     const src = img?.getAttribute("src") ?? "";
     expect(src.startsWith("data:image/svg+xml;base64,")).toBe(true);
@@ -72,7 +72,7 @@ describe("markdown viewer renders untrusted markdown without active content", ()
     hljs.highlight = () => ({ value: '<img src=x onerror=alert(1)><!--c--><noscript>n</noscript><span class="hljs-attr">title</span>' });
     const content = render("---\ntitle: <img src=x onerror=alert(1)>\n---\n# Doc");
     expect(unsafeNodes(content)).toEqual([]);
-    expect(content.querySelector(".cmux-frontmatter .hljs-attr")?.textContent).toBe("title");
+    expect(content.querySelector(".bree-frontmatter .hljs-attr")?.textContent).toBe("title");
     expect(content.querySelector("h1")?.textContent).toBe("Doc");
   });
 
@@ -103,7 +103,7 @@ describe("markdown viewer renders untrusted markdown without active content", ()
     expect(content.querySelectorAll("table td").length).toBe(2);
     expect(content.querySelector("a[href='https://example.com']")?.getAttribute("rel")).toBe("noopener noreferrer");
     expect(content.querySelector("a[href='#title']")).not.toBeNull();
-    expect(content.querySelector("img")?.getAttribute("src")).toStartWith("cmux-local-image://image?url=");
+    expect(content.querySelector("img")?.getAttribute("src")).toStartWith("bree-local-image://image?url=");
     expect(content.querySelector("pre code.hljs")?.textContent).toContain("const a = 1 < 2;");
     expect(content.querySelector("pre code.hljs .hljs-keyword")?.textContent).toBe("const");
   });
@@ -127,32 +127,32 @@ describe("generated diagrams are sanitized", () => {
 
   test("Mermaid output", async () => {
     const { dom, posted, render } = shell();
-    const win = dom.window as unknown as Record<string, unknown> & { __cmuxLibLoaded(name: string): void };
+    const win = dom.window as unknown as Record<string, unknown> & { __breeLibLoaded(name: string): void };
     win.mermaid = {
       initialize() {},
       render: async () => ({ svg: hostileSVG, bindFunctions: () => { throw new Error("bindings must not be attached"); } }),
     };
     const content = render("```mermaid\ngraph TD; A-->B\n```");
     expect(posted).toContainEqual({ lib: "mermaid" });
-    win.__cmuxLibLoaded("mermaid");
+    win.__breeLibLoaded("mermaid");
     await flush();
-    const svg = content.querySelector(".cmux-mermaid svg");
+    const svg = content.querySelector(".bree-mermaid svg");
     expect(svg).not.toBeNull();
     const findings = unsafeNodes(content).filter((finding) => finding !== "element:style" && finding !== "element:foreignobject");
     expect(findings).toEqual([]);
-    expect(content.querySelector(".cmux-mermaid a, .cmux-mermaid image, .cmux-mermaid script, .cmux-mermaid img, .cmux-mermaid animate")).toBeNull();
-    expect(content.querySelector(".cmux-mermaid use")?.hasAttribute("href")).toBe(false);
-    expect(content.querySelector(".cmux-mermaid rect")?.getAttribute("fill")).toBe("url(#grad)");
-    expect(content.querySelector(".cmux-mermaid rect")?.hasAttribute("style")).toBe(false);
-    expect(content.querySelector(".cmux-mermaid path")?.getAttribute("marker-end")).toBe("url(#arrow)");
-    const styles = Array.from(content.querySelectorAll(".cmux-mermaid style")).map((style) => style.textContent);
+    expect(content.querySelector(".bree-mermaid a, .bree-mermaid image, .bree-mermaid script, .bree-mermaid img, .bree-mermaid animate")).toBeNull();
+    expect(content.querySelector(".bree-mermaid use")?.hasAttribute("href")).toBe(false);
+    expect(content.querySelector(".bree-mermaid rect")?.getAttribute("fill")).toBe("url(#grad)");
+    expect(content.querySelector(".bree-mermaid rect")?.hasAttribute("style")).toBe(false);
+    expect(content.querySelector(".bree-mermaid path")?.getAttribute("marker-end")).toBe("url(#arrow)");
+    const styles = Array.from(content.querySelectorAll(".bree-mermaid style")).map((style) => style.textContent);
     expect(styles).toEqual(["#m .node{fill:red}", ""]);
-    expect(content.querySelector(".cmux-mermaid foreignObject div.nodeLabel")?.textContent).toBe("label");
+    expect(content.querySelector(".bree-mermaid foreignObject div.nodeLabel")?.textContent).toBe("label");
   });
 
   test("Vega output", async () => {
     const { dom, render } = shell();
-    const win = dom.window as unknown as Record<string, unknown> & { __cmuxLibLoaded(name: string): void };
+    const win = dom.window as unknown as Record<string, unknown> & { __breeLibLoaded(name: string): void };
     let finalized = false;
     let embedTarget: unknown = null;
     win.vegaEmbed = async (target: unknown) => {
@@ -160,15 +160,15 @@ describe("generated diagrams are sanitized", () => {
       return { view: { toSVG: async () => hostileSVG }, finalize: () => { finalized = true; } };
     };
     const content = render('```vega-lite\n{"mark": "bar", "data": {"values": [{"a": 1}]}}\n```');
-    const block = content.querySelector(".cmux-vega");
-    win.__cmuxLibLoaded("vega-lite");
+    const block = content.querySelector(".bree-vega");
+    win.__breeLibLoaded("vega-lite");
     await flush();
     expect(embedTarget).not.toBe(block);
     expect(finalized).toBe(true);
     const findings = unsafeNodes(content).filter((finding) => finding !== "element:style" && finding !== "element:foreignobject");
     expect(findings).toEqual([]);
-    expect(content.querySelector(".cmux-vega svg")).not.toBeNull();
-    expect(content.querySelector(".cmux-vega a, .cmux-vega image, .cmux-vega script, .cmux-vega img")).toBeNull();
+    expect(content.querySelector(".bree-vega svg")).not.toBeNull();
+    expect(content.querySelector(".bree-vega a, .bree-vega image, .bree-vega script, .bree-vega img")).toBeNull();
   });
 });
 
@@ -178,19 +178,19 @@ describe("remote images", () => {
     const opened: unknown[] = [];
     (dom.window as unknown as { open: (...args: unknown[]) => void }).open = (...args: unknown[]) => { opened.push(args); };
     const content = render("![x](https://example.com/a.png)");
-    const img = content.querySelector("img[data-cmux-remote-src]") as HTMLImageElement;
+    const img = content.querySelector("img[data-bree-remote-src]") as HTMLImageElement;
     expect(img.hasAttribute("src")).toBe(false);
-    const buttons = Array.from(content.querySelectorAll(".cmux-remote-image-placeholder button")) as HTMLButtonElement[];
-    const load = buttons.find((button) => button.getAttribute("data-cmux-remote-action") === "load") as HTMLButtonElement;
+    const buttons = Array.from(content.querySelectorAll(".bree-remote-image-placeholder button")) as HTMLButtonElement[];
+    const load = buttons.find((button) => button.getAttribute("data-bree-remote-action") === "load") as HTMLButtonElement;
     const open = buttons[buttons.length - 1];
 
     load.click();
     expect(posted).toContainEqual({ action: "approveRemoteImage", url: "https://example.com/a.png" });
     expect(img.hasAttribute("src")).toBe(false);
 
-    const win = dom.window as unknown as { __cmuxRemoteImageApproved(href: string): void; __cmuxRemoteImageRejected(href: string): void };
-    win.__cmuxRemoteImageApproved("https://example.com/a.png");
-    expect(img.getAttribute("src")).toBe(`cmux-remote-image://image?url=${encodeURIComponent("https://example.com/a.png")}`);
+    const win = dom.window as unknown as { __breeRemoteImageApproved(href: string): void; __breeRemoteImageRejected(href: string): void };
+    win.__breeRemoteImageApproved("https://example.com/a.png");
+    expect(img.getAttribute("src")).toBe(`bree-remote-image://image?url=${encodeURIComponent("https://example.com/a.png")}`);
 
     open.click();
     expect(posted).toContainEqual({ action: "openRemoteImage", url: "https://example.com/a.png" });
@@ -200,10 +200,10 @@ describe("remote images", () => {
   test("a rejected approval resets the placeholder", () => {
     const { dom, render } = shell();
     const content = render("![x](https://example.com/a.png)");
-    const load = content.querySelector("button[data-cmux-remote-action=load]") as HTMLButtonElement;
+    const load = content.querySelector("button[data-bree-remote-action=load]") as HTMLButtonElement;
     load.click();
     expect(load.disabled).toBe(true);
-    (dom.window as unknown as { __cmuxRemoteImageRejected(href: string): void }).__cmuxRemoteImageRejected("https://example.com/a.png");
+    (dom.window as unknown as { __breeRemoteImageRejected(href: string): void }).__breeRemoteImageRejected("https://example.com/a.png");
     expect(load.disabled).toBe(false);
     expect(content.querySelector("img")?.hasAttribute("src")).toBe(false);
   });

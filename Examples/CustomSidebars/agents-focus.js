@@ -1,7 +1,7 @@
 // agents-focus: one agent at a time. The single most urgent session gets a
 // hero card (needs-input first, then longest-working); everything else is a
 // quiet queue below. For people who treat agents like a checkout line.
-//   cmux right-sidebar set custom agents-focus
+//   bree right-sidebar set custom agents-focus
 
 const TINT = {
   needs_input: "#FF9F0A",
@@ -44,8 +44,8 @@ const hero = computed(() => ordered()[0] ?? null);
 const queue = computed(() => ordered().slice(1));
 
 function jump(e) {
-  cmux("workspace.select", { workspace_id: e.ws.id });
-  if (e.a.surfaceId) cmux("surface.focus", { surface_id: e.a.surfaceId });
+  bree("workspace.select", { workspace_id: e.ws.id });
+  if (e.a.surfaceId) bree("surface.focus", { surface_id: e.a.surfaceId });
 }
 
 sidebar(() =>
@@ -63,7 +63,7 @@ sidebar(() =>
       ]),
       Text(() => hero()?.a.title || hero()?.a.name || "No agents running")
         .font(15).weight("semibold").lineLimit(3),
-      Text(() => (hero() ? hero().ws.title + (hero().a.directory ? " · " + hero().a.directory : "") : "Start one in any cmux terminal."))
+      Text(() => (hero() ? hero().ws.title + (hero().a.directory ? " · " + hero().a.directory : "") : "Start one in any bree terminal."))
         .font(10).color("tertiary").lineLimit(1).truncation("middle"),
       HStack({}, [
         Text("Jump to terminal")

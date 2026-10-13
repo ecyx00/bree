@@ -23,8 +23,8 @@ class CurrentCommandFixtureTests(unittest.TestCase):
         cls.binary = Path(cls.temp.name) / "current-fixture"
         build = subprocess.run([
             "xcrun", "swiftc", "-o", str(cls.binary), "-module-cache-path", str(Path(cls.temp.name) / "cache"),
-            str(ROOT / "CLI/CLIError.swift"), str(ROOT / "CLI/CMUXCLI+Current.swift"), str(ROOT / "CLI/CMUXCLI+JSONOutput.swift"),
-            str(ROOT / "CLI/CMUXCLI+WindowDispatch.swift"), str(ROOT / "tests/fixtures/CurrentCommandFixture.swift"),
+            str(ROOT / "CLI/CLIError.swift"), str(ROOT / "CLI/BREECLI+Current.swift"), str(ROOT / "CLI/BREECLI+JSONOutput.swift"),
+            str(ROOT / "CLI/BREECLI+WindowDispatch.swift"), str(ROOT / "tests/fixtures/CurrentCommandFixture.swift"),
         ], capture_output=True, text=True, timeout=120)
         if build.returncode:
             raise RuntimeError(build.stderr)
@@ -42,7 +42,7 @@ class CurrentCommandFixtureTests(unittest.TestCase):
     def test_text_renders_cached_unknown_facts_and_truncation(self):
         result = self.invoke()
         self.assertEqual(result.returncode, 0, result.stderr)
-        for expected in ("Review cmux", "freshness: unknown", "attention: unread_notification", "Limit reached", "agent_sessions: unavailable"):
+        for expected in ("Review bree", "freshness: unknown", "attention: unread_notification", "Limit reached", "agent_sessions: unavailable"):
             self.assertIn(expected, result.stdout)
         self.assertEqual(json.loads(result.stderr), {"method": "current.list", "params": {}})
 

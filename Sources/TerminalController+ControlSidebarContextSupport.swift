@@ -1,7 +1,7 @@
-import CmuxControlSocket
-import CmuxSidebar
-import CmuxTerminal
-import CmuxWorkspaces
+import BreeControlSocket
+import BreeSidebar
+import BreeTerminal
+import BreeWorkspaces
 import Foundation
 
 /// Shared resolution/scheduling twins for the `ControlSidebarContext`
@@ -185,7 +185,7 @@ extension TerminalController {
         }
         // A live surface keeps its registry workspace binding current when it
         // moves, while the already-running child process cannot rewrite the
-        // CMUX_WORKSPACE_ID it inherited at launch. Route by the authoritative
+        // BREE_WORKSPACE_ID it inherited at launch. Route by the authoritative
         // live binding so telemetry follows Dock/workspace transfers.
         let ownerID = registeredSurface?.tabId ?? workspaceID
         let routingManager = AppDelegate.shared?.tabManagerFor(tabId: ownerID)

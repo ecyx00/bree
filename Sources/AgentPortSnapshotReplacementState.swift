@@ -1,4 +1,4 @@
-import CmuxCore
+import BreeCore
 import Foundation
 
 /// Queue-confined bound for retaining a snapshot across an agent-root transition.

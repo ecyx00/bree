@@ -35,11 +35,11 @@ final class UITestDiagnosticsWriter {
 
     func write(stage: String) {
         let env = ProcessInfo.processInfo.environment
-        guard let path = env["CMUX_UI_TEST_DIAGNOSTICS_PATH"], !path.isEmpty else { return }
+        guard let path = env["BREE_UI_TEST_DIAGNOSTICS_PATH"], !path.isEmpty else { return }
 
         var payload = load(at: path)
         let windows = NSApp.windows
-        let targetDisplayID = env["CMUX_UI_TEST_TARGET_DISPLAY_ID"] ?? ""
+        let targetDisplayID = env["BREE_UI_TEST_TARGET_DISPLAY_ID"] ?? ""
         payload["stage"] = stage
         payload["pid"] = String(ProcessInfo.processInfo.processIdentifier)
         payload["bundleId"] = Bundle.main.bundleIdentifier ?? ""
@@ -47,11 +47,11 @@ final class UITestDiagnosticsWriter {
         payload["windowsCount"] = String(windows.count)
         payload["windowIdentifiers"] = windows.map { $0.identifier?.rawValue ?? "" }.joined(separator: ",")
         payload["windowVisibleFlags"] = windows.map { $0.isVisible ? "1" : "0" }.joined(separator: ",")
-        payload["windowScreenDisplayIDs"] = windows.map { $0.screen?.cmuxDisplayID.map(String.init) ?? "" }.joined(separator: ",")
+        payload["windowScreenDisplayIDs"] = windows.map { $0.screen?.breeDisplayID.map(String.init) ?? "" }.joined(separator: ",")
         payload["uiTestTargetDisplayID"] = targetDisplayID
         if let rawDisplayID = UInt32(targetDisplayID) {
-            payload["targetDisplayPresent"] = NSScreen.screens.contains { $0.cmuxDisplayID == rawDisplayID } ? "1" : "0"
-            payload["targetDisplayMoveSucceeded"] = windows.contains { $0.screen?.cmuxDisplayID == rawDisplayID } ? "1" : "0"
+            payload["targetDisplayPresent"] = NSScreen.screens.contains { $0.breeDisplayID == rawDisplayID } ? "1" : "0"
+            payload["targetDisplayMoveSucceeded"] = windows.contains { $0.screen?.breeDisplayID == rawDisplayID } ? "1" : "0"
         }
         appendRenderDiagnostics(to: &payload, environment: env)
         payload.merge(socketDiagnostics(env)) { _, new in new }
@@ -70,7 +70,7 @@ final class UITestDiagnosticsWriter {
     }
 
     private func appendPortalDiagnostics(to payload: inout [String: String], environment env: [String: String]) {
-        guard env["CMUX_UI_TEST_PORTAL_STATS"] == "1" else { return }
+        guard env["BREE_UI_TEST_PORTAL_STATS"] == "1" else { return }
         let stats = TerminalWindowPortalRegistry.debugPortalStats()
         payload["portal_count"] = stringValue(stats["portal_count"])
         payload["portal_hosted_mapping_count"] = stringValue(stats["hosted_mapping_count"])
@@ -81,7 +81,7 @@ final class UITestDiagnosticsWriter {
     }
 
     private func appendRenderDiagnostics(to payload: inout [String: String], environment env: [String: String]) {
-        guard env["CMUX_UI_TEST_DISPLAY_RENDER_STATS"] == "1" else { return }
+        guard env["BREE_UI_TEST_DISPLAY_RENDER_STATS"] == "1" else { return }
         guard let state = renderDiagnostics() else {
             payload["renderStatsAvailable"] = "0"
             for key in ["renderPanelId", "renderDrawCount", "renderPresentCount", "renderLastPresentTime", "renderWindowVisible", "renderAppIsActive", "renderDesiredFocus", "renderIsFirstResponder"] { payload[key] = "" }

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cmux-ghostty-helper-cache-test.XXXXXX")"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bree-ghostty-helper-cache-test.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE \
   GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_PREFIX ZIG_REQUIRED
@@ -56,12 +56,12 @@ FOURTH="$TMP_DIR/fourth"
 FIFTH="$TMP_DIR/fifth"
 SIXTH="$TMP_DIR/sixth"
 
-CMUX_ZIG="$FAKE_ZIG" \
-CMUX_GHOSTTY_HELPER_CACHE_DIR="$CACHE_DIR" \
+BREE_ZIG="$FAKE_ZIG" \
+BREE_GHOSTTY_HELPER_CACHE_DIR="$CACHE_DIR" \
   "$FIXTURE_ROOT/scripts/build-ghostty-cli-helper.sh" \
   --target aarch64-macos --output "$FIRST" >"$TMP_DIR/first.log"
-CMUX_ZIG="$FAKE_ZIG" \
-CMUX_GHOSTTY_HELPER_CACHE_DIR="$CACHE_DIR" \
+BREE_ZIG="$FAKE_ZIG" \
+BREE_GHOSTTY_HELPER_CACHE_DIR="$CACHE_DIR" \
   "$FIXTURE_ROOT/scripts/build-ghostty-cli-helper.sh" \
   --target aarch64-macos --output "$SECOND" >"$TMP_DIR/second.log"
 
@@ -72,27 +72,27 @@ cmp -s "$FIRST" "$SECOND"
 cached_helper="$(find "$CACHE_DIR" -type f -name ghostty -print -quit)"
 [[ -n "$cached_helper" ]]
 printf 'tampered\n' >> "$cached_helper"
-CMUX_ZIG="$FAKE_ZIG" \
-CMUX_GHOSTTY_HELPER_CACHE_DIR="$CACHE_DIR" \
+BREE_ZIG="$FAKE_ZIG" \
+BREE_GHOSTTY_HELPER_CACHE_DIR="$CACHE_DIR" \
   "$FIXTURE_ROOT/scripts/build-ghostty-cli-helper.sh" \
   --target aarch64-macos --output "$FOURTH" >"$TMP_DIR/fourth.log"
 grep -q 'Building Ghostty CLI helper' "$TMP_DIR/fourth.log"
 cmp -s "$FIRST" "$FOURTH"
 
-CMUX_ZIG="$FAKE_ZIG" \
-CMUX_GHOSTTY_HELPER_CACHE_DIR="$CACHE_DIR" \
-CMUX_DISABLE_GHOSTTY_HELPER_CACHE=1 \
+BREE_ZIG="$FAKE_ZIG" \
+BREE_GHOSTTY_HELPER_CACHE_DIR="$CACHE_DIR" \
+BREE_DISABLE_GHOSTTY_HELPER_CACHE=1 \
   "$FIXTURE_ROOT/scripts/build-ghostty-cli-helper.sh" \
   --target aarch64-macos --output "$THIRD" >"$TMP_DIR/third.log"
 grep -q 'Building Ghostty CLI helper' "$TMP_DIR/third.log"
 cmp -s "$FIRST" "$THIRD"
 
-env -u HOME -u CMUX_GHOSTTY_HELPER_CACHE_DIR \
-  CMUX_ZIG="$FAKE_ZIG" \
+env -u HOME -u BREE_GHOSTTY_HELPER_CACHE_DIR \
+  BREE_ZIG="$FAKE_ZIG" \
   "$FIXTURE_ROOT/scripts/build-ghostty-cli-helper.sh" \
   --target aarch64-macos --output "$FIFTH" >"$TMP_DIR/fifth.log"
-env -u HOME -u CMUX_GHOSTTY_HELPER_CACHE_DIR \
-  CMUX_ZIG="$FAKE_ZIG" \
+env -u HOME -u BREE_GHOSTTY_HELPER_CACHE_DIR \
+  BREE_ZIG="$FAKE_ZIG" \
   "$FIXTURE_ROOT/scripts/build-ghostty-cli-helper.sh" \
   --target aarch64-macos --output "$SIXTH" >"$TMP_DIR/sixth.log"
 grep -q 'Building Ghostty CLI helper' "$TMP_DIR/fifth.log"
@@ -110,7 +110,7 @@ exec /bin/mkdir "$@"
 EOF
 chmod +x "$TMP_DIR/shims/mkdir"
 PATH="$TMP_DIR/shims:$PATH" BLOCK_CACHE="$TMP_DIR/unwritable-cache" \
-CMUX_ZIG="$FAKE_ZIG" CMUX_GHOSTTY_HELPER_CACHE_DIR="$TMP_DIR/unwritable-cache" \
+BREE_ZIG="$FAKE_ZIG" BREE_GHOSTTY_HELPER_CACHE_DIR="$TMP_DIR/unwritable-cache" \
   "$FIXTURE_ROOT/scripts/build-ghostty-cli-helper.sh" \
   --target aarch64-macos --output "$TMP_DIR/publication-failed" >"$TMP_DIR/publication-failed.log" 2>&1
 grep -q 'warning: unable to publish Ghostty CLI helper cache' "$TMP_DIR/publication-failed.log"

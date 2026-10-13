@@ -23,9 +23,9 @@ fn main() {
                 .windows(2)
                 .find_map(|pair| (pair[0] == "--base").then_some(pair[1].as_str()));
             if base == Some("malformed") {
-                println!("cmux-diff-viewer://0123456789abcdef/../not-allowed.html");
+                println!("bree-diff-viewer://0123456789abcdef/../not-allowed.html");
             } else {
-                println!("cmux-diff-viewer://0123456789abcdef/generated.html");
+                println!("bree-diff-viewer://0123456789abcdef/generated.html");
             }
         }
         _ => std::process::exit(2),

@@ -44,7 +44,7 @@ extension BrowserPanel {
             self.developerToolsDockControlNormalizationTask = nil
             self.normalizeDeveloperToolsDockControls()
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.devtools dockControls.normalize panel=\(self.id.uuidString.prefix(5)) " +
                 "reason=\(reason) \(self.debugDeveloperToolsStateSummary()) \(self.debugDeveloperToolsGeometrySummary())"
             )
@@ -73,7 +73,7 @@ extension BrowserPanel {
         guard detachedDeveloperToolsWindowBelongsToPanel(window) else { return false }
         if detachedDeveloperToolsExplicitUserCloseWindowIds.remove(ObjectIdentifier(window)) != nil {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.devtools detachedClose.userWillClose panel=\(id.uuidString.prefix(5)) " +
                 "window=\(window.windowNumber) \(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
             )
@@ -85,7 +85,7 @@ extension BrowserPanel {
         // closing _inspector here tears down the frontend while attach continues.
         scheduleDetachedDeveloperToolsWindowCloseResolution(source: "willClose")
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.devtools detachedClose.defer panel=\(id.uuidString.prefix(5)) " +
             "window=\(window.windowNumber) \(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
         )
@@ -126,7 +126,7 @@ extension BrowserPanel {
         clearDeveloperToolsVisibleIntentForHiddenState()
         reevaluateHiddenWebViewDiscardAfterDeveloperToolsHidden()
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.devtools detachedClose.\(source) panel=\(id.uuidString.prefix(5)) " +
             "closed=observed \(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
         )
@@ -186,7 +186,7 @@ extension BrowserPanel {
         }
 
         let elapsed = Date().timeIntervalSince(startedAt)
-        // WebKit's attach path is not reflected in cmux's transition flag, so a
+        // WebKit's attach path is not reflected in bree's transition flag, so a
         // no-window/no-layout state remains ambiguous until the bounded deadline.
         if (preferredDeveloperToolsVisible || visible),
            elapsed < developerToolsDetachedWindowCloseResolutionMaxDuration {
@@ -205,7 +205,7 @@ extension BrowserPanel {
         clearDeveloperToolsVisibleIntentForHiddenState()
         reevaluateHiddenWebViewDiscardAfterDeveloperToolsHidden()
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.devtools detachedClose.\(closeReason) panel=\(id.uuidString.prefix(5)) " +
             "source=\(source) \(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
         )
@@ -234,7 +234,7 @@ extension BrowserPanel {
         scheduleDeveloperToolsVisibilityLossCheck()
         reevaluateHiddenWebViewDiscardScheduling(reason: "developer_tools_visibility_changed")
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.devtools detachedClose.redockAdopt panel=\(id.uuidString.prefix(5)) " +
             "source=\(source) \(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
         )
@@ -242,7 +242,7 @@ extension BrowserPanel {
     }
 
     func detachedDeveloperToolsWindowBelongsToPanel(_ window: NSWindow) -> Bool {
-        guard let frontendWebView = webView.cmuxInspectorFrontendWebView(),
+        guard let frontendWebView = webView.breeInspectorFrontendWebView(),
               let contentView = window.contentView else {
             return false
         }
@@ -255,7 +255,7 @@ extension BrowserPanel {
         if let mainWindow = webView.window, window === mainWindow {
             return false
         }
-        if window.identifier?.rawValue.hasPrefix("cmux.main.") == true {
+        if window.identifier?.rawValue.hasPrefix("bree.main.") == true {
             return false
         }
         return !Self.windowContainsBrowserSlotView(contentView)
@@ -286,7 +286,7 @@ extension BrowserPanel {
         setPreferredDeveloperToolsPresentation(.detached)
         normalizeDeveloperToolsDockControls()
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.devtools strayWindow.userDetached panel=\(id.uuidString.prefix(5)) " +
             "count=\(detachedWindows.count) \(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
         )

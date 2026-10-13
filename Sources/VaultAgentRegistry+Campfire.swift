@@ -1,11 +1,11 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 
-extension CmuxVaultAgentRegistration {
-    static var builtInCampfire: CmuxVaultAgentRegistration {
-        CmuxVaultAgentRegistration(
+extension BreeVaultAgentRegistration {
+    static var builtInCampfire: BreeVaultAgentRegistration {
+        BreeVaultAgentRegistration(
             id: "campfire",
             name: "Campfire",
-            detect: CmuxVaultAgentDetectRule(
+            detect: BreeVaultAgentDetectRule(
                 processName: "campfire",
                 alternateProcessNames: ["bun", "node", "deno", "tsx", "ts-node"],
                 alternateArgvContainsAny: [

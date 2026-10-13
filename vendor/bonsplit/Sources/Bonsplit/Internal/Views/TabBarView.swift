@@ -125,7 +125,7 @@ public enum BonsplitTabItemHitRegionRegistry {
 
 enum BonsplitTabItemHitTesting {
     // Hit-test rect is intentionally larger than visual chrome. Do not bump
-    // visible tab padding/width to fix drag affordance; see cmux #4290 / #4433.
+    // visible tab padding/width to fix drag affordance; see bree #4290 / #4433.
     static let horizontalSlop: CGFloat = 10
     static let verticalSlop: CGFloat = 6
 
@@ -2346,7 +2346,7 @@ private struct SplitActionChromeModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(
-                // 4 mirrors BreeMetrics.radiusSmall (bonsplit cannot import CmuxFoundation).
+                // 4 mirrors BreeMetrics.radiusSmall (bonsplit cannot import BreeFoundation).
                 RoundedRectangle(cornerRadius: 4)
                     .fill(TabBarColors.splitActionFill(for: appearance, isActive: isActive, isHovering: isHovering))
                     .padding(.horizontal, -1)
@@ -3067,7 +3067,7 @@ struct TabBarDragAndHoverView: NSViewRepresentable {
         /// controls that can actually consume the press veto the tab source,
         /// and only when the press is inside that control and the control
         /// sits in this strip. A host window's hit-test can answer a view the
-        /// pointer is not in (cmux resolved the focused file editor for presses
+        /// pointer is not in (bree resolved the focused file editor for presses
         /// on the pane tab strip); such a view owns nothing about the press.
         private func isNativeInteraction(
             at windowPoint: NSPoint,
@@ -3090,7 +3090,7 @@ struct TabBarDragAndHoverView: NSViewRepresentable {
 
         /// `NSView.hitTest(_:)` takes a point in the receiver's superview
         /// coordinate space. A host's content view can be flipped while its
-        /// window frame is not (cmux's main window hosts SwiftUI directly), so
+        /// window frame is not (bree's main window hosts SwiftUI directly), so
         /// a point converted into the content view itself is mirrored
         /// vertically when handed to `hitTest`, and a press on the strip at
         /// the top of the window is answered by whatever sits at the bottom.

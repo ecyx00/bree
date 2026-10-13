@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 /// Resolves SSH PTY attach ownership through the same persisted-session payload

@@ -1,6 +1,6 @@
-import CmuxCommandPalette
-import CmuxFoundation
-import CmuxTerminalCore
+import BreeCommandPalette
+import BreeFoundation
+import BreeTerminalCore
 import Foundation
 
 /// One row of the terminal completion popup. Not shared with the text box
@@ -49,7 +49,7 @@ enum TerminalCompletionInline {
 
     /// Index of the command whose name is exactly the typed command word, so
     /// Tab on a finished `cd` just adds the space instead of opening a fuzzy
-    /// menu (`cd`, `cmux-dev`, `clean-diff`...). Nil outside the command position.
+    /// menu (`cd`, `bree-dev`, `clean-diff`...). Nil outside the command position.
     static func exactCommandIndex(word: String, isCommandPosition: Bool, candidates: [TerminalCompletionCandidate]) -> Int? {
         guard isCommandPosition, !word.isEmpty else { return nil }
         return candidates.firstIndex { $0.kind == .command && $0.insertion == word }

@@ -1,39 +1,39 @@
-import CmuxCloud
-import CmuxSettingsUI
+import BreeCloud
+import BreeSettingsUI
 import AppKit
-import CmuxRemoteSession
-import CmuxCore
-import CmuxAuthRuntime
-import CmuxBrowser
-import CmuxControlSocket
-import CmuxFoundation
-import CmuxPanes
-import CmuxRemoteDaemon
-import CmuxRemoteWorkspace
-import CmuxSurfaceCatalogModel
-import CmuxTerminal
-import CmuxTerminalSharing
-import CmuxTerminalSizing
-import CmuxSettings
-import CmuxSwiftRenderUI
+import BreeRemoteSession
+import BreeCore
+import BreeAuthRuntime
+import BreeBrowser
+import BreeControlSocket
+import BreeFoundation
+import BreePanes
+import BreeRemoteDaemon
+import BreeRemoteWorkspace
+import BreeSurfaceCatalogModel
+import BreeTerminal
+import BreeTerminalSharing
+import BreeTerminalSizing
+import BreeSettings
+import BreeSwiftRenderUI
 import Carbon.HIToolbox
-import CMUXMobileCore
-import CMUXAgentLaunch
-import CmuxAgentChat
+import BREEMobileCore
+import BREEAgentLaunch
+import BreeAgentChat
 import Foundation
 import os
 import Bonsplit
 import WebKit
-import CmuxSidebar
-import CmuxWorkspaces
-import CmuxNotifications
+import BreeSidebar
+import BreeWorkspaces
+import BreeNotifications
 extension Notification.Name {
-    static let socketListenerDidStart = Notification.Name("cmux.socketListenerDidStart")
-    static let terminalSurfaceHostedViewDidMoveToWindow = Notification.Name("cmux.terminalSurfaceHostedViewDidMoveToWindow")
-    static let mainWindowContextsDidChange = Notification.Name("cmux.mainWindowContextsDidChange")
-    static let browserDownloadEventDidArrive = Notification.Name("cmux.browserDownloadEventDidArrive")
-    static let reactGrabDidCopySelection = Notification.Name("cmux.reactGrabDidCopySelection")
-    static let workstreamEventReceived = Notification.Name("cmux.workstreamEventReceived")
+    static let socketListenerDidStart = Notification.Name("bree.socketListenerDidStart")
+    static let terminalSurfaceHostedViewDidMoveToWindow = Notification.Name("bree.terminalSurfaceHostedViewDidMoveToWindow")
+    static let mainWindowContextsDidChange = Notification.Name("bree.mainWindowContextsDidChange")
+    static let browserDownloadEventDidArrive = Notification.Name("bree.browserDownloadEventDidArrive")
+    static let reactGrabDidCopySelection = Notification.Name("bree.reactGrabDidCopySelection")
+    static let workstreamEventReceived = Notification.Name("bree.workstreamEventReceived")
 }
 private struct SocketLineProcessingResult: Sendable {
     let response: String?
@@ -41,7 +41,7 @@ private struct SocketLineProcessingResult: Sendable {
 }
 // Agent notification gating types (AgentTurnCompleteMode / AgentNotificationMeta /
 // agentNotificationShouldDeliver) live in AgentNotificationGate.swift;
-// AgentNotifyCategory lives in the CmuxSettings package.
+// AgentNotifyCategory lives in the BreeSettings package.
 #if DEBUG
 /// Accumulated worker→main `v2MainSync` hop time for the socket command
 /// currently executing on a worker thread. Confined to one thread: it lives in
@@ -65,7 +65,7 @@ private struct RemotePTYSocketTarget {
 }
 nonisolated func remotePTYSessionListErrorIsUnsupportedDaemon(_ error: Error) -> Bool {
     let nsError = error as NSError
-    guard nsError.domain == "cmux.remote.daemon.rpc", nsError.code == 14 else {
+    guard nsError.domain == "bree.remote.daemon.rpc", nsError.code == 14 else {
         return false
     }
     return error.localizedDescription
@@ -160,8 +160,8 @@ class TerminalController {
     nonisolated let remoteProxyBroker: any RemoteProxyBrokering
     /// Process-wide native SSH master owner and per-host reconnect coordinator.
     nonisolated let nativeSSHConnectionBroker: NativeSSHConnectionBroker
-    // Stateless Sendable structs from CmuxControlSocket; injected at construction.
-    // `transport` is internal so sibling-file extensions (CmuxEventStream) can write through it.
+    // Stateless Sendable structs from BreeControlSocket; injected at construction.
+    // `transport` is internal so sibling-file extensions (BreeEventStream) can write through it.
     nonisolated let transport: SocketTransport
     // The package-owned listener: path/bind/lock lifecycle, accept source,
     // backoff/rearm recovery, and the generation-counted state machine.
@@ -198,13 +198,13 @@ class TerminalController {
     // do not downgrade its locking on the assumption that all callers are
     // main-isolated.
     let socketFastPathState = SocketFastPathState()
-    // Stateless sidebar-metadata/command argument parser (CmuxSidebar).
+    // Stateless sidebar-metadata/command argument parser (BreeSidebar).
     // Pure transforms over the raw arg string; holds no state and reaches no
     // app singletons, so the `report_*`/sidebar-mutation handlers forward to it.
     private nonisolated let sidebarMetadataArgumentParser = SidebarMetadataArgumentParser()
     private nonisolated let myPid = getpid()
-    private nonisolated static let socketCommandFocusAllowanceStackKey = "cmux.socketCommandFocusAllowanceStack"
-    private nonisolated static let socketCommandKeyStackKey = "cmux.socketCommandKeyStack"
+    private nonisolated static let socketCommandFocusAllowanceStackKey = "bree.socketCommandFocusAllowanceStack"
+    private nonisolated static let socketCommandKeyStackKey = "bree.socketCommandKeyStack"
     /// Signposter for the worker→main `v2MainSync` hop. Intervals are named
     /// "main-hop" and carry the active socket command key plus queue-wait and
     /// body durations, so Instruments can attribute main-thread occupancy per
@@ -218,7 +218,7 @@ class TerminalController {
     /// tool such as Instruments records signposts, so
     /// `socketMainHopSignpostingActive` genuinely gates all per-hop work.
     private nonisolated static let socketMainHopSignposter = OSSignposter(
-        subsystem: "com.cmux.socket",
+        subsystem: "com.bree.socket",
         category: .dynamicTracing
     )
     /// True while a tool (e.g. Instruments' os_signpost instrument) is
@@ -241,7 +241,7 @@ class TerminalController {
     /// The one size panel popover, anchored at a terminal's tab.
     let terminalSizePanelPresenter = TerminalSizePanelPresenter()
 #if DEBUG
-    private nonisolated static let socketCommandDebugLogEnvironmentKey = "CMUX_DEBUG_SOCKET_COMMAND_LOG"
+    private nonisolated static let socketCommandDebugLogEnvironmentKey = "BREE_DEBUG_SOCKET_COMMAND_LOG"
     private nonisolated static let socketCommandSlowThresholdMs: Double = 500
 #endif
     // The terminal-input message/error statics are nonisolated: pure,
@@ -369,7 +369,7 @@ class TerminalController {
         id: Any?,
         params: [String: Any]
     ) -> String? {
-        guard CmuxAutomationInvocationContext.focusAllowed == false,
+        guard BreeAutomationInvocationContext.focusAllowed == false,
               commandHasFocusIntent(commandKey: method, isV2: true, params: params) else {
             return nil
         }
@@ -384,7 +384,7 @@ class TerminalController {
         )
     }
 
-    /// The main-actor RPC dispatch coordinator (CmuxControlSocket). Owns the
+    /// The main-actor RPC dispatch coordinator (BreeControlSocket). Owns the
     /// `kind:N` handle registry and the moved command domains (window so far,
     /// growing per stage-3c sub-stage); this controller is its interim
     /// composition owner and ``ControlCommandContext`` conformer. Constructed in
@@ -406,8 +406,8 @@ class TerminalController {
 
     private final class V2BrowserUndefinedSentinel: Sendable {}
 
-    private nonisolated static let v2BrowserEvalEnvelopeTypeKey = "__cmux_t"
-    private nonisolated static let v2BrowserEvalEnvelopeValueKey = "__cmux_v"
+    private nonisolated static let v2BrowserEvalEnvelopeTypeKey = "__bree_t"
+    private nonisolated static let v2BrowserEvalEnvelopeValueKey = "__bree_v"
     private nonisolated static let v2BrowserEvalEnvelopeTypeUndefined = "undefined"
     private nonisolated static let v2BrowserEvalEnvelopeTypeValue = "value"
 
@@ -420,7 +420,7 @@ class TerminalController {
     private var v2BrowserUnsupportedNetworkRequestsBySurface: [UUID: [[String: Any]]] = [:]
     private nonisolated let v2BrowserUndefinedSentinel = V2BrowserUndefinedSentinel()
     /// Stateless browser-control logic (JS builders, value normalization,
-    /// diagnostics, failure classification) extracted to `CmuxBrowser`.
+    /// diagnostics, failure classification) extracted to `BreeBrowser`.
     /// The per-surface mutable state and WebKit evaluation seam stay here.
     private nonisolated let v2BrowserControl = BrowserControlService(
         evalEnvelope: BrowserEvalEnvelope(
@@ -459,8 +459,8 @@ class TerminalController {
         weak var controller: TerminalController?
     }
 
-    /// Queues a session hook the app observed for a remote agent (the cmux-tui agent
-    /// roster of a `cmux ssh` machine) through the same relay-backed delivery
+    /// Queues a session hook the app observed for a remote agent (the bree-tui agent
+    /// roster of a `bree ssh` machine) through the same relay-backed delivery
     /// lane as `agent.hook.enqueue`, routed to the local pane showing it.
     /// - Returns: `false` when the socket is not listening, the event is
     ///   invalid for queued delivery, or the queue is full.
@@ -518,10 +518,10 @@ class TerminalController {
         let socketPathMarkerStore = SocketPathMarkerStore(
             bundleIdentifier: socketMarkerBundleIdentifier,
             environment: socketMarkerEnvironment,
-            stateDirectory: CmuxStateDirectory.url(
+            stateDirectory: BreeStateDirectory.url(
                 homeDirectory: socketMarkerFileManager.homeDirectoryForCurrentUser
             ),
-            legacyDirectory: CmuxStateDirectory.legacyApplicationSupportURL(
+            legacyDirectory: BreeStateDirectory.legacyApplicationSupportURL(
                 fileManager: socketMarkerFileManager
             ),
             tmpMarkerPath: socketMarkerVariant.tmpPath,
@@ -655,7 +655,7 @@ class TerminalController {
         // calls, but their default is deliberately focus-neutral. A task-local
         // override lets an action opt into focus without weakening the normal
         // command policy for user and external CLI traffic.
-        if let automationOverride = CmuxAutomationInvocationContext.focusAllowed {
+        if let automationOverride = BreeAutomationInvocationContext.focusAllowed {
             return automationOverride
         }
         if isV2 {
@@ -1073,7 +1073,7 @@ class TerminalController {
     /// main thread and keeps the connection thread (not the main queue) as
     /// the place the command waits. The hop keeps each reply synchronous with
     /// its effect — the deliberately-synchronous first relay
-    /// `surface.report_tty` (cmux-zsh-integration.zsh `_cmux_report_tty_once`)
+    /// `surface.report_tty` (bree-zsh-integration.zsh `_bree_report_tty_once`)
     /// must see the TTY registration applied before its reply so subsequent
     /// `surface.ports_kick` scans resolve the surface.
     nonisolated static let socketWorkerCoordinatorHopMethods: Set<String> = [
@@ -1427,7 +1427,7 @@ class TerminalController {
                 v2FeedPush(
                     params: request.params,
                     requiresIngestionAcknowledgment: request.id != nil,
-                    automationOrigin: CmuxAutomationInvocationContext.eventOrigin
+                    automationOrigin: BreeAutomationInvocationContext.eventOrigin
                 )
             )
         case "feed.permission.reply":
@@ -1895,7 +1895,7 @@ class TerminalController {
             }
             // Recheck after admission so a policy refresh cannot cross into execution.
             guard socketAuthorizationIsCurrent(authorizationGeneration, passwordAuthorization: &passwordAuthorization) else { _ = await writer.writeAll(Data((Self.socketClientAccessDeniedResponse + "\n").utf8)); return }
-            // Only a process in cmux's own descendant tree may attach the
+            // Only a process in bree's own descendant tree may attach the
             // internal automation envelope. Same-UID clients are authorized
             // for ordinary automation RPCs, but cannot forge a rule chain.
             let parsedCommandEnvelope = Self.automationCommandEnvelope(from: authorizedCommand)
@@ -1932,8 +1932,8 @@ class TerminalController {
                 return
             }
 
-            let result = await CmuxAutomationInvocationContext.$remoteClientPid.withValue(pid) {
-                await CmuxAutomationInvocationContext.$eventOrigin.withValue(commandOrigin) {
+            let result = await BreeAutomationInvocationContext.$remoteClientPid.withValue(pid) {
+                await BreeAutomationInvocationContext.$eventOrigin.withValue(commandOrigin) {
                     await processSocketLineAsync(
                         trimmed,
                         passwordAuthorization: passwordAuthorization,
@@ -1944,7 +1944,7 @@ class TerminalController {
             passwordAuthorization = result.passwordAuthorization
             if let response = result.response {
                 guard await writer.writeAll(Data((response + "\n").utf8)) else { return }
-                CmuxAutomationInvocationContext.$eventOrigin.withValue(commandOrigin) {
+                BreeAutomationInvocationContext.$eventOrigin.withValue(commandOrigin) {
                     publishSocketEvents(command: trimmed, response: response)
                 }
             }
@@ -2220,10 +2220,10 @@ class TerminalController {
     }
 
     private nonisolated static func debugLogSocketCommand(_ message: @autoclosure () -> String) {
-        cmuxDebugLog(message())
+        breeDebugLog(message())
     }
 
-    private nonisolated static let socketCommandMainHopAccumulatorKey = "cmux.socketCommandMainHopAccumulator"
+    private nonisolated static let socketCommandMainHopAccumulatorKey = "bree.socketCommandMainHopAccumulator"
 
     /// Installs a fresh per-command main-hop accumulator on the current
     /// (socket worker) thread. Called once per socket line so the totals in
@@ -2257,11 +2257,11 @@ class TerminalController {
     @discardableResult
     nonisolated static func noteRemoteActionIfSocketClient(_ request: ControlRequest) -> Bool {
         guard RemoteActionKind.kind(forMethod: request.method) != nil else { return false }
-        guard let pid = CmuxAutomationInvocationContext.remoteClientPid else {
-            cmuxDebugLog("remoteToast.skip method=\(request.method) reason=noSocketClient")
+        guard let pid = BreeAutomationInvocationContext.remoteClientPid else {
+            breeDebugLog("remoteToast.skip method=\(request.method) reason=noSocketClient")
             return false
         }
-        cmuxDebugLog("remoteToast.note method=\(request.method) pid=\(pid)")
+        breeDebugLog("remoteToast.note method=\(request.method) pid=\(pid)")
         RemoteActionToastPresenter.noteSocketAction(
             method: request.method,
             workspaceId: request.params["workspace_id"]?.foundationObject as? String,
@@ -2292,7 +2292,7 @@ class TerminalController {
                 return errorResponse
             }
             let request = relayAuthorization.request
-            let automationOrigin = CmuxAutomationInvocationContext.eventOrigin
+            let automationOrigin = BreeAutomationInvocationContext.eventOrigin
             Self.noteRemoteActionIfSocketClient(request)
             if let focusError = Self.focusSuppressionResponse(
                 method: request.method,
@@ -2314,7 +2314,7 @@ class TerminalController {
                         message: "\(request.method) must run off the main thread"
                     )
                 }
-                return CmuxAutomationInvocationContext.$eventOrigin.withValue(automationOrigin) {
+                return BreeAutomationInvocationContext.$eventOrigin.withValue(automationOrigin) {
                     v2BrowserKeyboardNativeResponseSync(
                         request: request,
                         event: event,
@@ -2330,11 +2330,11 @@ class TerminalController {
                 )
             }
             if policy.runsOnSocketWorker {
-                return CmuxAutomationInvocationContext.$eventOrigin.withValue(automationOrigin) {
+                return BreeAutomationInvocationContext.$eventOrigin.withValue(automationOrigin) {
                     socketWorkerV2Response(handling: request)
                 }
             }
-            return CmuxAutomationInvocationContext.$eventOrigin.withValue(automationOrigin) {
+            return BreeAutomationInvocationContext.$eventOrigin.withValue(automationOrigin) {
                 processParsedV2Command(request)
             }
         }
@@ -2390,7 +2390,7 @@ class TerminalController {
 
         let policyParams = cmd == "right_sidebar" ? ["args": args] : [:]
         return withSocketCommandPolicy(commandKey: cmd, isV2: false, params: policyParams) {
-            // V1 domains migrated into CmuxControlSocket's ControlCommandCoordinator
+            // V1 domains migrated into BreeControlSocket's ControlCommandCoordinator
             // (the sidebar metadata/pane/surface commands and the browser panel
             // commands) answer here; everything else falls through to the legacy
             // switch below.
@@ -2403,7 +2403,7 @@ class TerminalController {
         case "ping":
             return "PONG"
 
-        // Completion popup shell reports (cmux shell integrations): the shell
+        // Completion popup shell reports (bree shell integrations): the shell
         // announces the hidden completion widget once, then answers each
         // private-key request with its line buffer.
         case "report_completion_ready":
@@ -2610,8 +2610,8 @@ class TerminalController {
         case .failure(let parseError):
             return Self.v2Encoder.response(for: parseError)
         case .success(let request):
-            return CmuxAutomationInvocationContext.$eventOrigin.withValue(
-                CmuxAutomationInvocationContext.eventOrigin
+            return BreeAutomationInvocationContext.$eventOrigin.withValue(
+                BreeAutomationInvocationContext.eventOrigin
             ) {
                 processParsedV2Command(request)
             }
@@ -2705,7 +2705,7 @@ class TerminalController {
     ) -> V2MainHopOutcome {
         v2RefreshKnownRefs()
 
-        // Domains migrated into CmuxControlSocket's ControlCommandCoordinator
+        // Domains migrated into BreeControlSocket's ControlCommandCoordinator
         // answer here, on the main actor, through the same encoder/id as the
         // legacy switch (the worker encodes the typed result after the hop);
         // everything else falls through to the legacy switch below.
@@ -3331,7 +3331,7 @@ class TerminalController {
             return item
         }
 
-        let webContentPID = CmuxWebContentProcessIdentifier.pid(for: browserPanel.webView)
+        let webContentPID = BreeWebContentProcessIdentifier.pid(for: browserPanel.webView)
         let url = browserPanel.currentURL?.absoluteString ?? ""
         item["url"] = url
         item["browser_web_content_pid"] = v2OrNull(webContentPID)
@@ -4101,7 +4101,7 @@ class TerminalController {
     /// Resolves the workspace by `workspace_id` / surface / pane, falling back to the
     /// selected workspace only when no explicit target is supplied, and returns the
     /// raw configured set. An explicit-but-unresolvable target errors. Secret masking is a
-    /// CLI presentation concern (`cmux workspace env --mask`): the local control
+    /// CLI presentation concern (`bree workspace env --mask`): the local control
     /// socket already exposes the surrounding workspace state, so values are returned
     /// verbatim and the env set is deliberately kept out of `workspace.list` so a
     /// plain listing never echoes secrets.
@@ -4839,7 +4839,7 @@ class TerminalController {
                     return (match.element.windowId, match.offset)
                 }
                 guard let raw = window.identifier?.rawValue else { return (nil, nil) }
-                let prefix = "cmux.main."
+                let prefix = "bree.main."
                 guard raw.hasPrefix(prefix),
                       let parsedWindowId = UUID(uuidString: String(raw.dropFirst(prefix.count))) else {
                     return (nil, nil)
@@ -5120,7 +5120,7 @@ class TerminalController {
         guard surface.liveSurfaceForGhosttyAccess(reason: "socket.readTerminalText.start") == nil else {
             return false
         }
-        // A restore awaiting admission starts by itself once cmux knows which
+        // A restore awaiting admission starts by itself once bree knows which
         // agent session to resume, so wait for it. Hibernated and closing
         // terminals never start without outside action; report them now.
         if surface.runtimeUnavailableReason == .awaitingRestore {
@@ -5393,7 +5393,7 @@ class TerminalController {
             return ok
         }
         #if DEBUG
-        cmuxDebugLog("vtExport action=\(bindingAction) succeeded=\(actionSucceeded) hasPath=\(exportedPath != nil)")
+        breeDebugLog("vtExport action=\(bindingAction) succeeded=\(actionSucceeded) hasPath=\(exportedPath != nil)")
         #endif
         guard let exportedPath = Self.normalizedExportedScreenPath(exportedPath) else {
             return nil
@@ -5513,7 +5513,7 @@ class TerminalController {
     private nonisolated func v2FeedPush(
         params: [String: Any],
         requiresIngestionAcknowledgment: Bool,
-        automationOrigin: CmuxAutomationEventOrigin? = nil
+        automationOrigin: BreeAutomationEventOrigin? = nil
     ) -> V2CallResult {
         let waitTimeout: TimeInterval
         if let rawTimeout = params["wait_timeout_seconds"] {
@@ -5954,7 +5954,7 @@ class TerminalController {
 
         guard let outcome else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.jsRun.timeout preferAsync=\(preferAsync) " +
                 "world=\(world == .page ? "page" : "isolated") timeout=\(timeoutSeconds)"
             )
@@ -5977,7 +5977,7 @@ class TerminalController {
         let timeout = Double(timeoutMs) / 1000.0
         let waitScript = """
         (() => {
-          const __cmuxEvaluate = () => {
+          const __breeEvaluate = () => {
             try {
               return !!(\(conditionScript));
             } catch (_) {
@@ -5985,7 +5985,7 @@ class TerminalController {
             }
           };
 
-          if (__cmuxEvaluate()) {
+          if (__breeEvaluate()) {
             return true;
           }
 
@@ -6003,7 +6003,7 @@ class TerminalController {
               resolve(value);
             };
             const recheck = () => {
-              if (__cmuxEvaluate()) {
+              if (__breeEvaluate()) {
                 finish(true);
               }
             };
@@ -6136,7 +6136,7 @@ class TerminalController {
             readinessTask?.cancel()
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.jsCommit surface=\(surfaceId.uuidString.prefix(5)) " +
             "outcome=\(String(describing: outcome)) url=\(v2MainSync { webView.url?.absoluteString ?? "nil" })"
         )
@@ -6409,7 +6409,7 @@ class TerminalController {
         let policy = BrowserURLAllowlistPolicy(defaults: .standard)
         // Only local file documents use the trusted seam here. Other
         // user-supplied schemes (including data/blob/javascript) stay on the
-        // ordinary allowlist path; cmux-owned document schemes already pass it.
+        // ordinary allowlist path; bree-owned document schemes already pass it.
         let allowsURL = url.isFileURL
             ? policy.allowsTrustedInternalURL(url)
             : policy.allows(url)
@@ -6462,7 +6462,7 @@ class TerminalController {
     }
 
     // Internal (not private): `CloudTreeService.openDesktop/openPort` open the same browser
-    // split the socket verb does, so the sidebar, `cmux vm desktop`, and `cmux vm open` share
+    // split the socket verb does, so the sidebar, `bree vm desktop`, and `bree vm open` share
     // one path.
     func v2BrowserOpenSplit(
         params: [String: Any],
@@ -6488,7 +6488,7 @@ class TerminalController {
                 url = navigable
             } else if let parsed = URL(string: trimmedURLStr), parsed.scheme != nil {
                 // Preserve any real-scheme URL the navigable resolver rejects: about:blank,
-                // the trusted cmux-diff-viewer:// scheme, and external app/deep-link schemes
+                // the trusted bree-diff-viewer:// scheme, and external app/deep-link schemes
                 // (mailto:, xcode://, ...). The downstream browser-disabled, external-open, and
                 // diff-viewer-registration paths act on the original URL; only scheme-less,
                 // non-navigable input should fall through to a search query.
@@ -7618,7 +7618,7 @@ class TerminalController {
               if (!el) return { ok: false, error: 'not_found' };
               if (el.disabled) return { ok: false, error: 'disabled' };
               el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-              __cmuxClick(el);
+              __breeClick(el);
               return { ok: true };
             })()
             """
@@ -7634,10 +7634,10 @@ class TerminalController {
               if (!el) return { ok: false, error: 'not_found' };
               if (el.disabled) return { ok: false, error: 'disabled' };
               el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-              __cmuxClick(el);
-              __cmuxClick(el);
-              const c = __cmuxCenter(el);
-              __cmuxMouse(el, 'dblclick', c, 0, 2);
+              __breeClick(el);
+              __breeClick(el);
+              const c = __breeCenter(el);
+              __breeMouse(el, 'dblclick', c, 0, 2);
               return { ok: true };
             })()
             """
@@ -7652,7 +7652,7 @@ class TerminalController {
               const el = document.querySelector(\(selectorLiteral));
               if (!el) return { ok: false, error: 'not_found' };
               el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-              __cmuxHover(el);
+              __breeHover(el);
               return { ok: true };
             })()
             """
@@ -7699,26 +7699,26 @@ class TerminalController {
     /// mouse sequence (not just `click`) or need legacy KeyboardEvent fields (keyCode/which/code).
     /// These helpers reproduce a real user gesture so React, Vue, Svelte, Angular, Solid, and
     /// vanilla handlers all fire. Define them once at the top of an injected snippet, then call
-    /// `__cmuxClick(el)`, `__cmuxHover(el)`, or `__cmuxSetChecked(el, desired)`.
+    /// `__breeClick(el)`, `__breeHover(el)`, or `__breeSetChecked(el, desired)`.
     private nonisolated static let browserInputHelpers = """
-    function __cmuxCenter(el){const r=el.getBoundingClientRect();return {x:Math.floor(r.left+Math.min(r.width,r.width/2)),y:Math.floor(r.top+Math.min(r.height,r.height/2))};}
-    function __cmuxPointer(el,type,c,buttons,bubbles){try{el.dispatchEvent(new PointerEvent(type,{bubbles:(bubbles===false?false:true),cancelable:true,composed:true,view:window,pointerId:1,pointerType:'mouse',isPrimary:true,button:0,buttons:buttons,clientX:c.x,clientY:c.y,screenX:c.x,screenY:c.y}));}catch(e){}}
-    function __cmuxMouse(el,type,c,buttons,detail,bubbles){el.dispatchEvent(new MouseEvent(type,{bubbles:(bubbles===false?false:true),cancelable:true,composed:true,view:window,button:0,buttons:buttons,detail:detail||0,clientX:c.x,clientY:c.y,screenX:c.x,screenY:c.y}));}
-    function __cmuxClick(el){const c=__cmuxCenter(el);
-      __cmuxPointer(el,'pointerover',c,0);__cmuxMouse(el,'mouseover',c,0);
-      __cmuxPointer(el,'pointerenter',c,0,false);__cmuxMouse(el,'mouseenter',c,0,0,false);
-      __cmuxPointer(el,'pointermove',c,0);__cmuxMouse(el,'mousemove',c,0);
-      __cmuxPointer(el,'pointerdown',c,1);__cmuxMouse(el,'mousedown',c,1,1);
+    function __breeCenter(el){const r=el.getBoundingClientRect();return {x:Math.floor(r.left+Math.min(r.width,r.width/2)),y:Math.floor(r.top+Math.min(r.height,r.height/2))};}
+    function __breePointer(el,type,c,buttons,bubbles){try{el.dispatchEvent(new PointerEvent(type,{bubbles:(bubbles===false?false:true),cancelable:true,composed:true,view:window,pointerId:1,pointerType:'mouse',isPrimary:true,button:0,buttons:buttons,clientX:c.x,clientY:c.y,screenX:c.x,screenY:c.y}));}catch(e){}}
+    function __breeMouse(el,type,c,buttons,detail,bubbles){el.dispatchEvent(new MouseEvent(type,{bubbles:(bubbles===false?false:true),cancelable:true,composed:true,view:window,button:0,buttons:buttons,detail:detail||0,clientX:c.x,clientY:c.y,screenX:c.x,screenY:c.y}));}
+    function __breeClick(el){const c=__breeCenter(el);
+      __breePointer(el,'pointerover',c,0);__breeMouse(el,'mouseover',c,0);
+      __breePointer(el,'pointerenter',c,0,false);__breeMouse(el,'mouseenter',c,0,0,false);
+      __breePointer(el,'pointermove',c,0);__breeMouse(el,'mousemove',c,0);
+      __breePointer(el,'pointerdown',c,1);__breeMouse(el,'mousedown',c,1,1);
       if(typeof el.focus==='function'){try{el.focus({preventScroll:true});}catch(e){try{el.focus();}catch(e2){}}}
-      __cmuxPointer(el,'pointerup',c,0);__cmuxMouse(el,'mouseup',c,0,1);
-      if(typeof el.click==='function'){el.click();}else{__cmuxMouse(el,'click',c,0,1);}
+      __breePointer(el,'pointerup',c,0);__breeMouse(el,'mouseup',c,0,1);
+      if(typeof el.click==='function'){el.click();}else{__breeMouse(el,'click',c,0,1);}
     }
-    function __cmuxHover(el){const c=__cmuxCenter(el);
-      __cmuxPointer(el,'pointerover',c,0);__cmuxMouse(el,'mouseover',c,0);
-      __cmuxPointer(el,'pointerenter',c,0,false);__cmuxMouse(el,'mouseenter',c,0,0,false);
-      __cmuxPointer(el,'pointermove',c,0);__cmuxMouse(el,'mousemove',c,0);
+    function __breeHover(el){const c=__breeCenter(el);
+      __breePointer(el,'pointerover',c,0);__breeMouse(el,'mouseover',c,0);
+      __breePointer(el,'pointerenter',c,0,false);__breeMouse(el,'mouseenter',c,0,0,false);
+      __breePointer(el,'pointermove',c,0);__breeMouse(el,'mousemove',c,0);
     }
-    function __cmuxSetChecked(el,desired){
+    function __breeSetChecked(el,desired){
       // A click event runs the checkbox/radio activation behavior (it TOGGLES a checkbox / SELECTS a
       // radio) even when dispatched, and is also what React maps onChange to. So the correct way to
       // reach a target state is to click only when it differs; that fires input + change + (React)
@@ -7738,7 +7738,7 @@ class TerminalController {
         return;
       }
       if(typeof el.click==='function'){el.click();}
-      else {const c=__cmuxCenter(el); __cmuxMouse(el,'click',c,0,1);}
+      else {const c=__breeCenter(el); __breeMouse(el,'click',c,0,1);}
     }
     """
 
@@ -7978,7 +7978,7 @@ class TerminalController {
               if (el.disabled) return { ok: false, error: 'disabled' };
               el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
               if (typeof el.focus === 'function') { try { el.focus({ preventScroll: true }); } catch (e) {} }
-              __cmuxSetChecked(el, \(checked ? "true" : "false"));
+              __breeSetChecked(el, \(checked ? "true" : "false"));
               if (el.checked !== \(checked ? "true" : "false")) return { ok: false, error: 'not_changed' };
               return { ok: true };
             })()
@@ -8147,7 +8147,7 @@ class TerminalController {
 
         // Best effort: keep screenshot data available even when temp-file writes fail.
         let screenshotsDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cmux-browser-screenshots", isDirectory: true)
+            .appendingPathComponent("bree-browser-screenshots", isDirectory: true)
         if (try? FileManager.default.createDirectory(at: screenshotsDirectory, withIntermediateDirectories: true)) != nil {
             bestEffortPruneTemporaryFiles(in: screenshotsDirectory)
             let timestampMs = Int(Date().timeIntervalSince1970 * 1000)
@@ -9251,19 +9251,19 @@ class TerminalController {
             let textLiteral = text.map(v2JSONLiteral) ?? "null"
             let script = """
             (() => {
-              const q = window.__cmuxDialogQueue || [];
+              const q = window.__breeDialogQueue || [];
               if (!q.length) return { ok: false, error: 'not_found' };
               const entry = q.shift();
               if (entry.type === 'confirm') {
-                window.__cmuxDialogDefaults = window.__cmuxDialogDefaults || { confirm: false, prompt: null };
-                window.__cmuxDialogDefaults.confirm = \(acceptLiteral);
+                window.__breeDialogDefaults = window.__breeDialogDefaults || { confirm: false, prompt: null };
+                window.__breeDialogDefaults.confirm = \(acceptLiteral);
               }
               if (entry.type === 'prompt') {
-                window.__cmuxDialogDefaults = window.__cmuxDialogDefaults || { confirm: false, prompt: null };
+                window.__breeDialogDefaults = window.__breeDialogDefaults || { confirm: false, prompt: null };
                 if (\(acceptLiteral)) {
-                  window.__cmuxDialogDefaults.prompt = \(textLiteral);
+                  window.__breeDialogDefaults.prompt = \(textLiteral);
                 } else {
-                  window.__cmuxDialogDefaults.prompt = null;
+                  window.__breeDialogDefaults.prompt = null;
                 }
               }
               return { ok: true, dialog: entry, remaining: q.length };
@@ -9624,7 +9624,7 @@ class TerminalController {
             semaphore.signal()
         }
 
-        let watcherQueue = DispatchQueue(label: "com.cmux.browser.download.wait.file")
+        let watcherQueue = DispatchQueue(label: "com.bree.browser.download.wait.file")
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
             eventMask: [.write, .extend, .attrib, .link, .rename],
@@ -9974,8 +9974,8 @@ class TerminalController {
                 if all { return true }
                 if let name, cookie.name != name { return false }
                 if let value, cookie.value != value { return false }
-                if let url, !CmuxWebView.cookieMatchesURL(cookie, url: url) { return false }
-                if let domain, !CmuxWebView.cookieDomainMatchesFilter(cookie.domain, filter: domain) { return false }
+                if let url, !BreeWebView.cookieMatchesURL(cookie, url: url) { return false }
+                if let domain, !BreeWebView.cookieDomainMatchesFilter(cookie.domain, filter: domain) { return false }
                 if let path, cookie.path != path { return false }
                 if let expires,
                    cookie.expiresDate.map({ Int($0.timeIntervalSince1970) }) != expires {
@@ -10431,9 +10431,9 @@ class TerminalController {
             let clearLiteral = clear ? "true" : "false"
             let script = """
             (() => {
-              const items = Array.isArray(window.__cmuxConsoleLog) ? window.__cmuxConsoleLog.slice() : [];
+              const items = Array.isArray(window.__breeConsoleLog) ? window.__breeConsoleLog.slice() : [];
               if (\(clearLiteral)) {
-                window.__cmuxConsoleLog = [];
+                window.__breeConsoleLog = [];
               }
               return { ok: true, items };
             })()
@@ -10473,9 +10473,9 @@ class TerminalController {
             let clearLiteral = clear ? "true" : "false"
             let script = """
             (() => {
-              const items = Array.isArray(window.__cmuxErrorLog) ? window.__cmuxErrorLog.slice() : [];
+              const items = Array.isArray(window.__breeErrorLog) ? window.__breeErrorLog.slice() : [];
               if (\(clearLiteral)) {
-                window.__cmuxErrorLog = [];
+                window.__breeErrorLog = [];
               }
               return { ok: true, items };
             })()
@@ -11283,7 +11283,7 @@ class TerminalController {
           focus_pane <pane-id|index>      - Focus a pane
           focus_surface_by_panel <panel_id> - Focus surface by panel ID
           close_surface [id|idx]          - Close surface (collapse split)
-          reload_config                   - Reload Ghostty config, cmux settings, and refresh terminals
+          reload_config                   - Reload Ghostty config, bree settings, and refresh terminals
           refresh_surfaces                - Force refresh all terminals
           surface_health [workspace]      - Check view health of all surfaces
 
@@ -11788,7 +11788,7 @@ class TerminalController {
         case "tabtransfer", "tab-transfer", "com.splittabbar.tabtransfer":
             return DragOverlayRoutingPolicy.bonsplitTabTransferType
         case "sidebarreorder", "sidebar-reorder", "sidebar_tab_reorder",
-            "com.cmux.sidebar-tab-reorder":
+            "com.bree.sidebar-tab-reorder":
             return DragOverlayRoutingPolicy.sidebarTabReorderType
         default:
             // Allow explicit UTI strings for ad-hoc debug probes.
@@ -11815,7 +11815,7 @@ class TerminalController {
                 ?? NSApp.keyWindow
                 ?? NSApp.windows.first(where: { win in
                     guard let raw = win.identifier?.rawValue else { return false }
-                    return raw == "cmux.main" || raw.hasPrefix("cmux.main.")
+                    return raw == "bree.main" || raw.hasPrefix("bree.main.")
                 }),
                   let contentView = window.contentView,
                   let themeFrame = contentView.superview else { return }
@@ -11862,7 +11862,7 @@ class TerminalController {
                 ?? NSApp.keyWindow
                 ?? NSApp.windows.first(where: { win in
                     guard let raw = win.identifier?.rawValue else { return false }
-                    return raw == "cmux.main" || raw.hasPrefix("cmux.main.")
+                    return raw == "bree.main" || raw.hasPrefix("bree.main.")
                 }),
                   let contentView = window.contentView,
                   let themeFrame = contentView.superview else { return }
@@ -12629,7 +12629,7 @@ class TerminalController {
         ) else {
 #if DEBUG
             if let meta {
-                cmuxDebugLog(
+                breeDebugLog(
                     "socket.notifyTargetAsync.gated category=\(meta.category.rawValue) pending=\(meta.pending) workspace=\(tabId.uuidString.prefix(8)) surface=\(surfaceId.uuidString.prefix(8))"
                 )
             }
@@ -12637,7 +12637,7 @@ class TerminalController {
             return "OK"
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "socket.notifyTargetAsync.enqueue workspace=\(tabId.uuidString.prefix(8)) surface=\(surfaceId.uuidString.prefix(8)) titleLen=\(title.count) subtitleLen=\(subtitle.count) bodyLen=\(body.count) coalesces=0"
         )
 #endif
@@ -13059,7 +13059,7 @@ class TerminalController {
         let snapshotId = "\(timestamp)_\(shortId)"
 
         let outputDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cmux-screenshots")
+            .appendingPathComponent("bree-screenshots")
         try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
         let filename = label.isEmpty ? "\(snapshotId).png" : "\(label)_\(snapshotId).png"
         let outputPath = outputDir.appendingPathComponent(filename)
@@ -13464,7 +13464,7 @@ class TerminalController {
             // ("|c=turn-complete;p=<0|1>", "|c=needs-permission;p=<0|1>",
             // "|c=idle-reminder;p=<0|1>") in notify payloads; any other "c=..."
             // tail (unknown categories included) stays part of the body. Accepted
-            // because the only meta producers are cmux's own agent hooks (whose
+            // because the only meta producers are bree's own agent hooks (whose
             // fields are |-sanitized) and a collision requires one of those exact
             // suffixes.
             let candidate = parts[3].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -13949,7 +13949,7 @@ class TerminalController {
         options: [String: String]
     ) -> (target: SidebarMutationTabTarget?, error: String?) {
         // `SidebarMetadataArgumentParser.parseMutationTabTarget` already returns the
-        // `CmuxSidebar.SidebarMutationTabTarget` cases this controller resolves, so
+        // `BreeSidebar.SidebarMutationTabTarget` cases this controller resolves, so
         // forward the parsed target verbatim instead of re-mapping it case-for-case
         // onto a duplicate local enum.
         let resolution = sidebarMetadataArgumentParser.parseMutationTabTarget(options: options)
@@ -14198,10 +14198,10 @@ class TerminalController {
             return true
         }
         guard !AgentHibernationLifecycleStatusKeys.isManualKey(key), let tab = resolveSidebarMutationTab(target),
-              CmuxVaultAgentRegistration.isValidID(key) else {
+              BreeVaultAgentRegistration.isValidID(key) else {
             return false
         }
-        let registry = CmuxVaultAgentRegistry.load(
+        let registry = BreeVaultAgentRegistry.load(
             workingDirectory: agentLifecycleRegistryWorkingDirectory(tab: tab, panelId: panelId)
         )
         return registry.registration(id: key) != nil

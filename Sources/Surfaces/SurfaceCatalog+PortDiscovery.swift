@@ -1,16 +1,16 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension SurfaceCatalog {
     /// Explicit catalog refreshes are user inventory requests, so they opt a
     /// machine into demand-driven port discovery without enabling background polls.
     func requestPortDiscovery(for machine: SurfaceMachineID) {
-        (provider(for: machine) as? CmuxTuiSurfaceProvider)?.requestPortDiscovery()
+        (provider(for: machine) as? BreeTuiSurfaceProvider)?.requestPortDiscovery()
     }
 
     /// User refresh includes the metadata needed to recover a missing private address.
     func refreshPortDiscovery(machine: SurfaceMachineID) async {
-        guard let provider = provider(for: machine) as? CmuxTuiSurfaceProvider else { return }
+        guard let provider = provider(for: machine) as? BreeTuiSurfaceProvider else { return }
         let request = provider.requestPortDiscovery()
         do {
             try await provider.refreshPortMetadata()

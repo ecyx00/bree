@@ -1,7 +1,7 @@
 import Foundation
 
 /// A short name for the config profile an agent launched under, derived from
-/// the replay-safe launch environment cmux already captures
+/// the replay-safe launch environment bree already captures
 /// (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`). Shown in the compact status glyph's
 /// tooltip so sessions under different accounts can be told apart.
 ///

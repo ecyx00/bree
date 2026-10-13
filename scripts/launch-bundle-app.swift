@@ -24,16 +24,16 @@ private struct Options {
 }
 
 // LaunchServices can retain environment values from a different tagged app.
-// Remove every cmux/ghostty runtime override before applying this bundle's
+// Remove every bree/ghostty runtime override before applying this bundle's
 // LSEnvironment, so a launch for tag B cannot inherit tag A's socket.
-private let runtimeEnvironmentPrefixes = ["CMUX_", "GHOSTTY_"]
+private let runtimeEnvironmentPrefixes = ["BREE_", "GHOSTTY_"]
 
 private func launchEnvironment(for appURL: URL) -> [String: String] {
     var environment = ProcessInfo.processInfo.environment
     for key in environment.keys where runtimeEnvironmentPrefixes.contains(where: key.hasPrefix) {
         environment.removeValue(forKey: key)
     }
-    environment.removeValue(forKey: "CMUXD_UNIX_PATH")
+    environment.removeValue(forKey: "BREED_UNIX_PATH")
 
     if let bundle = Bundle(url: appURL),
        let launchEnvironment = bundle.infoDictionary?["LSEnvironment"] as? [String: Any] {

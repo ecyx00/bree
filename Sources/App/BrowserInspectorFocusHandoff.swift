@@ -1,25 +1,25 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import WebKit
 
 @MainActor
 extension AppDelegate {
-    func browserInspectorOwningWebView(for responder: NSResponder?, in window: NSWindow, event: NSEvent?) -> CmuxWebView? {
-        guard cmuxIsLikelyWebInspectorResponder(responder) else { return nil }
+    func browserInspectorOwningWebView(for responder: NSResponder?, in window: NSWindow, event: NSEvent?) -> BreeWebView? {
+        guard breeIsLikelyWebInspectorResponder(responder) else { return nil }
         guard let event,
               WindowInputRoutingContext(event: event).allowsFirstResponderHitTesting,
               browserInspectorPointerEventTargets(event, window) else {
             return nil
         }
         if let webView = BrowserWindowPortalRegistry.webViewAtWindowPoint(event.locationInWindow, in: window)
-            as? CmuxWebView {
+            as? BreeWebView {
             return webView
         }
         guard let responder else { return nil }
         guard let browserPanel = browserPanelOwningInspectorResponder(responder) else {
             return nil
         }
-        return browserPanel.webView as? CmuxWebView
+        return browserPanel.webView as? BreeWebView
     }
 
     func postBrowserInspectorClickIntentIfNeeded(for responder: NSResponder?, in window: NSWindow, event: NSEvent?) {
@@ -29,7 +29,7 @@ extension AppDelegate {
 
     func browserPanelOwningInspectorResponder(_ responder: NSResponder) -> BrowserPanel? {
         for browserPanel in allLiveBrowserPanels() {
-            guard let frontendWebView = browserPanel.webView.cmuxInspectorFrontendWebView(),
+            guard let frontendWebView = browserPanel.webView.breeInspectorFrontendWebView(),
                   browserInspectorResponder(responder, belongsTo: frontendWebView) else {
                 continue
             }

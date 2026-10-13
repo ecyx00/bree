@@ -1,4 +1,4 @@
-import CmuxSettingsUI
+import BreeSettingsUI
 import Foundation
 
 /// Narrow auth surface consumed by the in-pane sign-in model.

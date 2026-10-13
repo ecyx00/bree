@@ -1,22 +1,22 @@
-import CmuxCloud
+import BreeCloud
 import Foundation
-import CMUXMobileCore
-import CmuxCore
-import CmuxBrowser
-import CmuxFoundation
-import CmuxSettings
+import BREEMobileCore
+import BreeCore
+import BreeBrowser
+import BreeFoundation
+import BreeSettings
 import Combine
-import CmuxAppKitSupportUI
+import BreeAppKitSupportUI
 import WebKit
 import AppKit
 import Bonsplit
-import CmuxTerminalCore
+import BreeTerminalCore
 import Network
 import CFNetwork
 import SQLite3
 import CryptoKit
 import Darwin
-import CmuxTerminal
+import BreeTerminal
 #if canImport(CommonCrypto)
 import CommonCrypto
 #endif
@@ -305,10 +305,10 @@ enum BrowserImportHintSettings {
 }
 
 // `BrowserProfileDefinition` and `BrowserProfileClearOutcome` now live in the
-// `CmuxBrowser` package (imported above); the call sites reference them
+// `BreeBrowser` package (imported above); the call sites reference them
 // unqualified through that import.
 
-// Adapts `BrowserHistoryStore` to the `CmuxBrowser` history seams so the
+// Adapts `BrowserHistoryStore` to the `BreeBrowser` history seams so the
 // profile repository can manage per-profile history stores without depending on
 // the app-target `BrowserHistoryStore` type.
 extension BrowserHistoryStore: BrowserProfileHistoryStore {}
@@ -334,7 +334,7 @@ private final class BrowserProfileHistoryAdapter: BrowserProfileHistoryProviding
     }
 }
 
-// Adapts WebKit's `WKWebsiteDataStore` to the `CmuxBrowser` data-store
+// Adapts WebKit's `WKWebsiteDataStore` to the `BreeBrowser` data-store
 // seam, mapping the built-in default profile to the default store and bridging
 // the legacy completion-handler wipe to `async`/`await` at this one boundary.
 @MainActor
@@ -383,7 +383,7 @@ final class BrowserProfileStore: ObservableObject {
             historyProvider: BrowserProfileHistoryAdapter(),
             websiteDataStoreProvider: BrowserProfileWebsiteDataStoreAdapter(),
             fileRemover: BrowserProfileFileRemover(),
-            bundleIdentifier: Bundle.main.bundleIdentifier ?? "cmux",
+            bundleIdentifier: Bundle.main.bundleIdentifier ?? "bree",
             defaultProfileDisplayName: String(localized: "browser.profile.default", defaultValue: "Default")
         )
         mirrorPublishedState()
@@ -467,51 +467,51 @@ final class BrowserProfileStore: ObservableObject {
 }
 
 enum BrowserLinkOpenSettings {
-    static let openTerminalLinksInCmuxBrowserKey = "browserOpenTerminalLinksInCmuxBrowser"
-    static let defaultOpenTerminalLinksInCmuxBrowser: Bool = true
+    static let openTerminalLinksInBreeBrowserKey = "browserOpenTerminalLinksInBreeBrowser"
+    static let defaultOpenTerminalLinksInBreeBrowser: Bool = true
 
-    static let openSidebarPortLinksInCmuxBrowserKey = "browserOpenSidebarPortLinksInCmuxBrowser"
-    static let defaultOpenSidebarPortLinksInCmuxBrowser: Bool = true
+    static let openSidebarPortLinksInBreeBrowserKey = "browserOpenSidebarPortLinksInBreeBrowser"
+    static let defaultOpenSidebarPortLinksInBreeBrowser: Bool = true
 
-    static let interceptTerminalOpenCommandInCmuxBrowserKey = "browserInterceptTerminalOpenCommandInCmuxBrowser"
-    static let defaultInterceptTerminalOpenCommandInCmuxBrowser: Bool = true
+    static let interceptTerminalOpenCommandInBreeBrowserKey = "browserInterceptTerminalOpenCommandInBreeBrowser"
+    static let defaultInterceptTerminalOpenCommandInBreeBrowser: Bool = true
 
     static let browserHostWhitelistKey = "browserHostWhitelist"
     static let defaultBrowserHostWhitelist: String = ""
     static let browserExternalOpenPatternsKey = BrowserExternalURLPolicy.userDefaultsKey
 
-    static func openTerminalLinksInCmuxBrowser(defaults: UserDefaults = .standard) -> Bool {
+    static func openTerminalLinksInBreeBrowser(defaults: UserDefaults = .standard) -> Bool {
         guard BrowserAvailabilitySettings.isEnabled(defaults: defaults) else { return false }
-        if defaults.object(forKey: openTerminalLinksInCmuxBrowserKey) == nil {
-            return defaultOpenTerminalLinksInCmuxBrowser
+        if defaults.object(forKey: openTerminalLinksInBreeBrowserKey) == nil {
+            return defaultOpenTerminalLinksInBreeBrowser
         }
-        return defaults.bool(forKey: openTerminalLinksInCmuxBrowserKey)
+        return defaults.bool(forKey: openTerminalLinksInBreeBrowserKey)
     }
 
-    static func openSidebarPortLinksInCmuxBrowser(defaults: UserDefaults = .standard) -> Bool {
+    static func openSidebarPortLinksInBreeBrowser(defaults: UserDefaults = .standard) -> Bool {
         guard BrowserAvailabilitySettings.isEnabled(defaults: defaults) else { return false }
-        if defaults.object(forKey: openSidebarPortLinksInCmuxBrowserKey) == nil {
-            return defaultOpenSidebarPortLinksInCmuxBrowser
+        if defaults.object(forKey: openSidebarPortLinksInBreeBrowserKey) == nil {
+            return defaultOpenSidebarPortLinksInBreeBrowser
         }
-        return defaults.bool(forKey: openSidebarPortLinksInCmuxBrowserKey)
+        return defaults.bool(forKey: openSidebarPortLinksInBreeBrowserKey)
     }
 
-    static func interceptTerminalOpenCommandInCmuxBrowser(defaults: UserDefaults = .standard) -> Bool {
+    static func interceptTerminalOpenCommandInBreeBrowser(defaults: UserDefaults = .standard) -> Bool {
         guard BrowserAvailabilitySettings.isEnabled(defaults: defaults) else { return false }
-        if defaults.object(forKey: interceptTerminalOpenCommandInCmuxBrowserKey) != nil {
-            return defaults.bool(forKey: interceptTerminalOpenCommandInCmuxBrowserKey)
+        if defaults.object(forKey: interceptTerminalOpenCommandInBreeBrowserKey) != nil {
+            return defaults.bool(forKey: interceptTerminalOpenCommandInBreeBrowserKey)
         }
 
         // Migrate existing behavior for users who only had the link-click toggle.
-        if defaults.object(forKey: openTerminalLinksInCmuxBrowserKey) != nil {
-            return defaults.bool(forKey: openTerminalLinksInCmuxBrowserKey)
+        if defaults.object(forKey: openTerminalLinksInBreeBrowserKey) != nil {
+            return defaults.bool(forKey: openTerminalLinksInBreeBrowserKey)
         }
 
-        return defaultInterceptTerminalOpenCommandInCmuxBrowser
+        return defaultInterceptTerminalOpenCommandInBreeBrowser
     }
 
-    static func initialInterceptTerminalOpenCommandInCmuxBrowserValue(defaults: UserDefaults = .standard) -> Bool {
-        interceptTerminalOpenCommandInCmuxBrowser(defaults: defaults)
+    static func initialInterceptTerminalOpenCommandInBreeBrowserValue(defaults: UserDefaults = .standard) -> Bool {
+        interceptTerminalOpenCommandInBreeBrowser(defaults: defaults)
     }
 
     static func hostWhitelist(defaults: UserDefaults = .standard) -> [String] {
@@ -565,7 +565,7 @@ enum BrowserLinkOpenSettings {
 
 enum BrowserAvailabilitySettings {
     static let disabledKey = "browserDisabledOverride"
-    static let didChangeNotification = Notification.Name("cmux.browserAvailabilityDidChange")
+    static let didChangeNotification = Notification.Name("bree.browserAvailabilityDidChange")
     static let defaultDisabled = false
 
     static func isDisabled(defaults: UserDefaults = .standard) -> Bool {
@@ -629,7 +629,7 @@ final class BrowserAvailabilityMonitor {
 
     /// Posted only when the resolved availability differs from the last value.
     static let didChangeNotification = Notification.Name(
-        "cmux.browserAvailabilityMonitorDidChange"
+        "bree.browserAvailabilityMonitorDidChange"
     )
 
     private(set) var isEnabled: Bool
@@ -708,7 +708,7 @@ enum BrowserInsecureHTTPSettings {
         // Private-network addresses skip the warning outright: the modal's
         // rationale — "traffic can be read or modified on the network" — is
         // about the public Internet, and traffic to these ranges never crosses
-        // it. cmux Cloud machines live here (their VPC addresses, reached
+        // it. bree Cloud machines live here (their VPC addresses, reached
         // through the user's WireGuard tunnel, which encrypts the path anyway),
         // so warning on every http://10.x panel would train people to click
         // through the one dialog that matters on public sites.
@@ -720,7 +720,7 @@ enum BrowserInsecureHTTPSettings {
 
     /// Whether the (normalized) host is a literal address in a range that is
     /// not publicly routable: RFC 1918 IPv4, IPv4 link-local, IPv6 unique-local
-    /// (`fc00::/7` — cmux VPC addresses are here) and IPv6 link-local. Names
+    /// (`fc00::/7` — bree VPC addresses are here) and IPv6 link-local. Names
     /// are never matched — only literals, so DNS can't smuggle a public host in.
     static func isPrivateNetworkHost(_ normalizedHost: String) -> Bool {
         // IPv6 literal (normalizeHost strips brackets and lowercases).
@@ -756,7 +756,7 @@ enum BrowserInsecureHTTPSettings {
         defaults.set(patterns.joined(separator: "\n"), forKey: allowlistKey)
     }
 
-    // Single source of truth: the host normalizer moved to CmuxCore with the
+    // Single source of truth: the host normalizer moved to BreeCore with the
     // loopback alias lift; this forwards so allowlist semantics stay identical.
     static func normalizeHost(_ rawHost: String) -> String? {
         RemoteLoopbackProxyAlias.normalizeHost(rawHost)
@@ -833,10 +833,10 @@ enum BrowserFileSystemAccessBridge {
       if (typeof window.showOpenFilePicker === "function") {
         return true;
       }
-      if (window.__cmuxFileSystemAccessBridgeInstalled) {
+      if (window.__breeFileSystemAccessBridgeInstalled) {
         return true;
       }
-      window.__cmuxFileSystemAccessBridgeInstalled = true;
+      window.__breeFileSystemAccessBridgeInstalled = true;
 
       const makeDOMException = (name, message) => {
         try {
@@ -1077,9 +1077,9 @@ func browserLoadRequest(
         guard policy.allowsTrustedInternalURL(url) else {
             return nil
         }
-        if let cmuxWebView = webView as? CmuxWebView,
+        if let breeWebView = webView as? BreeWebView,
            BrowserURLAllowlistPolicy.trustedInternalSchemes.contains(url.scheme?.lowercased() ?? "") {
-            cmuxWebView.markTrustedInternalNavigation(url)
+            breeWebView.markTrustedInternalNavigation(url)
         }
     }
     webView.applyBrowserUserAgentPolicy(for: url)
@@ -1097,7 +1097,7 @@ private let browserEmbeddedNavigationSchemes: Set<String> = [
     "about",
     "applewebdata",
     "blob",
-    "cmux-diff-viewer",
+    "bree-diff-viewer",
     "data",
     "file",
     "http",
@@ -1262,7 +1262,7 @@ private func browserOpenExternalNavigationURL(
         browserPresentExternalNavigationFailure(for: url, in: webView, presentAlert: presentAlert)
     }
 #if DEBUG
-    cmuxDebugLog(
+    breeDebugLog(
         "browser.navigation.external source=\(source) opened=\(opened ? 1 : 0) " +
         "url=\(browserNavigationDebugURL(url))"
     )
@@ -1286,7 +1286,7 @@ func browserHandleExternalNavigation(
         let request = URLRequest(url: fallbackURL)
         loadFallbackRequest(request)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.navigation.external source=\(source) opened=1 fallback=1 " +
             "fallbackURL=\(browserNavigationDebugURL(fallbackURL)) url=\(browserNavigationDebugURL(url))"
         )
@@ -1300,7 +1300,7 @@ func browserHandleExternalNavigation(
             completion: { shouldOpenApp in
                 guard shouldOpenApp else {
 #if DEBUG
-                    cmuxDebugLog(
+                    breeDebugLog(
                         "browser.navigation.external source=\(source) opened=0 prompt=1 allowed=0 " +
                         "url=\(browserNavigationDebugURL(externalURL))"
                     )
@@ -1327,10 +1327,10 @@ func normalizedBrowserHistoryNamespace(bundleIdentifier: String) -> String {
 
 func browserIsTemporaryHistoryURL(_ url: URL?) -> Bool {
     guard let url else { return false }
-    if url.scheme?.lowercased() == CmuxDiffViewerURLSchemeHandler.scheme {
+    if url.scheme?.lowercased() == BreeDiffViewerURLSchemeHandler.scheme {
         return true
     }
-    guard url.fragment == "cmux-diff-viewer",
+    guard url.fragment == "bree-diff-viewer",
           url.scheme?.lowercased() == "http",
           let host = url.host else {
         return false
@@ -1346,7 +1346,7 @@ func browserIsTemporaryHistoryURL(_ url: URL?) -> Bool {
 final class BrowserHistoryStore: ObservableObject {
     static let shared = BrowserHistoryStore()
 
-    /// Persisted history record. Owned by `CmuxBrowser`; this alias keeps
+    /// Persisted history record. Owned by `BreeBrowser`; this alias keeps
     /// existing `BrowserHistoryStore.Entry` call sites byte-identical after the
     /// value type moved into the package.
     typealias Entry = BrowserHistoryEntry
@@ -1370,7 +1370,7 @@ final class BrowserHistoryStore: ObservableObject {
     private let saveDebounceNanoseconds: UInt64 = 120_000_000
 
     // Pure suggestion matching/scoring and persistence I/O live in
-    // `CmuxBrowser`; the store owns only the @Published entry list, the
+    // `BreeBrowser`; the store owns only the @Published entry list, the
     // first-load lifecycle, and the debounced-save scheduling.
     private let suggestionEngine = BrowserHistorySuggestionEngine()
     private let fileRepository = BrowserHistoryFileRepository()
@@ -1757,7 +1757,7 @@ final class BrowserHistoryStore: ObservableObject {
         guard let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
             return nil
         }
-        let bundleId = Bundle.main.bundleIdentifier ?? "cmux"
+        let bundleId = Bundle.main.bundleIdentifier ?? "bree"
         return BrowserHistoryLocation(applicationSupportDirectory: appSupport, bundleIdentifier: bundleId)
     }
 
@@ -1797,22 +1797,22 @@ final class BrowserSearchState: ObservableObject {
 @MainActor
 final class BrowserPanel: Panel, ObservableObject {
     /// Identifier of the offscreen window that preloads hidden tabs.
-    static let backgroundPreloadWindowIdentifier = "cmux.browserBackgroundPreload"
+    static let backgroundPreloadWindowIdentifier = "bree.browserBackgroundPreload"
 
     /// Popup windows owned by this panel (for lifecycle cleanup)
     private var popupControllers: [BrowserPopupWindowController] = []
 
     static let telemetryHookBootstrapScriptSource = """
     (() => {
-      if (window.__cmuxHooksInstalled) return true;
-      window.__cmuxHooksInstalled = true;
+      if (window.__breeHooksInstalled) return true;
+      window.__breeHooksInstalled = true;
 
-      window.__cmuxConsoleLog = window.__cmuxConsoleLog || [];
-      // A cmux browser REPL session attached to this tab registers this
+      window.__breeConsoleLog = window.__breeConsoleLog || [];
+      // A bree browser REPL session attached to this tab registers this
       // handler; without one, nothing is posted.
       const __postRepl = (body) => {
         try {
-          const handler = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.cmuxReplConsole;
+          const handler = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.breeReplConsole;
           if (handler) handler.postMessage(body);
         } catch (_) {}
       };
@@ -1822,10 +1822,10 @@ final class BrowserPanel: Panel, ObservableObject {
             if (typeof x === 'string') return x;
             try { return JSON.stringify(x); } catch (_) { return String(x); }
           }).join(' ');
-          window.__cmuxConsoleLog.push({ level, text, timestamp_ms: Date.now() });
+          window.__breeConsoleLog.push({ level, text, timestamp_ms: Date.now() });
           __postRepl({ kind: 'console', type: level === 'warn' ? 'warning' : level, text });
-          if (window.__cmuxConsoleLog.length > 512) {
-            window.__cmuxConsoleLog.splice(0, window.__cmuxConsoleLog.length - 512);
+          if (window.__breeConsoleLog.length > 512) {
+            window.__breeConsoleLog.splice(0, window.__breeConsoleLog.length - 512);
           }
         } catch (_) {}
       };
@@ -1839,18 +1839,18 @@ final class BrowserPanel: Panel, ObservableObject {
         };
       }
 
-      window.__cmuxErrorLog = window.__cmuxErrorLog || [];
+      window.__breeErrorLog = window.__breeErrorLog || [];
       window.addEventListener('error', (ev) => {
         try {
           const message = String((ev && ev.message) || '');
           const source = String((ev && ev.filename) || '');
           const line = Number((ev && ev.lineno) || 0);
           const col = Number((ev && ev.colno) || 0);
-          window.__cmuxErrorLog.push({ message, source, line, column: col, timestamp_ms: Date.now() });
+          window.__breeErrorLog.push({ message, source, line, column: col, timestamp_ms: Date.now() });
           const stack = String((ev && ev.error && ev.error.stack) || '');
           __postRepl({ kind: 'pageerror', message: String((ev && ev.error && ev.error.message) || message).replace(/^Uncaught /, ''), stack });
-          if (window.__cmuxErrorLog.length > 512) {
-            window.__cmuxErrorLog.splice(0, window.__cmuxErrorLog.length - 512);
+          if (window.__breeErrorLog.length > 512) {
+            window.__breeErrorLog.splice(0, window.__breeErrorLog.length - 512);
           }
         } catch (_) {}
       });
@@ -1858,10 +1858,10 @@ final class BrowserPanel: Panel, ObservableObject {
         try {
           const reason = ev && ev.reason;
           const message = typeof reason === 'string' ? reason : (reason && reason.message ? String(reason.message) : String(reason));
-          window.__cmuxErrorLog.push({ message, source: 'unhandledrejection', line: 0, column: 0, timestamp_ms: Date.now() });
+          window.__breeErrorLog.push({ message, source: 'unhandledrejection', line: 0, column: 0, timestamp_ms: Date.now() });
           __postRepl({ kind: 'pageerror', message, stack: String((reason && reason.stack) || '') });
-          if (window.__cmuxErrorLog.length > 512) {
-            window.__cmuxErrorLog.splice(0, window.__cmuxErrorLog.length - 512);
+          if (window.__breeErrorLog.length > 512) {
+            window.__breeErrorLog.splice(0, window.__breeErrorLog.length - 512);
           }
         } catch (_) {}
       });
@@ -1872,20 +1872,20 @@ final class BrowserPanel: Panel, ObservableObject {
 
     static let dialogTelemetryHookBootstrapScriptSource = """
     (() => {
-      if (window.__cmuxDialogHooksInstalled) return true;
-      window.__cmuxDialogHooksInstalled = true;
+      if (window.__breeDialogHooksInstalled) return true;
+      window.__breeDialogHooksInstalled = true;
 
-      window.__cmuxDialogQueue = window.__cmuxDialogQueue || [];
-      window.__cmuxDialogDefaults = window.__cmuxDialogDefaults || { confirm: false, prompt: null };
+      window.__breeDialogQueue = window.__breeDialogQueue || [];
+      window.__breeDialogDefaults = window.__breeDialogDefaults || { confirm: false, prompt: null };
       const __pushDialog = (type, message, defaultText) => {
-        window.__cmuxDialogQueue.push({
+        window.__breeDialogQueue.push({
           type,
           message: String(message || ''),
           default_text: defaultText == null ? null : String(defaultText),
           timestamp_ms: Date.now()
         });
-        if (window.__cmuxDialogQueue.length > 128) {
-          window.__cmuxDialogQueue.splice(0, window.__cmuxDialogQueue.length - 128);
+        if (window.__breeDialogQueue.length > 128) {
+          window.__breeDialogQueue.splice(0, window.__breeDialogQueue.length - 128);
         }
       };
 
@@ -1894,11 +1894,11 @@ final class BrowserPanel: Panel, ObservableObject {
       };
       window.confirm = function(message) {
         __pushDialog('confirm', message, null);
-        return !!window.__cmuxDialogDefaults.confirm;
+        return !!window.__breeDialogDefaults.confirm;
       };
       window.prompt = function(message, defaultValue) {
         __pushDialog('prompt', message, defaultValue == null ? null : defaultValue);
-        const v = window.__cmuxDialogDefaults.prompt;
+        const v = window.__breeDialogDefaults.prompt;
         if (v === null || v === undefined) {
           return defaultValue == null ? '' : String(defaultValue);
         }
@@ -2012,7 +2012,7 @@ final class BrowserPanel: Panel, ObservableObject {
 
     /// Owns the address-bar page-focus capture/restore subsystem.
     ///
-    /// The repository (in `CmuxBrowser`) runs the capture/restore scripts
+    /// The repository (in `BreeBrowser`) runs the capture/restore scripts
     /// through ``BrowserOmnibarPageFocusAdapter``, which reaches back to this
     /// panel's current `webView` weakly so the panel and repository do not retain
     /// each other.
@@ -2124,7 +2124,7 @@ final class BrowserPanel: Panel, ObservableObject {
     var nativeCanGoForward: Bool = false
 
     /// The replayable back/forward session history this surface restores from a
-    /// prior launch. The pure stack state machine lives in `CmuxBrowser`;
+    /// prior launch. The pure stack state machine lives in `BreeBrowser`;
     /// this surface owns the instance, feeds it the resolved live current URL,
     /// and performs the `WKWebView` calls its decisions return. The temporary-URL
     /// classification (diff viewer + remote loopback proxy alias) is inverted into
@@ -2196,7 +2196,7 @@ final class BrowserPanel: Panel, ObservableObject {
                 clearBrowserFocusMode(reason: "searchStateCreated")
                 preferredFocusIntent = .findField
 #if DEBUG
-                cmuxDebugLog("browser.find.state.created panel=\(id.uuidString.prefix(5))")
+                breeDebugLog("browser.find.state.created panel=\(id.uuidString.prefix(5))")
 #endif
                 searchNeedleCancellable = searchState.$needle
                     .removeDuplicates()
@@ -2212,7 +2212,7 @@ final class BrowserPanel: Panel, ObservableObject {
                     .sink { [weak self] needle in
                         guard let self else { return }
 #if DEBUG
-                        cmuxDebugLog("browser.find.needle.updated panel=\(self.id.uuidString.prefix(5)) bytes=\(needle.lengthOfBytes(using: .utf8))")
+                        breeDebugLog("browser.find.needle.updated panel=\(self.id.uuidString.prefix(5)) bytes=\(needle.lengthOfBytes(using: .utf8))")
 #endif
                         self.executeFindSearch(needle)
                     }
@@ -2222,7 +2222,7 @@ final class BrowserPanel: Panel, ObservableObject {
                 if preferredFocusIntent == .findField { preferredFocusIntent = .webView }
                 invalidateSearchFocusRequests(reason: "searchStateCleared")
 #if DEBUG
-                cmuxDebugLog("browser.find.state.cleared panel=\(id.uuidString.prefix(5))")
+                breeDebugLog("browser.find.state.cleared panel=\(id.uuidString.prefix(5))")
 #endif
                 executeFindClear()
             }
@@ -2294,7 +2294,7 @@ final class BrowserPanel: Panel, ObservableObject {
         promptFormatter: BrowserDesignModePromptFormatter(),
         artifactStore: BrowserDesignModeArtifactStore(
             directory: FileManager.default.temporaryDirectory
-                .appendingPathComponent("cmux-browser-design-mode", isDirectory: true)
+                .appendingPathComponent("bree-browser-design-mode", isDirectory: true)
         ),
         javaScriptEvaluator: BrowserDesignModeJavaScriptEvaluator(),
         screenshotEvaluator: BrowserDesignModeScreenshotEvaluator(),
@@ -2329,7 +2329,7 @@ final class BrowserPanel: Panel, ObservableObject {
     var sameDocumentNavigationMessageHandler: BrowserSameDocumentNavigationMessageHandler?; var documentReadyMessageHandler: BrowserDocumentReadyMessageHandler?
     /// Playing `<video>`/`<audio>` and Picture in Picture across the live page's
     /// frames, reported by the injected media-playback hook. Either keeps a
-    /// hidden pane alive (https://github.com/manaflow-ai/cmux/issues/5409).
+    /// hidden pane alive (https://github.com/ecyx00/bree/issues/5409).
     private(set) var mediaPlaybackFrames = BrowserMediaPlaybackFrames() {
         didSet {
             guard oldValue.isPlaying != mediaPlaybackFrames.isPlaying
@@ -2417,7 +2417,7 @@ final class BrowserPanel: Panel, ObservableObject {
     }
     private var pendingRemoteNavigation: PendingRemoteNavigation?
     private let bypassesRemoteWorkspaceProxy: Bool
-    /// Marks this surface as transparent internal cmux UI (e.g. the diff viewer
+    /// Marks this surface as transparent internal bree UI (e.g. the diff viewer
     /// or other custom UI) rather than a normal web page. When set, the webview
     /// is made fully clear over a transparent Ghostty theme so the page's own
     /// CSS owns the background. See `applyWebViewBackground(color:)`.
@@ -2469,10 +2469,10 @@ final class BrowserPanel: Panel, ObservableObject {
     @discardableResult
     private func applyMuteState(_ muted: Bool? = nil, to webView: WKWebView, reason: String) -> Bool {
         let targetMuted = muted ?? isMuted
-        let applied = webView.cmuxSetPageAudioMuted(targetMuted)
+        let applied = webView.breeSetPageAudioMuted(targetMuted)
 #if DEBUG
         if !applied {
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.audioMute.applyUnavailable panel=\(id.uuidString.prefix(5)) " +
                 "reason=\(reason) muted=\(targetMuted ? 1 : 0)"
             )
@@ -2719,7 +2719,7 @@ final class BrowserPanel: Panel, ObservableObject {
             lockedPortalHost = nil
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.portal.host.rearm panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) pane=\(paneId.id.uuidString.prefix(5))"
         )
@@ -2789,7 +2789,7 @@ final class BrowserPanel: Panel, ObservableObject {
                     lockedPortalHost = nil
                 }
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.portal.host.claim panel=\(id.uuidString.prefix(5)) " +
                     "reason=\(reason) host=\(hostId) pane=\(paneId.id.uuidString.prefix(5)) " +
                     "inWin=\(inWindow ? 1 : 0) size=\(String(format: "%.1fx%.1f", bounds.width, bounds.height)) " +
@@ -2803,7 +2803,7 @@ final class BrowserPanel: Panel, ObservableObject {
             }
 
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.portal.host.skip panel=\(id.uuidString.prefix(5)) " +
                 "reason=\(reason) host=\(hostId) pane=\(paneId.id.uuidString.prefix(5)) " +
                 "inWin=\(inWindow ? 1 : 0) size=\(String(format: "%.1fx%.1f", bounds.width, bounds.height)) " +
@@ -2820,7 +2820,7 @@ final class BrowserPanel: Panel, ObservableObject {
             pendingDistinctPortalHostReplacementPaneId == paneId.id
         guard !consumesPendingDistinctReplacement || leasePolicy.isUsable(next) else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.portal.host.skip panel=\(id.uuidString.prefix(5)) " +
                 "reason=\(reason) host=\(hostId) pane=\(paneId.id.uuidString.prefix(5)) " +
                 "inWin=\(inWindow ? 1 : 0) size=\(String(format: "%.1fx%.1f", bounds.width, bounds.height)) " +
@@ -2835,7 +2835,7 @@ final class BrowserPanel: Panel, ObservableObject {
         }
         activePortalHostLease = next
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.portal.host.claim panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) host=\(hostId) pane=\(paneId.id.uuidString.prefix(5)) " +
             "inWin=\(inWindow ? 1 : 0) size=\(String(format: "%.1fx%.1f", bounds.width, bounds.height)) " +
@@ -2853,7 +2853,7 @@ final class BrowserPanel: Panel, ObservableObject {
             lockedPortalHost = nil
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.portal.host.release panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) host=\(hostId) pane=\(current.paneId.uuidString.prefix(5)) " +
             "inWin=\(current.inWindow ? 1 : 0) area=\(String(format: "%.1f", current.area))"
@@ -2875,7 +2875,7 @@ final class BrowserPanel: Panel, ObservableObject {
     static func makeWebView(
         profileID: UUID,
         websiteDataStore: WKWebsiteDataStore? = nil
-    ) -> CmuxWebView {
+    ) -> BreeWebView {
         let config = WKWebViewConfiguration()
         configureWebViewConfiguration(
             config,
@@ -2883,7 +2883,7 @@ final class BrowserPanel: Panel, ObservableObject {
         )
         installFormStateUserScript(into: config)
 
-        let webView = CmuxWebView(frame: .zero, configuration: config, host: CmuxWebViewAppHost())
+        let webView = BreeWebView(frame: .zero, configuration: config, host: BreeWebViewAppHost())
         webView.allowsBackForwardNavigationGestures = true
         if #available(macOS 13.3, *) {
             webView.isInspectable = true
@@ -2908,10 +2908,10 @@ final class BrowserPanel: Panel, ObservableObject {
         // Ensure browser cookies/storage persist across navigations and launches.
         // This reduces repeated consent/bot-challenge flows on sites like Google.
         configuration.websiteDataStore = websiteDataStore
-        if configuration.urlSchemeHandler(forURLScheme: CmuxDiffViewerURLSchemeHandler.scheme) == nil {
+        if configuration.urlSchemeHandler(forURLScheme: BreeDiffViewerURLSchemeHandler.scheme) == nil {
             configuration.setURLSchemeHandler(
-                CmuxDiffViewerURLSchemeHandler.shared,
-                forURLScheme: CmuxDiffViewerURLSchemeHandler.scheme
+                BreeDiffViewerURLSchemeHandler.shared,
+                forURLScheme: BreeDiffViewerURLSchemeHandler.scheme
             )
         }
         // Review-comment persistence + TextBox attach for diff viewer pages.
@@ -2940,7 +2940,7 @@ final class BrowserPanel: Panel, ObservableObject {
         // Keep browser console/error/dialog telemetry active from document start on every navigation.
         // Main frame only — injecting into cross-origin iframes causes CAPTCHA providers
         // (reCAPTCHA, hCaptcha, Cloudflare Turnstile) to detect the overridden console.*
-        // methods and __cmux* globals as environment tampering, failing the challenge.
+        // methods and __bree* globals as environment tampering, failing the challenge.
         configuration.userContentController.addUserScript(
             WKUserScript(
                 source: Self.telemetryHookBootstrapScriptSource,
@@ -2988,7 +2988,7 @@ final class BrowserPanel: Panel, ObservableObject {
         // plain-text paste so Cmd+Shift+V is only consumed when the browser can use it.
         configuration.userContentController.addUserScript(
             WKUserScript(
-                source: CmuxWebView.pasteAsPlainTextFocusTrackingBootstrapScriptSource,
+                source: BreeWebView.pasteAsPlainTextFocusTrackingBootstrapScriptSource,
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: true
             )
@@ -2996,7 +2996,7 @@ final class BrowserPanel: Panel, ObservableObject {
         Self.installMediaPlaybackUserScript(into: configuration)
     }
 
-    func bindWebView(_ webView: CmuxWebView) {
+    func bindWebView(_ webView: BreeWebView) {
         localFileEncodingPolicy = BrowserLocalFileEncodingPolicy(
             preferences: webView.configuration.preferences
         )
@@ -3057,7 +3057,7 @@ final class BrowserPanel: Panel, ObservableObject {
         configureNavigationDelegateCallbacks()
         automationDocumentReadiness.bind(to: webViewInstanceID, hasCommittedDocument: webView.backForwardList.currentItem != nil)
         automationNavigationCoordinator.bind(to: webViewInstanceID)
-        webView.cmuxDownloadDelegate = downloadDelegate
+        webView.breeDownloadDelegate = downloadDelegate
         webView.navigationDelegate = navigationDelegate
         webView.uiDelegate = uiDelegate
         setupObservers(for: webView); setupSameDocumentNavigationMessageHandler(for: webView); setupDocumentReadyMessageHandler(for: webView)
@@ -3089,7 +3089,7 @@ final class BrowserPanel: Panel, ObservableObject {
         guard let navigationDelegate else { return }
         let boundWebViewInstanceID = webViewInstanceID
         let boundHistoryStore = historyStore
-        (webView as? CmuxWebView)?.onSubframeDownloadIntent = { [weak navigationDelegate] in
+        (webView as? BreeWebView)?.onSubframeDownloadIntent = { [weak navigationDelegate] in
             navigationDelegate?.recordSubframeDownloadIntent($0)
         }
         navigationDelegate.didRenderPDFDocument = { [weak self] url, isMainFrame in
@@ -3101,7 +3101,7 @@ final class BrowserPanel: Panel, ObservableObject {
         navigationDelegate.didStartProvisionalNavigation = { [weak self] webView, navigation in
             MainActor.assumeIsolated {
                 guard let self, self.isCurrentWebView(webView, instanceID: boundWebViewInstanceID) else { return }
-                (webView as? CmuxWebView)?.diffViewerNavigationDidStart(navigation)
+                (webView as? BreeWebView)?.diffViewerNavigationDidStart(navigation)
                 self.automationNavigationCoordinator.didStart(
                     instanceID: boundWebViewInstanceID,
                     navigationID: navigation.map { ObjectIdentifier($0) },
@@ -3118,7 +3118,7 @@ final class BrowserPanel: Panel, ObservableObject {
             MainActor.assumeIsolated {
                 guard let self, self.isCurrentWebView(webView, instanceID: boundWebViewInstanceID) else { return }
                 self.designModeController.webViewWillNavigate()
-                (webView as? CmuxWebView)?.diffViewerNavigationDidCommit(navigation)
+                (webView as? BreeWebView)?.diffViewerNavigationDidCommit(navigation)
                 self.isMainFrameProvisionalNavigationActive = false
                 self.automationDocumentReadiness.didCommit(instanceID: boundWebViewInstanceID)
                 self.automationNavigationCoordinator.didCommit(
@@ -3236,7 +3236,7 @@ final class BrowserPanel: Panel, ObservableObject {
         navigationDelegate.didCancelProvisionalNavigation = { [weak self] webView, cancelledNavigation in
             MainActor.assumeIsolated {
                 guard let self, self.isCurrentWebView(webView, instanceID: boundWebViewInstanceID) else { return }
-                (webView as? CmuxWebView)?.diffViewerNavigationDidCancel(cancelledNavigation)
+                (webView as? BreeWebView)?.diffViewerNavigationDidCancel(cancelledNavigation)
                 self.cloudAccess.didCancel(navigationID: cancelledNavigation.map(ObjectIdentifier.init))
                 self.automationNavigationCoordinator.didCancel(
                     instanceID: boundWebViewInstanceID,
@@ -3257,7 +3257,7 @@ final class BrowserPanel: Panel, ObservableObject {
             MainActor.assumeIsolated {
                 guard let self, self.isCurrentWebView(webView, instanceID: boundWebViewInstanceID) else { return }
                 self.failTrustedLocalFileNavigation()
-                (webView as? CmuxWebView)?.clearTrustedInternalNavigationGrants()
+                (webView as? BreeWebView)?.clearTrustedInternalNavigationGrants()
                 self.automationNavigationCoordinator.didChooseDownloadPolicy(
                     instanceID: boundWebViewInstanceID,
                     navigationID: navigation.map { ObjectIdentifier($0) }
@@ -3287,7 +3287,7 @@ final class BrowserPanel: Panel, ObservableObject {
                     return
                 }
                 self.failTrustedLocalFileNavigation()
-                (webView as? CmuxWebView)?.clearTrustedInternalNavigationGrants()
+                (webView as? BreeWebView)?.clearTrustedInternalNavigationGrants()
                 guard let restoreAttemptID,
                       restoreAttemptID == self.currentDiscardRestoreAttemptID else {
                     return
@@ -3478,7 +3478,7 @@ final class BrowserPanel: Panel, ObservableObject {
         self.websiteDataStore = websiteDataStore
         self.preservesExplicitEphemeralWebsiteDataStore =
             preservesExplicitEphemeralWebsiteDataStore
-        let webView: CmuxWebView
+        let webView: BreeWebView
         var adoptedPrewarmedWebView = false
         if let popup = Self.takePendingPopupWebView(for: initialURL) {
             // WebKit loads the popup's document into this web view itself.
@@ -3494,7 +3494,7 @@ final class BrowserPanel: Panel, ObservableObject {
         ) {
             webView = prewarmed
             // A pooled webview captured the default zoom when it was prewarmed, which
-            // may predate a settings change (or the startup cmux.json import), so
+            // may predate a settings change (or the startup bree.json import), so
             // re-apply the current configured default on adoption.
             webView.pageZoom = CGFloat(BrowserZoomSettings().current(defaults: .standard))
             adoptedPrewarmedWebView = true
@@ -3731,7 +3731,7 @@ final class BrowserPanel: Panel, ObservableObject {
         browserUIDelegate.closeRequested = { [weak self] closedWebView in
             guard let self, self.isCurrentWebView(closedWebView) else { return }
 #if DEBUG
-            cmuxDebugLog("browser.webViewDidClose panel=\(self.id.uuidString.prefix(5))")
+            breeDebugLog("browser.webViewDidClose panel=\(self.id.uuidString.prefix(5))")
 #endif
             self.webViewDidRequestClose?()
         }
@@ -3799,19 +3799,19 @@ final class BrowserPanel: Panel, ObservableObject {
     @discardableResult
     private func ensureBackgroundPreloadHostIfNeeded(reason: String) -> Bool {
         if let preloadWindow = backgroundPreloadWindow {
-            let presentationView = webView.cmuxBrowserViewportPresentationView
+            let presentationView = webView.breeBrowserViewportPresentationView
             guard webView.window == nil,
                   presentationView.superview == nil,
                   let contentView = preloadWindow.contentView else {
                 return false
             }
             contentView.addSubview(presentationView)
-            webView.cmuxApplyBrowserViewportLayout(in: contentView.bounds)
+            webView.breeApplyBrowserViewportLayout(in: contentView.bounds)
             webView.browserPortalNotifyHidden(reason: "backgroundPreload:\(reason)")
             return true
         }
 
-        let presentationView = webView.cmuxBrowserViewportPresentationView
+        let presentationView = webView.breeBrowserViewportPresentationView
         guard webView.window == nil else { return false }
         guard presentationView.superview == nil else { return false }
 
@@ -3832,14 +3832,14 @@ final class BrowserPanel: Panel, ObservableObject {
 
         let contentView = NSView(frame: frame)
         contentView.addSubview(presentationView)
-        webView.cmuxApplyBrowserViewportLayout(in: contentView.bounds)
+        webView.breeApplyBrowserViewportLayout(in: contentView.bounds)
         window.contentView = contentView
         backgroundPreloadWindow = window
         window.orderFrontRegardless()
         webView.browserPortalNotifyHidden(reason: "backgroundPreload:\(reason)")
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.backgroundPreload.host.create panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason)"
         )
@@ -3915,7 +3915,7 @@ final class BrowserPanel: Panel, ObservableObject {
                 )
             )
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.prompt.queue panel=\(id.uuidString.prefix(5)) " +
                 "pending=\(pendingInteractiveBrowserPrompts.count)"
             )
@@ -3935,7 +3935,7 @@ final class BrowserPanel: Panel, ObservableObject {
         isPresentingPendingInteractiveBrowserPrompt = true
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.prompt.drain panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) remaining=\(pendingInteractiveBrowserPrompts.count)"
         )
@@ -3956,7 +3956,7 @@ final class BrowserPanel: Panel, ObservableObject {
         isPresentingPendingInteractiveBrowserPrompt = false
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.prompt.cancel panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) count=\(prompts.count)"
         )
@@ -3979,7 +3979,7 @@ final class BrowserPanel: Panel, ObservableObject {
         preloadWindow.contentView = nil
         preloadWindow.close()
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.backgroundPreload.host.close panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason)"
         )
@@ -3994,7 +3994,7 @@ final class BrowserPanel: Panel, ObservableObject {
         resumePendingRemoteNavigationIfNeeded()
     }
 
-    /// Remote and cloud panes route only through cmux proxies that carry
+    /// Remote and cloud panes route only through bree proxies that carry
     /// their credential, so a proxy challenge there is refused rather than
     /// shown to the user.
     var refusesProxyAuthenticationChallenges: Bool {
@@ -4173,7 +4173,7 @@ final class BrowserPanel: Panel, ObservableObject {
         guard isMainFrame else { return }
         renderedPDFDocumentURL = url
         #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.pdf.rendered panel=\(id.uuidString.prefix(5)) " +
             "mainFrame=\(isMainFrame ? 1 : 0) url=\(browserNavigationDebugURL(url))"
         )
@@ -4362,7 +4362,7 @@ final class BrowserPanel: Panel, ObservableObject {
             refreshNavigationAvailability()
         case .clearedForward(let liveCurrentString):
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.history.restore.forward.clear panel=\(id.uuidString.prefix(5)) " +
                 "current=\(liveCurrentString)"
             )
@@ -4393,9 +4393,9 @@ final class BrowserPanel: Panel, ObservableObject {
         // awaits the same deduplicated loader if it reaches the handler first.
         if let token = snapshot.diffViewerToken,
            let requestPath = snapshot.diffViewerRequestPath,
-           let diffURL = CmuxDiffViewerURLSchemeHandler.diffViewerURL(token: token, requestPath: requestPath) {
+           let diffURL = BreeDiffViewerURLSchemeHandler.diffViewerURL(token: token, requestPath: requestPath) {
             Task { @MainActor in
-                _ = await CmuxDiffViewerURLSchemeHandler.shared.registerFromManifest(token: token)
+                _ = await BreeDiffViewerURLSchemeHandler.shared.registerFromManifest(token: token)
             }
             hiddenWebViewDiscardManager.updateRestoredSessionRenderIntent(snapshot.shouldRenderWebView)
             setMuted(snapshot.isMuted)
@@ -4433,7 +4433,7 @@ final class BrowserPanel: Panel, ObservableObject {
         if let resource = snapshot.cloudResource {
             restoredCloudTeamID = snapshot.cloudTeamID
             if let machineID = resource.machine.cloudMachineID {
-                CmuxTuiSurfaceProviderRegistry.shared.adoptOwnerTeam(snapshot.cloudTeamID, forMachineID: machineID)
+                BreeTuiSurfaceProviderRegistry.shared.adoptOwnerTeam(snapshot.cloudTeamID, forMachineID: machineID)
             }
             restoreCloudResource(resource, preferredURL: restoredURL, activate: shouldRenderRestoredWebView)
             if !shouldRenderRestoredWebView { shouldRenderWebView = false; refreshNavigationAvailability() }
@@ -4481,7 +4481,7 @@ final class BrowserPanel: Panel, ObservableObject {
         // path as local and non-pending. This cache-only query keeps session
         // snapshotting free of filesystem reads and JSON parsing.
         if let components = diffViewerSessionComponents() {
-            return CmuxDiffViewerURLSchemeHandler.shared.diffViewerRestorable(
+            return BreeDiffViewerURLSchemeHandler.shared.diffViewerRestorable(
                 token: components.token,
                 requestPath: components.requestPath
             )
@@ -4494,7 +4494,7 @@ final class BrowserPanel: Panel, ObservableObject {
         return true
     }
 
-    /// Whether this surface is transparent internal cmux UI, for the session
+    /// Whether this surface is transparent internal bree UI, for the session
     /// snapshot (so it restores transparent rather than opaque).
     var sessionSnapshotTransparentBackground: Bool {
         usesTransparentBackground
@@ -4503,8 +4503,8 @@ final class BrowserPanel: Panel, ObservableObject {
     /// The diff viewer `(token, requestPath)` for the live URL, if this surface
     /// is currently showing a diff viewer; used to persist + restore it.
     func diffViewerSessionComponents() -> (token: String, requestPath: String)? {
-        CmuxDiffViewerURLSchemeHandler.diffViewerComponents(from: webView.url)
-            ?? CmuxDiffViewerURLSchemeHandler.diffViewerComponents(from: currentURL)
+        BreeDiffViewerURLSchemeHandler.diffViewerComponents(from: webView.url)
+            ?? BreeDiffViewerURLSchemeHandler.diffViewerComponents(from: currentURL)
     }
 
     /// Tears down every live web-view observer and clears the derived
@@ -4612,7 +4612,7 @@ final class BrowserPanel: Panel, ObservableObject {
         webViewObservers.append(progressObserver)
 
         let fullscreenObserver = webView.observe(\.fullscreenState, options: [.initial, .new]) { [weak self] webView, _ in
-            let isElementFullscreenActive = webView.cmuxIsElementFullscreenActiveOrTransitioning
+            let isElementFullscreenActive = webView.breeIsElementFullscreenActiveOrTransitioning
             let fullscreenState = webView.fullscreenState
             Task { @MainActor [weak self, weak webView] in
                 guard let self, let webView, isCurrentObservedWebView(self, webView) else { return }
@@ -4632,7 +4632,7 @@ final class BrowserPanel: Panel, ObservableObject {
                     self.scheduleBrowserViewportHostRestoration(reason: "fullscreenExit")
                 }
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.fullscreen.state panel=\(self.id.uuidString.prefix(5)) " +
                     "web=\(ObjectIdentifier(webView)) state=\(String(describing: fullscreenState)) " +
                     "active=\(isElementFullscreenActive ? 1 : 0)"
@@ -4805,11 +4805,11 @@ final class BrowserPanel: Panel, ObservableObject {
         }
 
         let didBecomeFirstResponder: Bool
-        if let cmuxWebView = webView as? CmuxWebView {
+        if let breeWebView = webView as? BreeWebView {
             // Toolbar/menu activation is an explicit user gesture. Temporarily
             // bypass the background-pane acquisition guard while handing focus
             // back from the menu window to this browser surface.
-            didBecomeFirstResponder = cmuxWebView.withPointerFocusAllowance {
+            didBecomeFirstResponder = breeWebView.withPointerFocusAllowance {
                 window.makeFirstResponder(webView)
             }
         } else {
@@ -4830,8 +4830,8 @@ final class BrowserPanel: Panel, ObservableObject {
             guard webView.window === window else { return }
             let didBecomeFirstResponder: Bool
             if !Self.responderChainContains(window.firstResponder, target: webView) {
-                if let cmuxWebView = webView as? CmuxWebView {
-                    didBecomeFirstResponder = cmuxWebView.withPointerFocusAllowance {
+                if let breeWebView = webView as? BreeWebView {
+                    didBecomeFirstResponder = breeWebView.withPointerFocusAllowance {
                         window.makeFirstResponder(webView)
                     }
                 } else {
@@ -4969,7 +4969,7 @@ final class BrowserPanel: Panel, ObservableObject {
             guard self.isCurrentWebView(webView, instanceID: refreshWebViewInstanceID) else { return }
             guard self.isCurrentFaviconRefresh(generation: refreshGeneration) else { return }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.favicon.begin " +
                 "panel=\(id.uuidString.prefix(5)) " +
                 "page=\(pageURL.absoluteString)"
@@ -5040,7 +5040,7 @@ final class BrowserPanel: Panel, ObservableObject {
             let iconURL = discoveredURL ?? fallbackURL
             guard let iconURL else { return }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.favicon.iconURL " +
                 "panel=\(id.uuidString.prefix(5)) " +
                 "discovered=\(discoveredURL?.absoluteString ?? "<nil>") " +
@@ -5053,7 +5053,7 @@ final class BrowserPanel: Panel, ObservableObject {
             let iconURLString = iconURL.absoluteString
             if iconURLString == lastFaviconURLString, faviconPNGData != nil {
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.favicon.skipCached " +
                     "panel=\(id.uuidString.prefix(5)) " +
                     "icon=\(iconURLString)"
@@ -5080,7 +5080,7 @@ final class BrowserPanel: Panel, ObservableObject {
                     defer { remoteSession?.finishTasksAndInvalidate() }
                     if let remoteSession {
 #if DEBUG
-                        cmuxDebugLog(
+                        breeDebugLog(
                             "browser.favicon.fetch " +
                             "panel=\(id.uuidString.prefix(5)) " +
                             "via=proxy " +
@@ -5090,7 +5090,7 @@ final class BrowserPanel: Panel, ObservableObject {
                         (data, response) = try await remoteSession.data(for: effectiveRequest)
                     } else {
 #if DEBUG
-                        cmuxDebugLog(
+                        breeDebugLog(
                             "browser.favicon.fetch " +
                             "panel=\(id.uuidString.prefix(5)) " +
                             "via=direct " +
@@ -5102,7 +5102,7 @@ final class BrowserPanel: Panel, ObservableObject {
                 }
             } catch {
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.favicon.fetchError " +
                     "panel=\(id.uuidString.prefix(5)) " +
                     "error=\(String(describing: error))"
@@ -5117,7 +5117,7 @@ final class BrowserPanel: Panel, ObservableObject {
                   (200..<300).contains(http.statusCode) else {
 #if DEBUG
                 let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.favicon.badResponse " +
                     "panel=\(id.uuidString.prefix(5)) " +
                     "status=\(status)"
@@ -5126,7 +5126,7 @@ final class BrowserPanel: Panel, ObservableObject {
                 return
             }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.favicon.response " +
                 "panel=\(id.uuidString.prefix(5)) " +
                 "status=\(http.statusCode) " +
@@ -5137,7 +5137,7 @@ final class BrowserPanel: Panel, ObservableObject {
             // Use >= 2x the rendered point size so we don't upscale (blurry) on Retina.
             guard let png = Self.makeFaviconPNGData(from: data, targetPx: 32) else {
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.favicon.decodeFailed " +
                     "panel=\(id.uuidString.prefix(5)) " +
                     "bytes=\(data.count)"
@@ -5148,7 +5148,7 @@ final class BrowserPanel: Panel, ObservableObject {
             // Only update if we got a real icon; keep the old one otherwise to avoid flashes.
             faviconPNGData = png
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.favicon.ready " +
                 "panel=\(id.uuidString.prefix(5)) " +
                 "pngBytes=\(png.count)"
@@ -5311,7 +5311,7 @@ final class BrowserPanel: Panel, ObservableObject {
         }
         let request = URLRequest(url: url)
         let policy = BrowserURLAllowlistPolicy(defaults: .standard)
-        (webView as? CmuxWebView)?.clearTrustedInternalNavigationGrants()
+        (webView as? BreeWebView)?.clearTrustedInternalNavigationGrants()
         if !policy.allowsTrustedInternalURL(url) {
             navigationDelegate?.blockURLAllowlistNavigation(url, in: webView)
             onNavigationStarted?(nil)
@@ -5345,7 +5345,7 @@ final class BrowserPanel: Panel, ObservableObject {
         cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
         onNavigationStarted: ((WKNavigation?) -> Void)? = nil
     ) -> WKNavigation? {
-        (webView as? CmuxWebView)?.clearTrustedInternalNavigationGrants()
+        (webView as? BreeWebView)?.clearTrustedInternalNavigationGrants()
         let request = URLRequest(url: url, cachePolicy: cachePolicy)
         return navigateWithoutInsecureHTTPPrompt(
             request: request,
@@ -5480,7 +5480,7 @@ final class BrowserPanel: Panel, ObservableObject {
         }
         noteDiscardedWebViewRestoreNavigationStarted()
         userStoppedLoadSinceWebViewReplacement = false
-        (webView as? CmuxWebView)?.clearTrustedInternalNavigationGrants()
+        (webView as? BreeWebView)?.clearTrustedInternalNavigationGrants()
         let trustedInternalNavigation = BrowserURLAllowlistPolicy
             .trustedInternalSchemes
             .contains(originalURL.scheme?.lowercased() ?? "")
@@ -5511,7 +5511,7 @@ final class BrowserPanel: Panel, ObservableObject {
         var rewrittenRequest = request
         rewrittenRequest.url = rewrittenURL
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.remoteProxy.\(logScope) " +
             "panel=\(id.uuidString.prefix(5)) " +
             "from=\(url.absoluteString) " +
@@ -5661,7 +5661,7 @@ final class BrowserPanel: Panel, ObservableObject {
         alert.messageText = String(localized: "browser.error.insecure.title", defaultValue: "Connection isn\u{2019}t secure")
         alert.informativeText = String(localized: "browser.error.insecure.message", defaultValue: "\(host) uses plain HTTP, so traffic can be read or modified on the network.\n\nOpen this URL in your default browser, or proceed in Bree.")
         alert.addButton(withTitle: String(localized: "browser.openInDefaultBrowser", defaultValue: "Open in Default Browser"))
-        alert.addButton(withTitle: String(localized: "browser.proceedInCmux", defaultValue: "Proceed in Bree"))
+        alert.addButton(withTitle: String(localized: "browser.proceedInBree", defaultValue: "Proceed in Bree"))
         alert.addButton(withTitle: String(localized: "common.cancel", defaultValue: "Cancel"))
         alert.showsSuppressionButton = true
         alert.suppressionButton?.title = String(localized: "browser.alwaysAllowHost", defaultValue: "Always allow this host in Bree")
@@ -5787,7 +5787,7 @@ extension BrowserPanel: BrowserHiddenWebViewDiscardManagerDelegate {
             isVisualAutomationCaptureActive: activeVisualAutomationCaptureCount > 0
                 || BrowserReplTabAttachments.shared.attachment(for: id) != nil,
             hasPopups: !popupControllers.isEmpty,
-            isCapturingMedia: webView.cmuxIsCapturingMedia,
+            isCapturingMedia: webView.breeIsCapturingMedia,
             isPlayingMedia: isPlayingMedia,
             isPictureInPictureActive: mediaPlaybackFrames.isPictureInPictureActive,
             hasUnrestorableFormInput: pageRestoration.hasUnrestorableLiveInput
@@ -5837,7 +5837,7 @@ extension BrowserPanel {
         preferredDeveloperToolsVisible ||
         hasRecoverableWebContentTermination ||
         pendingWebContentRecoveryURL != nil ||
-        webView.cmuxBrowserViewportAttachmentSuperview != nil
+        webView.breeBrowserViewportAttachmentSuperview != nil
     }
 
     func resetForWorkspaceContextChange(
@@ -5847,7 +5847,7 @@ extension BrowserPanel {
         guard forceWebViewReplacement || needsWorkspaceContextReset else {
             resetWebViewLifecycleMetadata()
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.contextReset.skip panel=\(id.uuidString.prefix(5)) " +
                 "reason=\(reason) render=\(shouldRenderWebView ? 1 : 0)"
             )
@@ -5856,7 +5856,7 @@ extension BrowserPanel {
         }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.contextReset.begin panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) render=\(shouldRenderWebView ? 1 : 0) " +
             "url=\(preferredURLStringForOmnibar() ?? "nil")"
@@ -5933,7 +5933,7 @@ extension BrowserPanel {
         refreshNavigationAvailability()
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.contextReset.end panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) instance=\(webViewInstanceID.uuidString.prefix(6))"
         )
@@ -5958,7 +5958,7 @@ func resolveBrowserNavigableURL(_ input: String) -> URL? {
 }
 
 extension BrowserPanel {
-    /// Records a local file navigation started by cmux itself.
+    /// Records a local file navigation started by bree itself.
     func beginTrustedLocalFileNavigation(_ url: URL) {
         guard url.isFileURL,
               url.scheme?.lowercased() == "file",
@@ -6012,7 +6012,7 @@ extension BrowserPanel {
     }
 
     func markTrustedInternalNavigationIfNeeded(for url: URL?) {
-        (webView as? CmuxWebView)?.clearTrustedInternalNavigationGrants()
+        (webView as? BreeWebView)?.clearTrustedInternalNavigationGrants()
         guard let url,
               let scheme = url.scheme?.lowercased(),
               BrowserURLAllowlistPolicy.trustedInternalSchemes.contains(scheme),
@@ -6020,7 +6020,7 @@ extension BrowserPanel {
             return
         }
         beginTrustedLocalFileNavigation(url)
-        (webView as? CmuxWebView)?.markTrustedInternalNavigation(url)
+        (webView as? BreeWebView)?.markTrustedInternalNavigation(url)
     }
 
     @discardableResult
@@ -6148,7 +6148,7 @@ extension BrowserPanel {
         }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.newTab.open.begin panel=\(id.uuidString.prefix(5)) " +
             "workspace=\(workspaceId.uuidString.prefix(5)) url=\(browserNavigationDebugURL(seed.url)) bypass=\(seed.bypassInsecureHTTPHostOnce ?? "nil")"
         )
@@ -6156,14 +6156,14 @@ extension BrowserPanel {
         guard BrowserAvailabilitySettings.isEnabled() else {
             _ = NSWorkspace.shared.open(seed.url)
 #if DEBUG
-            cmuxDebugLog("browser.newTab.open.external panel=\(id.uuidString.prefix(5)) reason=browser_disabled")
+            breeDebugLog("browser.newTab.open.external panel=\(id.uuidString.prefix(5)) reason=browser_disabled")
 #endif
             return
         }
         if Workspace.openDockBrowserLinkInNewTabIfNeeded(panel: self, seed: seed) { return }
         guard let app = AppDelegate.shared else {
 #if DEBUG
-            cmuxDebugLog("browser.newTab.open.abort panel=\(id.uuidString.prefix(5)) reason=missingAppDelegate")
+            breeDebugLog("browser.newTab.open.abort panel=\(id.uuidString.prefix(5)) reason=missingAppDelegate")
 #endif
             return
         }
@@ -6172,13 +6172,13 @@ extension BrowserPanel {
             preferredWorkspaceId: workspaceId
         )?.workspace else {
 #if DEBUG
-            cmuxDebugLog("browser.newTab.open.abort panel=\(id.uuidString.prefix(5)) reason=workspaceMissing")
+            breeDebugLog("browser.newTab.open.abort panel=\(id.uuidString.prefix(5)) reason=workspaceMissing")
 #endif
             return
         }
         guard let paneId = workspace.paneId(forPanelId: id) else {
 #if DEBUG
-            cmuxDebugLog("browser.newTab.open.abort panel=\(id.uuidString.prefix(5)) reason=paneMissing")
+            breeDebugLog("browser.newTab.open.abort panel=\(id.uuidString.prefix(5)) reason=paneMissing")
 #endif
             return
         }
@@ -6192,12 +6192,12 @@ extension BrowserPanel {
             websiteDataStore: explicitEphemeralWebsiteDataStoreForSibling
         ) else {
 #if DEBUG
-            cmuxDebugLog("browser.newTab.open.abort panel=\(id.uuidString.prefix(5)) reason=newPanelFailed")
+            breeDebugLog("browser.newTab.open.abort panel=\(id.uuidString.prefix(5)) reason=newPanelFailed")
 #endif
             return
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.newTab.open.done panel=\(id.uuidString.prefix(5)) " +
             "workspace=\(workspace.id.uuidString.prefix(5)) pane=\(paneId.id.uuidString.prefix(5))"
         )
@@ -6288,7 +6288,7 @@ extension BrowserPanel {
 
     func hasAttachedDeveloperToolsLayout() -> Bool {
         guard let container = webView.superview else { return false }
-        if let frontendWebView = webView.cmuxInspectorFrontendWebView(),
+        if let frontendWebView = webView.breeInspectorFrontendWebView(),
            frontendWebView !== webView,
            frontendWebView.window === webView.window,
            frontendWebView.isDescendant(of: container),
@@ -6350,10 +6350,10 @@ extension BrowserPanel {
         // WebKit exposes no public API for embedding the inspector into an app
         // view hierarchy. Calling the private `attach` selector repeatedly can
         // crash inside WebKit::WebInspectorUIProxy::platformAttach on current
-        // macOS builds, so cmux only asks WebKit to show its inspector and does
+        // macOS builds, so bree only asks WebKit to show its inspector and does
         // not try to own WebKit's attached inspector layout.
         let isVisibleSelector = NSSelectorFromString("isVisible")
-        if inspector.cmuxCallBool(selector: isVisibleSelector) ?? false {
+        if inspector.breeCallBool(selector: isVisibleSelector) ?? false {
             developerToolsDetachedOpenGraceDeadline = nil
             developerToolsLastKnownVisibleAt = Date()
             return true
@@ -6361,8 +6361,8 @@ extension BrowserPanel {
 
         let showSelector = NSSelectorFromString("show")
         guard inspector.responds(to: showSelector) else { return false }
-        inspector.cmuxCallVoid(selector: showSelector)
-        let visibleAfterShow = inspector.cmuxCallBool(selector: isVisibleSelector) ?? false
+        inspector.breeCallVoid(selector: showSelector)
+        let visibleAfterShow = inspector.breeCallBool(selector: isVisibleSelector) ?? false
         if visibleAfterShow {
             developerToolsLastKnownVisibleAt = Date()
         }
@@ -6379,21 +6379,21 @@ extension BrowserPanel {
     @discardableResult
     private func concealDeveloperTools(_ inspector: NSObject) -> Bool {
         let isVisibleSelector = NSSelectorFromString("isVisible")
-        guard inspector.cmuxCallBool(selector: isVisibleSelector) ?? false else { return true }
+        guard inspector.breeCallBool(selector: isVisibleSelector) ?? false else { return true }
 
         var invokedSelector = false
         for rawSelector in ["hide", "close"] {
             let selector = NSSelectorFromString(rawSelector)
             guard inspector.responds(to: selector) else { continue }
             invokedSelector = true
-            inspector.cmuxCallVoid(selector: selector)
-            if !(inspector.cmuxCallBool(selector: isVisibleSelector) ?? false) {
+            inspector.breeCallVoid(selector: selector)
+            if !(inspector.breeCallBool(selector: isVisibleSelector) ?? false) {
                 return true
             }
         }
 
         guard invokedSelector else { return false }
-        return !(inspector.cmuxCallBool(selector: isVisibleSelector) ?? false)
+        return !(inspector.breeCallBool(selector: isVisibleSelector) ?? false)
     }
 
     private var isDeveloperToolsTransitionInFlight: Bool {
@@ -6447,7 +6447,7 @@ extension BrowserPanel {
                 cancelDeveloperToolsRestoreRetry()
             }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.devtools transition.queue panel=\(id.uuidString.prefix(5)) " +
                 "source=\(source) target=\(targetVisible ? 1 : 0) \(debugDeveloperToolsStateSummary())"
             )
@@ -6463,10 +6463,10 @@ extension BrowserPanel {
         to targetVisible: Bool,
         source: String
     ) -> Bool {
-        guard let inspector = webView.cmuxInspectorObject() else { return false }
+        guard let inspector = webView.breeInspectorObject() else { return false }
 
         let isVisibleSelector = NSSelectorFromString("isVisible")
-        let visible = inspector.cmuxCallBool(selector: isVisibleSelector) ?? false
+        let visible = inspector.breeCallBool(selector: isVisibleSelector) ?? false
         setPreferredDeveloperToolsVisible(targetVisible)
         developerToolsTransitionTargetVisible = targetVisible
         if targetVisible {
@@ -6491,7 +6491,7 @@ extension BrowserPanel {
         }
 
         if targetVisible {
-            let visibleAfterTransition = inspector.cmuxCallBool(selector: isVisibleSelector) ?? false
+            let visibleAfterTransition = inspector.breeCallBool(selector: isVisibleSelector) ?? false
             if visibleAfterTransition {
                 syncDeveloperToolsPresentationPreferenceFromUI()
                 cancelDeveloperToolsRestoreRetry()
@@ -6519,7 +6519,7 @@ extension BrowserPanel {
     @discardableResult
     func toggleDeveloperTools() -> Bool {
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.devtools toggle.begin panel=\(id.uuidString.prefix(5)) " +
             "\(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
         )
@@ -6527,13 +6527,13 @@ extension BrowserPanel {
         let targetVisible = !effectiveDeveloperToolsVisibilityIntent()
         let handled = enqueueDeveloperToolsVisibilityTransition(to: targetVisible, source: "toggle")
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.devtools toggle.end panel=\(id.uuidString.prefix(5)) targetVisible=\(targetVisible ? 1 : 0) " +
             "\(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
         )
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.devtools toggle.tick panel=\(self.id.uuidString.prefix(5)) " +
                 "\(self.debugDeveloperToolsStateSummary()) \(self.debugDeveloperToolsGeometrySummary())"
             )
@@ -6551,7 +6551,7 @@ extension BrowserPanel {
     func showDeveloperToolsConsole() -> Bool {
         guard showDeveloperTools() else { return false }
         guard !isDeveloperToolsTransitionInFlight else { return true }
-        guard let inspector = webView.cmuxInspectorObject() else { return true }
+        guard let inspector = webView.breeInspectorObject() else { return true }
         // WebKit private inspector API differs by OS; try known console selectors.
         let consoleSelectors = [
             "showConsole",
@@ -6561,7 +6561,7 @@ extension BrowserPanel {
         for raw in consoleSelectors {
             let selector = NSSelectorFromString(raw)
             if inspector.responds(to: selector) {
-                inspector.cmuxCallVoid(selector: selector)
+                inspector.breeCallVoid(selector: selector)
                 break
             }
         }
@@ -6587,8 +6587,8 @@ extension BrowserPanel {
 
     /// Called before WKWebView detaches so manual inspector closes are respected.
     func syncDeveloperToolsPreferenceFromInspector(preserveVisibleIntent: Bool = false) {
-        guard let inspector = webView.cmuxInspectorObject() else { return }
-        guard let visible = inspector.cmuxCallBool(selector: NSSelectorFromString("isVisible")) else { return }
+        guard let inspector = webView.breeInspectorObject() else { return }
+        guard let visible = inspector.breeCallBool(selector: NSSelectorFromString("isVisible")) else { return }
         if isDeveloperToolsTransitionInFlight {
             let targetVisible = pendingDeveloperToolsTransitionTargetVisible ?? developerToolsTransitionTargetVisible ?? visible
             setPreferredDeveloperToolsVisible(targetVisible)
@@ -6680,15 +6680,15 @@ extension BrowserPanel {
         guard preferredDeveloperToolsVisible else { return false }
         guard preferredDeveloperToolsPresentation != .detached else { return false }
         guard !isDeveloperToolsTransitionInFlight else { return false }
-        guard webView.cmuxBrowserViewportAttachmentSuperview != nil,
-              webView.cmuxBrowserViewportAttachmentWindow != nil else { return false }
+        guard webView.breeBrowserViewportAttachmentSuperview != nil,
+              webView.breeBrowserViewportAttachmentWindow != nil else { return false }
         guard let developerToolsLastAttachedHostAt else { return false }
         guard Date().timeIntervalSince(developerToolsLastAttachedHostAt) >= developerToolsAttachedManualCloseDetectionDelay else {
             return false
         }
         guard developerToolsLastKnownVisibleAt != nil else { return false }
-        guard let inspector = inspector ?? webView.cmuxInspectorObject() else { return false }
-        guard let visible = inspector.cmuxCallBool(selector: NSSelectorFromString("isVisible")) else { return false }
+        guard let inspector = inspector ?? webView.breeInspectorObject() else { return false }
+        guard let visible = inspector.breeCallBool(selector: NSSelectorFromString("isVisible")) else { return false }
         guard !visible else {
             developerToolsLastKnownVisibleAt = Date()
             return false
@@ -6697,7 +6697,7 @@ extension BrowserPanel {
         clearDeveloperToolsVisibleIntentForHiddenState()
         reevaluateHiddenWebViewDiscardAfterDeveloperToolsHidden()
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.devtools attachedClose.consume panel=\(id.uuidString.prefix(5)) " +
             "\(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
         )
@@ -6714,12 +6714,12 @@ extension BrowserPanel {
             return
         }
         guard !isDeveloperToolsTransitionInFlight else { return }
-        guard let inspector = webView.cmuxInspectorObject() else {
+        guard let inspector = webView.breeInspectorObject() else {
             scheduleDeveloperToolsRestoreRetry()
             return
         }
 
-        let visible = inspector.cmuxCallBool(selector: NSSelectorFromString("isVisible")) ?? false
+        let visible = inspector.breeCallBool(selector: NSSelectorFromString("isVisible")) ?? false
         if visible {
             let shouldForceRefresh = forceDeveloperToolsRefreshOnNextAttach
             forceDeveloperToolsRefreshOnNextAttach = false
@@ -6729,7 +6729,7 @@ extension BrowserPanel {
             developerToolsLastKnownVisibleAt = Date()
             #if DEBUG
             if shouldForceRefresh {
-                cmuxDebugLog("browser.devtools refresh.consumeVisible panel=\(id.uuidString.prefix(5)) \(debugDeveloperToolsStateSummary())")
+                breeDebugLog("browser.devtools refresh.consumeVisible panel=\(id.uuidString.prefix(5)) \(debugDeveloperToolsStateSummary())")
             }
             #endif
             cancelDeveloperToolsRestoreRetry()
@@ -6752,7 +6752,7 @@ extension BrowserPanel {
             developerToolsDetachedOpenGraceDeadline = nil
             cancelDeveloperToolsRestoreRetry()
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.devtools detachedClose.consume panel=\(id.uuidString.prefix(5)) " +
                 "\(debugDeveloperToolsStateSummary()) \(debugDeveloperToolsGeometrySummary())"
             )
@@ -6766,7 +6766,7 @@ extension BrowserPanel {
 
         #if DEBUG
         if shouldForceRefresh {
-            cmuxDebugLog("browser.devtools refresh.forceShowWhenHidden panel=\(id.uuidString.prefix(5)) \(debugDeveloperToolsStateSummary())")
+            breeDebugLog("browser.devtools refresh.forceShowWhenHidden panel=\(id.uuidString.prefix(5)) \(debugDeveloperToolsStateSummary())")
         }
         #endif
         // WebKit inspector show can trigger transient first-responder churn while
@@ -6776,7 +6776,7 @@ extension BrowserPanel {
             _ = revealDeveloperTools(inspector)
         }
         setPreferredDeveloperToolsVisible(true)
-        let visibleAfterShow = inspector.cmuxCallBool(selector: NSSelectorFromString("isVisible")) ?? false
+        let visibleAfterShow = inspector.breeCallBool(selector: NSSelectorFromString("isVisible")) ?? false
         if visibleAfterShow {
             syncDeveloperToolsPresentationPreferenceFromUI()
             developerToolsLastKnownVisibleAt = Date()
@@ -6789,8 +6789,8 @@ extension BrowserPanel {
 
     @discardableResult
     func isDeveloperToolsVisible() -> Bool {
-        guard let inspector = webView.cmuxInspectorObject() else { return false }
-        return inspector.cmuxCallBool(selector: NSSelectorFromString("isVisible")) ?? false
+        guard let inspector = webView.breeInspectorObject() else { return false }
+        return inspector.breeCallBool(selector: NSSelectorFromString("isVisible")) ?? false
     }
 
     @discardableResult
@@ -6802,7 +6802,7 @@ extension BrowserPanel {
         guard preferredDeveloperToolsVisible else { return }
         forceDeveloperToolsRefreshOnNextAttach = true
         #if DEBUG
-        cmuxDebugLog("browser.devtools refresh.request panel=\(id.uuidString.prefix(5)) reason=\(reason) \(debugDeveloperToolsStateSummary())")
+        breeDebugLog("browser.devtools refresh.request panel=\(id.uuidString.prefix(5)) reason=\(reason) \(debugDeveloperToolsStateSummary())")
         #endif
     }
 
@@ -6816,8 +6816,8 @@ extension BrowserPanel {
                 forceDeveloperToolsRefreshOnNextAttach ||
                 developerToolsRestoreRetryScheduler.isScheduled ||
                 hasPendingDetachedDeveloperToolsWindowCloseResolution ||
-                webView.cmuxBrowserViewportAttachmentSuperview == nil ||
-                webView.cmuxBrowserViewportAttachmentWindow == nil
+                webView.breeBrowserViewportAttachmentSuperview == nil ||
+                webView.breeBrowserViewportAttachmentWindow == nil
             )
     }
 
@@ -7013,7 +7013,7 @@ extension BrowserPanel {
     @discardableResult
     func ensureVisualAutomationRestoreHostIfNeeded(reason: String) -> Bool {
         guard shouldUseOffscreenRenderHostForVisualAutomation else { return false }
-        guard webView.cmuxBrowserViewportAttachmentSuperview == nil else { return false }
+        guard webView.breeBrowserViewportAttachmentSuperview == nil else { return false }
         return ensureBackgroundPreloadHostIfNeeded(reason: reason)
     }
 
@@ -7054,18 +7054,18 @@ extension BrowserPanel {
     /// virtualizes rows, so the generic in-page find script cannot see most
     /// of the diff; find-family shortcuts are forwarded to the app instead.
     var isDiffViewerFindOwner: Bool {
-        (webView as? CmuxWebView)?.isDiffViewerFindOwner == true
+        (webView as? BreeWebView)?.isDiffViewerFindOwner == true
     }
 
     private func performDiffViewerFindActionOrFallback(
-        _ action: CmuxWebView.DiffViewerFindAction,
+        _ action: BreeWebView.DiffViewerFindAction,
         fallback: @escaping @MainActor @Sendable () -> Void
     ) {
-        guard let cmuxWebView = webView as? CmuxWebView else {
+        guard let breeWebView = webView as? BreeWebView else {
             fallback()
             return
         }
-        cmuxWebView.performDiffViewerFindAction(action, fallback: fallback)
+        breeWebView.performDiffViewerFindAction(action, fallback: fallback)
     }
 
     func startFind() {
@@ -7116,7 +7116,7 @@ extension BrowserPanel {
     private func postBrowserSearchFocusNotification(reason: String, generation: UInt64, selectAll: Bool) {
         guard canApplySearchFocusRequest(generation) else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.find.focusNotification.skip panel=\(id.uuidString.prefix(5)) " +
                 "reason=\(reason) generation=\(generation)"
             )
@@ -7125,7 +7125,7 @@ extension BrowserPanel {
         }
 #if DEBUG
         let window = webView.window
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.find.focusNotification panel=\(id.uuidString.prefix(5)) " +
             "generation=\(generation) " +
             "reason=\(reason) selectAll=\(selectAll ? 1 : 0) window=\(window?.windowNumber ?? -1) " +
@@ -7192,7 +7192,7 @@ extension BrowserPanel {
 
         guard canEnterBrowserFocusMode else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.focusMode.activate.reject panel=\(id.uuidString.prefix(5)) " +
                 "reason=\(reason) render=\(shouldRenderWebView ? 1 : 0) " +
                 "window=\(webView.window == nil ? 0 : 1) hidden=\(webView.isHiddenOrHasHiddenAncestor ? 1 : 0) " +
@@ -7216,7 +7216,7 @@ extension BrowserPanel {
         }
 
 #if DEBUG
-        cmuxDebugLog("browser.focusMode.activate panel=\(id.uuidString.prefix(5)) reason=\(reason)")
+        breeDebugLog("browser.focusMode.activate panel=\(id.uuidString.prefix(5)) reason=\(reason)")
 #endif
         NotificationCenter.default.post(name: .browserFocusModeStateDidChange, object: id)
         return true
@@ -7234,7 +7234,7 @@ extension BrowserPanel {
         isBrowserFocusModeExitArmed = false
         isBrowserFocusModeActive = false
 #if DEBUG
-        cmuxDebugLog("browser.focusMode.clear panel=\(id.uuidString.prefix(5)) reason=\(reason)")
+        breeDebugLog("browser.focusMode.clear panel=\(id.uuidString.prefix(5)) reason=\(reason)")
 #endif
         if shouldNotify {
             NotificationCenter.default.post(name: .browserFocusModeStateDidChange, object: id)
@@ -7251,7 +7251,7 @@ extension BrowserPanel {
         browserFocusModeExitArmedAt = nil
         isBrowserFocusModeExitArmed = false
 #if DEBUG
-        cmuxDebugLog("browser.focusMode.escape.disarm panel=\(id.uuidString.prefix(5)) reason=\(reason)")
+        breeDebugLog("browser.focusMode.escape.disarm panel=\(id.uuidString.prefix(5)) reason=\(reason)")
 #endif
     }
 
@@ -7285,7 +7285,7 @@ extension BrowserPanel {
 
         guard !event.isARepeat else {
 #if DEBUG
-            cmuxDebugLog("browser.focusMode.escape.repeat panel=\(id.uuidString.prefix(5)) reason=\(reason)")
+            breeDebugLog("browser.focusMode.escape.repeat panel=\(id.uuidString.prefix(5)) reason=\(reason)")
 #endif
             return .consume
         }
@@ -7293,7 +7293,7 @@ extension BrowserPanel {
         let eventFingerprint = BrowserFocusModePlainEscapeEventFingerprint(event)
         if lastBrowserFocusModePlainEscapeEventFingerprint == eventFingerprint {
 #if DEBUG
-            cmuxDebugLog("browser.focusMode.escape.duplicate panel=\(id.uuidString.prefix(5)) reason=\(reason)")
+            breeDebugLog("browser.focusMode.escape.duplicate panel=\(id.uuidString.prefix(5)) reason=\(reason)")
 #endif
             return .consume
         }
@@ -7307,7 +7307,7 @@ extension BrowserPanel {
 
             browserFocusModeExitArmedAt = event.timestamp
 #if DEBUG
-            cmuxDebugLog("browser.focusMode.escape.rearm panel=\(id.uuidString.prefix(5)) reason=\(reason)")
+            breeDebugLog("browser.focusMode.escape.rearm panel=\(id.uuidString.prefix(5)) reason=\(reason)")
 #endif
             return .forwardToWebView
         }
@@ -7315,7 +7315,7 @@ extension BrowserPanel {
         isBrowserFocusModeExitArmed = true
         browserFocusModeExitArmedAt = event.timestamp
 #if DEBUG
-        cmuxDebugLog("browser.focusMode.escape.arm panel=\(id.uuidString.prefix(5)) reason=\(reason)")
+        breeDebugLog("browser.focusMode.escape.arm panel=\(id.uuidString.prefix(5)) reason=\(reason)")
 #endif
         return .forwardToWebView
     }
@@ -7371,7 +7371,7 @@ extension BrowserPanel {
     func suppressOmnibarAutofocus(for seconds: TimeInterval) {
         suppressOmnibarAutofocusUntil = Date().addingTimeInterval(seconds)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.focus.omnibarAutofocus.suppress panel=\(id.uuidString.prefix(5)) " +
             "seconds=\(String(format: "%.2f", seconds))"
         )
@@ -7381,7 +7381,7 @@ extension BrowserPanel {
     func suppressWebViewFocus(for seconds: TimeInterval) {
         suppressWebViewFocusUntil = Date().addingTimeInterval(seconds)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.focus.webView.suppress panel=\(id.uuidString.prefix(5)) " +
             "seconds=\(String(format: "%.2f", seconds))"
         )
@@ -7391,7 +7391,7 @@ extension BrowserPanel {
     func clearWebViewFocusSuppression() {
         suppressWebViewFocusUntil = nil
 #if DEBUG
-        cmuxDebugLog("browser.focus.webView.suppress.clear panel=\(id.uuidString.prefix(5))")
+        breeDebugLog("browser.focus.webView.suppress.clear panel=\(id.uuidString.prefix(5))")
 #endif
     }
 
@@ -7419,7 +7419,7 @@ extension BrowserPanel {
         let enteringAddressBar = !suppressWebViewFocusForAddressBar
         if enteringAddressBar {
 #if DEBUG
-            cmuxDebugLog("browser.focus.addressBarSuppress.begin panel=\(id.uuidString.prefix(5))")
+            breeDebugLog("browser.focus.addressBarSuppress.begin panel=\(id.uuidString.prefix(5))")
 #endif
             invalidateAddressBarPageFocusRestoreAttempts()
         }
@@ -7432,7 +7432,7 @@ extension BrowserPanel {
     func endSuppressWebViewFocusForAddressBar() {
         if suppressWebViewFocusForAddressBar {
 #if DEBUG
-            cmuxDebugLog("browser.focus.addressBarSuppress.end panel=\(id.uuidString.prefix(5))")
+            breeDebugLog("browser.focus.addressBarSuppress.end panel=\(id.uuidString.prefix(5))")
 #endif
         }
         suppressWebViewFocusForAddressBar = false
@@ -7444,7 +7444,7 @@ extension BrowserPanel {
     ) -> UUID? {
         guard chromeVisibility.allowsAddressBarFocus else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.focus.addressBar.request panel=\(id.uuidString.prefix(5)) result=chromeless"
             )
 #endif
@@ -7466,7 +7466,7 @@ extension BrowserPanel {
                 pendingAddressBarFocusSelectionIntent = .selectAll
                 self.pendingAddressBarFocusRequestId = requestId
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.focus.addressBar.request panel=\(id.uuidString.prefix(5)) " +
                     "request=\(requestId.uuidString.prefix(8)) result=upgrade_to_select_all"
                 )
@@ -7474,7 +7474,7 @@ extension BrowserPanel {
                 return requestId
             }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.focus.addressBar.request panel=\(id.uuidString.prefix(5)) " +
                 "request=\(pendingAddressBarFocusRequestId.uuidString.prefix(8)) result=reuse_pending " +
                 "selection=\(String(describing: pendingAddressBarFocusSelectionIntent))"
@@ -7486,7 +7486,7 @@ extension BrowserPanel {
         pendingAddressBarFocusSelectionIntent = selectionIntent
         pendingAddressBarFocusRequestId = requestId
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.focus.addressBar.request panel=\(id.uuidString.prefix(5)) " +
             "request=\(requestId.uuidString.prefix(8)) result=new " +
             "selection=\(String(describing: selectionIntent))"
@@ -7505,7 +7505,7 @@ extension BrowserPanel {
     func setChromeVisibility(_ visibility: BrowserChromeVisibility) -> Bool {
         guard chromeState.setVisibility(visibility) else { return false }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.omnibar.visible panel=\(id.uuidString.prefix(5)) " +
             "state=\(visibility.rawValue) " +
             "callers=\(Thread.callStackSymbols.dropFirst().prefix(5).map { frame in String(frame.split(separator: " ").dropFirst(3).first ?? "?") }.joined(separator: "<"))"
@@ -7602,7 +7602,7 @@ extension BrowserPanel {
             preferredFocusIntent = .findField
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.focus.prepare panel=\(id.uuidString.prefix(5)) " +
             "target=\(String(describing: target)) suppressWeb=\(shouldSuppressWebViewFocus() ? 1 : 0)"
         )
@@ -7628,7 +7628,7 @@ extension BrowserPanel {
             }
             NotificationCenter.default.post(name: .browserFocusAddressBar, object: id)
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.focus.restore panel=\(id.uuidString.prefix(5)) " +
                 "target=addressBar request=\(requestId.uuidString.prefix(8))"
             )
@@ -7667,7 +7667,7 @@ extension BrowserPanel {
             let yielded = BrowserWindowPortalRegistry.yieldSearchOverlayFocusIfOwned(by: id, in: window)
 #if DEBUG
             if yielded {
-                cmuxDebugLog("focus.handoff.yield panel=\(id.uuidString.prefix(5)) target=browserFind")
+                breeDebugLog("focus.handoff.yield panel=\(id.uuidString.prefix(5)) target=browserFind")
             }
 #endif
             return yielded
@@ -7680,7 +7680,7 @@ extension BrowserPanel {
             browserPrepareOmnibarForProgrammaticBlur(panelId: id, responder: window.firstResponder)
             clearAddressBarFocusTrackingForYield()
 #if DEBUG
-            cmuxDebugLog("focus.handoff.yield panel=\(id.uuidString.prefix(5)) target=addressBar")
+            breeDebugLog("focus.handoff.yield panel=\(id.uuidString.prefix(5)) target=addressBar")
 #endif
             return true
         case .webView:
@@ -7699,7 +7699,7 @@ extension BrowserPanel {
     private func beginSearchFocusRequest(reason: String) -> UInt64 {
         searchFocusRequestGeneration &+= 1
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.find.focusLease.begin panel=\(id.uuidString.prefix(5)) " +
             "generation=\(searchFocusRequestGeneration) reason=\(reason)"
         )
@@ -7710,7 +7710,7 @@ extension BrowserPanel {
     func invalidateSearchFocusRequests(reason: String) {
         searchFocusRequestGeneration &+= 1
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.find.focusLease.invalidate panel=\(id.uuidString.prefix(5)) " +
             "generation=\(searchFocusRequestGeneration) reason=\(reason)"
         )
@@ -7720,7 +7720,7 @@ extension BrowserPanel {
     func acknowledgeAddressBarFocusRequest(_ requestId: UUID) {
         guard pendingAddressBarFocusRequestId == requestId else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.focus.addressBar.requestAck panel=\(id.uuidString.prefix(5)) " +
                 "request=\(requestId.uuidString.prefix(8)) result=ignored " +
                 "pending=\(pendingAddressBarFocusRequestId?.uuidString.prefix(8) ?? "nil")"
@@ -7731,7 +7731,7 @@ extension BrowserPanel {
         pendingAddressBarFocusRequestId = nil
         pendingAddressBarFocusSelectionIntent = .preserveFieldEditorSelection
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.focus.addressBar.requestAck panel=\(id.uuidString.prefix(5)) " +
             "request=\(requestId.uuidString.prefix(8)) result=cleared"
         )
@@ -7880,7 +7880,7 @@ extension BrowserPanel {
         var count = 0
         while let current = stack.popLast() {
             for subview in current.subviews {
-                if cmuxIsWebInspectorObject(subview) {
+                if breeIsWebInspectorObject(subview) {
                     count += 1
                 }
                 stack.append(subview)
@@ -7892,9 +7892,9 @@ extension BrowserPanel {
     func debugDeveloperToolsStateSummary() -> String {
         let preferred = preferredDeveloperToolsVisible ? 1 : 0
         let visible = isDeveloperToolsVisible() ? 1 : 0
-        let inspector = webView.cmuxInspectorObject() == nil ? 0 : 1
-        let attached = webView.cmuxBrowserViewportAttachmentSuperview == nil ? 0 : 1
-        let inWindow = webView.cmuxBrowserViewportAttachmentWindow == nil ? 0 : 1
+        let inspector = webView.breeInspectorObject() == nil ? 0 : 1
+        let attached = webView.breeBrowserViewportAttachmentSuperview == nil ? 0 : 1
+        let inWindow = webView.breeBrowserViewportAttachmentWindow == nil ? 0 : 1
         let forceRefresh = forceDeveloperToolsRefreshOnNextAttach ? 1 : 0
         let transitionTarget = developerToolsTransitionTargetVisible.map { $0 ? "1" : "0" } ?? "nil"
         let pendingTarget = pendingDeveloperToolsTransitionTargetVisible.map { $0 ? "1" : "0" } ?? "nil"
@@ -7963,7 +7963,7 @@ private extension BrowserPanel {
     }
 
     static func isInspectorView(_ view: NSView) -> Bool {
-        cmuxIsWebInspectorObject(view)
+        breeIsWebInspectorObject(view)
     }
 
     static func isVisibleSideDockInspectorCandidate(_ view: NSView) -> Bool {
@@ -7993,7 +7993,7 @@ extension BrowserPanel {
 }
 
 extension WKWebView {
-    func cmuxInspectorObject() -> NSObject? {
+    func breeInspectorObject() -> NSObject? {
         let selector = NSSelectorFromString("_inspector")
         guard responds(to: selector),
               let inspector = perform(selector)?.takeUnretainedValue() as? NSObject else {
@@ -8002,8 +8002,8 @@ extension WKWebView {
         return inspector
     }
 
-    func cmuxInspectorFrontendWebView() -> WKWebView? {
-        guard let inspector = cmuxInspectorObject() else { return nil }
+    func breeInspectorFrontendWebView() -> WKWebView? {
+        guard let inspector = breeInspectorObject() else { return nil }
         let selector = NSSelectorFromString("inspectorWebView")
         guard inspector.responds(to: selector),
               let inspectorWebView = inspector.perform(selector)?.takeUnretainedValue() as? WKWebView else {
@@ -8036,26 +8036,26 @@ enum WebViewInspectorTeardown {
         assert(Thread.isMainThread)
 
         guard !isInspectorFrontendWebView(webView),
-              let inspector = webView.cmuxInspectorObject() else {
+              let inspector = webView.breeInspectorObject() else {
             return false
         }
 
         let isVisibleSelector = NSSelectorFromString("isVisible")
         let isAttachedSelector = NSSelectorFromString("isAttached")
-        let isVisible = inspector.cmuxCallBool(selector: isVisibleSelector)
-        let isAttached = inspector.cmuxCallBool(selector: isAttachedSelector)
+        let isVisible = inspector.breeCallBool(selector: isVisibleSelector)
+        let isAttached = inspector.breeCallBool(selector: isAttachedSelector)
         let shouldClose = (isVisible == true)
             || (isAttached == true)
             || (isVisible == nil && isAttached == nil)
         guard shouldClose else { return false }
 
-        // cmux already opens Web Inspector through WebKit's `_inspector` object
+        // bree already opens Web Inspector through WebKit's `_inspector` object
         // because the deployable SDK surface does not expose a stable close API.
         // Keep teardown on the same auditable SPI path so WebKit unregisters the
         // inspector window observers before the parent AppKit close cascade runs.
         let closeSelector = NSSelectorFromString("close")
         guard inspector.responds(to: closeSelector) else { return false }
-        inspector.cmuxCallVoid(selector: closeSelector)
+        inspector.breeCallVoid(selector: closeSelector)
         return true
     }
 
@@ -8089,19 +8089,19 @@ enum WebViewInspectorTeardown {
     }
 
     private static func isInspectorFrontendWebView(_ webView: WKWebView) -> Bool {
-        cmuxIsWebInspectorObject(webView)
+        breeIsWebInspectorObject(webView)
     }
 }
 
 private extension NSObject {
-    func cmuxCallBool(selector: Selector) -> Bool? {
+    func breeCallBool(selector: Selector) -> Bool? {
         guard responds(to: selector) else { return nil }
         typealias Fn = @convention(c) (AnyObject, Selector) -> Bool
         let fn = unsafeBitCast(method(for: selector), to: Fn.self)
         return fn(self, selector)
     }
 
-    func cmuxCallVoid(selector: Selector) {
+    func breeCallVoid(selector: Selector) {
         guard responds(to: selector) else { return }
         typealias Fn = @convention(c) (AnyObject, Selector) -> Void
         let fn = unsafeBitCast(method(for: selector), to: Fn.self)
@@ -8146,7 +8146,7 @@ class BrowserDownloadDelegate: NSObject, WKDownloadDelegate, BrowserSuggestedFil
     }
 
     static let tempDir: URL = {
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("\(CmuxIdentity.current.tempNamePrefix)-downloads", isDirectory: true)
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("\(BreeIdentity.current.tempNamePrefix)-downloads", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }()
@@ -8197,7 +8197,7 @@ class BrowserDownloadDelegate: NSObject, WKDownloadDelegate, BrowserSuggestedFil
     ) throws -> URL {
         let directory = filenameResolver.downloadsDirectory(fileManager: fileManager)
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: nil)
-        try tempURL.cmuxApplyWebDownloadQuarantine(sourceURL: sourceURL)
+        try tempURL.breeApplyWebDownloadQuarantine(sourceURL: sourceURL)
         var lastCollisionError: Error?
         for _ in 0..<Self.maxDownloadDestinationCollisionRetries {
             let destinationURL = filenameResolver.uniqueDownloadDestination(
@@ -8238,13 +8238,13 @@ class BrowserDownloadDelegate: NSObject, WKDownloadDelegate, BrowserSuggestedFil
                 return
             }
             do {
-                try tempURL.cmuxApplyWebDownloadQuarantine(sourceURL: sourceURL)
+                try tempURL.breeApplyWebDownloadQuarantine(sourceURL: sourceURL)
                 if FileManager.default.fileExists(atPath: destURL.path) {
                     _ = try FileManager.default.replaceItemAt(destURL, withItemAt: tempURL)
                 } else {
                     try FileManager.default.moveItem(at: tempURL, to: destURL)
                 }
-                try? destURL.cmuxApplyWebDownloadQuarantine(sourceURL: sourceURL); self?.onDownloadSaved?(suggestedFilename, destURL, false, downloadID)
+                try? destURL.breeApplyWebDownloadQuarantine(sourceURL: sourceURL); self?.onDownloadSaved?(suggestedFilename, destURL, false, downloadID)
             } catch {
                 try? FileManager.default.removeItem(at: tempURL)
                 self?.onDownloadFailed?(error, false, downloadID)
@@ -8283,7 +8283,7 @@ class BrowserDownloadDelegate: NSObject, WKDownloadDelegate, BrowserSuggestedFil
             self?.replAttachment?()?.downloadDidStart(id: downloadID, url: response.url, suggestedFilename: safeFilename)
         }
         #if DEBUG
-        cmuxDebugLog("download.decideDestination file=<redacted>")
+        breeDebugLog("download.decideDestination file=<redacted>")
         #endif
         completionHandler(destURL)
     }
@@ -8291,12 +8291,12 @@ class BrowserDownloadDelegate: NSObject, WKDownloadDelegate, BrowserSuggestedFil
     func downloadDidFinish(_ download: WKDownload) {
         guard let info = removeState(for: download) else {
             #if DEBUG
-            cmuxDebugLog("download.finished missing-state")
+            breeDebugLog("download.finished missing-state")
             #endif
             return
         }
         #if DEBUG
-        cmuxDebugLog("download.finished file=<redacted>")
+        breeDebugLog("download.finished file=<redacted>")
         #endif
         let filenameResolver = BrowserDownloadFilenameResolver()
         Task { @MainActor in
@@ -8338,7 +8338,7 @@ class BrowserDownloadDelegate: NSObject, WKDownloadDelegate, BrowserSuggestedFil
             case .success(let destinationURL):
                 self.onDownloadSaved?(suggestedFilename, destinationURL, true, info.downloadID)
                 #if DEBUG
-                cmuxDebugLog("download.saved path=<redacted>")
+                breeDebugLog("download.saved path=<redacted>")
                 #endif
             case .failure(let error):
                 try? FileManager.default.removeItem(at: info.tempURL)
@@ -8362,7 +8362,7 @@ class BrowserDownloadDelegate: NSObject, WKDownloadDelegate, BrowserSuggestedFil
             }
         }
         #if DEBUG
-        cmuxDebugLog("download.failed error=\(error.localizedDescription)")
+        breeDebugLog("download.failed error=\(error.localizedDescription)")
         #endif
         NSLog("BrowserPanel download failed: %@", error.localizedDescription)
     }
@@ -8492,7 +8492,7 @@ final class BrowserUIDelegate: BrowserPDFPreviewActionUIDelegate {
             "status=\(windowFeatures.statusBarVisibility?.stringValue ?? "nil")",
             "menu=\(windowFeatures.menuBarVisibility?.stringValue ?? "nil")"
         ].joined(separator: ",")
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.nav.createWebView navType=\(navType) button=\(navigationAction.buttonNumber) " +
             "mods=\(navigationAction.modifierFlags.rawValue) targetNil=\(navigationAction.targetFrame == nil ? 1 : 0) " +
             "targetMain=\(targetMainFrame) method=\(requestMethod) url=\(requestURL) " +
@@ -8505,14 +8505,14 @@ final class BrowserUIDelegate: BrowserPDFPreviewActionUIDelegate {
         // tab adopts a web view made from WebKit's configuration, so
         // window.opener and postMessage to the opener work as in a browser.
         // The page controls the URL, and a session's popup opens through
-        // cmux's own navigation, so it goes to the sessions only as an
+        // bree's own navigation, so it goes to the sessions only as an
         // untrusted navigation the URL allowlist and the creating session's
         // domain policy allow (BrowserReplNavigationGuard.popupRoute).
         if let owner, let attachment = BrowserReplTabAttachments.shared.attachment(for: owner.id) {
             switch BrowserReplNavigationGuard.shared.popupRoute(panelID: owner.id, url: navigationAction.request.url) {
             case .refused(let reason):
 #if DEBUG
-                cmuxDebugLog("browser.nav.createWebView kind=replPopupRefused reason=\(reason)")
+                breeDebugLog("browser.nav.createWebView kind=replPopupRefused reason=\(reason)")
 #endif
                 _ = reason
                 return nil
@@ -8594,7 +8594,7 @@ final class BrowserUIDelegate: BrowserPDFPreviewActionUIDelegate {
         if let url = navigationAction.request.url,
            BrowserAuthCallbackNavigationPolicy.shouldBlockExternalNavigation(url) {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.nav.createWebView kind=blockUntrustedAuthCallback scheme=\(url.scheme ?? "nil")"
             )
 #endif
@@ -8616,7 +8616,7 @@ final class BrowserUIDelegate: BrowserPDFPreviewActionUIDelegate {
             return nil
         }
 
-        let hasRecentMiddleClickIntent = CmuxWebView.hasRecentMiddleClickIntent(for: webView)
+        let hasRecentMiddleClickIntent = BreeWebView.hasRecentMiddleClickIntent(for: webView)
         let popupFeaturesWereSpecified = browserNavigationPopupFeaturesWereSpecified(windowFeatures: windowFeatures)
         let shouldOpenSimpleUserGesturePopupInCurrentTab = browserNavigationShouldOpenSimpleUserGesturePopupInCurrentTab(
             navigationType: navigationAction.navigationType,
@@ -8632,7 +8632,7 @@ final class BrowserUIDelegate: BrowserPDFPreviewActionUIDelegate {
         if shouldOpenSimpleUserGesturePopupInCurrentTab {
             if let url = navigationAction.request.url {
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.nav.createWebView.action kind=requestNavigationSimpleUserGesture intent=currentTab " +
                     "url=\(browserNavigationDebugURL(url))"
                 )
@@ -8660,7 +8660,7 @@ final class BrowserUIDelegate: BrowserPDFPreviewActionUIDelegate {
         if isScriptedPopup, let popupWebView = openPopup?(configuration, windowFeatures) {
             popupWebView.applyBrowserUserAgentPolicy(for: navigationAction.request.url)
 #if DEBUG
-            cmuxDebugLog("browser.nav.createWebView.action kind=popup")
+            breeDebugLog("browser.nav.createWebView.action kind=popup")
 #endif
             return popupWebView
         }
@@ -8670,7 +8670,7 @@ final class BrowserUIDelegate: BrowserPDFPreviewActionUIDelegate {
             if let requestNavigation {
                 let intent: BrowserInsecureHTTPNavigationIntent = .newTab
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.nav.createWebView.action kind=requestNavigation intent=newTab " +
                     "url=\(browserNavigationDebugURL(url))"
                 )
@@ -8679,7 +8679,7 @@ final class BrowserUIDelegate: BrowserPDFPreviewActionUIDelegate {
                 requestNavigation(navigationAction.request, intent)
             } else {
 #if DEBUG
-                cmuxDebugLog("browser.nav.createWebView.action kind=openInNewTab url=\(url.absoluteString)")
+                breeDebugLog("browser.nav.createWebView.action kind=openInNewTab url=\(url.absoluteString)")
 #endif
                 openInNewTab?(url)
             }
@@ -10024,7 +10024,7 @@ enum BrowserDataImporter {
     ) throws {
         let fileManager = FileManager.default
         let tempRoot = fileManager.temporaryDirectory.appendingPathComponent(
-            "cmux-browser-import-\(UUID().uuidString)",
+            "bree-browser-import-\(UUID().uuidString)",
             isDirectory: true
         )
         try fileManager.createDirectory(at: tempRoot, withIntermediateDirectories: true)
@@ -10121,7 +10121,7 @@ enum BrowserImportUITestFixtureLoader {
     }
 
     static func browsers(from environment: [String: String]) -> [InstalledBrowserCandidate]? {
-        guard let rawFixture = environment["CMUX_UI_TEST_BROWSER_IMPORT_FIXTURE"],
+        guard let rawFixture = environment["BREE_UI_TEST_BROWSER_IMPORT_FIXTURE"],
               let data = rawFixture.data(using: .utf8),
               let fixture = try? JSONDecoder().decode(BrowserFixture.self, from: data) else {
             return nil
@@ -10131,7 +10131,7 @@ enum BrowserImportUITestFixtureLoader {
             InstalledBrowserProfile(
                 displayName: name,
                 rootURL: FileManager.default.temporaryDirectory
-                    .appendingPathComponent("cmux-ui-test-browser-import")
+                    .appendingPathComponent("bree-ui-test-browser-import")
                     .appendingPathComponent(
                         fixture.browserName
                             .lowercased()
@@ -10175,7 +10175,7 @@ enum BrowserImportUITestFixtureLoader {
     }
 
     static func destinationProfiles(from environment: [String: String]) -> [BrowserProfileDefinition]? {
-        guard let rawDestinations = environment["CMUX_UI_TEST_BROWSER_IMPORT_DESTINATIONS"],
+        guard let rawDestinations = environment["BREE_UI_TEST_BROWSER_IMPORT_DESTINATIONS"],
               let data = rawDestinations.data(using: .utf8),
               let names = try? JSONDecoder().decode([String].self, from: data),
               !names.isEmpty else {
@@ -10529,7 +10529,7 @@ extension BrowserDataImportCoordinator {
             setupDataTypesContainer()
 
             registerStaticFont(validationLabel, size: 12, weight: .regular)
-            validationLabel.textColor = .systemRed
+            validationLabel.textColor = BreeChromePalette.currentSnapshot.ns.signalError
             validationLabel.isHidden = true
             validationLabel.lineBreakMode = .byWordWrapping
             validationLabel.maximumNumberOfLines = 3
@@ -10786,7 +10786,7 @@ extension BrowserDataImportCoordinator {
 
             let destinationTitleLabel = NSTextField(
                 labelWithString: String(
-                    localized: "browser.import.destination.cmux",
+                    localized: "browser.import.destination.bree",
                     defaultValue: "Bree destination"
                 )
             )
@@ -11333,10 +11333,10 @@ extension BrowserPanel {
     /// Debug-log sink handed to `BrowserOmnibarPageFocusRepository`.
     ///
     /// In release builds this is `nil`, so the repository emits no logging and
-    /// the former `#if DEBUG`-guarded `cmuxDebugLog` calls stay compiled out.
+    /// the former `#if DEBUG`-guarded `breeDebugLog` calls stay compiled out.
     static var omnibarPageFocusLogSink: (@MainActor @Sendable (String) -> Void)? {
 #if DEBUG
-        return { message in cmuxDebugLog(message) }
+        return { message in breeDebugLog(message) }
 #else
         return nil
 #endif

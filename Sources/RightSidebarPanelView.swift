@@ -1,14 +1,14 @@
 import AppKit
 import Bonsplit
-import CMUXAgentLaunch
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxSettings
-import CmuxSettingsUI
-import CmuxSidebarInterpreterClient
-import CmuxSidebarRemoteRender
-import CmuxSwiftRender
-import CmuxSwiftRenderUI
+import BREEAgentLaunch
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeSettings
+import BreeSettingsUI
+import BreeSidebarInterpreterClient
+import BreeSidebarRemoteRender
+import BreeSwiftRender
+import BreeSwiftRenderUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -159,7 +159,7 @@ struct RightSidebarPanelView: View {
         .rightSidebarButtonBorderShape()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // Keep every mode (including AppKit-backed file rows) on the
-        // same resolved cmux scheme as the window and left sidebar.
+        // same resolved bree scheme as the window and left sidebar.
         .environment(\.colorScheme, windowAppearance.resolvedColorScheme)
         .background(
             RightSidebarKeyboardFocusBridge()
@@ -195,7 +195,7 @@ struct RightSidebarPanelView: View {
             refreshModeAvailabilityAndFocusIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: ManagedDevicePolicy.didChangeNotification)
-            .merge(with: NotificationCenter.default.publisher(for: .cmuxFeatureFlagsDidChange))) { _ in
+            .merge(with: NotificationCenter.default.publisher(for: .breeFeatureFlagsDidChange))) { _ in
             managedPolicyRevision &+= 1
             refreshModeAvailabilityAndFocusIfNeeded()
         }
@@ -416,18 +416,18 @@ struct RightSidebarPanelView: View {
         }
     }
 
-    /// Custom mode: mounts the selected `~/.config/cmux/sidebars/<name>.{js,swift,json}`
+    /// Custom mode: mounts the selected `~/.config/bree/sidebars/<name>.{js,swift,json}`
     /// through the same surface as the left sidebar and panes (file-watched,
-    /// hot-reloading, same data keys and `cmux(...)` actions).
+    /// hot-reloading, same data keys and `bree(...)` actions).
     @ViewBuilder
     private var customSidebarPanel: some View {
         if let name = fileExplorerState.customSidebarName,
-           let fileURL = CmuxExtensionSidebarSelection.customSidebarFileURL(forName: name) {
+           let fileURL = BreeExtensionSidebarSelection.customSidebarFileURL(forName: name) {
             TimelineView(.periodic(from: .now, by: 1)) { timeline in
                 CustomSidebarSurface(
                     fileURL: fileURL,
                     dataContext: customSidebarDataContext(timeline.date),
-                    dispatch: makeCmuxSidebarActionDispatch(),
+                    dispatch: makeBreeSidebarActionDispatch(),
                     contentInsets: CustomSidebarContentInsets(top: 8, bottom: 8),
                     rendersInProcess: customSidebarRenderer == .inProcess,
                     client: $customSidebarWorkerClient
@@ -514,7 +514,7 @@ final class RightSidebarKeyboardFocusView: NSView {
         AppDelegate.shared?.keyboardFocusCoordinator(for: window)?.registerRightSidebarHost(self)
 #if DEBUG
         dlog(
-            "rs.focus.host.attach win=\(window.windowNumber) canAccept=\(cmuxCanAcceptRightSidebarKeyboardFocus ? 1 : 0) " +
+            "rs.focus.host.attach win=\(window.windowNumber) canAccept=\(breeCanAcceptRightSidebarKeyboardFocus ? 1 : 0) " +
             "fr=\(rightSidebarDebugResponder(window.firstResponder))"
         )
 #endif
@@ -572,7 +572,7 @@ final class RightSidebarKeyboardFocusView: NSView {
 }
 
 extension NSView {
-    var cmuxCanAcceptRightSidebarKeyboardFocus: Bool {
+    var breeCanAcceptRightSidebarKeyboardFocus: Bool {
         guard window != nil, !isHiddenOrHasHiddenAncestor else { return false }
         var view: NSView? = self
         while let current = view {

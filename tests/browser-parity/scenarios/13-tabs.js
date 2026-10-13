@@ -23,7 +23,7 @@ emit("window-open-url", second.url());
 const bg = await tabs.open(`${PRIMARY}/aria.html`, { background: true });
 emit("background-keeps-current", page === first);
 emit("get-by-id", (await tabs.get(bg.id)) === bg);
-emitCmux("snapshot-other-tab", (await snapshot(bg)).tree.split("\n")[0]);
+emitBree("snapshot-other-tab", (await snapshot(bg)).tree.split("\n")[0]);
 emit("one-active", (await tabs.list()).filter((t) => t.active).length);
 await tabs.use(bg);
 emit("use-switches", page === bg);

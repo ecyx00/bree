@@ -134,9 +134,9 @@ larger viewer shows a little blank margin — a gap, which is fine. Sizing to th
 largest would invert this and make the smaller viewer wrap, the one failure the
 whole design exists to remove.
 
-Within cmux this needs no special handling: there is exactly one window mirror
+Within bree this needs no special handling: there is exactly one window mirror
 per tmux window id (`windowMirrorByWindowId`), so the same tmux window is never
-displayed in two cmux OS windows at once, and macOS tabs within one window share
+displayed in two bree OS windows at once, and macOS tabs within one window share
 that window's content area (hidden tabs included). The multi-viewer case is
 therefore only a co-attached *external* client (a real `tmux attach` elsewhere),
 and the per-window pin already handles it: the pin is a ceiling, so tmux sizes

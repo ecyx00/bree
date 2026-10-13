@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import SwiftUI
 
@@ -72,7 +72,7 @@ final class TitlebarLayoutDebugWindowController: ReleasingWindowController {
         window.titleVisibility = .visible
         window.titlebarAppearsTransparent = false
         window.isMovableByWindowBackground = true
-        window.identifier = NSUserInterfaceItemIdentifier("cmux.titlebarLayoutDebug")
+        window.identifier = NSUserInterfaceItemIdentifier("bree.titlebarLayoutDebug")
         window.center()
         window.contentView = NSHostingView(rootView: TitlebarLayoutDebugView())
         AppDelegate.shared?.applyWindowDecorations(to: window)
@@ -102,7 +102,7 @@ private struct TitlebarLayoutDebugView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Text(String(localized: "debug.titlebarLayoutDebug.title", defaultValue: "Titlebar Layout Debug"))
-                    .cmuxFont(.headline)
+                    .scaledFont(.headline)
 
                 GroupBox(String(localized: "debug.titlebarLayoutDebug.titlebarControls", defaultValue: "Titlebar Controls")) {
                     VStack(alignment: .leading, spacing: 10) {
@@ -184,7 +184,7 @@ private struct TitlebarLayoutDebugView: View {
                 .frame(width: 112, alignment: .leading)
             Slider(value: clamped, in: range, step: step)
             Text(String(format: "%.1f", clamped.wrappedValue))
-                .cmuxFont(.caption, design: .monospaced)
+                .scaledFont(.caption, design: .monospaced)
                 .frame(width: 44, alignment: .trailing)
         }
     }

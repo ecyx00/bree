@@ -1,9 +1,9 @@
 import Foundation
 import OSLog
-import CmuxNotifications
+import BreeNotifications
 
 nonisolated private let focusSurfaceBroadcasterLogger = Logger(
-    subsystem: "com.cmuxterm.app",
+    subsystem: "com.bree.app",
     category: "FocusSurfaceBroadcaster"
 )
 
@@ -22,7 +22,7 @@ nonisolated private let focusSurfaceBroadcasterLogger = Logger(
 /// through SwiftUI body re-evaluation and across different `Workspace` instances
 /// (command-palette focus restore + cross-workspace handoff) was unbounded. That is
 /// the re-entrant SwiftUI/AppKit layout loop reported in
-/// https://github.com/manaflow-ai/cmux/issues/8843.
+/// https://github.com/ecyx00/bree/issues/8843.
 ///
 /// ## Contract
 ///
@@ -79,7 +79,7 @@ final class FocusSurfaceBroadcaster {
     static let shared = FocusSurfaceBroadcaster(
         onDrainBoundExceeded: { payload in
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "focus.broadcast.drain.exceeded workspace=\(payload.workspaceId.uuidString.prefix(5)) " +
                 "panel=\(payload.panelId.uuidString.prefix(5)) tx=\(payload.transactionId.uuidString.prefix(5)) " +
                 "explicit=\(payload.explicitFocusIntent ? 1 : 0)"
@@ -91,7 +91,7 @@ final class FocusSurfaceBroadcaster {
                 "panel=\(payload.panelId.uuidString.prefix(5)) tx=\(payload.transactionId.uuidString.prefix(5)) " +
                 "explicit=\(payload.explicitFocusIntent ? 1 : 0)"
 #if DEBUG
-            cmuxDebugLog(message)
+            breeDebugLog(message)
 #endif
             focusSurfaceBroadcasterLogger.error("\(message, privacy: .public)")
         }

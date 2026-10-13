@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Regression test: `cmux omo` points OpenCode at a shadow config dir holding a
+Regression test: `bree omo` points OpenCode at a shadow config dir holding a
 copy of the user's opencode.json. Relative references in that copy, such as
 {file:./prompts/chief.md}, resolve against the shadow dir, so the files they
 name must be visible there. OpenCode already scans the user's real config dir
 for agents, commands, modes, plugins, tools, and skills; linking those into the
 shadow dir too would load each one twice, and linking package-lock.json would
 let OpenCode's npm install in the shadow dir rewrite the user's lockfile.
-https://github.com/manaflow-ai/cmux/issues/14844
+https://github.com/ecyx00/bree/issues/14844
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from claude_teams_test_utils import cli_dot_directory_name, resolve_cmux_cli
+from claude_teams_test_utils import cli_dot_directory_name, resolve_bree_cli
 from isolated_home import home_env, isolated_home
 
 
@@ -40,8 +40,8 @@ mkdir -p "node_modules/$package"
     )
     env = home_env(root, os.environ.copy())
     env["PATH"] = f"{fake_bin}:{env.get('PATH', '')}"
-    env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-    env["CMUX_SOCKET_PATH"] = str(root / "missing.sock")
+    env["BREE_CLI_SENTRY_DISABLED"] = "1"
+    env["BREE_SOCKET_PATH"] = str(root / "missing.sock")
     # A non-session OMO command still prepares the shadow config.
     return subprocess.run(
         [cli_path, "omo", "models"],
@@ -71,7 +71,7 @@ def make_user_config(root: Path) -> Path:
 
 
 def check_referenced_files_are_mirrored(cli_path: str, failures: list[str]) -> None:
-    with isolated_home("cmux-omo-mirror-") as iso:
+    with isolated_home("bree-omo-mirror-") as iso:
         root = iso.root
         user_dir = make_user_config(root)
         run = run_omo(cli_path, root)
@@ -86,14 +86,14 @@ def check_referenced_files_are_mirrored(cli_path: str, failures: list[str]) -> N
         elif shadow_prompt.read_text(encoding="utf-8") != (user_dir / "prompts" / "chief.md").read_text(encoding="utf-8"):
             failures.append("prompts/chief.md in the shadow dir does not match the user's file")
 
-        # cmux owns these in the shadow dir; they must not become links to the user's copies.
+        # bree owns these in the shadow dir; they must not become links to the user's copies.
         for owned in ["opencode.json", "package.json"]:
             if (shadow / owned).is_symlink():
                 failures.append(f"shadow {owned} was replaced by a link to the user's file")
 
 
 def check_auto_discovered_entries_are_not_mirrored(cli_path: str, failures: list[str]) -> None:
-    with isolated_home("cmux-omo-discovered-") as iso:
+    with isolated_home("bree-omo-discovered-") as iso:
         root = iso.root
         user_dir = make_user_config(root)
         for folder, filename in [
@@ -117,13 +117,13 @@ def check_auto_discovered_entries_are_not_mirrored(cli_path: str, failures: list
             if os.path.lexists(shadow / relative):
                 failures.append(f"shadow {relative} exists, so OpenCode would load or write it a second time")
         if not (shadow / "plugins" / "bree-session.js").exists():
-            failures.append(f"cmux session plugin missing from the shadow dir; exit={run.returncode} stderr={run.stderr.strip()}")
+            failures.append(f"bree session plugin missing from the shadow dir; exit={run.returncode} stderr={run.stderr.strip()}")
         if (user_dir / "plugins" / "bree-session.js").exists():
-            failures.append("cmux wrote its session plugin into the user's plugins dir")
+            failures.append("bree wrote its session plugin into the user's plugins dir")
 
 
 def check_removed_user_entries_do_not_leave_dangling_links(cli_path: str, failures: list[str]) -> None:
-    with isolated_home("cmux-omo-prune-") as iso:
+    with isolated_home("bree-omo-prune-") as iso:
         root = iso.root
         user_dir = make_user_config(root)
         (user_dir / "snippets").mkdir()
@@ -141,7 +141,7 @@ def check_removed_user_entries_do_not_leave_dangling_links(cli_path: str, failur
         if os.path.lexists(shadow / "snippets"):
             failures.append(f"shadow snippets still exists after the user removed it; exit={run.returncode}")
         if not (shadow / "plugins" / "bree-session.js").exists():
-            failures.append("pruning removed the cmux session plugin")
+            failures.append("pruning removed the bree session plugin")
         if not (shadow / "prompts" / "chief.md").exists():
             failures.append("pruning removed a link whose target still exists")
         shadow_node_modules = shadow / "node_modules"
@@ -151,7 +151,7 @@ def check_removed_user_entries_do_not_leave_dangling_links(cli_path: str, failur
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
@@ -165,7 +165,7 @@ def main() -> int:
         for failure in failures:
             print(f"FAIL: {failure}")
         return 1
-    print("PASS: cmux omo exposes referenced config files without duplicating what OpenCode already loads")
+    print("PASS: bree omo exposes referenced config files without duplicating what OpenCode already loads")
     return 0
 
 

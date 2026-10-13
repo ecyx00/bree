@@ -124,7 +124,7 @@ test("buildApng: valid chunks, frame count, sequence numbers; other sizes skippe
 
 // One REPL session on the dev driver, with the app's output cap.
 async function withRepl(fn, { maxOutput, setupContext, readable } = {}) {
-  const dir = makeTestDir("cmux-repl-bu-");
+  const dir = makeTestDir("bree-repl-bu-");
   const sessionId = `bu-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
   const browser = await createDevBrowser({ setupContext });
   const driver = browser.driver();
@@ -151,20 +151,20 @@ async function withRepl(fn, { maxOutput, setupContext, readable } = {}) {
 }
 
 // The app gives each session a private temporary directory (os.tmpdir(),
-// mode 0700) under <tmp>/cmux-browser-repl. Files the session writes go
+// mode 0700) under <tmp>/bree-browser-repl. Files the session writes go
 // straight into it; seen on the app, images landed in
-// <session tmp>/cmux-browser-repl/<session>/image-1.png, one session
+// <session tmp>/bree-browser-repl/<session>/image-1.png, one session
 // directory inside another (18-print).
 test("files a session writes go straight into its private temporary directory", async () => {
   const servers = await startFixtureServers();
-  const dir = makeTestDir("cmux-repl-tmp-");
+  const dir = makeTestDir("bree-repl-tmp-");
   const browser = await createDevBrowser();
   const lines = [];
   const host = createNodeHost({ workDir: dir, sessionId: `tmp-${process.pid}`, print: (level, text) => lines.push(text) });
   const repl = createDevRepl({ host, driver: browser.driver() });
   try {
     assert.equal(fs.statSync(host.tmpdir).mode & 0o777, 0o700, "the session's temporary directory is private");
-    assert.equal(path.dirname(host.tmpdir), path.join(fs.realpathSync(os.tmpdir()), "cmux-browser-repl"));
+    assert.equal(path.dirname(host.tmpdir), path.join(fs.realpathSync(os.tmpdir()), "bree-browser-repl"));
     const r = await repl.evaluate(`
       await page.goto(${JSON.stringify(servers.origins.primary + "/aria.html")});
       display(await screenshot());
@@ -427,7 +427,7 @@ test("cookie calls name the page's tab, so the driver uses that tab's store", as
   const browser = await createDevBrowser();
   const servers = await startFixtureServers();
   const { primary } = servers.origins;
-  const dir = makeTestDir("cmux-repl-cookie-");
+  const dir = makeTestDir("bree-repl-cookie-");
   const driver = browser.driver();
   const calls = [];
   const call = driver.call.bind(driver);
@@ -469,7 +469,7 @@ test("storage state reads and writes localStorage only in the page's own data st
   const browser = await createDevBrowser();
   const servers = await startFixtureServers();
   const { primary } = servers.origins;
-  const dir = makeTestDir("cmux-repl-store-");
+  const dir = makeTestDir("bree-repl-store-");
   const driver = browser.driver();
   let otherId = null;
   let recording = false;
@@ -521,7 +521,7 @@ test("a closed page's context still reads and adds cookies", async () => {
   const browser = await createDevBrowser();
   const servers = await startFixtureServers();
   const { primary } = servers.origins;
-  const dir = makeTestDir("cmux-repl-cookie-closed-");
+  const dir = makeTestDir("bree-repl-cookie-closed-");
   const repl = createDevRepl({ host: createNodeHost({ workDir: dir, sessionId: `cookie-closed-${process.pid}`, print: () => {} }), driver: browser.driver() });
   try {
     const r = await repl.evaluate(`
@@ -666,7 +666,7 @@ test("reference-c-parity.md: verdicts and proofs resolve", () => {
   assert.ok(rows.length > 60, `${rows.length} rows`);
   const goldenKeys = (name) => {
     const g = JSON.parse(fs.readFileSync(path.join(root, "goldens", `${name}.json`), "utf8"));
-    return [...Object.keys(g.cmux || {}), ...Object.keys(g.oracle || {})];
+    return [...Object.keys(g.bree || {}), ...Object.keys(g.oracle || {})];
   };
   const titles = (file) => [...fs.readFileSync(path.join(root, "unit", `${file}.test.mjs`), "utf8").matchAll(/^test\("((?:[^"\\]|\\.)*)"/gm)].map((m) => m[1]);
   for (const row of rows) {

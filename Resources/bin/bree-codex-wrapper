@@ -1,0 +1,562 @@
+#!/usr/bin/env bash
+# bree codex wrapper - per-invocation Codex hook injection + launch detection.
+#
+# When running inside a bree terminal (BREE_SURFACE_ID is set), this wrapper
+# makes `codex` carry exactly one bree producer per event. The emitter reads
+# ~/.codex/hooks.json without changing it, then injects only missing bree hooks
+# for THIS invocation. It never rewrites the user's Codex settings.
+# Codex's own SessionStart/UserPromptSubmit/Stop/PreToolUse/PostToolUse/
+# PermissionRequest then fire back into bree with Codex's real session_id.
+# Those hook payloads are the source of truth for session identity; the wrapper
+# never predicts fresh-vs-resume state from Codex's command-line syntax.
+#
+# Outside bree (no BREE_SURFACE_ID), or when the user opts out
+# (BREE_CODEX_HOOKS_DISABLED=1), the wrapper does NOTHING but exec the real
+# codex. Every failure path below also execs the real codex, so installing the
+# wrapper can never break `codex`.
+
+# Deliberately NOT using `set -e`/`set -u`: a wrapper that aborts on any error
+# would break the user's `codex`. Each helper handles its own failures and the
+# script always reaches an `exec "$REAL_CODEX"`.
+
+bree_codex_wrapper_is_self_or_shim() {
+    local candidate="$1"
+    [[ -n "$candidate" ]] || return 1
+    if [[ -e "$candidate" && "$candidate" -ef "$0" ]]; then
+        return 0
+    fi
+    if [[ -n "${BREE_CODEX_WRAPPER_SHIM:-}" &&
+          -e "$candidate" &&
+          -e "$BREE_CODEX_WRAPPER_SHIM" &&
+          "$candidate" -ef "$BREE_CODEX_WRAPPER_SHIM" ]]; then
+        return 0
+    fi
+    if [[ -n "${BREE_CODEX_WRAPPER_SHIM_ROOT:-}" &&
+          "$candidate" == "${BREE_CODEX_WRAPPER_SHIM_ROOT%/}/codex" ]]; then
+        return 0
+    fi
+    case "$candidate" in
+        */bree-cli-shims/*/codex|*/bree-cli-shims/codex)
+            return 0
+            ;;
+        */Contents/Resources/bin/codex|*/Resources/bin/codex)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+codex_launch_has_subrouter_provider() {
+    local argument assignment compact provider=""
+    local expects_config_value=0
+    for argument in "$@"; do
+        [[ "$argument" == "--" ]] && break
+        assignment=""
+        if (( expects_config_value )); then
+            assignment="$argument"
+            expects_config_value=0
+        else
+            case "$argument" in
+                -c|--config)
+                    expects_config_value=1
+                    continue
+                    ;;
+                -c=*|--config=*)
+                    assignment="${argument#*=}"
+                    ;;
+                *)
+                    continue
+                    ;;
+            esac
+        fi
+        compact="${assignment//[[:space:]]/}"
+        case "$compact" in
+            model_provider=subrouter|model_provider=\"subrouter\"|model_provider=\'subrouter\')
+                provider="subrouter"
+                ;;
+            model_provider=*)
+                provider="other"
+                ;;
+        esac
+    done
+    [[ "$provider" == "subrouter" ]]
+}
+
+# Find the real codex binary, skipping this wrapper and bree's shell shims.
+find_real_codex() {
+    local custom="${BREE_CUSTOM_CODEX_PATH:-}"
+    custom="${custom#"${custom%%[![:space:]]*}"}"  # trim leading whitespace
+    custom="${custom%"${custom##*[![:space:]]}"}"  # trim trailing whitespace
+    if [[ -n "$custom" && -f "$custom" && -x "$custom" ]]; then
+        if ! bree_codex_wrapper_is_self_or_shim "$custom"; then
+            printf '%s' "$custom"
+            return 0
+        fi
+    fi
+    local self_dir
+    self_dir="$(cd "$(dirname "$0")" && pwd)"
+    local IFS=:
+    for d in $PATH; do
+        [[ "$d" == "$self_dir" ]] && continue
+        local candidate="$d/codex"
+        bree_codex_wrapper_is_self_or_shim "$candidate" && continue
+        [[ -x "$candidate" ]] && printf '%s' "$candidate" && return 0
+    done
+    return 1
+}
+
+resolve_hook_bree_bin() {
+    local self_dir bundled_cli
+    bundled_cli="${BREE_BUNDLED_CLI_PATH:-}"
+    if [[ -n "$bundled_cli" && -x "$bundled_cli" ]]; then
+        printf '%s' "$bundled_cli"
+        return 0
+    fi
+
+    self_dir="$(cd "$(dirname "$0")" && pwd)"
+    bundled_cli="$self_dir/bree"
+    if [[ -x "$bundled_cli" ]]; then
+        printf '%s' "$bundled_cli"
+        return 0
+    fi
+
+    bundled_cli="$(command -v bree 2>/dev/null || true)"
+    if [[ -n "$bundled_cli" ]]; then
+        printf '%s' "$bundled_cli"
+        return 0
+    fi
+
+    printf '%s' "bree"
+}
+
+bree_codex_json_escape() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    value="${value//$'\n'/\\n}"
+    value="${value//$'\r'/\\r}"
+    value="${value//$'\t'/\\t}"
+    printf '%s' "$value"
+}
+
+# The interactive session, `exec`/`e`, `resume`, and `fork` entrypoints all START
+# a Codex session, so all four must receive bree's hook injection; everything
+# else (review, login, mcp, doctor, --help, --version, ...) passes through
+# untouched. `resume` is critical: bree auto-resumes a session as `codex resume
+# <id>` after a Mac relaunch, and without hooks the resumed process fires no
+# SessionStart, so the registry keeps only the stale pre-relaunch record (its
+# old pid is dead -> seeded `.ended`) and the iOS GUI shows it read-only with no
+# input bar. Injecting hooks on resume lets the live resumed session re-bind and
+# flip back to idle/editable. codex accepts the global `--enable hooks` /
+# `--dangerously-bypass-hook-trust` / `-c hooks.X=...` flags before the `resume`
+# subcommand, so prepending them is safe. Mirrors should_inject_claude_hooks: a
+# leading non-option token that is a known Codex subcommand means "not a session"
+# unless it is exec, e, resume, or fork.
+codex_subcommand_starts_session() {
+    # `fork` duplicates a previous interactive session into a new live one:
+    # it takes an optional prompt and accepts the same global flags before
+    # the subcommand as `resume` (verified against codex-cli 0.144), so it
+    # needs hook injection exactly like exec/resume.
+    case "$1" in
+        exec|e|resume|fork) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+codex_known_subcommand() {
+    case "$1" in
+        exec|e|review|login|logout|mcp|plugin|mcp-server|app-server|\
+        remote-control|app|completion|update|doctor|sandbox|debug|apply|a|\
+        resume|archive|delete|unarchive|fork|cloud|exec-server|features|help)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+# Options that take a value, so a following non-option token is the value and
+# not the subcommand. Conservative: unknown `--flag value` is handled by the
+# "first bare token decides" rule below, which is safe because Codex session
+# launches take an optional prompt, not a subcommand.
+codex_option_consumes_value() {
+    case "$1" in
+        -c|--config|-m|--model|-p|--profile|-C|--cd|--remote|-a|--ask-for-approval|\
+        -s|--sandbox|--output-last-message|--enable|--disable|--add-dir|-i|--image|\
+        --local-provider|--remote-auth-token-env|--output-schema|--color)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+codex_passthrough_option_flag() {
+    case "$1" in
+        --help|-h|-V|--version)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+# Decide whether this invocation is a Codex SESSION entrypoint we should inject
+# hooks into. Bare `codex` (no args) and `codex [prompt]` are interactive
+# sessions; `codex exec ...` is a non-interactive session; `codex resume ...`
+# (picker, <id>, --last, --all <id>) resumes a session; `codex fork ...` starts
+# a child session whose hooks report the new id; any other leading subcommand
+# is not.
+should_inject_codex_hooks() {
+    (( $# == 0 )) && return 0
+
+    local arg
+    local skip_next=false
+    for arg in "$@"; do
+        if [[ "$skip_next" == true ]]; then
+            skip_next=false
+            continue
+        fi
+        case "$arg" in
+            --)
+                return 0
+                ;;
+            -*)
+                if codex_passthrough_option_flag "$arg"; then
+                    return 1
+                fi
+                if [[ "$arg" != *=* ]] && codex_option_consumes_value "$arg"; then
+                    skip_next=true
+                fi
+                continue
+                ;;
+            *)
+                if codex_known_subcommand "$arg"; then
+                    codex_subcommand_starts_session "$arg" && return 0
+                    return 1
+                fi
+                # First bare token is a prompt -> interactive session.
+                return 0
+                ;;
+        esac
+    done
+
+    return 0
+}
+
+# Codex declares -c/--config, --enable, and --disable as clap `global`
+# arguments. When a subcommand also receives one of them, Codex keeps only the
+# subcommand-level values: on codex-cli 0.159.3, `codex -c a=1 mcp -c b=2 list`
+# sees only b. The wrapper places its own overrides before the user's argv, so
+# `codex exec -c model=x` or `codex resume --last -c ...` silently dropped the
+# hook config. A global
+# argument means the same thing at either position, so move the user's
+# subcommand-level occurrences, in order, in front of the subcommand. Codex then
+# sees one root-level list: wrapper values, user root values, user subcommand
+# values, with later values winning as before. Tokens after `--` are prompt
+# text and stay in place. Without a subcommand nothing moves.
+bree_codex_session_args=()
+bree_codex_hoist_session_global_args() {
+    local -a head=() hoisted=() tail=()
+    local arg
+    bree_codex_session_args=()
+    while (( $# > 0 )); do
+        arg="$1"
+        case "$arg" in
+            --)
+                head+=("$@")
+                break
+                ;;
+            -*)
+                head+=("$arg")
+                shift
+                if [[ "$arg" != *=* ]] && codex_option_consumes_value "$arg" && (( $# > 0 )); then
+                    head+=("$1")
+                    shift
+                fi
+                continue
+                ;;
+        esac
+        if ! codex_known_subcommand "$arg"; then
+            # First bare token is a prompt: an interactive session has no
+            # subcommand scope, so every option is already root-level.
+            head+=("$@")
+            break
+        fi
+        tail+=("$arg")
+        shift
+        while (( $# > 0 )); do
+            arg="$1"
+            case "$arg" in
+                --)
+                    tail+=("$@")
+                    break
+                    ;;
+                -c|--config|--enable|--disable)
+                    if (( $# >= 2 )); then
+                        hoisted+=("$arg" "$2")
+                        shift 2
+                    else
+                        tail+=("$arg")
+                        shift
+                    fi
+                    ;;
+                -c=*|--config=*|--enable=*|--disable=*|-c?*)
+                    hoisted+=("$arg")
+                    shift
+                    ;;
+                -*)
+                    tail+=("$arg")
+                    shift
+                    if [[ "$arg" != *=* ]] && codex_option_consumes_value "$arg" && (( $# > 0 )); then
+                        tail+=("$1")
+                        shift
+                    fi
+                    ;;
+                *)
+                    tail+=("$arg")
+                    shift
+                    ;;
+            esac
+        done
+        break
+    done
+    (( ${#head[@]} > 0 )) && bree_codex_session_args+=("${head[@]}")
+    (( ${#hoisted[@]} > 0 )) && bree_codex_session_args+=("${hoisted[@]}")
+    (( ${#tail[@]} > 0 )) && bree_codex_session_args+=("${tail[@]}")
+    return 0
+}
+
+# `codex exec` runs headless. It shares the pane's surface with any
+# interactive Codex there, so the agent message hooks skip it.
+codex_launch_is_headless() {
+    local arg
+    local skip_next=false
+    for arg in "$@"; do
+        if [[ "$skip_next" == true ]]; then
+            skip_next=false
+            continue
+        fi
+        case "$arg" in
+            --) return 1 ;;
+            -*)
+                if [[ "$arg" != *=* ]] && codex_option_consumes_value "$arg"; then
+                    skip_next=true
+                fi
+                continue
+                ;;
+            exec|e) return 0 ;;
+            *) return 1 ;;
+        esac
+    done
+    return 1
+}
+
+# Codex does not emit its own SessionStart hook for an explicit `resume <id>`
+# launch. The wrapper is the only layer that knows both the resumed session id
+# and the new live process, so replay that lifecycle event after exporting the
+# launch identity below. Picker/`--last` resumes have no id at exec time and
+# remain dependent on Codex's own lifecycle event once it selects a session.
+bree_codex_resume_session_id() {
+    local seen_resume=false arg
+    for arg in "$@"; do
+        if [[ "$seen_resume" == true ]]; then
+            if [[ "$arg" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+                printf '%s' "$arg"
+                return 0
+            fi
+        elif [[ "$arg" == "resume" ]]; then
+            seen_resume=true
+        fi
+    done
+    return 1
+}
+
+# A direct `codex fork` creates its child rollout before the first prompt but
+# does not reliably emit SessionStart at that point. The app marks bree-owned
+# fork launches with the parent id; keep a bounded monitor alive beside Codex
+# so the rollout's forked_from_id can become the destination pane's identity.
+bree_codex_start_fork_session_watch() {
+    local parent_session_id="${BREE_AGENT_FORK_PARENT_SESSION_ID:-}"
+    [[ -n "$parent_session_id" ]] || return 0
+    [[ -n "${BREE_CODEX_HOOK_BREE_BIN:-}" && -x "$BREE_CODEX_HOOK_BREE_BIN" ]] || return 0
+    local launch_at="${BREE_AGENT_FORK_LAUNCH_AT:-}"
+    local launch_id="${BREE_AGENT_FORK_LAUNCH_ID:-}"
+    local owner_pid="${BREE_CODEX_PID:-}"
+    local -a monitor_args=(hooks codex monitor --fork-parent "$parent_session_id")
+    [[ -n "$launch_at" ]] && monitor_args+=(--fork-launch-at "$launch_at")
+    [[ -n "$launch_id" ]] && monitor_args+=(--fork-launch-id "$launch_id")
+    [[ -n "$owner_pid" ]] && monitor_args+=(--fork-owner-pid "$owner_pid")
+    if [[ -n "${BREE_SOCKET_PATH:-}" ]]; then
+        nohup "$BREE_CODEX_HOOK_BREE_BIN" --socket "$BREE_SOCKET_PATH" "${monitor_args[@]}" \
+            </dev/null >/dev/null 2>&1 &
+    else
+        nohup "$BREE_CODEX_HOOK_BREE_BIN" "${monitor_args[@]}" \
+            </dev/null >/dev/null 2>&1 &
+    fi
+}
+
+IN_BREE=0
+if [[ -n "${BREE_SURFACE_ID:-}" ]]; then
+    IN_BREE=1
+fi
+
+# Consume obsolete one-shot launch markers so inherited state never affects the
+# hook payloads. Session identity comes from Codex itself, not these markers.
+unset BREE_AGENT_RESTORE_LAUNCH
+unset BREE_AGENT_RESUME_LAUNCH
+
+# Resolve real codex up front; if it cannot be found we error like a missing
+# binary would (same as the claude wrapper) rather than silently succeeding.
+REAL_CODEX="$(find_real_codex)" || { echo "Error: codex not found in PATH" >&2; exit 127; }
+
+exec_real_codex_passthrough() {
+    if [[ "$IN_BREE" == "1" ]]; then
+        local bree_key
+        for bree_key in "${!BREE_@}"; do
+            unset "$bree_key"
+        done
+        unset TERMINFO
+    fi
+    exec "$REAL_CODEX" "$@"
+}
+
+# BREE_CODEX_HOOKS_DISABLED is the documented MASTER opt-out: the wrapper
+# stays fully inert — no bree calls, no argv changes.
+if [[ "${BREE_CODEX_HOOKS_DISABLED:-}" == "1" ]]; then
+    exec_real_codex_passthrough "$@"
+fi
+
+# Outside bree the wrapper does nothing: plain `codex` in a random terminal
+# stays untouched.
+if [[ "$IN_BREE" == "0" ]]; then
+    exec_real_codex_passthrough "$@"
+fi
+
+# Not a session entrypoint (review/login/doctor/--help/...): pass through with
+# no injection of any kind.
+if ! should_inject_codex_hooks "$@"; then
+    exec_real_codex_passthrough "$@"
+fi
+
+# Export launch identity so the hook subprocesses and bree's agent-pid /
+# ended-detection can bind this Codex to its surface and pid. Because we exec
+# codex below, $$ becomes the real codex pid. The invocation token is owned by
+# this wrapper generation. A wrapper launched from another Codex keeps the
+# inherited token as an explicit parent token, then gets a fresh child token;
+# a direct `codex exec` that bypasses this wrapper retains the outer token and
+# is distinguished by its live hook-process identity.
+BREE_CODEX_PARENT_INVOCATION_ID="${BREE_CODEX_INVOCATION_ID:-}"
+# A hook callback records its own immediate Codex parent. Never let a wrapper
+# launched from inside a callback inherit that callback's observation as if it
+# were the new process's identity.
+unset BREE_CODEX_HOOK_PID
+if command -v uuidgen >/dev/null 2>&1; then
+    BREE_CODEX_INVOCATION_ID="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+else
+    BREE_CODEX_INVOCATION_ID="bree-codex-$$-$(date +%s)"
+fi
+export BREE_CODEX_INVOCATION_ID
+if [[ -n "$BREE_CODEX_PARENT_INVOCATION_ID" ]]; then
+    export BREE_CODEX_PARENT_INVOCATION_ID
+else
+    unset BREE_CODEX_PARENT_INVOCATION_ID
+fi
+export BREE_CODEX_PID=$$
+if codex_launch_is_headless "$@"; then
+    export BREE_CODEX_HEADLESS=1
+else
+    export BREE_CODEX_HEADLESS=0
+fi
+export BREE_CODEX_HOOK_BREE_BIN="$(resolve_hook_bree_bin)"
+export BREE_AGENT_LAUNCH_KIND="codex"
+export BREE_AGENT_LAUNCH_EXECUTABLE="$REAL_CODEX"
+export BREE_AGENT_LAUNCH_CWD="$PWD"
+unset BREE_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND
+if codex_launch_has_subrouter_provider "$@"; then
+    case "${SUBROUTER_CODEX_RESUME_COMMAND:-}" in
+        "sr codex resume"|"subrouter codex resume"|"cx codex resume")
+            export BREE_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND="$SUBROUTER_CODEX_RESUME_COMMAND"
+            ;;
+    esac
+fi
+{
+    bree_codex_argv_b64="$(
+        {
+            printf '%s\0' "$REAL_CODEX"
+            if (( $# > 0 )); then
+                printf '%s\0' "$@"
+            fi
+        } | base64 | tr -d '\n'
+    )"
+    [[ -n "$bree_codex_argv_b64" ]] && export BREE_AGENT_LAUNCH_ARGV_B64="$bree_codex_argv_b64"
+}
+
+bree_codex_start_fork_session_watch
+# The monitor received a private copy of these launch markers in its argv.
+# Do not let a nested Codex wrapper inherit the parent fork transaction.
+unset BREE_AGENT_FORK_PARENT_SESSION_ID
+unset BREE_AGENT_FORK_LAUNCH_AT
+unset BREE_AGENT_FORK_LAUNCH_ID
+
+# Fresh launches deliberately wait for Codex's real SessionStart payload so no
+# fallback identity is created. Explicit resumes do not emit that event, so
+# enqueue one with the known session id and current pid. The app's Codex hook
+# admission is idempotent for the same session and updates the persisted binding
+# to this generation's process; failures are best-effort and never block Codex.
+bree_codex_resume_sid="$(bree_codex_resume_session_id "$@")"
+if [[ -n "$bree_codex_resume_sid" \
+      && -n "$BREE_CODEX_HOOK_BREE_BIN" && -x "$BREE_CODEX_HOOK_BREE_BIN" ]]; then
+    bree_codex_resume_json_session_id="$(bree_codex_json_escape "$bree_codex_resume_sid")"
+    bree_codex_resume_json_cwd="$(bree_codex_json_escape "$PWD")"
+    bree_codex_resume_payload="{\"session_id\":\"$bree_codex_resume_json_session_id\",\"cwd\":\"$bree_codex_resume_json_cwd\"}"
+    if [[ -n "${BREE_SOCKET_PATH:-}" ]]; then
+        printf '%s' "$bree_codex_resume_payload" \
+            | BREE_CLI_RESPONSE_TIMEOUT_SEC=1 "$BREE_CODEX_HOOK_BREE_BIN" \
+                --socket "$BREE_SOCKET_PATH" hooks enqueue codex session-start >/dev/null 2>&1 || true
+    else
+        printf '%s' "$bree_codex_resume_payload" \
+            | BREE_CLI_RESPONSE_TIMEOUT_SEC=1 "$BREE_CODEX_HOOK_BREE_BIN" \
+                hooks enqueue codex session-start >/dev/null 2>&1 || true
+    fi
+fi
+
+# Build the per-invocation [hooks] injection. The bree CLI emits the exact arg
+# list (NUL-separated). Non-decision commands perform a bounded foreground
+# admission to bree's app-owned ordered queue, so Codex never waits for the
+# downstream app socket work. Decision commands remain synchronous so Codex can
+# consume their stdout and exit status.
+#
+# Resolving the args via the CLI (instead of re-deriving fragile shell here)
+# avoids quoting bugs in the generated commands. If the emit fails or yields nothing, we
+# fall back to plain passthrough so installing the wrapper can never break codex.
+BREE_INJECT_CLI="$BREE_CODEX_HOOK_BREE_BIN"
+bree_codex_injected_args=()
+bree_codex_read_inject_args() {
+    [[ -n "$BREE_INJECT_CLI" && -x "$BREE_INJECT_CLI" ]] || return 1
+    local arg
+    # Read the NUL-TERMINATED arg stream DIRECTLY via process substitution. A
+    # `raw="$(... )"` command substitution must NOT be used: bash discards every
+    # NUL byte from command-substitution output (with a warning), which would
+    # collapse the whole stream into one token and silently drop the injection.
+    if [[ -n "${BREE_SOCKET_PATH:-}" ]]; then
+        while IFS= read -r -d '' arg; do
+            bree_codex_injected_args+=("$arg")
+        done < <("$BREE_INJECT_CLI" --socket "$BREE_SOCKET_PATH" hooks codex inject-args 2>/dev/null)
+    else
+        while IFS= read -r -d '' arg; do
+            bree_codex_injected_args+=("$arg")
+        done < <("$BREE_INJECT_CLI" hooks codex inject-args 2>/dev/null)
+    fi
+    (( ${#bree_codex_injected_args[@]} > 0 )) || return 1
+    return 0
+}
+
+bree_codex_hoist_session_global_args "$@"
+
+if bree_codex_read_inject_args; then
+    exec "$REAL_CODEX" \
+        "${bree_codex_injected_args[@]}" "${bree_codex_session_args[@]}"
+fi
+
+# A reconciled persistent channel intentionally emits no overrides; an emitter
+# failure also returns nothing. In both cases preserve the bree surface context
+# so persistent, native, or future hooks can still bind this session.
+exec "$REAL_CODEX" "${bree_codex_session_args[@]}"

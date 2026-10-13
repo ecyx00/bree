@@ -181,7 +181,7 @@
     };
   }
 
-  global.CmuxViewerNavigation = {
+  global.BreeViewerNavigation = {
     install: install,
     installManualInputReset: installManualInputReset,
     performAction: performAction,

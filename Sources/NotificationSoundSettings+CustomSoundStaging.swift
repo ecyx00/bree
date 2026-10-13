@@ -147,7 +147,7 @@ struct NotificationSoundProcessRunner: NotificationSoundProcessRunning, Sendable
     // running them in Task.detached would consume Swift's cooperative workers
     // and starve the deadline task that is responsible for cancellation.
     private static let blockingIOQueue = DispatchQueue(
-        label: "com.cmuxterm.notification-sound.process-io",
+        label: "com.bree.notification-sound.process-io",
         qos: .utility,
         attributes: .concurrent
     )
@@ -626,8 +626,8 @@ struct NotificationSoundProcessRunner: NotificationSoundProcessRunning, Sendable
 /// This keeps the global picker and sparse per-agent matrix on the same cache
 /// and prevents concurrent selections from replacing the same destination.
 extension NotificationSoundSettings {
-    static let customSoundBaseName = "cmux-custom-notification-sound"
-    static let systemSoundBaseName = "cmux-system-notification-sound"
+    static let customSoundBaseName = "bree-custom-notification-sound"
+    static let systemSoundBaseName = "bree-system-notification-sound"
     static let systemSoundDirectoryURL = URL(
         fileURLWithPath: "/System/Library/Sounds",
         isDirectory: true

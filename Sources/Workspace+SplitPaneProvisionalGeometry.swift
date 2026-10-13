@@ -12,7 +12,7 @@ extension Workspace {
     /// re-created anchors. Until they bind, the source terminal (a transparent
     /// glyph layer above SwiftUI) would keep its pre-split frame and paint over
     /// the new pane's tab bar and content
-    /// (https://github.com/manaflow-ai/cmux/issues/13387). Projecting the
+    /// (https://github.com/ecyx00/bree/issues/13387). Projecting the
     /// model's own split geometry here puts the resize in the same
     /// CoreAnimation commit as the new chrome; the anchors' real geometry
     /// replaces it when they bind.
@@ -81,7 +81,7 @@ extension Workspace {
             )
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.provisionalGeometry original=\(originalPane.id.uuidString.prefix(5)) " +
             "new=\(newPane.id.uuidString.prefix(5)) orientation=\(split.orientation) " +
             "sourceIsFirst=\(request.sourceIsFirst ? 1 : 0) divider=\(String(format: "%.3f", split.dividerPosition)) " +

@@ -1,12 +1,12 @@
 import AppKit
-import CmuxWorkspaces
+import BreeWorkspaces
 import SwiftUI
 /// Attaches the checklist popover to the section container (not just the
 /// summary line — see the call site comment in ``SidebarWorkspaceChecklistSection/body``)
 /// via `SidebarWorkspaceTodoPopoverHost` (a real NSPopover, not SwiftUI's
 /// native `.popover()`): the checklist popover embeds a first-responder
 /// TextField (the add/edit fields), and SwiftUI's native `.popover` does not
-/// make its window key in cmux's focus-managed environment, so keystrokes
+/// make its window key in bree's focus-managed environment, so keystrokes
 /// fall through to the terminal.
 ///
 /// The anchor NSView is pinned to a fixed 1×1pt corner via `.overlay` rather

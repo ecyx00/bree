@@ -1,29 +1,29 @@
-import CmuxCloud
-import CmuxAppKitSupportUI
-import CMUXMobileCore
-import CmuxFoundation
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeAppKitSupportUI
+import BREEMobileCore
+import BreeFoundation
+import BreeSurfaceCatalogModel
 import Foundation
-import CmuxCore
-import CmuxRemoteDaemon
-import CmuxRemoteSession
-import CmuxRemoteWorkspace
-import CmuxWorkspaces
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeCore
+import BreeRemoteDaemon
+import BreeRemoteSession
+import BreeRemoteWorkspace
+import BreeWorkspaces
+import BreeTerminal
+import BreeTerminalCore
 import SwiftUI
 import AppKit
 import WebKit
-import CmuxFoundation
+import BreeFoundation
 import Bonsplit
-import CMUXAgentLaunch
-import CmuxAgentChat
-import CmuxSettings
-import CmuxBrowser
-import CmuxCommandPalette
-import CmuxPanes
-import CmuxSidebar
-import CmuxNotifications
+import BREEAgentLaunch
+import BreeAgentChat
+import BreeSettings
+import BreeBrowser
+import BreeCommandPalette
+import BreePanes
+import BreeSidebar
+import BreeNotifications
 import Combine
 import CryptoKit
 import Darwin
@@ -1197,7 +1197,7 @@ extension Workspace {
         var totalCharacters = 0
         for panelId in panels.keys.sorted(by: { $0.uuidString < $1.uuidString }) {
             guard panels[panelId] is TerminalPanel else { continue }
-            let header = "cmux perf synthetic scrollback workspace=\(id.uuidString) panel=\(panelId.uuidString)\n"
+            let header = "bree perf synthetic scrollback workspace=\(id.uuidString) panel=\(panelId.uuidString)\n"
             let paddingCount = max(0, targetCharacters - header.count)
             let scrollback = String((header + String(repeating: "s", count: paddingCount)).prefix(targetCharacters))
             debugSessionSnapshotSyntheticScrollbackByPanelId[panelId] = scrollback
@@ -1894,7 +1894,7 @@ extension Workspace {
             if let restorableAgent {
                 let sessionPreview = String(restorableAgent.sessionId.prefix(8))
                 let launchArgc = restorableAgent.launchCommand?.arguments.count ?? 0
-                cmuxDebugLog(
+                breeDebugLog(
                     "session.restore.agent panel=\(snapshot.id.uuidString.prefix(5)) " +
                     "kind=\(restorableAgent.kind.rawValue) session=\(sessionPreview) " +
                     "hasLaunch=\(restorableAgent.launchCommand == nil ? 0 : 1) " +
@@ -1905,7 +1905,7 @@ extension Workspace {
                 )
             }
             if let resumeBinding {
-                cmuxDebugLog(
+                breeDebugLog(
                     "session.restore.surfaceResume panel=\(snapshot.id.uuidString.prefix(5)) " +
                     "kind=\(resumeBinding.kind ?? "unknown") source=\(resumeBinding.source ?? "unknown") " +
                     "hasLaunch=\(restoredBindingLaunch == nil ? 0 : 1) " +
@@ -2113,7 +2113,7 @@ extension Workspace {
                     panelId: terminalPanel.id
                 )
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "session.restore.startupInput.registered panel=\(terminalPanel.id.uuidString.prefix(5)) " +
                     "bytes=\(restoredStartupInput?.utf8.count ?? 0) deferred=\(deferredAgentResumeAdmission ? 1 : 0)"
                 )
@@ -2149,7 +2149,7 @@ extension Workspace {
                 }
                 bindSurface(tabId, toPanelId: restoredPanelId)
                 applySessionPanelMetadata(snapshot, toPanelId: restoredPanelId)
-                publishCmuxSurfaceCreated(
+                publishBreeSurfaceCreated(
                     restoredPanelId,
                     paneId: paneId,
                     kind: SurfaceKind.browser.rawValue,
@@ -2424,7 +2424,7 @@ extension Workspace {
 
                 self.removePendingTerminalInputObserver(registration, forPanelId: panelId)
                 #if DEBUG
-                NSLog("[CmuxConfig] surface not ready after 3s, dropping command (%d chars)", text.count)
+                NSLog("[BreeConfig] surface not ready after 3s, dropping command (%d chars)", text.count)
                 #endif
             }
         }
@@ -2559,9 +2559,9 @@ extension Workspace {
     }
 
 }
-/// Lifted to `CmuxBrowser.ClosedBrowserPanelRestoreSnapshot` (Workspace
+/// Lifted to `BreeBrowser.ClosedBrowserPanelRestoreSnapshot` (Workspace
 /// decomposition, Wave 3). This typealias keeps call sites byte-identical.
-typealias ClosedBrowserPanelRestoreSnapshot = CmuxBrowser.ClosedBrowserPanelRestoreSnapshot
+typealias ClosedBrowserPanelRestoreSnapshot = BreeBrowser.ClosedBrowserPanelRestoreSnapshot
 
 /// Workspace represents a sidebar tab.
 /// Each workspace contains one BonsplitController that manages split panes and nested surfaces.
@@ -2571,8 +2571,8 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         case userInitiated
         case automationPreload
         case restoration
-        /// Config-driven layout application (`cmux.json` layouts, saved
-        /// layouts, `cmux layout`). Unlike `.restoration`, applying a layout
+        /// Config-driven layout application (`bree.json` layouts, saved
+        /// layouts, `bree layout`). Unlike `.restoration`, applying a layout
         /// is a creation request, not the return of a pane the user already
         /// had, so it honors the browser-disabled gate.
         case layoutApplication
@@ -2591,7 +2591,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     }
 
     static let terminalScrollBarHiddenDidChangeNotification = Notification.Name(
-        "cmux.workspaceTerminalScrollBarHiddenDidChange"
+        "bree.workspaceTerminalScrollBarHiddenDidChange"
     )
     let id: UUID
     private(set) var isRetiredFromOwningTabManager = false
@@ -2647,12 +2647,12 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     @Published var customColor: String?  // hex string, e.g. "#C0392B"
     /// User-defined environment variables applied to every shell spawned in this
     /// workspace: the initial terminal, every later pane/surface/split, and every
-    /// surface recreated on session restore. Managed `CMUX_*` and terminal-identity
+    /// surface recreated on session restore. Managed `BREE_*` and terminal-identity
     /// variables always win — this dictionary is merged through the
     /// `additionalEnvironment` / `initialEnvironmentOverrides` channels, both of
     /// which skip `protectedStartupEnvironmentKeys` in
     /// `mergedStartupEnvironment(...)`, so a workspace env entry can never clobber
-    /// the variables the daemon relies on (CMUX_WORKSPACE_ID, CMUX_SOCKET_PATH, …).
+    /// the variables the daemon relies on (BREE_WORKSPACE_ID, BREE_SOCKET_PATH, …).
     /// Persisted in the session manifest and restored before surfaces are rebuilt.
     @Published var workspaceEnvironment: [String: String] = [:]
     // Legacy in-memory state for old helpers/tests. Product UI, rendering, and
@@ -2688,7 +2688,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     let restorableAgentIndexProvider: @MainActor () -> RestorableAgentSessionIndex?
     private let settings: any SettingsReading
 
-    /// Ordinal for CMUX_PORT range assignment (monotonically increasing per app session)
+    /// Ordinal for BREE_PORT range assignment (monotonically increasing per app session)
     var portOrdinal: Int = 0
 
     /// The bonsplit controller managing the split panes for this workspace
@@ -2757,9 +2757,9 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     }
 
     private struct SurfaceTabBarExecutableButton {
-        let button: CmuxSurfaceTabBarButton
-        let builtInAction: CmuxSurfaceTabBarBuiltInAction?
-        let workspaceCommand: CmuxResolvedCommand?
+        let button: BreeSurfaceTabBarButton
+        let builtInAction: BreeSurfaceTabBarBuiltInAction?
+        let workspaceCommand: BreeResolvedCommand?
         let terminalCommandSourcePath: String?
     }
 
@@ -2770,27 +2770,27 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     private var featureFlagsObserver: NSObjectProtocol?
     private var browserAvailabilityObserver: NSObjectProtocol?
 
-    /// The pane-tree sub-model (CmuxPanes): owns the panel registry, the
+    /// The pane-tree sub-model (BreePanes): owns the panel registry, the
     /// surface-id mapping, and the pane-layout bookkeeping. The legacy
     /// accessors below forward here; `Workspace` hosts the property-observer
     /// hooks via `PaneTreeHosting`.
     let paneTree = PaneTreeModel<any Panel>()
 
-    /// The surface-list derivation sub-model (CmuxWorkspaces): derives
+    /// The surface-list derivation sub-model (BreeWorkspaces): derives
     /// the ordered panel-id lists, focused panel, representative panel, per-pane
     /// selection, the `tabIdsTo*` pane queries, and the `paneLayoutVersion`
     /// reorder bump. `Workspace` is its tree-reading host via
     /// `WorkspaceSurfaceTreeReading`; the legacy accessors below forward here.
     let surfaceList = WorkspaceSurfaceListModel()
 
-    /// The surface-registry sub-model (CmuxWorkspaceCore): owns the
+    /// The surface-registry sub-model (BreeWorkspaceCore): owns the
     /// per-surface registry annotations (tty names, shell-activity states)
     /// and the transient tab-selection/focus-reassert request state. The
     /// legacy accessors below forward here. None of the moved properties
     /// were `@Published`, so no observer hooks are required.
     let surfaceRegistry = SurfaceRegistryModel<PendingTabSelectionRequest>()
 
-    /// The split-layout sub-model (CmuxPanes): owns the split/detach
+    /// The split-layout sub-model (BreePanes): owns the split/detach
     /// choreography bookkeeping (programmatic-split flag, detaching surface
     /// ids, captured transfer payloads, detach-close transaction count). The
     /// legacy accessors below forward here. None of the moved properties
@@ -2994,7 +2994,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     var tmuxWorkspaceFlashToken: UInt64 { tmuxWorkspaceFlash.token }
     var tmuxOverlaySelectionRevision: UInt64 = 0
     var manualUnreadMarkedAt: [UUID: Date] = [:]
-    /// The sidebar-metadata sub-model (CmuxSidebar): owns the
+    /// The sidebar-metadata sub-model (BreeSidebar): owns the
     /// sidebar status entries, metadata blocks, log entries, progress, and
     /// git-branch / pull-request presentation state. The legacy accessors below
     /// forward here. The moved properties were `@Published` and fed the sidebar
@@ -3054,10 +3054,10 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             owningTabManager?.workspaceHostLabelDidChange(self)
         }
     }
-    /// The cloud machine whose cmux-tui session runs in this workspace's pane. Unlike
+    /// The cloud machine whose bree-tui session runs in this workspace's pane. Unlike
     /// `remoteConfiguration` (app-managed SSH/websocket transports) the session belongs
-    /// to the pane's own `cmux vm-tui-connect` process, so this binding is what the
-    /// Machines panel, the sidebar cloud button, and `cmux vm desktop` use to find the
+    /// to the pane's own `bree vm-tui-connect` process, so this binding is what the
+    /// Machines panel, the sidebar cloud button, and `bree vm desktop` use to find the
     /// machine's workspace. Set through `workspace.cloud_vm_bind` and persisted in the
     /// session snapshot (`SessionWorkspaceSnapshot.cloudVM`); the pane's one-shot link is
     /// not replayed on restore, only the binding is.
@@ -3413,7 +3413,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     /// workspace flagged red forever. Proxy-only and daemon entries have
     /// their own retraction paths; this covers the non-proxy connection seam
     /// those paths deliberately leave alone.
-    /// https://github.com/manaflow-ai/cmux/issues/10640
+    /// https://github.com/ecyx00/bree/issues/10640
     func clearRecoveredRemoteConnectionSidebarArtifacts() {
         logEntries.removeAll { $0.source == "remote" }
         statusEntries.removeValue(forKey: Self.remoteErrorStatusKey)
@@ -3545,11 +3545,11 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             localized: "surfaceResumeApproval.runPrompt.dontAskAgain",
             defaultValue: "Don’t ask again for this command"
         )
-        let content = CmuxAlertContent(
+        let content = BreeAlertContent(
             flattenedText: informativeText,
             separatingScrollableDetails: binding.command
         )
-        let response = alert.runCmuxModal(content: content)
+        let response = alert.runBreeModal(content: content)
         let shouldRun: Bool
         if response == .alertFirstButtonReturn {
             shouldRun = true
@@ -4012,7 +4012,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         title: String = "Terminal",
         workingDirectory: String? = nil,
         portOrdinal: Int = 0,
-        configTemplate: CmuxSurfaceConfigTemplate? = nil,
+        configTemplate: BreeSurfaceConfigTemplate? = nil,
         initialSurface: NewWorkspaceInitialSurface = .terminal,
         initialTerminalCommand: String? = nil,
         initialTerminalIsRemote: Bool = false,
@@ -4117,15 +4117,15 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         // Remove the default "Welcome" tab that bonsplit creates
         let welcomeTabIds = bonsplitController.allTabIds
 
-        // When the workspace boots with an explicit initial command (`cmux ssh` /
-        // `cmux vm new` both funnel their ssh startup script through this path),
+        // When the workspace boots with an explicit initial command (`bree ssh` /
+        // `bree vm new` both funnel their ssh startup script through this path),
         // hold the PTY open after that command exits. Without this Ghostty
         // silently respawns a local login shell and the user can't tell a dead
         // VM apart from a healthy local prompt.
         var resolvedConfigTemplate = configTemplate
         if let trimmedCommand = initialTerminalCommand?.trimmingCharacters(in: .whitespacesAndNewlines),
            !trimmedCommand.isEmpty {
-            var template = resolvedConfigTemplate ?? CmuxSurfaceConfigTemplate()
+            var template = resolvedConfigTemplate ?? BreeSurfaceConfigTemplate()
             template.waitAfterCommand = true
             resolvedConfigTemplate = template
         }
@@ -4352,8 +4352,8 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             }
         }
         featureFlagsObserver = NotificationCenter.default.addObserver(
-            forName: .cmuxFeatureFlagsDidChange,
-            object: CmuxFeatureFlags.shared,
+            forName: .breeFeatureFlagsDidChange,
+            object: BreeFeatureFlags.shared,
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -4455,7 +4455,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     /// left the button drawn and only beeping (#10866). Named and static so
     /// the gate is testable without standing up a workspace.
     static func surfaceTabBarBuiltInActionIsAvailable(
-        _ action: CmuxSurfaceTabBarBuiltInAction
+        _ action: BreeSurfaceTabBarBuiltInAction
     ) -> Bool {
         switch action {
         case .newBrowser:
@@ -4467,12 +4467,12 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     }
 
     func applySurfaceTabBarButtons(
-        _ buttons: [CmuxSurfaceTabBarButton],
+        _ buttons: [BreeSurfaceTabBarButton],
         sourcePath: String?,
         globalConfigPath: String,
-        settingPresets: [String: CmuxSettingValue] = [:],
+        settingPresets: [String: BreeSettingValue] = [:],
         terminalCommandSourcePaths: [String: String],
-        workspaceCommands: [String: CmuxResolvedCommand]
+        workspaceCommands: [String: BreeResolvedCommand]
     ) {
         surfaceTabBarButtonConfiguration = SurfaceTabBarButtonConfiguration(
             buttons: buttons,
@@ -4543,7 +4543,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         let bonsplitButtons = buttons.map { button in
             let executable = executableButtons[button.id]
             let allowProjectLocalIcon = executable.map {
-                CmuxConfigExecutor.isTrustedSurfaceButton(
+                BreeConfigExecutor.isTrustedSurfaceButton(
                     $0.button,
                     workspaceCommand: $0.workspaceCommand,
                     terminalCommandSourcePath: $0.terminalCommandSourcePath,
@@ -4687,7 +4687,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     private var isAttemptingLayoutFollowUp = false
     private var isNormalizingPinnedTabOrder = false
     /// The pending non-focusing-split focus re-assert request (the value
-    /// type now lives in CmuxWorkspaceCore); stored in the surface-registry
+    /// type now lives in BreeWorkspaceCore); stored in the surface-registry
     /// sub-model.
     private var pendingNonFocusSplitFocusReassert: PendingNonFocusSplitFocusReassert? {
         get { surfaceRegistry.pendingNonFocusSplitFocusReassert }
@@ -4894,7 +4894,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             guard let self, let browserPanel else { return }
             guard self.panels[browserPanel.id] is BrowserPanel else { return }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.close.requestedByPage ws=\(self.id.uuidString.prefix(5)) " +
                 "panel=\(browserPanel.id.uuidString.prefix(5))"
             )
@@ -5279,7 +5279,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             return false
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "session.restore.browser.materialize.request workspace=\(id.uuidString.prefix(8)) " +
                 "panel=\(panelId.uuidString.prefix(8)) reason=\(reason)"
         )
@@ -5358,7 +5358,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "session.restore.browser.materialize workspace=\(id.uuidString.prefix(8)) " +
                 "panel=\(deferredPanel.id.uuidString.prefix(8))"
         )
@@ -6057,7 +6057,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         // example, completed when the shell prompt returned).
         syncTerminalTabAgentIconAsset(forPanelId: panelId)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "surface.shellState workspace=\(id.uuidString.prefix(5)) " +
             "panel=\(panelId.uuidString.prefix(5)) from=\(previousState.rawValue) to=\(state.rawValue) " +
             "restore=\(restoredAgentResumeStatesByPanelId[panelId].map { String(describing: $0) } ?? "none") " +
@@ -6450,7 +6450,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         guard !browserPanels.isEmpty else { return }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "workspace.contextReset.browserPanels workspace=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) count=\(browserPanels.count)"
         )
@@ -6659,7 +6659,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         remoteConfiguration != nil
     }
 
-    /// Ephemeral remote tmux mirror; excluded from cmux session restore.
+    /// Ephemeral remote tmux mirror; excluded from bree session restore.
     var isRemoteTmuxMirror: Bool = false
     weak var remoteTmuxSessionMirror: RemoteTmuxSessionMirror?
     /// Bound action for this mirror's outbound window-order mutation boundary.
@@ -6825,7 +6825,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
 
     func listRemotePTYSessions() throws -> [[String: Any]] {
         guard let controller = remoteSessionController else {
-            throw NSError(domain: "cmux.remote.pty", code: 10, userInfo: [
+            throw NSError(domain: "bree.remote.pty", code: 10, userInfo: [
                 NSLocalizedDescriptionKey: "remote connection is not active",
             ])
         }
@@ -6834,7 +6834,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
 
     func closeRemotePTYSession(sessionID: String) throws {
         guard let controller = remoteSessionController else {
-            throw NSError(domain: "cmux.remote.pty", code: 11, userInfo: [
+            throw NSError(domain: "bree.remote.pty", code: 11, userInfo: [
                 NSLocalizedDescriptionKey: "remote connection is not active",
             ])
         }
@@ -6842,7 +6842,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     }
     func resizeRemotePTY(sessionID: String, attachmentID: String, attachmentToken: String, cols: Int, rows: Int) throws {
         guard let controller = remoteSessionController else {
-            throw NSError(domain: "cmux.remote.pty", code: 13, userInfo: [
+            throw NSError(domain: "bree.remote.pty", code: 13, userInfo: [
                 NSLocalizedDescriptionKey: "remote connection is not active",
             ])
         }
@@ -6856,7 +6856,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     }
     func detachRemotePTYAttachment(sessionID: String, attachmentID: String, attachmentToken: String) throws {
         guard let controller = remoteSessionController else {
-            throw NSError(domain: "cmux.remote.pty", code: 14, userInfo: [
+            throw NSError(domain: "bree.remote.pty", code: 14, userInfo: [
                 NSLocalizedDescriptionKey: "remote connection is not active",
             ])
         }
@@ -6943,15 +6943,15 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             payload["local_proxy_port"] = NSNull()
             payload["persistent_daemon_slot"] = NSNull()
         }
-        // A cmux-tui workspace reports its machine under the same key the managed
-        // transports use, so `cmux vm desktop`/the Machines panel find it either way.
+        // A bree-tui workspace reports its machine under the same key the managed
+        // transports use, so `bree vm desktop`/the Machines panel find it either way.
         if let binding = cloudVMBinding {
             if remoteConfiguration?.managedCloudVMID?.isEmpty != false {
                 payload["managed_cloud_vm_id"] = binding.vmID
             }
             payload["cloud_vm_id"] = binding.vmID
             payload["cloud_vm_base"] = binding.isBase
-            payload["cloud_vm_transport"] = "cmux-remote"
+            payload["cloud_vm_transport"] = "bree-remote"
         } else {
             payload["cloud_vm_id"] = NSNull()
             payload["cloud_vm_base"] = NSNull()
@@ -7303,14 +7303,14 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     /// `initialEnvironmentOverrides` channel (which would otherwise export a blank value on the
     /// initial shell only).
     ///
-    /// Reserved `CMUX_*` variables are intentionally *not* stripped by name — they are protected
+    /// Reserved `BREE_*` variables are intentionally *not* stripped by name — they are protected
     /// at spawn time by `mergedStartupEnvironment(protectedKeys:)`, the single authority on which
     /// keys are managed. That protection is an exact Swift-string match, but the env eventually
     /// crosses the Swift→C boundary (`strdup` / Ghostty), where a key is truncated at its first
-    /// NUL. A key like `"CMUX_SOCKET_PATH\0x"` would dodge the exact-match check yet collapse to
-    /// `CMUX_SOCKET_PATH` in the spawned shell, so reject any key containing a NUL (and `=`,
+    /// NUL. A key like `"BREE_SOCKET_PATH\0x"` would dodge the exact-match check yet collapse to
+    /// `BREE_SOCKET_PATH` in the spawned shell, so reject any key containing a NUL (and `=`,
     /// which is never a valid env var name) and any value containing a NUL. This is the single
-    /// choke point for every entry point (CLI, cmux.json, session restore), so the guard cannot be bypassed.
+    /// choke point for every entry point (CLI, bree.json, session restore), so the guard cannot be bypassed.
     // `nonisolated` so the nonisolated socket workspace-create parsing path (`v2WorkspaceCreate`)
     // can call this pure helper without hopping to the main actor; `Workspace` is `@MainActor`,
     // so its statics are main-actor-isolated by default.
@@ -7327,7 +7327,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     }
 
     /// Pure merge core: overlays `explicit` on top of `workspaceEnvironment`.
-    /// Managed `CMUX_*` / terminal-identity keys are protected downstream by
+    /// Managed `BREE_*` / terminal-identity keys are protected downstream by
     /// `mergedStartupEnvironment(protectedKeys:)`; this only decides precedence
     /// among user-supplied values — explicit per-surface entries (layout `env`,
     /// scrollback replay, SSH startup) win over the workspace set. Static so the
@@ -7496,8 +7496,8 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         )
     }
 
-    nonisolated static let remotePTYSessionEnvironmentKey = "CMUX_REMOTE_PTY_SESSION_ID"
-    nonisolated static let remoteInitialWorkingDirectoryEnvironmentKey = "CMUX_REMOTE_INITIAL_CWD"
+    nonisolated static let remotePTYSessionEnvironmentKey = "BREE_REMOTE_PTY_SESSION_ID"
+    nonisolated static let remoteInitialWorkingDirectoryEnvironmentKey = "BREE_REMOTE_INITIAL_CWD"
 
     nonisolated static func parsedDefaultSSHPTYSessionID(_ value: String) -> (workspaceId: UUID, panelId: UUID)? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -7566,7 +7566,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     }
 
     /// The cloud machine this workspace hosts, through either transport: the legacy
-    /// remote configuration (`managedCloudVMID`) or the cmux-tui binding. Nil for
+    /// remote configuration (`managedCloudVMID`) or the bree-tui binding. Nil for
     /// workspaces that are not cloud machines.
     var cloudVMID: String? {
         if let managedCloudVMID = remoteConfiguration?.managedCloudVMID?
@@ -7588,7 +7588,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             ) ?? .local
         }
         if let remoteConfiguration {
-            // `cmux ssh` takes a port through `--ssh-option Port=...` as well as `--port`.
+            // `bree ssh` takes a port through `--ssh-option Port=...` as well as `--port`.
             let optionPort = SSHAgentSocketResolver(environment: [:])
                 .optionValue(named: "Port", in: remoteConfiguration.sshOptions)
                 .flatMap { Int($0) }
@@ -7655,43 +7655,43 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
 
     private func defaultFreestyleSSHDTerminalStartupCommand(vmID: String) -> String {
         let lines = [
-            "cmux_freestyle_cli=\"${CMUX_BUNDLED_CLI_PATH:-}\"",
-            "if [ -z \"$cmux_freestyle_cli\" ] || [ ! -x \"$cmux_freestyle_cli\" ]; then cmux_freestyle_cli=\"$(command -v bree 2>/dev/null || true)\"; fi",
-            "if [ -z \"$cmux_freestyle_cli\" ]; then printf '%s\\n' '[Bree] bundled CLI not found for Cloud VM SSH attach.' >&2; exit 127; fi",
-            "CMUX_SSH_RECONNECT_LIMIT=\"${CMUX_SSH_RECONNECT_LIMIT:-\(SSHReconnectBudget().maximumLimit)}\"",
-            "CMUX_SSH_RECONNECT_DELAY_SECONDS=\"${CMUX_SSH_RECONNECT_DELAY_SECONDS:-2}\"",
-            "CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT=\"${CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT:-$CMUX_SSH_RECONNECT_LIMIT}\"",
-            "CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS=\"${CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS:-$CMUX_SSH_RECONNECT_DELAY_SECONDS}\"",
-            "export CMUX_SSH_RECONNECT_LIMIT CMUX_SSH_RECONNECT_DELAY_SECONDS",
-            "export CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT CMUX_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS",
-            "cmux_freestyle_attach() {",
-            "  if [ -n \"${CMUX_SOCKET_PATH:-}\" ]; then",
-            "    if [ -n \"${CMUX_REMOTE_PTY_SESSION_ID:-}\" ]; then",
-            "      \"$cmux_freestyle_cli\" --socket \"$CMUX_SOCKET_PATH\" vm-pty-attach --id \(Self.shellQuote(vmID)) --default-freestyle-sshd --session \"$CMUX_REMOTE_PTY_SESSION_ID\"",
+            "bree_freestyle_cli=\"${BREE_BUNDLED_CLI_PATH:-}\"",
+            "if [ -z \"$bree_freestyle_cli\" ] || [ ! -x \"$bree_freestyle_cli\" ]; then bree_freestyle_cli=\"$(command -v bree 2>/dev/null || true)\"; fi",
+            "if [ -z \"$bree_freestyle_cli\" ]; then printf '%s\\n' '[Bree] bundled CLI not found for Cloud VM SSH attach.' >&2; exit 127; fi",
+            "BREE_SSH_RECONNECT_LIMIT=\"${BREE_SSH_RECONNECT_LIMIT:-\(SSHReconnectBudget().maximumLimit)}\"",
+            "BREE_SSH_RECONNECT_DELAY_SECONDS=\"${BREE_SSH_RECONNECT_DELAY_SECONDS:-2}\"",
+            "BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT=\"${BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT:-$BREE_SSH_RECONNECT_LIMIT}\"",
+            "BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS=\"${BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS:-$BREE_SSH_RECONNECT_DELAY_SECONDS}\"",
+            "export BREE_SSH_RECONNECT_LIMIT BREE_SSH_RECONNECT_DELAY_SECONDS",
+            "export BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_LIMIT BREE_DEFAULT_FREESTYLE_ATTACH_RETRY_DELAY_SECONDS",
+            "bree_freestyle_attach() {",
+            "  if [ -n \"${BREE_SOCKET_PATH:-}\" ]; then",
+            "    if [ -n \"${BREE_REMOTE_PTY_SESSION_ID:-}\" ]; then",
+            "      \"$bree_freestyle_cli\" --socket \"$BREE_SOCKET_PATH\" vm-pty-attach --id \(Self.shellQuote(vmID)) --default-freestyle-sshd --session \"$BREE_REMOTE_PTY_SESSION_ID\"",
             "    else",
-            "      \"$cmux_freestyle_cli\" --socket \"$CMUX_SOCKET_PATH\" vm-pty-attach --id \(Self.shellQuote(vmID)) --default-freestyle-sshd",
+            "      \"$bree_freestyle_cli\" --socket \"$BREE_SOCKET_PATH\" vm-pty-attach --id \(Self.shellQuote(vmID)) --default-freestyle-sshd",
             "    fi",
             "  else",
-            "    if [ -n \"${CMUX_REMOTE_PTY_SESSION_ID:-}\" ]; then",
-            "      \"$cmux_freestyle_cli\" vm-pty-attach --id \(Self.shellQuote(vmID)) --default-freestyle-sshd --session \"$CMUX_REMOTE_PTY_SESSION_ID\"",
+            "    if [ -n \"${BREE_REMOTE_PTY_SESSION_ID:-}\" ]; then",
+            "      \"$bree_freestyle_cli\" vm-pty-attach --id \(Self.shellQuote(vmID)) --default-freestyle-sshd --session \"$BREE_REMOTE_PTY_SESSION_ID\"",
             "    else",
-            "      \"$cmux_freestyle_cli\" vm-pty-attach --id \(Self.shellQuote(vmID)) --default-freestyle-sshd",
+            "      \"$bree_freestyle_cli\" vm-pty-attach --id \(Self.shellQuote(vmID)) --default-freestyle-sshd",
             "    fi",
             "  fi",
             "}",
-            "cmux_freestyle_retry=0",
+            "bree_freestyle_retry=0",
             "while :; do",
-            "  if [ \"$cmux_freestyle_retry\" -gt 0 ]; then",
-            "    export CMUX_CLOUD_RECONNECT_ATTEMPT=\"$cmux_freestyle_retry\"",
+            "  if [ \"$bree_freestyle_retry\" -gt 0 ]; then",
+            "    export BREE_CLOUD_RECONNECT_ATTEMPT=\"$bree_freestyle_retry\"",
             "  else",
-            "    unset CMUX_CLOUD_RECONNECT_ATTEMPT",
+            "    unset BREE_CLOUD_RECONNECT_ATTEMPT",
             "  fi",
-            "  cmux_freestyle_attach",
-            "  cmux_freestyle_status=$?",
-            "  case \"$cmux_freestyle_status\" in 254|255) ;; *) exit \"$cmux_freestyle_status\" ;; esac",
-            "  if [ \"$cmux_freestyle_retry\" -ge \"$CMUX_SSH_RECONNECT_LIMIT\" ]; then exit \"$cmux_freestyle_status\"; fi",
-            "  cmux_freestyle_retry=$((cmux_freestyle_retry + 1))",
-            "  sleep \"$CMUX_SSH_RECONNECT_DELAY_SECONDS\"",
+            "  bree_freestyle_attach",
+            "  bree_freestyle_status=$?",
+            "  case \"$bree_freestyle_status\" in 254|255) ;; *) exit \"$bree_freestyle_status\" ;; esac",
+            "  if [ \"$bree_freestyle_retry\" -ge \"$BREE_SSH_RECONNECT_LIMIT\" ]; then exit \"$bree_freestyle_status\"; fi",
+            "  bree_freestyle_retry=$((bree_freestyle_retry + 1))",
+            "  sleep \"$BREE_SSH_RECONNECT_DELAY_SECONDS\"",
             "done",
         ]
         return "/bin/sh -c \(Self.shellQuote(lines.joined(separator: "\n")))"
@@ -7723,12 +7723,12 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
               configuration.skipDaemonBootstrap else {
             return nil
         }
-        if configuration.persistentDaemonSlot == "cmux-default-freestyle-sshd-v1",
+        if configuration.persistentDaemonSlot == "bree-default-freestyle-sshd-v1",
            let vmID = configuration.managedCloudVMID {
             return vmID
         }
         let destination = configuration.destination.trimmingCharacters(in: .whitespacesAndNewlines)
-        let suffix = "+cmux@vm-ssh.freestyle.sh"
+        let suffix = "+bree@vm-ssh.freestyle.sh"
         guard destination.hasSuffix(suffix) else {
             return nil
         }
@@ -8576,7 +8576,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     func inheritedTerminalConfig(
         preferredPanelId: UUID? = nil,
         inPane preferredPaneId: PaneID? = nil
-    ) -> CmuxSurfaceConfigTemplate? {
+    ) -> BreeSurfaceConfigTemplate? {
 #if DEBUG
         debugInheritedTerminalConfigInvocationCount += 1
 #endif
@@ -8589,7 +8589,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             // Pin the panel and its TerminalSurface wrapper for the duration of
             // this iteration. The raw ghostty_surface_t extracted below is owned
             // by `surface` (the TerminalSurface) — ARC must not release it while
-            // ghostty_surface_inherited_config or cmuxCurrentSurfaceFontSizePoints
+            // ghostty_surface_inherited_config or breeCurrentSurfaceFontSizePoints
             // is still reading through the pointer.
             let surface = terminalPanel.surface
             let inheritanceContext =
@@ -8654,7 +8654,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
                 reason: "inheritedTerminalConfig"
             ) else {
                 if let inheritedFontSizeLineage {
-                    var config = CmuxSurfaceConfigTemplate()
+                    var config = BreeSurfaceConfigTemplate()
                     config.fontSizeLineage = inheritedFontSizeLineage
                     config.fontSizeChangeToken = inheritanceContext?.token
                     config.fontSizeChangeTokens =
@@ -8666,7 +8666,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
                 }
                 continue
             }
-            var config = cmuxInheritedSurfaceConfig(
+            var config = breeInheritedSurfaceConfig(
                 sourceSurface: sourceSurface,
                 context: GHOSTTY_SURFACE_CONTEXT_SPLIT
             )
@@ -8688,12 +8688,12 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         if let fallbackFontSizeLineage =
                 activeTerminalFontSizeChangeInheritanceContext?.fallbackLineage
                 ?? lastTerminalConfigInheritanceFontSizeLineage {
-            var config = CmuxSurfaceConfigTemplate()
+            var config = BreeSurfaceConfigTemplate()
             config.fontSizeLineage = fallbackFontSizeLineage
             config.fontSizeChangeToken =
                 activeTerminalFontSizeChangeInheritanceContext?.token
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "zoom.inherit fallback=lastKnownFont context=split font=\(String(format: "%.2f", fallbackFontSizeLineage.basePoints))"
             )
 #endif
@@ -8706,7 +8706,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     /// Remote tmux display surfaces need the workspace's durable font lineage
     /// without inheriting a local terminal's command, environment, or other
     /// process configuration.
-    private func inheritedTerminalFontSizeConfig() -> CmuxSurfaceConfigTemplate? {
+    private func inheritedTerminalFontSizeConfig() -> BreeSurfaceConfigTemplate? {
         let sourcePanel: TerminalPanel? = {
             if let remembered =
                     lastRememberedTerminalPanelForConfigInheritance() {
@@ -8795,7 +8795,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             transferProjection?.representedRequestTokens
             ?? []
         )
-        var config = CmuxSurfaceConfigTemplate()
+        var config = BreeSurfaceConfigTemplate()
         config.fontSizeLineage = fontSizeLineage
         config.fontSizeChangeToken = inheritanceContext?.token
         config.fontSizeChangeTokens =
@@ -8971,7 +8971,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         // to $SHELL), and a dead VM looks identical to a healthy workspace with a
         // local prompt — which is what we saw during dogfood.
         if startupCommand != nil {
-            var template = inheritedConfig ?? CmuxSurfaceConfigTemplate()
+            var template = inheritedConfig ?? BreeSurfaceConfigTemplate()
             template.waitAfterCommand = true
             inheritedConfig = template
         }
@@ -8991,7 +8991,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         effectiveStartupEnvironment = cwdResolution.startupEnvironment
         let tracksRemoteTerminalSurface = remoteTerminalStartupCommand != nil || effectiveRemotePTYSessionID != nil
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.cwd panelId=\(panelId.uuidString.prefix(5)) panelDir=\(panelDirectories[panelId] ?? "nil") requestedDir=\(terminalPanel(for: panelId)?.requestedWorkingDirectory ?? "nil") currentDir=\(currentDirectory) resolved=\(splitWorkingDirectory ?? "nil")"
         )
 #endif
@@ -9077,11 +9077,11 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             newPanel.close()
             return nil
         }
-        publishCmuxSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: newPanel.id, kind: "terminal", origin: autoLayout ? "terminal_auto_layout" : "terminal_split", focused: focus)
+        publishBreeSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: newPanel.id, kind: "terminal", origin: autoLayout ? "terminal_auto_layout" : "terminal_split", focused: focus)
 
 #if DEBUG
-        cmuxDebugLog("split.created pane=\(paneId.id.uuidString.prefix(5)) orientation=\(orientation)")
-        cmuxDebugLog(
+        breeDebugLog("split.created pane=\(paneId.id.uuidString.prefix(5)) orientation=\(orientation)")
+        breeDebugLog(
             "split.timing workspace=\(id.uuidString.prefix(5)) panel=\(panelId.uuidString.prefix(5)) " +
             "transport=\(splitTransport) stage=layout_committed elapsedMs=\(debugElapsedMs(since: splitTimingStart)) " +
             "newPanel=\(newPanel.id.uuidString.prefix(5))"
@@ -9314,7 +9314,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         // command exits so the user sees the error rather than a silently-respawned
         // local login shell.
         if startupCommand != nil {
-            var template = inheritedConfig ?? CmuxSurfaceConfigTemplate()
+            var template = inheritedConfig ?? BreeSurfaceConfigTemplate()
             template.waitAfterCommand = true
             inheritedConfig = template
         }
@@ -9389,7 +9389,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             )
             terminalStartupRestoreCoordinator.commitPendingRestores(panelIDs: [newPanel.id])
         }
-        publishCmuxSurfaceCreated(newPanel.id, paneId: paneId, kind: "terminal", origin: "terminal_tab", focused: shouldFocusNewTab)
+        publishBreeSurfaceCreated(newPanel.id, paneId: paneId, kind: "terminal", origin: "terminal_tab", focused: shouldFocusNewTab)
 
         // bonsplit's createTab may not reliably emit didSelectTab, and its internal selection
         // updates can be deferred. Force a deterministic selection + focus path so the new
@@ -9437,7 +9437,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     /// Creates a configured manual-mirror ``TerminalPanel`` for one remote tmux pane,
     /// WITHOUT inserting it into the workspace's bonsplit/`panels` (the
     /// ``RemoteTmuxWindowMirror`` owns it and renders it via ``TerminalPanelView``
-    /// inside a single tab, so the pane gets the full native cmux pane chrome —
+    /// inside a single tab, so the pane gets the full native bree pane chrome —
     /// background, focus overlay, dividers).
     func makeRemoteTmuxPanePanel(
         id panelID: UUID = UUID(), onInput: @escaping @Sendable (TerminalManualInput) -> Void,
@@ -9722,7 +9722,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             return nil
         }
         setPreferredBrowserProfileID(browserPanel.profileID)
-        publishCmuxSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: browserPanel.id, kind: "browser", origin: "browser_split", focused: focus)
+        publishBreeSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: browserPanel.id, kind: "browser", origin: "browser_split", focused: focus)
 
         // See newTerminalSplit: suppress old view's becomeFirstResponder during reparenting.
         let previousHostedView = focusedTerminalInputTarget()?.panel.hostedView
@@ -9845,7 +9845,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             let endInsertionGap = bonsplitController.tabs(inPane: paneId).count
             _ = bonsplitController.reorderTab(newTabId, toIndex: endInsertionGap)
         }
-        publishCmuxSurfaceCreated(browserPanel.id, paneId: paneId, kind: "browser", origin: "browser_tab", focused: shouldFocusNewTab)
+        publishBreeSurfaceCreated(browserPanel.id, paneId: paneId, kind: "browser", origin: "browser_tab", focused: shouldFocusNewTab)
 
         // Match terminal behavior: enforce deterministic selection + focus.
         if shouldFocusNewTab {
@@ -9883,10 +9883,10 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         inPane paneId: PaneID,
         title: String,
         focus: Bool = true
-    ) -> CMUXSidebarExtensionBrowserPanel? {
+    ) -> BREESidebarExtensionBrowserPanel? {
         guard !isRetiredFromOwningTabManager else { return nil }
         let shouldFocusNewTab = focus || bonsplitController.focusedPaneId == paneId
-        let extensionBrowserPanel = CMUXSidebarExtensionBrowserPanel(title: title)
+        let extensionBrowserPanel = BREESidebarExtensionBrowserPanel(title: title)
         panels[extensionBrowserPanel.id] = extensionBrowserPanel
         panelTitles[extensionBrowserPanel.id] = extensionBrowserPanel.displayTitle
 
@@ -9905,7 +9905,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         }
 
         bindSurface(newTabId, toPanelId: extensionBrowserPanel.id)
-        publishCmuxSurfaceCreated(
+        publishBreeSurfaceCreated(
             extensionBrowserPanel.id,
             paneId: paneId,
             kind: SurfaceKind.extensionBrowser.rawValue,
@@ -10008,7 +10008,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             panelTitles.removeValue(forKey: markdownPanel.id)
             return nil
         }
-        publishCmuxSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: markdownPanel.id, kind: "markdown", origin: "markdown_split", focused: focus)
+        publishBreeSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: markdownPanel.id, kind: "markdown", origin: "markdown_split", focused: focus)
 
         let previousHostedView = focusedTerminalInputTarget()?.panel.hostedView
         if focus {
@@ -10068,7 +10068,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         if let targetIndex {
             _ = bonsplitController.reorderTab(newTabId, toIndex: targetIndex)
         }
-        publishCmuxSurfaceCreated(markdownPanel.id, paneId: paneId, kind: "markdown", origin: "markdown_tab", focused: shouldFocusNewTab)
+        publishBreeSurfaceCreated(markdownPanel.id, paneId: paneId, kind: "markdown", origin: "markdown_tab", focused: shouldFocusNewTab)
         if shouldFocusNewTab {
             bonsplitController.focusPane(paneId)
             bonsplitController.selectTab(newTabId)
@@ -10121,7 +10121,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         if let targetIndex {
             _ = bonsplitController.reorderTab(newTabId, toIndex: targetIndex)
         }
-        publishCmuxSurfaceCreated(projectPanel.id, paneId: paneId, kind: SurfaceKind.project.rawValue, origin: "project_tab", focused: shouldFocusNewTab)
+        publishBreeSurfaceCreated(projectPanel.id, paneId: paneId, kind: SurfaceKind.project.rawValue, origin: "project_tab", focused: shouldFocusNewTab)
         if shouldFocusNewTab {
             bonsplitController.focusPane(paneId)
             bonsplitController.selectTab(newTabId)
@@ -10325,7 +10325,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         if let targetIndex {
             _ = bonsplitController.reorderTab(newTabId, toIndex: targetIndex)
         }
-        publishCmuxSurfaceCreated(filePreviewPanel.id, paneId: paneId, kind: "file_preview", origin: "file_preview_tab", focused: shouldFocusNewTab)
+        publishBreeSurfaceCreated(filePreviewPanel.id, paneId: paneId, kind: "file_preview", origin: "file_preview_tab", focused: shouldFocusNewTab)
         if shouldFocusNewTab {
             bonsplitController.focusPane(paneId)
             bonsplitController.selectTab(newTabId)
@@ -10399,7 +10399,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         if let targetIndex {
             _ = bonsplitController.reorderTab(newTabId, toIndex: targetIndex)
         }
-        publishCmuxSurfaceCreated(toolPanel.id, paneId: paneId, kind: "right_sidebar_tool", origin: "right_sidebar_tool_tab", focused: shouldFocusNewTab)
+        publishBreeSurfaceCreated(toolPanel.id, paneId: paneId, kind: "right_sidebar_tool", origin: "right_sidebar_tool_tab", focused: shouldFocusNewTab)
 
         if shouldFocusNewTab {
             focusPanel(toolPanel.id)
@@ -10450,7 +10450,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             removeSurfaceMapping(forSurfaceId: newTab.id)
             return nil
         }
-        publishCmuxSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: filePreviewPanel.id, kind: "file_preview", origin: "file_preview_split", focused: true)
+        publishBreeSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: filePreviewPanel.id, kind: "file_preview", origin: "file_preview_split", focused: true)
 
         bonsplitController.selectTab(newTab.id)
         filePreviewPanel.focus()
@@ -10555,7 +10555,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         }
 
         let firstResponderPanelId = (NSApp.keyWindow?.firstResponder ?? NSApp.mainWindow?.firstResponder)
-            .cmuxStrictOwningGhosttyView()?.terminalSurface?.id
+            .breeStrictOwningGhosttyView()?.terminalSurface?.id
         return closeUnmappedPanelViaSelectedTab(
             panelId,
             firstResponderPanelId: firstResponderPanelId,
@@ -10580,7 +10580,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
               let focusedPane = bonsplitController.focusedPaneId,
               let selected = bonsplitController.selectedTab(inPane: focusedPane) else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "surface.close.fallback.skip panel=\(panelId.uuidString.prefix(5)) " +
                 "focusedPanel=\(focusedPanelId?.uuidString.prefix(5) ?? "nil") " +
                 "firstResponderPanel=\(firstResponderPanelId?.uuidString.prefix(5) ?? "nil") " +
@@ -10592,7 +10592,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
 
         if let selectedOwner = panelIdFromSurfaceId(selected.id), selectedOwner != panelId {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "surface.close.fallback.refuse panel=\(panelId.uuidString.prefix(5)) " +
                 "selectedTab=\(String(describing: selected.id).prefix(5)) " +
                 "selectedOwner=\(selectedOwner.uuidString.prefix(5))"
@@ -10603,7 +10603,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
 
         let closed = requestCloseTab(selected.id, force: force)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "surface.close.fallback panel=\(panelId.uuidString.prefix(5)) " +
             "selectedTab=\(String(describing: selected.id).prefix(5)) " +
             "closed=\(closed ? 1 : 0)"
@@ -10884,7 +10884,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             && activeRemoteTerminalSurfaceIds.count == 1
 #if DEBUG
         let detachStart = ProcessInfo.processInfo.systemUptime
-        cmuxDebugLog(
+        breeDebugLog(
             "split.detach.begin ws=\(id.uuidString.prefix(5)) panel=\(panelId.uuidString.prefix(5)) " +
             "tab=\(tabId.uuid.uuidString.prefix(5)) activeDetachTxn=\(activeDetachCloseTransactions) " +
             "pendingDetached=\(pendingDetachedSurfaces.count)"
@@ -10899,7 +10899,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             splitLayout.cancelDetach(tabId)
             forceCloseTabIds.remove(tabId)
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "split.detach.fail ws=\(id.uuidString.prefix(5)) panel=\(panelId.uuidString.prefix(5)) " +
                 "tab=\(tabId.uuid.uuidString.prefix(5)) reason=closeTabRejected elapsedMs=\(debugElapsedMs(since: detachStart))"
             )
@@ -10923,9 +10923,9 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
                 detached = detachedTransfer.withRemoteCleanupConfiguration(remoteConfiguration)
             }
         }
-        publishCmuxSurfaceClosed(panelId, paneId: sourcePaneId, panel: sourcePanel, origin: detached == nil ? "detach_lost" : "detach")
+        publishBreeSurfaceClosed(panelId, paneId: sourcePaneId, panel: sourcePanel, origin: detached == nil ? "detach_lost" : "detach")
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.detach.end ws=\(id.uuidString.prefix(5)) panel=\(panelId.uuidString.prefix(5)) " +
             "tab=\(tabId.uuid.uuidString.prefix(5)) transfer=\(detached != nil ? 1 : 0) " +
             "elapsedMs=\(debugElapsedMs(since: detachStart))"
@@ -10945,14 +10945,14 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         guard !isRetiredFromOwningTabManager, acceptsDetachedSurface(detached) else { return nil }
 #if DEBUG
         let attachStart = ProcessInfo.processInfo.systemUptime
-        cmuxDebugLog(
+        breeDebugLog(
             "split.attach.begin ws=\(id.uuidString.prefix(5)) panel=\(detached.panelId.uuidString.prefix(5)) " +
             "pane=\(paneId.id.uuidString.prefix(5)) index=\(index.map(String.init) ?? "nil") focus=\(focus ? 1 : 0)"
         )
 #endif
         guard bonsplitController.allPaneIds.contains(paneId) else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "split.attach.fail ws=\(id.uuidString.prefix(5)) panel=\(detached.panelId.uuidString.prefix(5)) " +
                 "reason=invalidPane elapsedMs=\(debugElapsedMs(since: attachStart))"
             )
@@ -10961,7 +10961,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         }
         guard panels[detached.panelId] == nil else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "split.attach.fail ws=\(id.uuidString.prefix(5)) panel=\(detached.panelId.uuidString.prefix(5)) " +
                 "reason=panelExists elapsedMs=\(debugElapsedMs(since: attachStart))"
             )
@@ -11053,7 +11053,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             panelSubscriptions.removeValue(forKey: detached.panelId)
             discardBrowserPanelSubscription(panelId: detached.panelId, panel: detached.panel)
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "split.attach.fail ws=\(id.uuidString.prefix(5)) panel=\(detached.panelId.uuidString.prefix(5)) " +
                 "reason=createTabFailed elapsedMs=\(debugElapsedMs(since: attachStart))"
             )
@@ -11216,7 +11216,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         syncPinnedStateForTab(newTabId, panelId: detached.panelId)
         syncUnreadBadgeStateForPanel(detached.panelId)
         normalizePinnedTabs(in: paneId)
-        publishCmuxSurfaceCreated(detached.panelId, paneId: paneId, kind: Self.cmuxEventSurfaceKind(detached.panel), origin: "detach_attach", focused: focus)
+        publishBreeSurfaceCreated(detached.panelId, paneId: paneId, kind: Self.breeEventSurfaceKind(detached.panel), origin: "detach_attach", focused: focus)
 
         if focus {
             bonsplitController.focusPane(paneId)
@@ -11229,7 +11229,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         scheduleTerminalGeometryReconcile()
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.attach.end ws=\(id.uuidString.prefix(5)) panel=\(detached.panelId.uuidString.prefix(5)) " +
             "tab=\(newTabId.uuid.uuidString.prefix(5)) pane=\(paneId.id.uuidString.prefix(5)) " +
             "index=\(index.map(String.init) ?? "nil") focus=\(focus ? 1 : 0) " +
@@ -11377,7 +11377,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         let pane = bonsplitController.focusedPaneId?.id.uuidString.prefix(5) ?? "nil"
         let triggerLabel = trigger == .terminalFirstResponder ? "firstResponder" : "standard"
         let transactionLabel = effectiveFocusTransactionId.map { String($0.uuidString.prefix(5)) } ?? "nil"
-        cmuxDebugLog("focus.panel panel=\(panelId.uuidString.prefix(5)) pane=\(pane) trigger=\(triggerLabel) tx=\(transactionLabel)")
+        breeDebugLog("focus.panel panel=\(panelId.uuidString.prefix(5)) pane=\(pane) trigger=\(triggerLabel) tx=\(transactionLabel)")
         AppDelegate.shared?.focusLog.append(
             "Workspace.focusPanel panelId=\(panelId.uuidString) focusedPane=\(pane) trigger=\(triggerLabel) transactionId=\(transactionLabel)"
         )
@@ -11430,7 +11430,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             .flatMap { bonsplitController.selectedTab(inPane: $0)?.id }
             .map { String($0.uuid.uuidString.prefix(5)) } ?? "nil"
         let currentPanelShort = currentlyFocusedPanelId.map { String($0.uuidString.prefix(5)) } ?? "nil"
-        cmuxDebugLog(
+        breeDebugLog(
             "focus.panel.begin workspace=\(id.uuidString.prefix(5)) " +
             "panel=\(panelId.uuidString.prefix(5)) trigger=\(String(describing: trigger)) " +
             "targetPane=\(targetPaneShort) focusedPane=\(focusedPaneShort) selectedTab=\(selectedTabShort) " +
@@ -11459,7 +11459,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
 
         if let targetPaneId, !selectionAlreadyConverged {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "focus.panel.focusPane workspace=\(id.uuidString.prefix(5)) " +
                 "panel=\(panelId.uuidString.prefix(5)) pane=\(targetPaneId.id.uuidString.prefix(5))"
             )
@@ -11469,7 +11469,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
 
         if !selectionAlreadyConverged {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "focus.panel.selectTab workspace=\(id.uuidString.prefix(5)) " +
                 "panel=\(panelId.uuidString.prefix(5)) tab=\(tabId.uuid.uuidString.prefix(5))"
             )
@@ -11688,7 +11688,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             ? "/usr/bin/false"
             : placeholderCommand
         if replacementInitialCommand != nil {
-            var config = replacementConfig ?? CmuxSurfaceConfigTemplate()
+            var config = replacementConfig ?? BreeSurfaceConfigTemplate()
             config.waitAfterCommand = true
             replacementConfig = config
         }
@@ -11891,7 +11891,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             hostedView.suppressReparentFocus()
             pendingReparentFocusSuppressionViews[ObjectIdentifier(hostedView)] = hostedView
 #if DEBUG
-            cmuxDebugLog("focus.reparent.suppressPending reason=\(reason) count=\(pendingReparentFocusSuppressionViews.count)")
+            breeDebugLog("focus.reparent.suppressPending reason=\(reason) count=\(pendingReparentFocusSuppressionViews.count)")
 #endif
         }
 
@@ -11912,7 +11912,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         let hostedViews = Array(pendingReparentFocusSuppressionViews.values)
         pendingReparentFocusSuppressionViews.removeAll()
 #if DEBUG
-        cmuxDebugLog("focus.reparent.clearPending reason=\(reason) count=\(hostedViews.count)")
+        breeDebugLog("focus.reparent.clearPending reason=\(reason) count=\(hostedViews.count)")
 #endif
         for hostedView in hostedViews {
             hostedView.clearSuppressReparentFocus()
@@ -11930,7 +11930,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             pendingReparentFocusSuppressionViews.removeValue(forKey: key)
         }
 #if DEBUG
-        cmuxDebugLog("focus.reparent.clearReady reason=\(reason) count=\(hostedViews.count)")
+        breeDebugLog("focus.reparent.clearReady reason=\(reason) count=\(hostedViews.count)")
 #endif
         for hostedView in hostedViews {
             hostedView.clearSuppressReparentFocus()
@@ -11962,7 +11962,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
         // it on every event-loop tick during tracking (scroll, drag), which pumped
         // flushWorkspaceWindowLayouts() per scroll tick while a session was open.
         // Convergence comes from the self-rescheduling attempt loop plus the
-        // structural observers below (https://github.com/manaflow-ai/cmux/issues/6790).
+        // structural observers below (https://github.com/ecyx00/bree/issues/6790).
         layoutFollowUpObservers.append(NotificationCenter.default.addObserver(
             forName: .terminalSurfaceDidBecomeReady,
             object: nil,
@@ -12103,7 +12103,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     private func browserPortalReady(for browserPanel: BrowserPanel) -> Bool {
         browserPortalAnchorReady(for: browserPanel) &&
             browserPanel.webView.window != nil &&
-            browserPanel.webView.cmuxBrowserViewportAttachmentSuperview != nil &&
+            browserPanel.webView.breeBrowserViewportAttachmentSuperview != nil &&
             BrowserWindowPortalRegistry.isWebView(browserPanel.webView, boundTo: browserPanel.portalAnchorView)
     }
 
@@ -12530,7 +12530,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
                 anchorView.bounds.height > 1
             if !anchorReady ||
                 browserPanel.webView.window == nil ||
-                browserPanel.webView.cmuxBrowserViewportAttachmentSuperview == nil ||
+                browserPanel.webView.breeBrowserViewportAttachmentSuperview == nil ||
                 !BrowserWindowPortalRegistry.isWebView(browserPanel.webView, boundTo: anchorView) {
                 return true
             }
@@ -12844,7 +12844,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             remoteStartupCommand: startupCommand
         )
         if startupCommand != nil {
-            var template = inheritedConfig ?? CmuxSurfaceConfigTemplate()
+            var template = inheritedConfig ?? BreeSurfaceConfigTemplate()
             template.waitAfterCommand = true
             inheritedConfig = template
         }
@@ -12905,7 +12905,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
             )
             terminalStartupRestoreCoordinator.commitPendingRestores(panelIDs: [newPanel.id])
         }
-        publishCmuxSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: newPanel.id, kind: "terminal", origin: "terminal_split", focused: true)
+        publishBreeSplitCreated(newPaneId, sourcePaneId: paneId, orientation: orientation, surfaceId: newPanel.id, kind: "terminal", origin: "terminal_split", focused: true)
 
         bonsplitController.selectTab(newTab.id)
         newPanel.focus()
@@ -13035,7 +13035,7 @@ final class Workspace: Identifiable, ObservableObject, FilePreviewTabMetadataHos
     }
 
     /// Fork the panel's agent conversation into a brand-new sibling tab placed immediately
-    /// to the right of `anchorTabId` in `paneId`. Local surfaces use the structured `cmux fork`
+    /// to the right of `anchorTabId` in `paneId`. Local surfaces use the structured `bree fork`
     /// selector; remote shells retain their provider command when the local CLI is unreachable.
     @discardableResult
     func forkAgentConversationToNewTab(
@@ -13224,9 +13224,9 @@ extension Workspace: BonsplitDelegate {
 
         CloseDontAskAgainCheckbox.add(to: alert, offering: dontAskAgain)
         let warningDefaults = closeTabWarningDefaults
-        let content = CmuxAlertContent(informativeText: message)
+        let content = BreeAlertContent(informativeText: message)
         // Prefer a sheet if we can find a window, otherwise fall back to modal.
-        if let window = NSApp.cmuxMainWindowForModalPresentation(),
+        if let window = NSApp.breeMainWindowForModalPresentation(),
            window.attachedSheet == nil {
             content.apply(to: alert, presentingWindow: window)
             return await withCheckedContinuation { continuation in
@@ -13324,7 +13324,7 @@ extension Workspace: BonsplitDelegate {
         let selectedTabBefore = bonsplitController.focusedPaneId
             .flatMap { bonsplitController.selectedTab(inPane: $0)?.id }
             .map { String($0.uuid.uuidString.prefix(5)) } ?? "nil"
-        cmuxDebugLog(
+        breeDebugLog(
             "focus.split.apply.begin workspace=\(id.uuidString.prefix(5)) " +
             "pane=\(pane.id.uuidString.prefix(5)) tab=\(tabId.uuid.uuidString.prefix(5)) " +
             "focusedPane=\(focusedPaneBefore) selectedTab=\(selectedTabBefore) " +
@@ -13455,7 +13455,7 @@ extension Workspace: BonsplitDelegate {
                 if !terminalPanel.hostedView.isSurfaceViewFirstResponder() {
 #if DEBUG
                     let previousExists = previousTerminalHostedView != nil ? 1 : 0
-                    cmuxDebugLog(
+                    breeDebugLog(
                         "focus.split.moveFocus workspace=\(id.uuidString.prefix(5)) " +
                         "panel=\(panelId.uuidString.prefix(5)) previousExists=\(previousExists) " +
                         "to=\(activationPanel.id.uuidString.prefix(5))"
@@ -13468,7 +13468,7 @@ extension Workspace: BonsplitDelegate {
                     )
                 }
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "focus.split.ensureFocus workspace=\(id.uuidString.prefix(5)) " +
                     "panel=\(activationPanel.id.uuidString.prefix(5)) pane=\(focusedPane.id.uuidString.prefix(5)) " +
                     "tab=\(selectedTabId.uuid.uuidString.prefix(5)) intent=\(String(describing: activationIntent))"
@@ -13516,10 +13516,10 @@ extension Workspace: BonsplitDelegate {
                 transactionId: transactionId
             )
         )
-        publishCmuxFocusedSelection(paneId: focusedPane, surfaceId: panelId, origin: "bonsplit_selection")
+        publishBreeFocusedSelection(paneId: focusedPane, surfaceId: panelId, origin: "bonsplit_selection")
 #if DEBUG
         let prevPanelShort = previousFocusedPanelId.map { String($0.uuidString.prefix(5)) } ?? "nil"
-        cmuxDebugLog(
+        breeDebugLog(
             "focus.split.apply.end workspace=\(id.uuidString.prefix(5)) " +
             "panel=\(panelId.uuidString.prefix(5)) type=\(String(describing: type(of: panel))) " +
             "focusedPane=\(focusedPane.id.uuidString.prefix(5)) selectedTab=\(selectedTabId.uuid.uuidString.prefix(5)) " +
@@ -13591,7 +13591,7 @@ extension Workspace: BonsplitDelegate {
         for (panelId, panel) in panels where panelId != targetPanelId {
             guard let ownedIntent = panel.ownedFocusIntent(for: firstResponder, in: window) else { continue }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "focus.handoff.begin workspace=\(id.uuidString.prefix(5)) " +
                 "fromPanel=\(panelId.uuidString.prefix(5)) toPanel=\(targetPanelId.uuidString.prefix(5)) " +
                 "fromIntent=\(String(describing: ownedIntent)) toIntent=\(String(describing: targetIntent))"
@@ -13695,7 +13695,7 @@ extension Workspace: BonsplitDelegate {
             // Only a close that takes the zoomed pane with it ends the zoom. While
             // other tabs remain the pane outlives the close and keeps filling the
             // window, so the layout must not snap back to the split
-            // (https://github.com/manaflow-ai/cmux/issues/8363).
+            // (https://github.com/ecyx00/bree/issues/8363).
             if controller.zoomedPaneId == pane,
                controller.selectedTab(inPane: pane)?.id == tab.id,
                tabs.count <= 1 {
@@ -14191,12 +14191,12 @@ extension Workspace: BonsplitDelegate {
             .map { String(String(describing: $0.id).prefix(5)) } ?? "nil"
         let focusedPaneBefore = controller.focusedPaneId?.id.uuidString.prefix(5) ?? "nil"
         let focusedPanelBefore = focusedPanelId?.uuidString.prefix(5) ?? "nil"
-        cmuxDebugLog(
+        breeDebugLog(
             "split.moveTab idx=\(debugDidMoveTabEventCount) dtSincePrevMs=\(sincePrev) panel=\(movedPanel) " +
             "from=\(source.id.uuidString.prefix(5)) to=\(destination.id.uuidString.prefix(5)) " +
             "sourceTabs=\(controller.tabs(inPane: source).count) destTabs=\(controller.tabs(inPane: destination).count)"
         )
-        cmuxDebugLog(
+        breeDebugLog(
             "split.moveTab.state.before idx=\(debugDidMoveTabEventCount) panel=\(movedPanel) " +
             "destSelected=\(selectedBefore) focusedPane=\(focusedPaneBefore) focusedPanel=\(focusedPanelBefore)"
         )
@@ -14214,7 +14214,7 @@ extension Workspace: BonsplitDelegate {
         let focusedPaneAfter = controller.focusedPaneId?.id.uuidString.prefix(5) ?? "nil"
         let focusedPanelAfter = focusedPanelId?.uuidString.prefix(5) ?? "nil"
         let movedPanelFocused = (movedPanelIdAfter != nil && movedPanelIdAfter == focusedPanelId) ? 1 : 0
-        cmuxDebugLog(
+        breeDebugLog(
             "split.moveTab.state.after idx=\(debugDidMoveTabEventCount) panel=\(movedPanel) " +
             "destSelected=\(selectedAfter) focusedPane=\(focusedPaneAfter) focusedPanel=\(focusedPanelAfter) " +
             "movedFocused=\(movedPanelFocused)"
@@ -14255,7 +14255,7 @@ extension Workspace: BonsplitDelegate {
         let shouldScheduleFocusReconcile = !isDetachingCloseTransaction
         releaseProvisionalSplitPaneGeometryForRemovedSplits()
 
-        publishCmuxPaneClosed(paneId, closedPanelIds: closedPanelIds, origin: "pane_close")
+        publishBreePaneClosed(paneId, closedPanelIds: closedPanelIds, origin: "pane_close")
         if !closedPanelIds.isEmpty {
             if !isDetachingCloseTransaction && !suppressClosedPanelHistory {
                 for entry in closedHistoryEntries {
@@ -14359,7 +14359,7 @@ extension Workspace: BonsplitDelegate {
 #if DEBUG
         let originalSelectedKind = controller.selectedTab(inPane: originalPane).map { debugSplitPanelKind(forTabId: $0.id) } ?? "none"
         let newSelectedKind = controller.selectedTab(inPane: newPane).map { debugSplitPanelKind(forTabId: $0.id) } ?? "none"
-        cmuxDebugLog(
+        breeDebugLog(
             "split.didSplit original=\(originalPane.id.uuidString.prefix(5)) new=\(newPane.id.uuidString.prefix(5)) " +
             "orientation=\(orientation) programmatic=\(isProgrammaticSplit ? 1 : 0) " +
             "originalTabs=\(controller.tabs(inPane: originalPane).count) newTabs=\(controller.tabs(inPane: newPane).count) " +
@@ -14403,7 +14403,7 @@ extension Workspace: BonsplitDelegate {
         // If the new pane already has a tab, this split moved an existing tab (drag-to-split).
         //
         // In the "drag the only tab to split edge" case, bonsplit inserts a placeholder "Empty"
-        // tab in the source pane to avoid leaving it tabless. In cmux, this is undesirable:
+        // tab in the source pane to avoid leaving it tabless. In bree, this is undesirable:
         // it creates a pane with no real surfaces and leaves an "Empty" tab in the tab bar.
         //
         // Replace placeholder-only source panes with a real terminal surface, then drop the
@@ -14412,7 +14412,7 @@ extension Workspace: BonsplitDelegate {
             let originalTabs = controller.tabs(inPane: originalPane)
             let hasRealSurface = originalTabs.contains { panelIdFromSurfaceId($0.id) != nil }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "split.didSplit.drag original=\(originalPane.id.uuidString.prefix(5)) " +
                 "new=\(newPane.id.uuidString.prefix(5)) originalTabs=\(originalTabs.count) " +
                 "newTabs=\(controller.tabs(inPane: newPane).count) hasRealSurface=\(hasRealSurface ? 1 : 0) " +
@@ -14451,7 +14451,7 @@ extension Workspace: BonsplitDelegate {
         }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.didSplit.autoCreate pane=\(newPane.id.uuidString.prefix(5)) " +
             "fromPane=\(originalPane.id.uuidString.prefix(5)) sourcePanel=\(sourcePanelId.map { String($0.uuidString.prefix(5)) } ?? "none")"
         )
@@ -14490,9 +14490,9 @@ extension Workspace: BonsplitDelegate {
         rememberTerminalConfigInheritanceSource(newPanel)
         normalizePinnedTabs(in: newPane)
         equalizeSplitsAfterCreatingSplitIfEnabled(newPaneId: newPane)
-        publishCmuxSplitCreated(newPane, sourcePaneId: originalPane, orientation: orientation, surfaceId: newPanel.id, kind: "terminal", origin: "ui_split", focused: true)
+        publishBreeSplitCreated(newPane, sourcePaneId: originalPane, orientation: orientation, surfaceId: newPanel.id, kind: "terminal", origin: "ui_split", focused: true)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.didSplit.autoCreate.done pane=\(newPane.id.uuidString.prefix(5)) " +
             "panel=\(newPanel.id.uuidString.prefix(5))"
         )
@@ -14551,6 +14551,8 @@ extension Workspace: BonsplitDelegate {
                 ArchitectureWindowController.shared.toggle(from: self)
             case .toggleWiki:
                 WikiPopoverController.shared.toggle(from: self)
+            case .showBoard:
+                BoardPopoverController.shared.toggle(from: self)
             case .newTerminal, .newBrowser, .splitRight, .splitDown:
                 break
             }
@@ -14562,7 +14564,7 @@ extension Workspace: BonsplitDelegate {
         }
 
         if case .setting(let change) = executable.button.action {
-            CmuxSettingActionRunner.run(
+            BreeSettingActionRunner.run(
                 change,
                 actionSourcePath: executable.button.actionSourcePath,
                 globalConfigPath: globalConfigPath,
@@ -14594,7 +14596,7 @@ extension Workspace: BonsplitDelegate {
             let trimmedCwd = rawCwd.trimmingCharacters(in: .whitespacesAndNewlines)
             let baseCwd = trimmedCwd.isEmpty ? FileManager.default.homeDirectoryForCurrentUser.path : trimmedCwd
             guard let tabManager = owningTabManager else { return }
-            let command: CmuxCommandDefinition
+            let command: BreeCommandDefinition
             let configSourcePath: String?
             if let workspaceCommand = executable.workspaceCommand {
                 command = workspaceCommand.command
@@ -14605,7 +14607,7 @@ extension Workspace: BonsplitDelegate {
             } else {
                 return
             }
-            _ = CmuxConfigExecutor.execute(
+            _ = BreeConfigExecutor.execute(
                 command: command,
                 tabManager: tabManager,
                 baseCwd: baseCwd,
@@ -14622,7 +14624,7 @@ extension Workspace: BonsplitDelegate {
 
         guard let command = executable.button.terminalCommand else { return }
         let target = executable.button.resolvedTerminalCommandTarget
-        let didExecute = CmuxConfigExecutor.prepareShellInputIfAuthorized(
+        let didExecute = BreeConfigExecutor.prepareShellInputIfAuthorized(
             command,
             confirm: executable.button.confirm ?? false,
             actionID: executable.button.id,
@@ -14666,7 +14668,7 @@ extension Workspace: BonsplitDelegate {
 
     func splitTabBar(_ controller: BonsplitController, didRequestCustomAction identifier: String, inPane pane: PaneID) {
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "split.customAction.request workspace=\(id.uuidString.prefix(5)) " +
             "pane=\(pane.id.uuidString.prefix(5)) identifier=\(identifier)"
         )

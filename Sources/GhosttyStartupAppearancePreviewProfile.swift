@@ -1,4 +1,4 @@
-import CmuxTerminalCore
+import BreeTerminalCore
 import Foundation
 
 enum GhosttyStartupAppearancePreviewProfile: String, CaseIterable, Identifiable {
@@ -81,7 +81,7 @@ enum GhosttyStartupAppearancePreviewProfile: String, CaseIterable, Identifiable 
         case .realUserConfig:
             return nil
         case .freshInstall:
-            return GhosttyConfig.cmuxDefaultThemeConfigContents(
+            return GhosttyConfig.breeDefaultThemeConfigContents(
                 preferredColorScheme: preferredColorScheme
             )
         case .userThemePair:

@@ -1,4 +1,4 @@
-import CmuxBrowser
+import BreeBrowser
 import AppKit
 
 /// Event-driven follow-up state for the Dock portal reconciler.
@@ -362,7 +362,7 @@ extension DockSplitStore {
     func dockBrowserPortalReady(_ browser: BrowserPanel) -> Bool {
         dockBrowserPortalAnchorReady(browser.portalAnchorView) &&
             browser.webView.window != nil &&
-            browser.webView.cmuxBrowserViewportAttachmentSuperview != nil &&
+            browser.webView.breeBrowserViewportAttachmentSuperview != nil &&
             BrowserWindowPortalRegistry.isWebView(browser.webView, boundTo: browser.portalAnchorView)
     }
 

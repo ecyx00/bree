@@ -11,7 +11,7 @@ extension AppDelegate {
                     source: "shortcut.\(NSWindow.keyDescription(event))"
                 ) {
 #if DEBUG
-                    cmuxDebugLog(
+                    breeDebugLog(
                         "browser.devtools detachedClose.shortcut panel=\(panel.id.uuidString.prefix(5)) " +
                         "event=\(NSWindow.keyDescription(event)) window=\(window.windowNumber)"
                     )
@@ -107,7 +107,7 @@ extension AppDelegate {
                     source: "sendAction.\(NSStringFromSelector(action))"
                 ) {
 #if DEBUG
-                    cmuxDebugLog(
+                    breeDebugLog(
                         "browser.devtools detachedClose.action panel=\(panel.id.uuidString.prefix(5)) " +
                         "action=\(NSStringFromSelector(action)) window=\(window.windowNumber)"
                     )

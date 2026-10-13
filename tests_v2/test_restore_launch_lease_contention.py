@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Run two real restore CLIs with isolated homes, PTYs, and an app RPC fixture.
 
-Usage: python3 tests_v2/test_restore_launch_lease_contention.py --cli /path/to/cmux
+Usage: python3 tests_v2/test_restore_launch_lease_contention.py --cli /path/to/bree
 With no --cli, discover it from the test runner's configured app (read-only).
 Restores never access that app's panes or real Codex data. The first restore
-execs a stand-in agent and the real cmux exit watcher holds its launch lease.
+execs a stand-in agent and the real bree exit watcher holds its launch lease.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ import uuid
 
 def exercise(cli: Path, reports_owner: bool, owner_cli: Path, launching: bool = False,
              presentation: str | None = None) -> None:
-    with tempfile.TemporaryDirectory(prefix="cmux-15111-", dir="/tmp") as temporary:
+    with tempfile.TemporaryDirectory(prefix="bree-15111-", dir="/tmp") as temporary:
         root = Path(temporary).resolve()
         home = root / "codex-home"
         sessions = home / "sessions"
@@ -111,7 +111,7 @@ def exercise(cli: Path, reports_owner: bool, owner_cli: Path, launching: bool = 
         thread.start()
         environment = {
             "HOME": str(root), "CFFIXED_USER_HOME": str(root), "CODEX_HOME": str(home),
-            "CMUX_SOCKET_PATH": str(path), "CMUX_CLI_SENTRY_DISABLED": "1",
+            "BREE_SOCKET_PATH": str(path), "BREE_CLI_SENTRY_DISABLED": "1",
             "SHELL": "/bin/sh", "PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8",
         }
         for key in ("DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH"):
@@ -120,7 +120,7 @@ def exercise(cli: Path, reports_owner: bool, owner_cli: Path, launching: bool = 
         command = [str(cli), "restore", "--surface", surface, "codex", session]
         owner_command = [str(owner_cli), *command[1:]]
         if launching:
-            directory = root / ".cmuxterm" / "agent-restore-launches"
+            directory = root / ".bree" / "agent-restore-launches"
             directory.mkdir(parents=True, mode=0o700)
             key = hashlib.sha256((str(home) + "\0" + session).encode()).hexdigest()
             lease_path = directory / (key + ".lock")
@@ -180,16 +180,16 @@ def exercise(cli: Path, reports_owner: bool, owner_cli: Path, launching: bool = 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cli", type=Path, default=os.environ.get("CMUX_BUNDLED_CLI_PATH")
-                        or os.environ.get("CMUXTERM_CLI"))
+    parser.add_argument("--cli", type=Path, default=os.environ.get("BREE_BUNDLED_CLI_PATH")
+                        or os.environ.get("BREE_CLI"))
     parser.add_argument("--owner-cli", type=Path, help="Optional older CLI to verify stable/nightly interoperability")
     arguments = parser.parse_args()
     if arguments.cli is None:
-        socket_path = os.environ.get("CMUX_SOCKET_PATH")
+        socket_path = os.environ.get("BREE_SOCKET_PATH")
         if not socket_path:
-            parser.error("Pass --cli or set CMUX_BUNDLED_CLI_PATH / CMUX_SOCKET_PATH")
-        from cmux import cmux
-        with cmux(socket_path) as client:
+            parser.error("Pass --cli or set BREE_BUNDLED_CLI_PATH / BREE_SOCKET_PATH")
+        from bree import bree
+        with bree(socket_path) as client:
             identity = client._call("system.identify")
         arguments.cli = Path(identity["app_bundle_path"]) / "Contents/Resources/bin/bree"
     for reports_owner in (True, False):

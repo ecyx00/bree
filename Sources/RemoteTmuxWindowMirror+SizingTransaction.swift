@@ -1,6 +1,6 @@
 import AppKit
-import CmuxRemoteSession
-import CmuxTerminal
+import BreeRemoteSession
+import BreeTerminal
 import Foundation
 
 extension RemoteTmuxWindowMirror {
@@ -82,7 +82,7 @@ extension RemoteTmuxWindowMirror {
             #endif
             if containerSizePt != nil, oversized {
                 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "mirror.container.note @\(windowId) proposed=\(Int(pointSize.width))x\(Int(pointSize.height)) bound=\(Int(bound.width))x\(Int(bound.height)) -> drop"
                 )
                 #endif
@@ -116,7 +116,7 @@ extension RemoteTmuxWindowMirror {
         #if DEBUG
         if pointSize.width > 3000 || pointSize.height > 3000 {
             let window = visibleHostingContext()?.window
-            cmuxDebugLog(
+            breeDebugLog(
                 "remote.container.record @\(windowId)"
                     + " size=\(Int(pointSize.width))x\(Int(pointSize.height))"
                     + " panels=\(panelsByPaneId.count)"
@@ -514,7 +514,7 @@ extension RemoteTmuxWindowMirror {
         outputParityRearmsSpent += 1
         #if DEBUG
         RemoteTmuxSizingDiagnostics.parityRearmCount += 1
-        cmuxDebugLog(
+        breeDebugLog(
             "remote.parity.rearm @\(windowId) \(mismatch) attempt=\(outputParityRearmsSpent)/3"
         )
         #endif
@@ -583,7 +583,7 @@ extension RemoteTmuxWindowMirror {
         if renderFrameSize != clamped {
             renderFrameSize = clamped
             #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "mirror.renderFrame @\(windowId) grid=\(renderedLayout.width)x\(renderedLayout.height)"
                     + " exact=\(Int(exact.width))x\(Int(exact.height))"
                     + " region=\(Int(container.width))x\(Int(container.height))"
@@ -624,13 +624,13 @@ extension RemoteTmuxWindowMirror {
         guard !dumpedAncestorChains else { return }
         dumpedAncestorChains = true
         guard let probe = hostProbeView else {
-            cmuxDebugLog("mirror.container.ancestors @\(windowId) NO-PROBE proposed=\(Int(proposedWidth))")
+            breeDebugLog("mirror.container.ancestors @\(windowId) NO-PROBE proposed=\(Int(proposedWidth))")
             return
         }
         let chain = hostProbeAncestorChain(maxDepth: 14).map {
             "\(String($0.className.prefix(48)))=\(Int($0.width))"
         }
-        cmuxDebugLog(
+        breeDebugLog(
             "mirror.container.ancestors @\(windowId) proposed=\(Int(proposedWidth)) bound=\(boundWidth.map { String(Int($0)) } ?? "nil") \(chain.joined(separator: " < "))"
         )
         guard let bound = boundWidth else { return }
@@ -641,7 +641,7 @@ extension RemoteTmuxWindowMirror {
                 let kids = view.subviews.prefix(8).map {
                     "\(String(NSStringFromClass(type(of: $0)).suffix(28)))=\(Int($0.frame.width))"
                 }.joined(separator: " ")
-                cmuxDebugLog(
+                breeDebugLog(
                     "mirror.container.kids @\(windowId) level=\(depth) \(String(NSStringFromClass(type(of: view)).suffix(28)))=\(Int(view.frame.width)) kids[\(kids)]"
                 )
             }
@@ -662,7 +662,7 @@ extension RemoteTmuxWindowMirror {
         // FEWER columns than assigned wraps every full-width line.
         if let leaf = renderedLayout.firstLeaf(withPaneId: paneId),
            sample.columns < leaf.width || sample.rows < leaf.height {
-            cmuxDebugLog(
+            breeDebugLog(
                 "remote.grid.mismatch @\(windowId) pane=%\(paneId)"
                     + " rendered=\(sample.columns)x\(sample.rows)"
                     + " assigned=\(leaf.width)x\(leaf.height)"
@@ -686,7 +686,7 @@ extension RemoteTmuxWindowMirror {
                     cellPx: (width: geometry.cellWidthPx, height: geometry.cellHeightPx)
                 )
                 if sample.columns != expected.columns || sample.rows != expected.rows {
-                    cmuxDebugLog(
+                    breeDebugLog(
                         "remote.parity.mismatch @\(windowId) pane=%\(paneId)"
                             + " sampled=\(sample.columns)x\(sample.rows)"
                             + " expectedFromPlan=\(expected.columns)x\(expected.rows)"
@@ -741,7 +741,7 @@ extension RemoteTmuxWindowMirror {
         }
         refreshGeometryConstants()
         #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "remote.rects.push @\(windowId) container="
                 + (containerSizePt.map { "\(Int($0.width))x\(Int($0.height))" } ?? "nil")
                 + " scale=\(containerScale ?? 0) geom=\(currentGeometry() != nil ? 1 : 0)"

@@ -1,4 +1,4 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Foundation
 
 extension SurfaceResumeBindingSnapshot {
@@ -15,7 +15,7 @@ extension SurfaceResumeBindingSnapshot {
     /// compatibility command for a binding whose process executes remotely.
     ///
     /// Remote SSH/tmux bindings deliberately keep their provider command unless
-    /// their transport supplies a reachable cmux relay. The caller chooses the
+    /// their transport supplies a reachable bree relay. The caller chooses the
     /// binding's launch flavor before this method is used.
     func forkStartupInput(
         repairPortableAgentExecutable: Bool = true
@@ -37,7 +37,7 @@ extension SurfaceResumeBindingSnapshot {
         return TerminalStartupTypedShellCommand().typedInput(posixCommand: command) + "\n"
     }
 
-    /// Local bindings can resolve the fork record through the local cmux
+    /// Local bindings can resolve the fork record through the local bree
     /// socket. Remote bindings need a transport-provided relay and otherwise
     /// retain their provider command.
     var usesLocalForkVerb: Bool {

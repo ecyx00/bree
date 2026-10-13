@@ -1,10 +1,10 @@
 import Foundation
 
-/// The custom URL scheme this build registers for `cmux://` SSH and workspace
-/// links (`CMUX_AUTH_CALLBACK_SCHEME` in the build settings).
+/// The custom URL scheme this build registers for `bree://` SSH and workspace
+/// links (`BREE_AUTH_CALLBACK_SCHEME` in the build settings).
 ///
-/// Resolution order: the `CMUX_AUTH_CALLBACK_SCHEME` process-environment
-/// override, then (DEBUG) `cmux-dev` or `cmux-dev-<tag>`, then the release
+/// Resolution order: the `BREE_AUTH_CALLBACK_SCHEME` process-environment
+/// override, then (DEBUG) `bree-dev` or `bree-dev-<tag>`, then the release
 /// channel by bundle identifier.
 enum AppURLScheme {
     /// The scheme for the running process.
@@ -29,27 +29,27 @@ enum AppURLScheme {
         bundleIdentifier: String?,
         isDebugBuild: Bool
     ) -> String {
-        if let overridden = environment["CMUX_AUTH_CALLBACK_SCHEME"]?
+        if let overridden = environment["BREE_AUTH_CALLBACK_SCHEME"]?
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !overridden.isEmpty {
             return overridden
         }
         if isDebugBuild {
-            // Untagged Debug builds register cmux-dev:// so they can coexist
+            // Untagged Debug builds register bree-dev:// so they can coexist
             // with the installed stable app. Tagged Debug builds use
-            // cmux-dev-<tag>://.
-            if let tag = environment["CMUX_TAG"]?
+            // bree-dev-<tag>://.
+            if let tag = environment["BREE_TAG"]?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                !tag.isEmpty,
                let schemeTag = sanitizedTag(tag) {
-                return "cmux-dev-\(schemeTag)"
+                return "bree-dev-\(schemeTag)"
             }
-            return "cmux-dev"
+            return "bree-dev"
         }
         if bundleIdentifier == "com.bree.app" { return "bree" }
-        if bundleIdentifier == "com.cmuxterm.app.nightly" { return "cmux-nightly" }
-        if bundleIdentifier == "com.cmuxterm.app.rc" { return "cmux-rc" }
-        return "cmux"
+        if bundleIdentifier == "com.bree.app.nightly" { return "bree-nightly" }
+        if bundleIdentifier == "com.bree.app.rc" { return "bree-rc" }
+        return "bree"
     }
 
     private static func sanitizedTag(_ rawTag: String) -> String? {

@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "snapshot": "title: Dialogs Fixture\nurl: PRIMARY/dialogs.html\ndialog: confirm \"Confirm text\" (answer with page.dialog().accept() or .dismiss())\n# the page is blocked until the dialog is answered",
     "dialog": {
       "type": "confirm",

@@ -1,12 +1,12 @@
 import AppKit
 import Bonsplit
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension SurfacePaneFactory {
     /// Sets each local divider to the ratio the machine screen had, walking the workspace's
     /// live Bonsplit tree in step with the layout the catalog just built (the traversal
-    /// `Workspace.applyCustomLayout` uses for cmux.json layouts). Any shape mismatch — a
+    /// `Workspace.applyCustomLayout` uses for bree.json layouts). Any shape mismatch — a
     /// split the projection could not create, an orientation that differs — stops that
     /// branch: a ratio is never applied to a divider the layout did not describe.
     static func applyDividerRatios(_ layout: SurfaceProjectionLayout, in workspaceID: UUID) {

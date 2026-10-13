@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression for https://github.com/manaflow-ai/cmux/issues/10926.
+Regression for https://github.com/ecyx00/bree/issues/10926.
 
 The remaining zsh watcher (git HEAD)
 guarded parent liveness with a bare `kill -0 $watch_shell_pid`, which is
@@ -9,11 +9,11 @@ process, the guard returns true forever and the watcher never exits
 (793 orphans / 2.1 GB after 20 days in the issue).
 
 The fix records a stable parent identity at spawn (PID plus a numeric UTC
-`/bin/ps` lstart token) in `_cmux_watcher_parent_start_time`, and the
-per-iteration guard `_cmux_watcher_parent_alive` treats a start-time mismatch
+`/bin/ps` lstart token) in `_bree_watcher_parent_start_time`, and the
+per-iteration guard `_bree_watcher_parent_alive` treats a start-time mismatch
 or a failed ps as parent-dead.
 
-This test never touches a running cmux instance or /tmp/cmux-debug.sock:
+This test never touches a running bree instance or /tmp/bree-debug.sock:
 it builds its own scratch HOME, its own unix socket, and unique panel ids.
 """
 
@@ -31,7 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ZSH_INTEGRATION = ROOT / "Resources" / "shell-integration" / "cmux-zsh-integration.zsh"
+ZSH_INTEGRATION = ROOT / "Resources" / "shell-integration" / "bree-zsh-integration.zsh"
 
 # Start identities are epoch seconds from both Darwin providers.
 FAKE_START_TIME = "1000000000"
@@ -63,7 +63,7 @@ def run_shell(
     pass_fds: tuple[int, ...] = (),
 ) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [*shell_argv, "-c", script, "cmux-test", *args],
+        [*shell_argv, "-c", script, "bree-test", *args],
         env=env,
         capture_output=True,
         text=True,
@@ -113,7 +113,7 @@ def shell_start_time(shell_argv: list[str], integration: Path, env: dict[str, st
     """Read the identity token through the shipped shell helper."""
     proc = run_shell(
         shell_argv,
-        'source "$1"; _cmux_watcher_parent_start_time "$2"',
+        'source "$1"; _bree_watcher_parent_start_time "$2"',
         [str(integration), str(pid)],
         env,
     )
@@ -157,16 +157,16 @@ def check_guard_semantics(name: str, shell_argv: list[str], integration: Path, e
     # The integration path is $1 in both shells so the scripts stay identical.
     guard_script = (
         'source "$1"; pid="$2"; expected="$3"; '
-        "_cmux_watcher_parent_alive \"$pid\" \"$expected\"; "
+        "_bree_watcher_parent_alive \"$pid\" \"$expected\"; "
         'printf \'GUARD:%s\\n\' "$?"'
     )
     self_script = (
         'source "$1"; IFS=:; '
-        'start="$(_cmux_watcher_parent_start_time $$)" || { printf "NOSTART\\n"; exit 1; }; '
-        'repeat="$(_cmux_watcher_parent_start_time $$)" || { printf "NOREPEAT\\n"; exit 1; }; '
-        '_cmux_watcher_parent_identity_valid $$ "$start" || { printf "NONNUMERIC\\n"; exit 1; }; '
+        'start="$(_bree_watcher_parent_start_time $$)" || { printf "NOSTART\\n"; exit 1; }; '
+        'repeat="$(_bree_watcher_parent_start_time $$)" || { printf "NOREPEAT\\n"; exit 1; }; '
+        '_bree_watcher_parent_identity_valid $$ "$start" || { printf "NONNUMERIC\\n"; exit 1; }; '
         '[[ "$start" == "$repeat" ]] || { printf "UNSTABLE\\n"; exit 1; }; '
-        "_cmux_watcher_parent_alive $$ \"$start\"; "
+        "_bree_watcher_parent_alive $$ \"$start\"; "
         'printf \'GUARD:%s\\n\' "$?"'
     )
 
@@ -194,7 +194,7 @@ def check_guard_semantics(name: str, shell_argv: list[str], integration: Path, e
     # start-time capture cannot safely fall back to PID-only liveness.
     empty_script = (
         'source "$1"; '
-        '_cmux_watcher_parent_alive "$$" ""; '
+        '_bree_watcher_parent_alive "$$" ""; '
         'printf \'GUARD:%s\\n\' "$?"'
     )
     proc = run_shell(shell_argv, empty_script, [str(integration)], env)
@@ -209,10 +209,10 @@ def check_guard_semantics(name: str, shell_argv: list[str], integration: Path, e
     # host process table.
     ps_failure_script = (
         'source "$1"; '
-        '_cmux_watcher_parent_start_time() { return 1; }; '
-        '_cmux_watcher_parent_alive "$$" "19700101000000"; '
+        '_bree_watcher_parent_start_time() { return 1; }; '
+        '_bree_watcher_parent_alive "$$" "19700101000000"; '
         'printf \'GUARD:%s\\n\' "$?"; '
-        '_cmux_capture_shell_start_time; printf \'CAPTURE:%s\\n\' "$?"'
+        '_bree_capture_shell_start_time; printf \'CAPTURE:%s\\n\' "$?"'
     )
     proc = run_shell(shell_argv, ps_failure_script, [str(integration)], env)
     if "GUARD:0" in proc.stdout or "GUARD:" not in proc.stdout or "CAPTURE:1" not in proc.stdout:
@@ -300,12 +300,12 @@ def check_tiered_cadence(name: str, shell_argv: list[str], integration: Path, en
     """
     script = (
         'source "$1"; '
-        "_CMUX_WATCHER_IDENTITY_INTERVAL=3; "
-        'start="$(_cmux_watcher_parent_start_time $$)" || exit 9; '
-        "_cmux_watcher_guard_tick $$ \"$start\"; printf 'T1:%s\\n' \"$?\"; "
-        f"_cmux_watcher_guard_tick $$ \"{FAKE_START_TIME}\"; printf 'T2:%s\\n' \"$?\"; "
-        f"_cmux_watcher_guard_tick $$ \"{FAKE_START_TIME}\"; printf 'T3:%s\\n' \"$?\"; "
-        f"_cmux_watcher_guard_tick $$ \"{FAKE_START_TIME}\"; printf 'T4:%s\\n' \"$?\""
+        "_BREE_WATCHER_IDENTITY_INTERVAL=3; "
+        'start="$(_bree_watcher_parent_start_time $$)" || exit 9; '
+        "_bree_watcher_guard_tick $$ \"$start\"; printf 'T1:%s\\n' \"$?\"; "
+        f"_bree_watcher_guard_tick $$ \"{FAKE_START_TIME}\"; printf 'T2:%s\\n' \"$?\"; "
+        f"_bree_watcher_guard_tick $$ \"{FAKE_START_TIME}\"; printf 'T3:%s\\n' \"$?\"; "
+        f"_bree_watcher_guard_tick $$ \"{FAKE_START_TIME}\"; printf 'T4:%s\\n' \"$?\""
     )
     proc = run_shell(shell_argv, script, [str(integration)], env)
     expected = ["T1:0", "T2:0", "T3:0"]
@@ -322,7 +322,7 @@ def check_injected_watcher_loop(name: str, shell_argv: list[str], integration: P
     # runs the ps comparison only every Nth iteration to avoid steady-state
     # forks, which would push the reuse-detection bound past this test's.
     env = dict(env)
-    env["_CMUX_WATCHER_IDENTITY_INTERVAL"] = "1"
+    env["_BREE_WATCHER_IDENTITY_INTERVAL"] = "1"
 
     def spawn_loop(pid: int, expected: str) -> tuple[int | None, int, bool]:
         read_fd, write_fd = os.pipe()
@@ -330,8 +330,8 @@ def check_injected_watcher_loop(name: str, shell_argv: list[str], integration: P
             ready_command = f"print -r -- READY >&{write_fd}"
             loop_script = (
                 'source "$1"; '
-                f"{{ _cmux_watcher_guard_tick \"$2\" \"$3\" || exit 0; {ready_command}; "
-                "while true; do sleep 0.2; _cmux_watcher_guard_tick \"$2\" \"$3\" || exit 0; done; } >/dev/null 2>&1 "
+                f"{{ _bree_watcher_guard_tick \"$2\" \"$3\" || exit 0; {ready_command}; "
+                "while true; do sleep 0.2; _bree_watcher_guard_tick \"$2\" \"$3\" || exit 0; done; } >/dev/null 2>&1 "
                 "&!; "
                 'printf \'LOOP:%s\\n\' "$!"'
             )
@@ -394,7 +394,7 @@ def make_socket(path: Path) -> socket.socket:
 
 
 def check_real_loops(name: str, shell_argv: list[str], integration: Path, tmp: Path) -> None:
-    """Drive the shipped _cmux_start_* functions from a throwaway parent shell.
+    """Drive the shipped _bree_start_* functions from a throwaway parent shell.
 
     Parent alive: watchers keep running. Parent killed (SIGKILL, so no exit
     hooks run, matching the SIGHUP-less pane-close path): watchers exit within
@@ -408,37 +408,37 @@ def check_real_loops(name: str, shell_argv: list[str], integration: Path, tmp: P
     env = base_env(tmp)
     env.update(
         {
-            "CMUX_SOCKET_PATH": str(sock_path),
-            "CMUX_TAB_ID": "tab-test-10926",
-            "CMUX_PANEL_ID": f"panel-test-10926-{name}-{os.getpid()}",
-            "_CMUX_WATCHER_IDENTITY_INTERVAL": "1",
+            "BREE_SOCKET_PATH": str(sock_path),
+            "BREE_TAB_ID": "tab-test-10926",
+            "BREE_PANEL_ID": f"panel-test-10926-{name}-{os.getpid()}",
+            "_BREE_WATCHER_IDENTITY_INTERVAL": "1",
         }
     )
 
     ready_read, ready_write = os.pipe()
     parent_script = f"""
 source "$1"
-functions[_cmux_test_guard_tick_impl]="${{functions[_cmux_watcher_guard_tick]}}"
-typeset -g _CMUX_TEST_READY_SENT=0
-_cmux_watcher_guard_tick() {{
-    _cmux_test_guard_tick_impl "$@"
+functions[_bree_test_guard_tick_impl]="${{functions[_bree_watcher_guard_tick]}}"
+typeset -g _BREE_TEST_READY_SENT=0
+_bree_watcher_guard_tick() {{
+    _bree_test_guard_tick_impl "$@"
     local guard_status=$?
-    if (( guard_status == 0 && _CMUX_TEST_READY_SENT == 0 )); then
+    if (( guard_status == 0 && _BREE_TEST_READY_SENT == 0 )); then
         print -r -- READY >&{ready_write}
-        _CMUX_TEST_READY_SENT=1
+        _BREE_TEST_READY_SENT=1
     fi
     return "$guard_status"
 }}
-_cmux_git_resolve_head_path() {{ print -r -- {str(head_file)!r}; }}
-_cmux_git_head_signature() {{ print -r -- "sig"; }}
-_cmux_report_git_branch_for_path() {{ true; }}
-_cmux_start_git_head_watch
-print -r -- "WATCHERS:$_CMUX_GIT_HEAD_WATCH_PID"
+_bree_git_resolve_head_path() {{ print -r -- {str(head_file)!r}; }}
+_bree_git_head_signature() {{ print -r -- "sig"; }}
+_bree_report_git_branch_for_path() {{ true; }}
+_bree_start_git_head_watch
+print -r -- "WATCHERS:$_BREE_GIT_HEAD_WATCH_PID"
 exec sleep 300
 """
 
     parent = subprocess.Popen(
-        [*shell_argv, "-c", parent_script, "cmux-test-parent", str(integration)],
+        [*shell_argv, "-c", parent_script, "bree-test-parent", str(integration)],
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -513,7 +513,7 @@ def main() -> int:
         print("SKIP: zsh not installed")
         return 0
 
-    tmp = Path(tempfile.mkdtemp(prefix="cmux_10926_"))
+    tmp = Path(tempfile.mkdtemp(prefix="bree_10926_"))
     (tmp / "home").mkdir()
     try:
         shells = [

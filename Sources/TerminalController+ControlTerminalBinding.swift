@@ -1,5 +1,5 @@
-import CmuxControlSocket
-import CmuxTerminal
+import BreeControlSocket
+import BreeTerminal
 import Foundation
 import GhosttyKit
 import OSLog
@@ -15,7 +15,7 @@ import OSLog
 @MainActor
 struct ControlTerminalSocketTarget {
     nonisolated private static let logger = Logger(
-        subsystem: "com.cmuxterm.app",
+        subsystem: "com.bree.app",
         category: "socket.terminal-binding"
     )
 

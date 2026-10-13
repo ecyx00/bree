@@ -1,6 +1,6 @@
 import AppKit
-import CmuxCommandPalette
-import CmuxPanes
+import BreeCommandPalette
+import BreePanes
 
 extension ContentView {
     func paneSizingContributions(

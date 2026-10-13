@@ -1,13 +1,13 @@
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 /// Classifies a raw agent hook event into our wire `hook_event_name` plus an
 /// `isActionable` flag.
 ///
-/// This is the single source of truth behind both the running `cmux` CLI
-/// (`cmux hooks feed …`) and the `FeedEventClassificationTests` regression
-/// suite — the file is compiled into the `cmux-cli` target and the
-/// `cmuxTests` target so the pure decision can be unit-tested without
+/// This is the single source of truth behind both the running `bree` CLI
+/// (`bree hooks feed …`) and the `FeedEventClassificationTests` regression
+/// suite — the file is compiled into the `bree-cli` target and the
+/// `breeTests` target so the pure decision can be unit-tested without
 /// launching the app or running the CLI as a subprocess.
 ///
 /// The mapping is driven by an explicit, typed registry
@@ -17,7 +17,7 @@ import Foundation
 /// tool-*starting* lifecycle event can never be mistaken for an approval
 /// request — and unknown / future event names default to non-actionable
 /// telemetry that never notifies. Conflating a tool-start with an approval
-/// is the bug behind https://github.com/manaflow-ai/cmux/issues/4985.
+/// is the bug behind https://github.com/ecyx00/bree/issues/4985.
 /// Resolved user-attention outcome for one raw agent hook event on the
 /// Feed bridge path.
 struct FeedEventClassification: Equatable {
@@ -28,10 +28,10 @@ struct FeedEventClassification: Equatable {
     let isActionable: Bool
     /// The agent is blocked waiting for the user in its OWN approval UI
     /// (e.g. Codex's approval reviewer). The feed event stays non-actionable
-    /// telemetry — cmux must not double-prompt — but the hook bridge must
+    /// telemetry — bree must not double-prompt — but the hook bridge must
     /// raise the "Agent Needs Permission"-gated notification, or the blocked
     /// agent is silent indefinitely.
-    /// https://github.com/manaflow-ai/cmux/issues/9592
+    /// https://github.com/ecyx00/bree/issues/9592
     let notifiesNativeApprovalPrompt: Bool
     /// A tool COMPLETED for an agent whose approval prompts notify via
     /// ``notifiesNativeApprovalPrompt`` — execution strictly follows any
@@ -43,7 +43,7 @@ struct FeedEventClassification: Equatable {
     /// just-raised prompt while the agent is still blocked.
     ///
     /// The clear is deliberately pane-wide and uncorrelated with any single
-    /// request: notifications carry no request identity anywhere in cmux,
+    /// request: notifications carry no request identity anywhere in bree,
     /// and every agent integration clears the same way on progress signals —
     /// Claude's `session-start`/`prompt-submit`/`pre-tool-use` hooks, the
     /// generic `.approvalResponse` action (Hermes' resolved native
@@ -99,7 +99,7 @@ struct FeedEventClassifier {
         case toolStart
         /// The agent is blocked waiting for the user in its OWN approval
         /// UI (e.g. Codex's approval reviewer). The feed event stays
-        /// non-actionable telemetry — an actionable cmux Feed card would
+        /// non-actionable telemetry — an actionable bree Feed card would
         /// compete with the agent's native prompt and bypass features like
         /// Codex's "Approve for me" — but the bridge raises the
         /// "Agent Needs Permission"-gated notification so the blocked
@@ -276,7 +276,7 @@ struct FeedEventClassifier {
         "codex": [
             // Codex runs PermissionRequest hooks before its own approval
             // reviewer. Keep the feed side telemetry so "Approve for me" can
-            // still use Codex's auto-review path instead of blocking on cmux
+            // still use Codex's auto-review path instead of blocking on bree
             // Feed, but raise the permission-prompt notification: this is the
             // only hook Codex fires while blocked on the user (#9592).
             "PermissionRequest": .nativeApprovalPrompt,

@@ -1,7 +1,7 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxTerminalCore
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeTerminalCore
 
 /// Computes the live ``BreeChromePalette`` from the Ghostty theme and the
 /// system, and publishes it to ``BreeChromePaletteStore``.
@@ -82,7 +82,7 @@ final class BreeChromePaletteProvider {
             foreground = background.mixed(with: label.withAlpha(1), label.alpha)
         }
 
-        let config = GhosttyConfig.loadForCmux(preferredColorScheme: app.effectiveTerminalColorSchemePreference)
+        let config = GhosttyConfig.loadForBree(preferredColorScheme: app.effectiveTerminalColorSchemePreference)
         let ansi = (0..<16).map { index in
             config.palette[index].map { BreeRGBA(nsColor: $0).withAlpha(1) } ?? foreground
         }

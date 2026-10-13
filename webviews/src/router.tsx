@@ -26,7 +26,7 @@ export function createWebviewsRouter(WebviewComponent: WebviewRouteComponent) {
   });
   const generatedDiffRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/cmux-diff-viewer",
+    path: "/bree-diff-viewer",
     component: WebviewComponent,
   });
   const routeTree = rootRoute.addChildren([

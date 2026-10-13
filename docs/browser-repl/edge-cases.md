@@ -2,7 +2,7 @@
 
 Every row is one differential case in
 [tests/browser-parity/diff/cases](../../tests/browser-parity/diff/cases)
-(the `edge` field names the id). The case runs the same task in cmux, reference A
+(the `edge` field names the id). The case runs the same task in bree, reference A
 and reference B where the reference can run it inside the approved
 test scope, and [parity-report.md](parity-report.md) lists its verdicts.
 `tests/browser-parity/unit/diff.test.mjs` fails when a row has no case or a
@@ -12,11 +12,11 @@ Scope for the references: reference B runs on one approved origin
 (`http://127.0.0.1:PORT`), so rows that need another origin, TLS or DNS are
 out of scope for it; reference A runs on loopback fixture pages, so rows that need a
 public name (`lvh.me`, `.invalid`) are out of scope for it. Rows that act on
-processes or on a person's window run in the cmux app only.
+processes or on a person's window run in the bree app only.
 
 ## Network and navigation
 
-| Id | Scenario | cmux behavior | Case |
+| Id | Scenario | bree behavior | Case |
 | --- | --- | --- | --- |
 | `auth-basic` | HTTP Basic challenge, with and without credentials in the URL | Without credentials `goto` resolves at once with the 401 response (no prompt blocks the tab); `user:pass@` in the URL answers the challenge | `edge.auth-basic` |
 | `auth-digest` | HTTP Digest challenge | Same as Basic; `user:pass@` in the URL answers the digest challenge | `edge.auth-digest` |
@@ -35,7 +35,7 @@ processes or on a person's window run in the cmux app only.
 
 ## Cookies, storage and permissions
 
-| Id | Scenario | cmux behavior | Case |
+| Id | Scenario | bree behavior | Case |
 | --- | --- | --- | --- |
 | `cookies-flags` | HttpOnly, Secure, SameSite cookies | `document.cookie` omits HttpOnly; requests send all of them | `edge.cookies-flags` |
 | `cookies-subdomain` | `Domain=` cookie across sibling subdomains | Sent to the sibling subdomain, not to another site | `edge.cookies-subdomain` |
@@ -48,7 +48,7 @@ processes or on a person's window run in the cmux app only.
 
 ## Downloads and files
 
-| Id | Scenario | cmux behavior | Case |
+| Id | Scenario | bree behavior | Case |
 | --- | --- | --- | --- |
 | `download-blob` | `blob:` URL download | `download` event with the name; the file is readable | `edge.download-blob` |
 | `download-data` | `data:` URL download | Same | `edge.download-data` |
@@ -60,7 +60,7 @@ processes or on a person's window run in the cmux app only.
 
 ## Input and forms
 
-| Id | Scenario | cmux behavior | Case |
+| Id | Scenario | bree behavior | Case |
 | --- | --- | --- | --- |
 | `select-multiple` | `<select multiple>` | `selectOption([...])` selects all given values and returns them | `loc.select-option.forms` |
 | `input-date` | `type=date` | `fill("2026-09-30")` sets the value; invalid text fails | `edge.input-types` |
@@ -81,7 +81,7 @@ processes or on a person's window run in the cmux app only.
 
 ## Layout, frames and windows
 
-| Id | Scenario | cmux behavior | Case |
+| Id | Scenario | bree behavior | Case |
 | --- | --- | --- | --- |
 | `nested-scroll` | Target inside two nested scroll containers | Actions scroll every container that clips the target | `edge.nested-scroll` |
 | `infinite-scroll` | Feed that loads more on scroll | Scrolling a sentinel into view loads more items | `edge.infinite-scroll` |
@@ -100,7 +100,7 @@ processes or on a person's window run in the cmux app only.
 
 ## Sessions and processes
 
-| Id | Scenario | cmux behavior | Case |
+| Id | Scenario | bree behavior | Case |
 | --- | --- | --- | --- |
 | `sessions-two-tabs` | Two REPL sessions, each on its own tab, at once | Both finish with their own results; no cross-talk | `edge.sessions-two-tabs` |
 | `sessions-same-tab` | Two sessions on one tab | Both see each other's changes; concurrent clicks both land; closing by one is seen by the other | `edge.sessions-same-tab` |

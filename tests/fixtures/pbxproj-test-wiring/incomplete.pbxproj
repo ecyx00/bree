@@ -17,32 +17,32 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		111111111111111111111111 /* cmuxTests */ = {
+		111111111111111111111111 /* breeTests */ = {
 			isa = PBXGroup;
 			children = (
 				444444444444444444444444 /* ExistingTests.swift */,
 				999999999999999999999999 /* HalfWiredTests.swift */,
 				EEEEEEEEEEEEEEEEEEEEEEEE /* ExternalPackageTests.swift */,
 			);
-			path = cmuxTests;
+			path = breeTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		222222222222222222222222 /* cmuxTests */ = {
+		222222222222222222222222 /* breeTests */ = {
 			isa = PBXNativeTarget;
 			buildPhases = (
 				333333333333333333333333 /* Sources */,
 			);
-			name = cmuxTests;
+			name = breeTests;
 		};
-		666666666666666666666666 /* cmuxUITests */ = {
+		666666666666666666666666 /* breeUITests */ = {
 			isa = PBXNativeTarget;
 			buildPhases = (
 				777777777777777777777777 /* Sources */,
 			);
-			name = cmuxUITests;
+			name = breeUITests;
 		};
 /* End PBXNativeTarget section */
 

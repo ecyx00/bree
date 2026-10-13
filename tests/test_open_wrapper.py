@@ -43,27 +43,27 @@ def run_wrapper(
     extra_env: dict[str, str | None] | None = None,
     locale_capture: dict[str, list[str]] | None = None,
 ) -> tuple[list[str], list[str], int, str]:
-    """Run Resources/bin/open with faked system_open/cmux/defaults and return its dispatch.
+    """Run Resources/bin/open with faked system_open/bree/defaults and return its dispatch.
 
     If `locale_capture` is given, it is populated (before the temp dir is
     cleaned up) with the LC_ALL each fake child process observed, under the
-    keys "open" and "cmux" -- used to verify the wrapper restores the
+    keys "open" and "bree" -- used to verify the wrapper restores the
     caller's original locale for dispatch instead of leaking its own
     internal `LC_ALL=C` (see test_child_processes_observe_original_locale).
     """
-    with tempfile.TemporaryDirectory(prefix="cmux-open-wrapper-test-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-open-wrapper-test-") as td:
         tmp = Path(td)
         wrapper = tmp / "open"
         shutil.copy2(SOURCE_WRAPPER, wrapper)
         wrapper.chmod(0o755)
 
         open_log = tmp / "open.log"
-        cmux_log = tmp / "cmux.log"
+        bree_log = tmp / "bree.log"
         open_locale_log = tmp / "open-locale.log"
-        cmux_locale_log = tmp / "cmux-locale.log"
+        bree_locale_log = tmp / "bree-locale.log"
         system_open = tmp / "system-open"
         defaults = tmp / "defaults"
-        cmux = tmp / "bree"
+        bree = tmp / "bree"
 
         make_executable(
             system_open,
@@ -83,7 +83,7 @@ if [[ "${1:-}" != "read" ]]; then
 fi
 key="${3:-}"
 case "$key" in
-  browserInterceptTerminalOpenCommandInCmuxBrowser)
+  browserInterceptTerminalOpenCommandInBreeBrowser)
     if [[ "${FAKE_DEFAULTS_INTERCEPT_OPEN+x}" == "x" ]]; then
       printf '%s\\n' "$FAKE_DEFAULTS_INTERCEPT_OPEN"
       exit 0
@@ -97,7 +97,7 @@ case "$key" in
     fi
     exit 1
     ;;
-  browserOpenTerminalLinksInCmuxBrowser)
+  browserOpenTerminalLinksInBreeBrowser)
     if [[ "${FAKE_DEFAULTS_LEGACY_OPEN+x}" == "x" ]]; then
       printf '%s\\n' "$FAKE_DEFAULTS_LEGACY_OPEN"
       exit 0
@@ -126,17 +126,17 @@ esac
         )
 
         make_executable(
-            cmux,
+            bree,
             """#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\\n' "$*" >> "$FAKE_CMUX_LOG"
-printf '%s\\n' "${LC_ALL-<unset>}" >> "$FAKE_CMUX_LOCALE_LOG"
+printf '%s\\n' "$*" >> "$FAKE_BREE_LOG"
+printf '%s\\n' "${LC_ALL-<unset>}" >> "$FAKE_BREE_LOCALE_LOG"
 url=""
 for arg in "$@"; do
   url="$arg"
 done
-if [[ -n "${FAKE_CMUX_FAIL_URLS:-}" ]]; then
-  IFS=',' read -r -a failures <<< "$FAKE_CMUX_FAIL_URLS"
+if [[ -n "${FAKE_BREE_FAIL_URLS:-}" ]]; then
+  IFS=',' read -r -a failures <<< "$FAKE_BREE_FAIL_URLS"
   for fail_url in "${failures[@]}"; do
     if [[ "$url" == "$fail_url" ]]; then
       exit 1
@@ -154,18 +154,18 @@ exit 0
                 target.write_text("<!doctype html><title>fixture</title>", encoding="utf-8")
 
         env = os.environ.copy()
-        env["CMUX_SOCKET_PATH"] = "/tmp/cmux-open-wrapper-test.sock"
-        env["CMUX_BUNDLE_ID"] = "com.cmuxterm.app.debug.test"
-        env["CMUX_OPEN_WRAPPER_SYSTEM_OPEN"] = str(system_open)
-        env["CMUX_OPEN_WRAPPER_DEFAULTS"] = str(defaults)
+        env["BREE_SOCKET_PATH"] = "/tmp/bree-open-wrapper-test.sock"
+        env["BREE_BUNDLE_ID"] = "com.bree.app.debug.test"
+        env["BREE_OPEN_WRAPPER_SYSTEM_OPEN"] = str(system_open)
+        env["BREE_OPEN_WRAPPER_DEFAULTS"] = str(defaults)
         env["FAKE_OPEN_LOG"] = str(open_log)
-        env["FAKE_CMUX_LOG"] = str(cmux_log)
+        env["FAKE_BREE_LOG"] = str(bree_log)
         env["FAKE_OPEN_LOCALE_LOG"] = str(open_locale_log)
-        env["FAKE_CMUX_LOCALE_LOG"] = str(cmux_locale_log)
+        env["FAKE_BREE_LOCALE_LOG"] = str(bree_locale_log)
         if python_bin is None:
-            env.pop("CMUX_OPEN_WRAPPER_PYTHON3", None)
+            env.pop("BREE_OPEN_WRAPPER_PYTHON3", None)
         else:
-            env["CMUX_OPEN_WRAPPER_PYTHON3"] = python_bin
+            env["BREE_OPEN_WRAPPER_PYTHON3"] = python_bin
 
         if intercept_setting is None:
             env.pop("FAKE_DEFAULTS_INTERCEPT_OPEN", None)
@@ -193,9 +193,9 @@ exit 0
             env["FAKE_DEFAULTS_EXTERNAL_PATTERNS"] = external_patterns
 
         if fail_urls:
-            env["FAKE_CMUX_FAIL_URLS"] = ",".join(fail_urls)
+            env["FAKE_BREE_FAIL_URLS"] = ",".join(fail_urls)
         else:
-            env.pop("FAKE_CMUX_FAIL_URLS", None)
+            env.pop("FAKE_BREE_FAIL_URLS", None)
 
         if extra_env:
             for key, value in extra_env.items():
@@ -215,9 +215,9 @@ exit 0
 
         if locale_capture is not None:
             locale_capture["open"] = read_log(open_locale_log)
-            locale_capture["cmux"] = read_log(cmux_locale_log)
+            locale_capture["bree"] = read_log(bree_locale_log)
 
-        return read_log(open_log), read_log(cmux_log), result.returncode, result.stderr.strip()
+        return read_log(open_log), read_log(bree_log), result.returncode, result.stderr.strip()
 
 
 def expect(condition: bool, message: str, failures: list[str]) -> None:
@@ -255,27 +255,27 @@ def discover_alternate_bash_binaries() -> list[str]:
 
 def test_toggle_disabled_passthrough(failures: list[str]) -> None:
     url = "https://example.com"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="0",
         whitelist="",
     )
     expect(code == 0, f"toggle off: wrapper exited {code}: {stderr}", failures)
-    expect(cmux_log == [], f"toggle off: cmux should not be called, got {cmux_log}", failures)
+    expect(bree_log == [], f"toggle off: bree should not be called, got {bree_log}", failures)
     expect(open_log == [url], f"toggle off: expected system open [{url}], got {open_log}", failures)
 
 
 def test_toggle_disabled_case_insensitive_passthrough(failures: list[str]) -> None:
     url = "https://example.com"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting=" FaLsE ",
         whitelist="",
     )
     expect(code == 0, f"toggle off (case-insensitive): wrapper exited {code}: {stderr}", failures)
     expect(
-        cmux_log == [],
-        f"toggle off (case-insensitive): cmux should not be called, got {cmux_log}",
+        bree_log == [],
+        f"toggle off (case-insensitive): bree should not be called, got {bree_log}",
         failures,
     )
     expect(
@@ -287,14 +287,14 @@ def test_toggle_disabled_case_insensitive_passthrough(failures: list[str]) -> No
 
 def test_browser_disabled_override_passthrough(failures: list[str]) -> None:
     url = "https://example.com"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         browser_disabled_setting=" true ",
         whitelist="",
     )
     expect(code == 0, f"browser disabled override: wrapper exited {code}: {stderr}", failures)
-    expect(cmux_log == [], f"browser disabled override: cmux should not be called, got {cmux_log}", failures)
+    expect(bree_log == [], f"browser disabled override: bree should not be called, got {bree_log}", failures)
     expect(
         open_log == [url],
         f"browser disabled override: expected one system open [{url}], got {open_log}",
@@ -304,31 +304,31 @@ def test_browser_disabled_override_passthrough(failures: list[str]) -> None:
 
 def test_whitelist_miss_passthrough(failures: list[str]) -> None:
     url = "https://example.com"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="localhost\n127.0.0.1",
     )
     expect(code == 0, f"whitelist miss: wrapper exited {code}: {stderr}", failures)
-    expect(cmux_log == [], f"whitelist miss: cmux should not be called, got {cmux_log}", failures)
+    expect(bree_log == [], f"whitelist miss: bree should not be called, got {bree_log}", failures)
     expect(open_log == [url], f"whitelist miss: expected system open [{url}], got {open_log}", failures)
 
 
-def test_whitelist_match_routes_to_cmux(failures: list[str]) -> None:
+def test_whitelist_match_routes_to_bree(failures: list[str]) -> None:
     url = "https://api.example.com/path?q=1"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="*.example.com",
     )
     expect(code == 0, f"whitelist match: wrapper exited {code}: {stderr}", failures)
     expect(open_log == [], f"whitelist match: system open should not be called, got {open_log}", failures)
-    expect(cmux_log == [f"browser open {url}"], f"whitelist match: unexpected cmux log {cmux_log}", failures)
+    expect(bree_log == [f"browser open {url}"], f"whitelist match: unexpected bree log {bree_log}", failures)
 
 
 def test_external_literal_pattern_is_deferred_to_app(failures: list[str]) -> None:
     url = "https://platform.openai.com/account/usage"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="",
@@ -336,8 +336,8 @@ def test_external_literal_pattern_is_deferred_to_app(failures: list[str]) -> Non
     )
     expect(code == 0, f"external literal deferred: wrapper exited {code}: {stderr}", failures)
     expect(
-        cmux_log == [f"browser open {url}"],
-        f"external literal deferred: expected wrapper to pass URL to cmux, got {cmux_log}",
+        bree_log == [f"browser open {url}"],
+        f"external literal deferred: expected wrapper to pass URL to bree, got {bree_log}",
         failures,
     )
     expect(
@@ -349,7 +349,7 @@ def test_external_literal_pattern_is_deferred_to_app(failures: list[str]) -> Non
 
 def test_external_regex_pattern_is_deferred_to_app(failures: list[str]) -> None:
     url = "https://foo.example.com/billing"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="*.example.com",
@@ -357,8 +357,8 @@ def test_external_regex_pattern_is_deferred_to_app(failures: list[str]) -> None:
     )
     expect(code == 0, f"external regex deferred: wrapper exited {code}: {stderr}", failures)
     expect(
-        cmux_log == [f"browser open {url}"],
-        f"external regex deferred: expected wrapper to pass URL to cmux, got {cmux_log}",
+        bree_log == [f"browser open {url}"],
+        f"external regex deferred: expected wrapper to pass URL to bree, got {bree_log}",
         failures,
     )
     expect(
@@ -370,7 +370,7 @@ def test_external_regex_pattern_is_deferred_to_app(failures: list[str]) -> None:
 
 def test_external_regex_with_icu_features_is_deferred_to_app(failures: list[str]) -> None:
     url = "https://example.com/usage/42"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="example.com",
@@ -378,8 +378,8 @@ def test_external_regex_with_icu_features_is_deferred_to_app(failures: list[str]
     )
     expect(code == 0, f"external regex icu deferred: wrapper exited {code}: {stderr}", failures)
     expect(
-        cmux_log == [f"browser open {url}"],
-        f"external regex icu deferred: expected wrapper to pass URL to cmux, got {cmux_log}",
+        bree_log == [f"browser open {url}"],
+        f"external regex icu deferred: expected wrapper to pass URL to bree, got {bree_log}",
         failures,
     )
     expect(
@@ -391,7 +391,7 @@ def test_external_regex_with_icu_features_is_deferred_to_app(failures: list[str]
 
 def test_external_invalid_regex_is_ignored_silently(failures: list[str]) -> None:
     url = "https://example.com/path"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="",
@@ -399,8 +399,8 @@ def test_external_invalid_regex_is_ignored_silently(failures: list[str]) -> None
     )
     expect(code == 0, f"external invalid regex: wrapper exited {code}: {stderr}", failures)
     expect(
-        cmux_log == [f"browser open {url}"],
-        f"external invalid regex: expected cmux open for {url}, got {cmux_log}",
+        bree_log == [f"browser open {url}"],
+        f"external invalid regex: expected bree open for {url}, got {bree_log}",
         failures,
     )
     expect(
@@ -419,7 +419,7 @@ def test_partial_failures_only_fallback_failed_urls(failures: list[str]) -> None
     good = "https://api.example.com"
     failed = "https://fail.example.com"
     external = "https://outside.test"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[good, failed, external],
         intercept_setting="1",
         whitelist="*.example.com",
@@ -427,8 +427,8 @@ def test_partial_failures_only_fallback_failed_urls(failures: list[str]) -> None
     )
     expect(code == 0, f"partial failure: wrapper exited {code}: {stderr}", failures)
     expect(
-        cmux_log == [f"browser open {good}", f"browser open {failed}"],
-        f"partial failure: cmux log mismatch {cmux_log}",
+        bree_log == [f"browser open {good}", f"browser open {failed}"],
+        f"partial failure: bree log mismatch {bree_log}",
         failures,
     )
     expect(
@@ -440,20 +440,20 @@ def test_partial_failures_only_fallback_failed_urls(failures: list[str]) -> None
 
 def test_legacy_toggle_fallback_passthrough(failures: list[str]) -> None:
     url = "https://example.com"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting=None,
         legacy_open_setting="0",
         whitelist="",
     )
     expect(code == 0, f"legacy fallback: wrapper exited {code}: {stderr}", failures)
-    expect(cmux_log == [], f"legacy fallback: cmux should not be called, got {cmux_log}", failures)
+    expect(bree_log == [], f"legacy fallback: bree should not be called, got {bree_log}", failures)
     expect(open_log == [url], f"legacy fallback: expected system open [{url}], got {open_log}", failures)
 
 
 def test_legacy_toggle_fallback_case_insensitive_passthrough(failures: list[str]) -> None:
     url = "https://example.com"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting=None,
         legacy_open_setting=" Off ",
@@ -461,8 +461,8 @@ def test_legacy_toggle_fallback_case_insensitive_passthrough(failures: list[str]
     )
     expect(code == 0, f"legacy fallback (case-insensitive): wrapper exited {code}: {stderr}", failures)
     expect(
-        cmux_log == [],
-        f"legacy fallback (case-insensitive): cmux should not be called, got {cmux_log}",
+        bree_log == [],
+        f"legacy fallback (case-insensitive): bree should not be called, got {bree_log}",
         failures,
     )
     expect(
@@ -472,21 +472,21 @@ def test_legacy_toggle_fallback_case_insensitive_passthrough(failures: list[str]
     )
 
 
-def test_uppercase_scheme_routes_to_cmux(failures: list[str]) -> None:
+def test_uppercase_scheme_routes_to_bree(failures: list[str]) -> None:
     url = "HTTPS://api.example.com/path?q=1"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="*.example.com",
     )
     expect(code == 0, f"uppercase scheme: wrapper exited {code}: {stderr}", failures)
     expect(open_log == [], f"uppercase scheme: system open should not be called, got {open_log}", failures)
-    expect(cmux_log == [f"browser open {url}"], f"uppercase scheme: unexpected cmux log {cmux_log}", failures)
+    expect(bree_log == [f"browser open {url}"], f"uppercase scheme: unexpected bree log {bree_log}", failures)
 
 
-def test_local_html_file_routes_to_cmux(failures: list[str]) -> None:
+def test_local_html_file_routes_to_bree(failures: list[str]) -> None:
     filename = "fixtures/hello page.HTML"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[filename],
         intercept_setting="1",
         whitelist="",
@@ -494,35 +494,35 @@ def test_local_html_file_routes_to_cmux(failures: list[str]) -> None:
     )
     expect(code == 0, f"local html file: wrapper exited {code}: {stderr}", failures)
     expect(open_log == [], f"local html file: system open should not be called, got {open_log}", failures)
-    expect(len(cmux_log) == 1, f"local html file: expected exactly one cmux call, got {cmux_log}", failures)
-    if cmux_log:
+    expect(len(bree_log) == 1, f"local html file: expected exactly one bree call, got {bree_log}", failures)
+    if bree_log:
         expect(
-            cmux_log[0].startswith("browser open file://"),
-            f"local html file: expected file:// target, got {cmux_log[0]}",
+            bree_log[0].startswith("browser open file://"),
+            f"local html file: expected file:// target, got {bree_log[0]}",
             failures,
         )
         expect(
-            "hello%20page.HTML" in cmux_log[0],
-            f"local html file: expected URL-encoded filename in cmux target, got {cmux_log[0]}",
+            "hello%20page.HTML" in bree_log[0],
+            f"local html file: expected URL-encoded filename in bree target, got {bree_log[0]}",
             failures,
         )
 
 
-def test_file_url_html_routes_to_cmux(failures: list[str]) -> None:
-    url = "file:///tmp/cmux-open-wrapper-fixture.html"
-    open_log, cmux_log, code, stderr = run_wrapper(
+def test_file_url_html_routes_to_bree(failures: list[str]) -> None:
+    url = "file:///tmp/bree-open-wrapper-fixture.html"
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="",
     )
     expect(code == 0, f"file url html: wrapper exited {code}: {stderr}", failures)
     expect(open_log == [], f"file url html: system open should not be called, got {open_log}", failures)
-    expect(cmux_log == [f"browser open {url}"], f"file url html: unexpected cmux log {cmux_log}", failures)
+    expect(bree_log == [f"browser open {url}"], f"file url html: unexpected bree log {bree_log}", failures)
 
 
-def test_file_url_html_routes_to_cmux_without_python_binary(failures: list[str]) -> None:
-    url = "file:///tmp/cmux-open-wrapper-fixture.html"
-    open_log, cmux_log, code, stderr = run_wrapper(
+def test_file_url_html_routes_to_bree_without_python_binary(failures: list[str]) -> None:
+    url = "file:///tmp/bree-open-wrapper-fixture.html"
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="",
@@ -535,15 +535,15 @@ def test_file_url_html_routes_to_cmux_without_python_binary(failures: list[str])
         failures,
     )
     expect(
-        cmux_log == [f"browser open {url}"],
-        f"file url html no-python fallback: unexpected cmux log {cmux_log}",
+        bree_log == [f"browser open {url}"],
+        f"file url html no-python fallback: unexpected bree log {bree_log}",
         failures,
     )
 
 
-def test_local_html_file_routes_to_cmux_without_python_binary(failures: list[str]) -> None:
+def test_local_html_file_routes_to_bree_without_python_binary(failures: list[str]) -> None:
     filename = "fixtures/no python fallback.html"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[filename],
         intercept_setting="1",
         whitelist="",
@@ -553,34 +553,34 @@ def test_local_html_file_routes_to_cmux_without_python_binary(failures: list[str
     expect(code == 0, f"local html no-python fallback: wrapper exited {code}: {stderr}", failures)
     expect(open_log == [], f"local html no-python fallback: system open should not be called, got {open_log}", failures)
     expect(
-        len(cmux_log) == 1,
-        f"local html no-python fallback: expected exactly one cmux call, got {cmux_log}",
+        len(bree_log) == 1,
+        f"local html no-python fallback: expected exactly one bree call, got {bree_log}",
         failures,
     )
-    if cmux_log:
+    if bree_log:
         expect(
-            cmux_log[0].startswith("browser open file://"),
-            f"local html no-python fallback: expected file:// target, got {cmux_log[0]}",
+            bree_log[0].startswith("browser open file://"),
+            f"local html no-python fallback: expected file:// target, got {bree_log[0]}",
             failures,
         )
         expect(
-            "no%20python%20fallback.html" in cmux_log[0],
-            f"local html no-python fallback: expected URL-encoded filename, got {cmux_log[0]}",
+            "no%20python%20fallback.html" in bree_log[0],
+            f"local html no-python fallback: expected URL-encoded filename, got {bree_log[0]}",
             failures,
         )
 
 
 def test_domain_like_html_argument_passthrough(failures: list[str]) -> None:
     arg = "example.com/report.html"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[arg],
         intercept_setting="1",
         whitelist="",
     )
     expect(code == 0, f"domain-like html argument: wrapper exited {code}: {stderr}", failures)
     expect(
-        cmux_log == [],
-        f"domain-like html argument: cmux should not be called, got {cmux_log}",
+        bree_log == [],
+        f"domain-like html argument: bree should not be called, got {bree_log}",
         failures,
     )
     expect(
@@ -592,38 +592,38 @@ def test_domain_like_html_argument_passthrough(failures: list[str]) -> None:
 
 def test_non_file_scheme_html_passthrough(failures: list[str]) -> None:
     url = "ftp://example.com/report.html"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="",
     )
     expect(code == 0, f"non-file scheme html: wrapper exited {code}: {stderr}", failures)
-    expect(cmux_log == [], f"non-file scheme html: cmux should not be called, got {cmux_log}", failures)
+    expect(bree_log == [], f"non-file scheme html: bree should not be called, got {bree_log}", failures)
     expect(open_log == [url], f"non-file scheme html: expected system open [{url}], got {open_log}", failures)
 
 
 def test_mailto_html_passthrough(failures: list[str]) -> None:
     url = "mailto:help@example.com?subject=report.html"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="",
     )
     expect(code == 0, f"mailto html: wrapper exited {code}: {stderr}", failures)
-    expect(cmux_log == [], f"mailto html: cmux should not be called, got {cmux_log}", failures)
+    expect(bree_log == [], f"mailto html: bree should not be called, got {bree_log}", failures)
     expect(open_log == [url], f"mailto html: expected system open [{url}], got {open_log}", failures)
 
 
 def test_local_non_html_file_passthrough(failures: list[str]) -> None:
     filename = "fixtures/readme.md"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[filename],
         intercept_setting="1",
         whitelist="",
         local_files=[filename],
     )
     expect(code == 0, f"local non-html file: wrapper exited {code}: {stderr}", failures)
-    expect(cmux_log == [], f"local non-html file: cmux should not be called, got {cmux_log}", failures)
+    expect(bree_log == [], f"local non-html file: bree should not be called, got {bree_log}", failures)
     expect(open_log == [filename], f"local non-html file: expected system open [{filename}], got {open_log}", failures)
 
 
@@ -647,15 +647,15 @@ def _run_multibyte_argument(bash_bin: str) -> tuple[list[str], list[str], int, s
 def test_multibyte_filename_argument_does_not_crash_default_bash(failures: list[str]) -> None:
     """Sanity baseline: a multibyte filename passes through unchanged on /bin/bash."""
     filename = "日本語.pdf"
-    open_log, cmux_log, code, stderr = _run_multibyte_argument("/bin/bash")
+    open_log, bree_log, code, stderr = _run_multibyte_argument("/bin/bash")
     expect(
         code == 0,
         f"multibyte filename (/bin/bash): wrapper exited {code}: {stderr}",
         failures,
     )
     expect(
-        cmux_log == [],
-        f"multibyte filename (/bin/bash): cmux should not be called, got {cmux_log}",
+        bree_log == [],
+        f"multibyte filename (/bin/bash): bree should not be called, got {bree_log}",
         failures,
     )
     expect(
@@ -681,14 +681,14 @@ def test_multibyte_filename_argument_does_not_crash_alternate_bash_builds(
     if not alternates:
         print(
             "note: no alternate bash build found (e.g. MacPorts /opt/local/bin/bash); "
-            "skipping multibyte-argument crash repro (see cmux issue for the original "
+            "skipping multibyte-argument crash repro (see bree issue for the original "
             "SIGSEGV report under MacPorts bash 5.3.9)."
         )
         return
 
     filename = "日本語.pdf"
     for bash_bin in alternates:
-        open_log, cmux_log, code, stderr = _run_multibyte_argument(bash_bin)
+        open_log, bree_log, code, stderr = _run_multibyte_argument(bash_bin)
         expect(
             code != -11 and code != 139,
             f"multibyte filename ({bash_bin}): wrapper crashed with SIGSEGV "
@@ -701,8 +701,8 @@ def test_multibyte_filename_argument_does_not_crash_alternate_bash_builds(
             failures,
         )
         expect(
-            cmux_log == [],
-            f"multibyte filename ({bash_bin}): cmux should not be called, got {cmux_log}",
+            bree_log == [],
+            f"multibyte filename ({bash_bin}): bree should not be called, got {bree_log}",
             failures,
         )
         expect(
@@ -990,8 +990,8 @@ def test_system_open_observes_original_locale(failures: list[str]) -> None:
     )
 
 
-def test_cmux_cli_observes_original_locale(failures: list[str]) -> None:
-    """The cmux CLI invocation must also restore the caller's original locale."""
+def test_bree_cli_observes_original_locale(failures: list[str]) -> None:
+    """The bree CLI invocation must also restore the caller's original locale."""
     url = "https://example.com"
 
     locale_capture: dict[str, list[str]] = {}
@@ -1003,9 +1003,9 @@ def test_cmux_cli_observes_original_locale(failures: list[str]) -> None:
         extra_env={"LC_ALL": "de_DE.UTF-8"},
     )
     expect(
-        locale_capture.get("cmux") == ["de_DE.UTF-8"],
-        "the cmux CLI should observe the caller's original LC_ALL "
-        f"('de_DE.UTF-8'), not the wrapper's internal C locale, got {locale_capture.get('cmux')!r}",
+        locale_capture.get("bree") == ["de_DE.UTF-8"],
+        "the bree CLI should observe the caller's original LC_ALL "
+        f"('de_DE.UTF-8'), not the wrapper's internal C locale, got {locale_capture.get('bree')!r}",
         failures,
     )
 
@@ -1018,35 +1018,35 @@ def test_cmux_cli_observes_original_locale(failures: list[str]) -> None:
         extra_env={"LC_ALL": None},
     )
     expect(
-        locale_capture_unset.get("cmux") == ["<unset>"],
-        "the cmux CLI should observe LC_ALL as unset when the caller never "
-        f"set it, got {locale_capture_unset.get('cmux')!r}",
+        locale_capture_unset.get("bree") == ["<unset>"],
+        "the bree CLI should observe LC_ALL as unset when the caller never "
+        f"set it, got {locale_capture_unset.get('bree')!r}",
         failures,
     )
 
 
 def test_unicode_whitelist_matches_punycode_url(failures: list[str]) -> None:
     url = "https://xn--bcher-kva.example/path"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="bücher.example",
     )
     expect(code == 0, f"unicode whitelist: wrapper exited {code}: {stderr}", failures)
     expect(open_log == [], f"unicode whitelist: system open should not be called, got {open_log}", failures)
-    expect(cmux_log == [f"browser open {url}"], f"unicode whitelist: unexpected cmux log {cmux_log}", failures)
+    expect(bree_log == [f"browser open {url}"], f"unicode whitelist: unexpected bree log {bree_log}", failures)
 
 
 def test_punycode_whitelist_matches_unicode_url(failures: list[str]) -> None:
     url = "https://bücher.example/path"
-    open_log, cmux_log, code, stderr = run_wrapper(
+    open_log, bree_log, code, stderr = run_wrapper(
         args=[url],
         intercept_setting="1",
         whitelist="xn--bcher-kva.example",
     )
     expect(code == 0, f"punycode whitelist: wrapper exited {code}: {stderr}", failures)
     expect(open_log == [], f"punycode whitelist: system open should not be called, got {open_log}", failures)
-    expect(cmux_log == [f"browser open {url}"], f"punycode whitelist: unexpected cmux log {cmux_log}", failures)
+    expect(bree_log == [f"browser open {url}"], f"punycode whitelist: unexpected bree log {bree_log}", failures)
 
 
 def main() -> int:
@@ -1056,7 +1056,7 @@ def main() -> int:
     test_toggle_disabled_case_insensitive_passthrough(failures)
     test_browser_disabled_override_passthrough(failures)
     test_whitelist_miss_passthrough(failures)
-    test_whitelist_match_routes_to_cmux(failures)
+    test_whitelist_match_routes_to_bree(failures)
     test_external_literal_pattern_is_deferred_to_app(failures)
     test_external_regex_pattern_is_deferred_to_app(failures)
     test_external_regex_with_icu_features_is_deferred_to_app(failures)
@@ -1064,11 +1064,11 @@ def main() -> int:
     test_partial_failures_only_fallback_failed_urls(failures)
     test_legacy_toggle_fallback_passthrough(failures)
     test_legacy_toggle_fallback_case_insensitive_passthrough(failures)
-    test_uppercase_scheme_routes_to_cmux(failures)
-    test_local_html_file_routes_to_cmux(failures)
-    test_file_url_html_routes_to_cmux(failures)
-    test_file_url_html_routes_to_cmux_without_python_binary(failures)
-    test_local_html_file_routes_to_cmux_without_python_binary(failures)
+    test_uppercase_scheme_routes_to_bree(failures)
+    test_local_html_file_routes_to_bree(failures)
+    test_file_url_html_routes_to_bree(failures)
+    test_file_url_html_routes_to_bree_without_python_binary(failures)
+    test_local_html_file_routes_to_bree_without_python_binary(failures)
     test_domain_like_html_argument_passthrough(failures)
     test_non_file_scheme_html_passthrough(failures)
     test_mailto_html_passthrough(failures)
@@ -1079,7 +1079,7 @@ def main() -> int:
     test_pattern_removal_regex_detects_positional_parameters(failures)
     test_wrapper_forces_c_locale_before_arg_processing(failures)
     test_system_open_observes_original_locale(failures)
-    test_cmux_cli_observes_original_locale(failures)
+    test_bree_cli_observes_original_locale(failures)
     test_unicode_whitelist_matches_punycode_url(failures)
     test_punycode_whitelist_matches_unicode_url(failures)
 

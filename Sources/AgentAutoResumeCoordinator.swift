@@ -1,11 +1,11 @@
-import CmuxAgentJournal
-import CMUXMobileCore
-import CmuxSettings
-import CmuxSidebar
-import CmuxTerminal
+import BreeAgentJournal
+import BREEMobileCore
+import BreeSettings
+import BreeSidebar
+import BreeTerminal
 import Foundation
 
-/// Resumes a cmux-launched agent whose turn ended on a retryable upstream
+/// Resumes a bree-launched agent whose turn ended on a retryable upstream
 /// failure (model at capacity, overloaded, or a dropped connection).
 ///
 /// The decision lives in ``AgentAutoResumeTracker``; this type owns the
@@ -47,7 +47,7 @@ final class AgentAutoResumeCoordinator {
         case .cancel(let surface):
             timers.removeValue(forKey: surface)?.cancel()
 #if DEBUG
-            cmuxDebugLog("agentAutoResume.cancel surface=\(surface.prefix(8)) kind=\(draft.kind.rawValue)")
+            breeDebugLog("agentAutoResume.cancel surface=\(surface.prefix(8)) kind=\(draft.kind.rawValue)")
 #endif
         case let .schedule(surface, attempt, delay, token):
             guard isEnabled else {
@@ -58,7 +58,7 @@ final class AgentAutoResumeCoordinator {
             let workspaceHint = draft.workspaceId
             let agent = draft.source
             let sessionId = tracker.pendingSessionId(surfaceId: surface, token: token)
-            CmuxEventBus.shared.publish(
+            BreeEventBus.shared.publish(
                 name: "agent.auto_resume.scheduled",
                 category: "agent",
                 source: "auto_resume",
@@ -67,7 +67,7 @@ final class AgentAutoResumeCoordinator {
                 payload: ["agent": agent, "attempt": attempt, "delay_ms": Int(delay.components.seconds * 1_000)]
             )
 #if DEBUG
-            cmuxDebugLog("agentAutoResume.schedule surface=\(surface.prefix(8)) agent=\(agent) attempt=\(attempt)")
+            breeDebugLog("agentAutoResume.schedule surface=\(surface.prefix(8)) agent=\(agent) attempt=\(attempt)")
 #endif
             timers[surface] = Task { [weak self] in
                 try? await Task.sleep(for: delay)
@@ -150,7 +150,7 @@ final class AgentAutoResumeCoordinator {
             color: "#4C8DFF"
         )
         target.setStatusEntry(statusEntry, key: Self.statusKey)
-        CmuxEventBus.shared.publish(
+        BreeEventBus.shared.publish(
             name: "agent.auto_resume.sent",
             category: "agent",
             source: "auto_resume",
@@ -159,7 +159,7 @@ final class AgentAutoResumeCoordinator {
             payload: ["agent": agent, "attempt": attempt, "total": total]
         )
 #if DEBUG
-        cmuxDebugLog("agentAutoResume.sent surface=\(surfaceId.prefix(8)) agent=\(agent) attempt=\(attempt) total=\(total)")
+        breeDebugLog("agentAutoResume.sent surface=\(surfaceId.prefix(8)) agent=\(agent) attempt=\(attempt) total=\(total)")
 #endif
     }
 

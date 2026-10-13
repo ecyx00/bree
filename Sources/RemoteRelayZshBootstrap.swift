@@ -16,7 +16,7 @@ struct RemoteRelayZshBootstrap {
 
     private var sharedHistoryLines: [String] {
         [
-            "if [ -z \"${HISTFILE:-}\" ] || [ \"$HISTFILE\" = \"\(shellStateDir)/.zsh_history\" ]; then export HISTFILE=\"$CMUX_REAL_ZDOTDIR/.zsh_history\"; fi",
+            "if [ -z \"${HISTFILE:-}\" ] || [ \"$HISTFILE\" = \"\(shellStateDir)/.zsh_history\" ]; then export HISTFILE=\"$BREE_REAL_ZDOTDIR/.zsh_history\"; fi",
         ]
     }
 
@@ -28,11 +28,11 @@ struct RemoteRelayZshBootstrap {
     // file sets is kept for the files after it. .zlogin is the last startup
     // file, so it leaves the user's value in place for the session.
     private var restoreUserZdotdirLine: String {
-        "if [ \"${CMUX_REAL_ZDOTDIR:-$HOME}\" = \"$HOME\" ]; then unset ZDOTDIR; else export ZDOTDIR=\"$CMUX_REAL_ZDOTDIR\"; fi"
+        "if [ \"${BREE_REAL_ZDOTDIR:-$HOME}\" = \"$HOME\" ]; then unset ZDOTDIR; else export ZDOTDIR=\"$BREE_REAL_ZDOTDIR\"; fi"
     }
 
     private var captureUserZdotdirLine: String {
-        "if [ -n \"${ZDOTDIR:-}\" ] && [ \"$ZDOTDIR\" != \"\(shellStateDir)\" ]; then export CMUX_REAL_ZDOTDIR=\"$ZDOTDIR\"; fi"
+        "if [ -n \"${ZDOTDIR:-}\" ] && [ \"$ZDOTDIR\" != \"\(shellStateDir)\" ]; then export BREE_REAL_ZDOTDIR=\"$ZDOTDIR\"; fi"
     }
 
     private var relayZdotdirLine: String {
@@ -42,7 +42,7 @@ struct RemoteRelayZshBootstrap {
     var zshEnvLines: [String] {
         [
             restoreUserZdotdirLine,
-            "[ -f \"$CMUX_REAL_ZDOTDIR/.zshenv\" ] && source \"$CMUX_REAL_ZDOTDIR/.zshenv\"",
+            "[ -f \"$BREE_REAL_ZDOTDIR/.zshenv\" ] && source \"$BREE_REAL_ZDOTDIR/.zshenv\"",
             captureUserZdotdirLine,
         ] + sharedHistoryLines + [
             // Stays set even for `zsh -c`: a RemoteCommand like `exec zsh`
@@ -54,7 +54,7 @@ struct RemoteRelayZshBootstrap {
     var zshProfileLines: [String] {
         [
             restoreUserZdotdirLine,
-            "[ -f \"$CMUX_REAL_ZDOTDIR/.zprofile\" ] && source \"$CMUX_REAL_ZDOTDIR/.zprofile\"",
+            "[ -f \"$BREE_REAL_ZDOTDIR/.zprofile\" ] && source \"$BREE_REAL_ZDOTDIR/.zprofile\"",
             captureUserZdotdirLine,
             relayZdotdirLine,
         ]
@@ -63,7 +63,7 @@ struct RemoteRelayZshBootstrap {
     func zshRCLines(commonShellLines: [String]) -> [String] {
         sharedHistoryLines + [
             restoreUserZdotdirLine,
-            "[ -f \"$CMUX_REAL_ZDOTDIR/.zshrc\" ] && source \"$CMUX_REAL_ZDOTDIR/.zshrc\"",
+            "[ -f \"$BREE_REAL_ZDOTDIR/.zshrc\" ] && source \"$BREE_REAL_ZDOTDIR/.zshrc\"",
             captureUserZdotdirLine,
             relayZdotdirLine,
         ] + commonShellLines + [
@@ -75,7 +75,7 @@ struct RemoteRelayZshBootstrap {
     var zshLoginLines: [String] {
         [
             restoreUserZdotdirLine,
-            "[ -f \"$CMUX_REAL_ZDOTDIR/.zlogin\" ] && source \"$CMUX_REAL_ZDOTDIR/.zlogin\"",
+            "[ -f \"$BREE_REAL_ZDOTDIR/.zlogin\" ] && source \"$BREE_REAL_ZDOTDIR/.zlogin\"",
         ]
     }
 }

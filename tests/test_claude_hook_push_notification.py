@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Regression: Claude PushNotification tool calls must reach cmux notifications.
+"""Regression: Claude PushNotification tool calls must reach bree notifications.
 
 Claude Code's PushNotification tool delivers via a raw OSC desktop
-notification. cmux suppresses raw OSC notifications for surfaces running a
+notification. bree suppresses raw OSC notifications for surfaces running a
 hook-integrated agent, and the tool never fires the Notification hook, so the
 PostToolUse `hooks claude push-notification` bridge is the only path into the
-cmux notification store. The bridge mirrors the tool's own delivery decision
+bree notification store. The bridge mirrors the tool's own delivery decision
 (tool_response.localSent) and fails open when the structured response is
 missing.
 """
@@ -27,27 +27,27 @@ import time
 import uuid
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit:
         if os.path.exists(explicit) and os.access(explicit, os.X_OK):
             return explicit
-        raise RuntimeError(f"Configured cmux CLI is not executable: {explicit}")
+        raise RuntimeError(f"Configured bree CLI is not executable: {explicit}")
 
     # No /tmp globbing: /tmp is world-writable, so auto-discovering and
-    # executing binaries from it is unsafe. CI always passes CMUX_CLI_BIN.
+    # executing binaries from it is unsafe. CI always passes BREE_CLI_BIN.
     candidates: list[str] = []
-    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/cmux")))
+    candidates.extend(glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/bree")))
     candidates = [path for path in candidates if os.path.exists(path) and os.access(path, os.X_OK)]
     if candidates:
         candidates.sort(key=os.path.getmtime, reverse=True)
         return candidates[0]
 
-    in_path = shutil.which("cmux")
+    in_path = shutil.which("bree")
     if in_path:
         return in_path
 
-    raise RuntimeError("Unable to find cmux CLI binary. Set CMUX_CLI_BIN.")
+    raise RuntimeError("Unable to find bree CLI binary. Set BREE_CLI_BIN.")
 
 
 class CapturingSocketServer:
@@ -67,8 +67,8 @@ class CapturingSocketServer:
         self.ready = threading.Event()
         self.stop = threading.Event()
         self.error: Exception | None = None
-        self.root = tempfile.TemporaryDirectory(prefix="cmux-claude-push-")
-        self.socket_path = os.path.join(self.root.name, "cmux.sock")
+        self.root = tempfile.TemporaryDirectory(prefix="bree-claude-push-")
+        self.socket_path = os.path.join(self.root.name, "bree.sock")
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.server: socket.socket | None = None
 
@@ -126,7 +126,7 @@ class CapturingSocketServer:
                     if not raw_line:
                         continue
                     line = raw_line.decode("utf-8", errors="replace")
-                    if line.startswith("_cmux_capability_v1 "):
+                    if line.startswith("_bree_capability_v1 "):
                         parts = line.split(" ", 2)
                         line = parts[2] if len(parts) == 3 else line
                     self.commands.append(line)
@@ -198,12 +198,12 @@ def run_push_notification_hook(
         env = os.environ.copy()
         env["HOME"] = server.root.name
         env["CFFIXED_USER_HOME"] = server.root.name
-        env["CMUX_SOCKET_PATH"] = server.socket_path
-        env["CMUX_WORKSPACE_ID"] = workspace_id
-        env["CMUX_SURFACE_ID"] = surface_id
-        env["CMUX_CLAUDE_HOOK_STATE_PATH"] = os.path.join(server.root.name, "state.json")
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
+        env["BREE_SOCKET_PATH"] = server.socket_path
+        env["BREE_WORKSPACE_ID"] = workspace_id
+        env["BREE_SURFACE_ID"] = surface_id
+        env["BREE_CLAUDE_HOOK_STATE_PATH"] = os.path.join(server.root.name, "state.json")
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
 
         proc = subprocess.run(
             [cli_path, "--socket", server.socket_path, "hooks", "claude", "push-notification"],
@@ -274,13 +274,13 @@ def run_unresolved_push_notification_hook(
         env = os.environ.copy()
         env["HOME"] = server.root.name
         env["CFFIXED_USER_HOME"] = server.root.name
-        env["CMUX_SOCKET_PATH"] = server.socket_path
-        env["CMUX_WORKSPACE_ID"] = workspace_id
-        env["CMUX_SURFACE_ID"] = recorded_surface_id
-        env["CMUX_CLAUDE_HOOK_STATE_PATH"] = str(state_path)
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
-        env.pop("CMUX_CLAUDE_PID", None)
+        env["BREE_SOCKET_PATH"] = server.socket_path
+        env["BREE_WORKSPACE_ID"] = workspace_id
+        env["BREE_SURFACE_ID"] = recorded_surface_id
+        env["BREE_CLAUDE_HOOK_STATE_PATH"] = str(state_path)
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
+        env.pop("BREE_CLAUDE_PID", None)
 
         proc = subprocess.run(
             [cli_path, "--socket", server.socket_path, "hooks", "claude", "push-notification"],
@@ -305,7 +305,7 @@ def push_payload(message: str, tool_response: object) -> dict:
     payload = {
         "session_id": f"sess-{uuid.uuid4().hex}",
         "hook_event_name": "PostToolUse",
-        "cwd": "/tmp/cmux-test-workspace",
+        "cwd": "/tmp/bree-test-workspace",
         "tool_name": "PushNotification",
         "tool_input": {"message": message, "status": "proactive"},
     }
@@ -316,12 +316,12 @@ def push_payload(message: str, tool_response: object) -> dict:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    # 1. localSent true -> bridged into a cmux notification, no lifecycle flip.
+    # 1. localSent true -> bridged into a bree notification, no lifecycle flip.
     message = "build failed: alpha|beta, 2 auth tests"
     proc, commands, workspace_id, surface_id = run_push_notification_hook(
         cli_path,
@@ -347,7 +347,7 @@ def main() -> int:
         print(f"commands={commands!r}")
         return 1
 
-    # 2. Tool skipped delivery (user present) -> no cmux notification.
+    # 2. Tool skipped delivery (user present) -> no bree notification.
     proc, commands, _, _ = run_push_notification_hook(
         cli_path,
         push_payload(
@@ -360,7 +360,7 @@ def main() -> int:
         print(f"stdout={proc.stdout!r} stderr={proc.stderr!r} commands={commands!r}")
         return 1
     if bool(message_presentations(commands)):
-        print("FAIL: skipped PushNotification must not create a cmux notification")
+        print("FAIL: skipped PushNotification must not create a bree notification")
         print(f"commands={commands!r}")
         return 1
 
@@ -401,7 +401,7 @@ def main() -> int:
 
     # 5. localSent=false with NO disabledReason (e.g. mobile-only delivery, or
     #    a client whose local terminal channel is suppressed) -> bridge. The
-    #    cmux notification is the only Mac-visible surface in that state, so
+    #    bree notification is the only Mac-visible surface in that state, so
     #    the gate must not key on localSent; only explicit user-facing skip
     #    reasons (user_present, config_off) suppress the bridge.
     proc, commands, workspace_id, surface_id = run_push_notification_hook(
@@ -421,7 +421,7 @@ def main() -> int:
         print(f"expected={expected!r} commands={commands!r}")
         return 1
 
-    # 6. config_off is a deliberate user setting -> no cmux notification.
+    # 6. config_off is a deliberate user setting -> no bree notification.
     proc, commands, _, _ = run_push_notification_hook(
         cli_path,
         push_payload(
@@ -434,7 +434,7 @@ def main() -> int:
         print(f"stdout={proc.stdout!r} stderr={proc.stderr!r} commands={commands!r}")
         return 1
     if bool(message_presentations(commands)):
-        print("FAIL: config_off PushNotification must not create a cmux notification")
+        print("FAIL: config_off PushNotification must not create a bree notification")
         print(f"commands={commands!r}")
         return 1
 
@@ -473,7 +473,7 @@ def main() -> int:
         print(f"expected len={len(expected)} got={[len(a) for a in actual]}")
         return 1
 
-    print("PASS: PushNotification tool calls bridge into cmux notifications")
+    print("PASS: PushNotification tool calls bridge into bree notifications")
     return 0
 
 

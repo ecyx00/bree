@@ -1,7 +1,7 @@
-// Reference C parity for the cmux browser REPL
+// Reference C parity for the bree browser REPL
 // (docs/browser-repl/reference-c-parity.md): what reference C's tools,
 // browser profile and agent offer that a REPL-driving agent can use, in this
-// REPL's Playwright-shaped API and without a model inside cmux.
+// REPL's Playwright-shaped API and without a model inside bree.
 //
 // Globals: secret(name), secrets, search(query, options), tools.
 // session: allowedDomains, prohibitedDomains, blockIPAddresses,
@@ -14,10 +14,10 @@
 // Page._inputText; repl-host.js output and errors; api.js fetch).
 (function (root) {
   "use strict";
-  const ns = (root.CmuxBrowserRepl = root.CmuxBrowserRepl || {});
+  const ns = (root.BreeBrowserRepl = root.BreeBrowserRepl || {});
   const core = ns.core;
   const { Buffer } = core;
-  const AGENT = 'globalThis[Symbol.for("cmux.browserRepl.agent")]';
+  const AGENT = 'globalThis[Symbol.for("bree.browserRepl.agent")]';
 
   // ---------------------------------------------------------------------------
   // Domain patterns, reference C's syntax (utils.match_url_with_domain_pattern
@@ -374,7 +374,7 @@
   // The frame as Markdown blocks. Iframes become placeholders "\u0000F<i>\u0000"
   // with their handles, so the host stitches each frame's Markdown in place.
   function markdownOfFrame(opts) {
-    const A = globalThis[Symbol.for("cmux.browserRepl.agent")];
+    const A = globalThis[Symbol.for("bree.browserRepl.agent")];
     const frames = [];
     const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "HEAD", "META", "LINK", "TITLE", "SVG", "CANVAS", "VIDEO", "AUDIO", "OBJECT", "EMBED", "MAP", "DIALOG"]);
     const OUTSIDE_MAIN = new Set(["navigation", "banner", "contentinfo", "complementary", "search"]);
@@ -593,7 +593,7 @@
   // scope itself), ["spec"] (every match), or an object: { $: "selector", ...fields }
   // is one object per match, an object without $ is one nested object.
   function extractInFrame(schema, opts) {
-    const A = globalThis[Symbol.for("cmux.browserRepl.agent")];
+    const A = globalThis[Symbol.for("bree.browserRepl.agent")];
     const limit = opts.limit || 1000;
     const all = (sel, scope) => A.queryAll(sel, scope && scope !== document ? A.handleFor(scope) : undefined).map((h) => A.element(h));
     const text = (el) => {
@@ -625,15 +625,15 @@
         if (spec.length !== 1) throw new Error("page.extract: a list spec has one item: [\"selector\"] or [{ $: \"selector\", ... }]");
         const item = spec[0];
         if (typeof item === "string") return leaf(item, scope, true);
-        if (item && typeof item === "object" && Array.isArray(item.__cmuxPairs) && item.__cmuxPairs.some(([k, v]) => k === "$" && typeof v === "string")) return run(item, scope);
+        if (item && typeof item === "object" && Array.isArray(item.__breePairs) && item.__breePairs.some(([k, v]) => k === "$" && typeof v === "string")) return run(item, scope);
         throw new Error("page.extract: a list spec has one item: [\"selector\"] or [{ $: \"selector\", ... }]");
       }
       // Objects travel as key/value pairs both ways, so their key order
       // survives drivers whose JSON does not keep it (the app's).
-      if (spec && typeof spec === "object" && Array.isArray(spec.__cmuxPairs)) {
-        const entries = spec.__cmuxPairs;
+      if (spec && typeof spec === "object" && Array.isArray(spec.__breePairs)) {
+        const entries = spec.__breePairs;
         const each = entries.find(([k]) => k === "$");
-        const fields = (s) => ({ __cmuxPairs: entries.filter(([k]) => k !== "$").map(([k, v]) => [k, run(v, s)]) });
+        const fields = (s) => ({ __breePairs: entries.filter(([k]) => k !== "$").map(([k, v]) => [k, run(v, s)]) });
         if (each && typeof each[1] === "string") return all(each[1], scope).slice(0, limit).map(fields);
         return fields(scope);
       }
@@ -645,7 +645,7 @@
 
   // Text matches with context, like grep over what the page renders.
   function searchTextInFrame(opts) {
-    const A = globalThis[Symbol.for("cmux.browserRepl.agent")];
+    const A = globalThis[Symbol.for("bree.browserRepl.agent")];
     const scope = opts.scope ? A.element(opts.scope) : document.body || document.documentElement;
     const visible = (el) => {
       if (!el) return false;
@@ -715,7 +715,7 @@
   }
 
   function dropdownInFrame(handle) {
-    const A = globalThis[Symbol.for("cmux.browserRepl.agent")];
+    const A = globalThis[Symbol.for("bree.browserRepl.agent")];
     const el = A.element(handle);
     const clean = (s) => (s || "").replace(/[\s ]+/g, " ").trim();
     if (el.tagName && el.tagName.toUpperCase() === "SELECT") {
@@ -750,7 +750,7 @@
   }
 
   function scrollInfoInFrame(handle) {
-    const A = globalThis[Symbol.for("cmux.browserRepl.agent")];
+    const A = globalThis[Symbol.for("bree.browserRepl.agent")];
     const el = handle ? A.element(handle) : null;
     const doc = document.scrollingElement || document.documentElement;
     const target = el || doc;
@@ -1244,7 +1244,7 @@
       const page = await session.newPage(undefined, { background: true });
       try {
         const r = await page.evaluate(parseResults, { html, engine, base: url, limit });
-        if (r.blocked) throw new Error(`search: ${engine} showed a CAPTCHA; cmux does not solve CAPTCHAs. Try another engine, or open ${url} with tabs.open() and let the user answer it`);
+        if (r.blocked) throw new Error(`search: ${engine} showed a CAPTCHA; bree does not solve CAPTCHAs. Try another engine, or open ${url} with tabs.open() and let the user answer it`);
         return r.results;
       } finally {
         await page.close().catch(() => {});
@@ -1383,16 +1383,16 @@
     }
     const unpair = (v) => {
       if (Array.isArray(v)) return v.map(unpair);
-      if (v && typeof v === "object" && Array.isArray(v.__cmuxPairs)) {
+      if (v && typeof v === "object" && Array.isArray(v.__breePairs)) {
         const o = {};
-        for (const [k, x] of v.__cmuxPairs) o[k] = unpair(x);
+        for (const [k, x] of v.__breePairs) o[k] = unpair(x);
         return o;
       }
       return v;
     };
     const pair = (v) => {
       if (Array.isArray(v)) return v.map(pair);
-      if (v && typeof v === "object") return { __cmuxPairs: Object.entries(v).map(([k, x]) => [k, pair(x)]) };
+      if (v && typeof v === "object") return { __breePairs: Object.entries(v).map(([k, x]) => [k, pair(x)]) };
       return v;
     };
     return unpair(await agentCall(frame, extractInFrame, pair(schema), { scope, limit: options.limit }));

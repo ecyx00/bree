@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 struct SidebarMediaActivityIndicators: View {
@@ -13,7 +13,7 @@ struct SidebarMediaActivityIndicators: View {
                 localized: "sidebar.mediaActivity.audio.tooltip",
                 defaultValue: "Playing audio"
             )
-            CmuxSystemSymbolImage(magnified: "speaker.wave.2.fill", pointSize: symbolPointSize, weight: .regular, tint: audioColor)
+            BreeSystemSymbolImage(magnified: "speaker.wave.2.fill", pointSize: symbolPointSize, weight: .regular, tint: audioColor)
                 .safeHelp(audioPlayingTooltip)
                 .accessibilityLabel(audioPlayingTooltip)
         }
@@ -23,7 +23,7 @@ struct SidebarMediaActivityIndicators: View {
                 localized: "sidebar.mediaActivity.microphone.tooltip",
                 defaultValue: "Microphone in use"
             )
-            CmuxSystemSymbolImage(magnified: "mic.fill", pointSize: symbolPointSize, weight: .regular, tint: palette.signalInfo)
+            BreeSystemSymbolImage(magnified: "mic.fill", pointSize: symbolPointSize, weight: .regular, tint: palette.textSecondary)
                 .safeHelp(microphoneInUseTooltip)
                 .accessibilityLabel(microphoneInUseTooltip)
         }
@@ -33,7 +33,7 @@ struct SidebarMediaActivityIndicators: View {
                 localized: "sidebar.mediaActivity.camera.tooltip",
                 defaultValue: "Camera in use"
             )
-            CmuxSystemSymbolImage(magnified: "video.fill", pointSize: symbolPointSize, weight: .regular, tint: palette.signalInfo)
+            BreeSystemSymbolImage(magnified: "video.fill", pointSize: symbolPointSize, weight: .regular, tint: palette.textSecondary)
                 .safeHelp(cameraInUseTooltip)
                 .accessibilityLabel(cameraInUseTooltip)
         }

@@ -1,4 +1,4 @@
-// cmux browser REPL runtime core.
+// bree browser REPL runtime core.
 //
 // A Playwright-like object model (Page, Frame, Locator, Keyboard, Mouse, ...)
 // built on the engine driver protocol (docs/browser-repl/driver-protocol.md).
@@ -7,7 +7,7 @@
 // an injected `host` object; nothing here imports Node built-ins.
 (function (root) {
   "use strict";
-  const ns = (root.CmuxBrowserRepl = root.CmuxBrowserRepl || {});
+  const ns = (root.BreeBrowserRepl = root.BreeBrowserRepl || {});
   // Playwright's selector builders, with the text argument checked first:
   // getByText(42) fails as an invalid argument instead of matching nothing.
   const LU = (() => {
@@ -28,9 +28,9 @@
     };
     return wrapped;
   })();
-  const AGENT = 'globalThis[Symbol.for("cmux.browserRepl.agent")]';
+  const AGENT = 'globalThis[Symbol.for("bree.browserRepl.agent")]';
   const DEFAULT_TIMEOUT = 30000;
-  const UNDEFINED_MARK = "__cmuxUndefined__";
+  const UNDEFINED_MARK = "__breeUndefined__";
 
   // ---------------------------------------------------------------------------
   // Errors
@@ -1978,7 +1978,7 @@
       return this._page;
     }
     async _respond(accept, promptText) {
-      // cmux already answered it; a listener's answer has nothing to do.
+      // bree already answered it; a listener's answer has nothing to do.
       if (this._p.dismissedDuring) return;
       if (this._handled) throw new Error("Cannot accept dialog which is already handled!");
       // Validate before answering: a rejected answer must leave the dialog
@@ -2501,7 +2501,7 @@
       this._frames.clear();
       this.emit("crash", this);
     }
-    // cmux replaced the tab's web view (it restored a page it had unloaded
+    // bree replaced the tab's web view (it restored a page it had unloaded
     // to save memory, or recovered a crashed one): frames have new ids.
     _onReplaced() {
       this._mainFrame._id = null;
@@ -2600,7 +2600,7 @@
       }
     }
 
-    // Public API: cmux additions (docs/browser-repl/README.md, Page additions)
+    // Public API: bree additions (docs/browser-repl/README.md, Page additions)
     ref(ref) {
       if (typeof ref !== "string" || !REF_PATTERN.test(ref.trim())) {
         throw new Error(`page.ref: expected a snapshot ref such as "e5" or "f1e2", got ${JSON.stringify(ref)}`);
@@ -2795,7 +2795,7 @@
       try {
         r = await this._navigate("tab.reload", {}, options);
       } catch (e) {
-        // After a crash cmux reloads the tab itself when it shows it; that
+        // After a crash bree reloads the tab itself when it shows it; that
         // load replacing ours is the recovery we asked for.
         if (!recovering || !/interrupted by another navigation/.test(String(e && e.message))) throw e;
         await this.waitForLoadState("load", options);

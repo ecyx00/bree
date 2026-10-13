@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 extension TerminalController: ControlLayoutContext {
@@ -16,7 +16,7 @@ extension TerminalController: ControlLayoutContext {
             do {
                 let capture = try workspace.captureLayoutDefinition()
                 let store = SavedLayoutStore()
-                let layout = CmuxSavedLayout(
+                let layout = BreeSavedLayout(
                     name: name,
                     description: description,
                     workspace: capture.workspace
@@ -201,7 +201,7 @@ extension TerminalController: ControlLayoutContext {
         }
     }
 
-    private static func controlLayoutCounts(_ node: CmuxLayoutNode?) -> (panes: Int, surfaces: Int) {
+    private static func controlLayoutCounts(_ node: BreeLayoutNode?) -> (panes: Int, surfaces: Int) {
         guard let node else { return (0, 0) }
         switch node {
         case .pane(let pane):
@@ -215,7 +215,7 @@ extension TerminalController: ControlLayoutContext {
         }
     }
 
-    private static func controlLayoutJSONValue(_ layout: CmuxSavedLayout) -> JSONValue? {
+    private static func controlLayoutJSONValue(_ layout: BreeSavedLayout) -> JSONValue? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         guard let data = try? encoder.encode(layout),

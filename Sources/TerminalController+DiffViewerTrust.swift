@@ -1,22 +1,22 @@
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 
 /// Off-main validation result passed through the socket worker's existing main hop.
 enum DiffViewerSessionPreparation: Sendable {
     case notNeeded
-    case prepared(CmuxDiffViewerPreparedSession)
+    case prepared(BreeDiffViewerPreparedSession)
     case invalid(message: String, details: String?)
 }
 
 extension TerminalController {
     func v2IsDiffViewerURL(_ url: URL?) -> Bool {
         guard let url else { return false }
-        if url.scheme?.lowercased() == CmuxDiffViewerURLSchemeHandler.scheme {
+        if url.scheme?.lowercased() == BreeDiffViewerURLSchemeHandler.scheme {
             return true
         }
         return url.scheme?.lowercased() == "http" &&
             url.host == "127.0.0.1" &&
-            url.fragment == "cmux-diff-viewer"
+            url.fragment == "bree-diff-viewer"
     }
 
     /// Parses, validates, canonicalizes, and leases a custom-scheme allowlist on
@@ -26,14 +26,14 @@ extension TerminalController {
     ) -> DiffViewerSessionPreparation {
         guard let rawURL = params["url"] as? String,
               let url = URL(string: rawURL.trimmingCharacters(in: .whitespacesAndNewlines)),
-              url.scheme == CmuxDiffViewerURLSchemeHandler.scheme else {
+              url.scheme == BreeDiffViewerURLSchemeHandler.scheme else {
             return .notNeeded
         }
         guard let token = params["diff_viewer_token"] as? String,
               token == url.host,
               let rawFiles = params["diff_viewer_files"] as? [[String: Any]],
               !rawFiles.isEmpty,
-              rawFiles.count <= CmuxDiffViewerURLSchemeHandler.maxRegisteredFiles else {
+              rawFiles.count <= BreeDiffViewerURLSchemeHandler.maxRegisteredFiles else {
             return .invalid(
                 message: String(
                     localized: "cli.browser.error.diffViewerAllowlistMissingOrInvalid",
@@ -52,7 +52,7 @@ extension TerminalController {
             )
         }
 
-        let files = rawFiles.compactMap(CmuxDiffViewerURLSchemeHandler.registeredFile(from:))
+        let files = rawFiles.compactMap(BreeDiffViewerURLSchemeHandler.registeredFile(from:))
         guard files.count == rawFiles.count else {
             return .invalid(
                 message: String(
@@ -63,7 +63,7 @@ extension TerminalController {
             )
         }
         do {
-            let prepared = try CmuxDiffViewerSessionPreparer().prepare(
+            let prepared = try BreeDiffViewerSessionPreparer().prepare(
                 token: token,
                 files: files
             )
@@ -85,7 +85,7 @@ extension TerminalController {
     ) -> DiffViewerSessionPreparation {
         guard let rawURL = params["url"] as? String,
               let url = URL(string: rawURL.trimmingCharacters(in: .whitespacesAndNewlines)),
-              url.scheme == CmuxDiffViewerURLSchemeHandler.scheme else {
+              url.scheme == BreeDiffViewerURLSchemeHandler.scheme else {
             return .notNeeded
         }
         guard let token = url.host,
@@ -106,7 +106,7 @@ extension TerminalController {
 
         do {
             return .prepared(
-                try CmuxDiffViewerSessionPreparer().prepareFromManifest(token: token)
+                try BreeDiffViewerSessionPreparer().prepareFromManifest(token: token)
             )
         } catch {
             return .invalid(
@@ -135,7 +135,7 @@ extension TerminalController {
                 data: nil
             )
         }
-        if url.scheme != CmuxDiffViewerURLSchemeHandler.scheme {
+        if url.scheme != BreeDiffViewerURLSchemeHandler.scheme {
             guard DiffViewerSessionTrustRegistry.shared.registerLiveHTTPURL(url, token: token) else {
                 return .err(
                     code: "invalid_params",
@@ -161,7 +161,7 @@ extension TerminalController {
 
         switch preparation {
         case .prepared(let prepared) where prepared.token == token:
-            CmuxDiffViewerURLSchemeHandler.shared.install(prepared)
+            BreeDiffViewerURLSchemeHandler.shared.install(prepared)
             return nil
         case .invalid(let message, let details):
             return .err(
@@ -187,11 +187,11 @@ extension TerminalController {
         preparation: DiffViewerSessionPreparation
     ) -> V2CallResult? {
         guard let url = URL(string: rawURL.trimmingCharacters(in: .whitespacesAndNewlines)),
-              url.scheme == CmuxDiffViewerURLSchemeHandler.scheme else {
+              url.scheme == BreeDiffViewerURLSchemeHandler.scheme else {
             return nil
         }
 
-        let handler = CmuxDiffViewerURLSchemeHandler.shared
+        let handler = BreeDiffViewerURLSchemeHandler.shared
         switch preparation {
         case .prepared(let prepared) where prepared.token == url.host:
             handler.install(prepared)

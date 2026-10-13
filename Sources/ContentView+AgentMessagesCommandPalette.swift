@@ -1,5 +1,5 @@
 import AppKit
-import CmuxCommandPalette
+import BreeCommandPalette
 import Foundation
 
 extension ContentView {
@@ -9,7 +9,7 @@ extension ContentView {
 
     /// Turns agent messages off or on for the focused terminal, through the
     /// same ``AgentMessageCenter/setReceivingEnabled(_:scope:id:)`` path as
-    /// `cmux agent messages off|on`.
+    /// `bree agent messages off|on`.
     static func commandPaletteAgentMessagesContributions(
         subtitle: @escaping (CommandPaletteContextSnapshot) -> String
     ) -> [CommandPaletteCommandContribution] {

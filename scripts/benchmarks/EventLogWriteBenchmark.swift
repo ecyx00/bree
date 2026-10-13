@@ -6,7 +6,7 @@ struct EventLogWriteBenchmark {
     static func main() throws {
         let samples = Int(CommandLine.arguments[1]) ?? 7
         let root = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cmux-event-log-benchmark-\(UUID().uuidString)")
+            .appendingPathComponent("bree-event-log-benchmark-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
         for count in [32, 256, 1_024, 1_152] {
             try run(count: count, crossing: false, samples: samples, root: root)
@@ -34,8 +34,8 @@ struct EventLogWriteBenchmark {
                 seed = Data(("{\"seed\":\"" + padding + "\"}\n").utf8)
                 try seed.write(to: url)
             }
-            let spy = CmuxEventLogWriteSpy()
-            let writer = CmuxEventLogWriter(
+            let spy = BreeEventLogWriteSpy()
+            let writer = BreeEventLogWriter(
                 eventLogURL: url,
                 maxEventLogBytes: UInt64(limit),
                 maxPendingLines: 1_024,

@@ -4,7 +4,7 @@ struct WorkspaceSwitchSignposts {
 
     init(
         signposts: DynamicTracingSignposts = DynamicTracingSignposts(
-            subsystem: "com.cmux.workspace-switch"
+            subsystem: "com.bree.workspace-switch"
         )
     ) {
         self.signposts = signposts

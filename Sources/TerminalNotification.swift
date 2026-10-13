@@ -1,5 +1,5 @@
-import CmuxNotifications
-import CmuxSettings
+import BreeNotifications
+import BreeSettings
 import Foundation
 
 struct TerminalNotification: Identifiable, Hashable, Sendable {
@@ -29,7 +29,7 @@ struct TerminalNotification: Identifiable, Hashable, Sendable {
     var agentCategory: String?
     var agentSessionId: String?
     /// Who emitted the text. Remote origins are clamped to display-only side effects by
-    /// the store and surface to hooks as `CMUX_NOTIFICATION_ORIGIN`.
+    /// the store and surface to hooks as `BREE_NOTIFICATION_ORIGIN`.
     var origin: TerminalNotificationOrigin = .local
 
     init(

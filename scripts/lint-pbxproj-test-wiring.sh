@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
-# Lint: every Swift file under cmuxTests/ must be wired into
-# cmux.xcodeproj/project.pbxproj.
+# Lint: every Swift file under breeTests/ must be wired into
+# bree.xcodeproj/project.pbxproj.
 #
 # A test file added to the worktree but not registered as a PBXFileReference +
 # PBXSourcesBuildPhase entry in project.pbxproj is silently ignored by Xcode and
 # never compiles or runs on CI. Both bot reviews and
-# `xcodebuild test -only-testing:cmuxTests/<TestClass>` pass with
+# `xcodebuild test -only-testing:breeTests/<TestClass>` pass with
 # "Executed 0 tests" — so missing wiring is indistinguishable from a passing
 # regression test until a real user hits the bug the test was supposed to catch.
 #
-# Originally surfaced during the https://github.com/manaflow-ai/cmux/issues/4529
+# Originally surfaced during the https://github.com/ecyx00/bree/issues/4529
 # investigation, where SessionIndexJSONLStreamTests.swift on
-# https://github.com/manaflow-ai/cmux/pull/4536 looked like a clean two-commit
+# https://github.com/ecyx00/bree/pull/4536 looked like a clean two-commit
 # red/green test fix but never actually ran on CI.
 #
-# The same check covers app source directories: `--target cmux --tests-dir
+# The same check covers app source directories: `--target bree --tests-dir
 # Sources --recursive --allowlist scripts/pbxproj-sources-wiring-allowlist.txt`
 # fails when a Sources/**/*.swift file is not compiled into the app target.
 # That is how main stopped compiling on 2026-09-25: a merge dropped
-# AgentChatProseStreamWakeDriver.swift from the cmux target while code on main
+# AgentChatProseStreamWakeDriver.swift from the bree target while code on main
 # still used its types.
 #
 # Usage:
@@ -39,7 +39,7 @@
 set -euo pipefail
 
 REPO_ROOT=""
-TARGET_NAME="cmuxTests"
+TARGET_NAME="breeTests"
 TESTS_DIR_ARG=""
 RECURSIVE=false
 ALLOWLIST=""
@@ -80,13 +80,13 @@ if [ -z "$REPO_ROOT" ]; then
   REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"
 fi
 
-PBXPROJ="$REPO_ROOT/cmux.xcodeproj/project.pbxproj"
+PBXPROJ="$REPO_ROOT/bree.xcodeproj/project.pbxproj"
 TESTS_REL="${TESTS_DIR_ARG:-$TARGET_NAME}"
 TESTS_DIR="$REPO_ROOT/$TESTS_REL"
 
 if [ ! -f "$PBXPROJ" ]; then
   echo "lint-pbxproj-test-wiring: not found: $PBXPROJ" >&2
-  echo "  (run from the cmux repo root or pass --repo-root)" >&2
+  echo "  (run from the bree repo root or pass --repo-root)" >&2
   exit 2
 fi
 if [ ! -d "$TESTS_DIR" ]; then
@@ -94,23 +94,23 @@ if [ ! -d "$TESTS_DIR" ]; then
   exit 2
 fi
 
-# Locate the cmuxTests PBXNativeTarget and resolve its Sources build phase
+# Locate the breeTests PBXNativeTarget and resolve its Sources build phase
 # UUID. We then slice out just that build phase block and look for files inside
-# it — which is exactly the set of files Xcode compiles into cmuxTests.
+# it — which is exactly the set of files Xcode compiles into breeTests.
 #
-# Targeting the cmuxTests Sources phase specifically (instead of the whole
+# Targeting the breeTests Sources phase specifically (instead of the whole
 # pbxproj) catches three failure modes:
 #   1. File missing entirely (no `<file>.swift in Sources` anywhere).
 #   2. File has a PBXFileReference + group child but no PBXBuildFile /
 #      Sources phase entry (in the project tree but not a member of any
 #      target).
-#   3. File is a member of the wrong target (e.g. cmuxUITests or cmux). Its
+#   3. File is a member of the wrong target (e.g. breeUITests or bree). Its
 #      `<file>.swift in Sources` lines exist in the pbxproj, so a global grep
-#      would pass, but they are not inside the cmuxTests Sources block.
-# `/* cmuxTests */ = {` appears twice in a typical pbxproj: once for the
+#      would pass, but they are not inside the breeTests Sources block.
+# `/* breeTests */ = {` appears twice in a typical pbxproj: once for the
 # PBXGroup that holds the test files, and once for the PBXNativeTarget. We
 # only care about the native-target block. Use awk to capture every
-# `/* cmuxTests */ = { ... };` block and keep only the one whose `isa =
+# `/* breeTests */ = { ... };` block and keep only the one whose `isa =
 # PBXNativeTarget;` line is present.
 tests_target_block="$(awk -v target="$TARGET_NAME" '
   $0 ~ "/\\* " target " \\*/ = \\{" { capture = 1; buf = "" }
@@ -131,7 +131,7 @@ if [ -z "$tests_target_block" ]; then
 fi
 
 # Xcode UUIDs are conventionally 24 uppercase hex chars, but hand-edited
-# pbxprojs use other lengths too: the cmux app target's Sources phase is the
+# pbxprojs use other lengths too: the bree app target's Sources phase is the
 # 8-char A5001051. Accept any alphanumeric identifier.
 tests_sources_uuid="$(printf '%s\n' "$tests_target_block" \
   | grep -oE '[A-Za-z0-9]+ /\* Sources \*/' \
@@ -143,7 +143,7 @@ if [ -z "$tests_sources_uuid" ]; then
   exit 2
 fi
 
-# Slice the PBXSourcesBuildPhase block whose UUID matches the cmuxTests
+# Slice the PBXSourcesBuildPhase block whose UUID matches the breeTests
 # target's Sources phase reference. The block begins with the UUID/Sources
 # header and ends at the next standalone "};" line.
 tests_sources_block="$(awk -v uuid="$tests_sources_uuid" '
@@ -256,12 +256,12 @@ if [ "${#missing[@]}" -eq 0 ]; then
   exit 0
 fi
 
-echo "lint-pbxproj-test-wiring: ${#missing[@]} Swift file(s) not a member of the $TARGET_NAME target's Sources build phase (uuid=$tests_sources_uuid) in cmux.xcodeproj/project.pbxproj"
+echo "lint-pbxproj-test-wiring: ${#missing[@]} Swift file(s) not a member of the $TARGET_NAME target's Sources build phase (uuid=$tests_sources_uuid) in bree.xcodeproj/project.pbxproj"
 for entry in "${missing[@]}"; do
   echo "  - $entry"
 done
 echo ""
-echo "Each $TESTS_REL/<file>.swift must be wired into cmux.xcodeproj/project.pbxproj"
+echo "Each $TESTS_REL/<file>.swift must be wired into bree.xcodeproj/project.pbxproj"
 echo "as a full target member of $TARGET_NAME:"
 echo "  1. a PBXBuildFile entry (line ends with '<file>.swift in Sources */ = { ... };')"
 echo "  2. a PBXFileReference entry"
@@ -270,15 +270,15 @@ echo "  4. an entry in the $TARGET_NAME target's PBXSourcesBuildPhase files"
 echo "     (line ends with '<file>.swift in Sources */,')"
 echo ""
 echo "This lint slices the $TARGET_NAME Sources phase and looks for entry 4 there."
-echo "Files wired only into cmuxUITests, cmux, or the project tree (without"
+echo "Files wired only into breeUITests, bree, or the project tree (without"
 echo "$TARGET_NAME target membership) are silently skipped by Xcode and will be"
 echo "flagged here."
 echo ""
-if [ "$TARGET_NAME" = "cmuxTests" ] && [ "$TESTS_REL" = "cmuxTests" ]; then
+if [ "$TARGET_NAME" = "breeTests" ] && [ "$TESTS_REL" = "breeTests" ]; then
   echo "Run ./scripts/sync-test-wiring to reconcile direct $TESTS_REL/*.swift files."
   echo "Use ./scripts/sync-test-wiring --check for a read-only authoring/CI check."
 else
-  # sync-test-wiring only reconciles cmuxTests.
+  # sync-test-wiring only reconciles breeTests.
   echo "Run ./scripts/wire-app-sources.py --target $TARGET_NAME --dir $TESTS_REL"
   echo "to add the four entries for each unwired file (see its --help)."
 fi

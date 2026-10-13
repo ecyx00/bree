@@ -79,7 +79,7 @@ extension Workspace {
 
     /// Selects the fork startup input for one source panel. A matching local
     /// binding uses the canonicalizer so binding-driven and snapshot-driven
-    /// launches share the same `cmux fork` selector; other locations use the
+    /// launches share the same `bree fork` selector; other locations use the
     /// snapshot's provider command fallback.
     func forkStartupInput(
         snapshot: SessionRestorableAgentSnapshot,

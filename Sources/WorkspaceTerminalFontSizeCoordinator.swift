@@ -1,7 +1,7 @@
 import Foundation
-import CmuxFoundation
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeFoundation
+import BreeTerminal
+import BreeTerminalCore
 import OSLog
 
 @MainActor
@@ -27,7 +27,7 @@ final class WorkspaceTerminalFontSizeCoordinator {
     private static let mutationRetryBackoffInterval: TimeInterval = 0.05
 
     private static let logger = Logger(
-        subsystem: "com.cmuxterm.app",
+        subsystem: "com.bree.app",
         category: "WorkspaceTerminalFontSize"
     )
 
@@ -81,7 +81,7 @@ final class WorkspaceTerminalFontSizeCoordinator {
             terminalPanel,
             configuredRuntimePoints,
             magnificationPercent in
-            cmuxApplyTerminalFontSizeChange(
+            breeApplyTerminalFontSizeChange(
                 change,
                 to: terminalPanel,
                 configuredRuntimePoints: configuredRuntimePoints,

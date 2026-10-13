@@ -34,9 +34,12 @@ struct SidebarPulseRow: View {
                             .truncationMode(.middle)
                     }
                     if let suffix {
-                        Text(line == nil ? suffix : SidebarWorkspacePulse.separator + suffix)
+                        let high = resource?.isHigh == true
+                        let separator = Text(line == nil ? "" : SidebarWorkspacePulse.separator).foregroundColor(color)
+                        let value = resourceLabel(suffix, high: high)
+                            .foregroundColor(high ? palette.signalError : palette.textSecondary)
+                        (separator + value)
                             .font(font)
-                            .foregroundColor(resource?.isHigh == true ? palette.signalAttention : palette.signalInfo)
                             .lineLimit(1)
                             .fixedSize()
                     }
@@ -58,6 +61,11 @@ struct SidebarPulseRow: View {
     }
 }
 
+/// A critical resource reads as red text with a warning glyph, so the state is not colour only.
+private func resourceLabel(_ text: String, high: Bool) -> Text {
+    high ? Text(Image(systemName: "exclamationmark.triangle.fill")) + Text(" " + text) : Text(text)
+}
+
 /// Resource alarm for a row that has no pulse line (minimal sidebar). Renders
 /// nothing unless this workspace is high or paused, so no empty line appears.
 /// Observes only its own workspace's entry, like `SidebarPulseRow`.
@@ -71,9 +79,9 @@ struct SidebarResourceRow: View {
     var body: some View {
         Group {
             if let suffix = SidebarWorkspacePulse.resourceText(resource) {
-                Text(suffix)
+                resourceLabel(suffix, high: resource?.isHigh == true)
                     .font(font)
-                    .foregroundColor(resource?.isHigh == true ? palette.signalAttention : palette.signalInfo)
+                    .foregroundColor(resource?.isHigh == true ? palette.signalError : palette.textSecondary)
                     .lineLimit(1)
                     .accessibilityIdentifier("SidebarResourceRow")
             }

@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import CoreGraphics
 
 /// Font sizes, icon/control frames, and badge padding for

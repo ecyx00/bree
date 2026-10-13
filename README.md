@@ -13,7 +13,7 @@
   <a href="https://github.com/ecyx00/bree/releases/latest">Download</a> ·
   <a href="#install">Install</a> ·
   <a href="#build-from-source">Build from source</a> ·
-  <a href="docs/releases/0.1.1.md">Release notes</a>
+  <a href="docs/releases/0.1.2.md">Release notes</a>
 </p>
 
 <p align="center">
@@ -70,12 +70,12 @@ When a script or agent changes the UI through the socket, Bree shows a short toa
 
 ## Everything one keystroke away
 
-The command palette (⌘⇧P) groups every command by what it acts on: Workspace, Pane, Agent, View, Learn and App. Bree also has a bottom panel (⌘J), a Quick View for HTML, CSV, JSONL and image folders, a shell editor, an image strip, pinned project files, keyboard focus regions, and a resource guard that pauses panes that run hot.
+The command palette (⌘⇧P) groups every command by what it acts on: Workspace, Pane, Agent, View, Learn and App. Bree also has a bottom panel (⌘J), a Quick View for HTML, CSV, JSONL and image folders, a shell editor, pinned project files, keyboard focus regions, and a resource guard that pauses panes that run hot.
 
 ## Install
 
-1. Download `Bree-0.1.1-arm64.zip` and its `.sha256` file from the [latest release](https://github.com/ecyx00/bree/releases/latest).
-2. Check the download: `shasum -a 256 -c Bree-0.1.1-arm64.zip.sha256`
+1. Download `Bree-0.1.2-arm64.zip` and its `.sha256` file from the [latest release](https://github.com/ecyx00/bree/releases/latest).
+2. Check the download: `shasum -a 256 -c Bree-0.1.2-arm64.zip.sha256`
 3. Unzip it and move `Bree.app` to `/Applications`.
 4. Bree is ad-hoc signed and not notarized, so macOS blocks the first launch. Control-click `Bree.app` and choose **Open**, or run `xattr -dr com.apple.quarantine /Applications/Bree.app`.
 5. Optional: put the CLI on your PATH:
@@ -83,7 +83,7 @@ The command palette (⌘⇧P) groups every command by what it acts on: Workspace
    ln -s /Applications/Bree.app/Contents/Resources/bin/bree /usr/local/bin/bree
    ```
 
-Requires Apple Silicon and macOS 14 or later. Bree does not update itself. To update, install a newer release over the old app. Bree has its own bundle id (`com.bree.app`) and its own state folders, so it runs next to cmux without sharing anything.
+Requires Apple Silicon and macOS 14 or later. Bree does not update itself. To update, install a newer release over the old app. Bree has its own bundle id (`com.bree.app`) and its own state folders, so it runs next to other installs without sharing anything.
 
 ## Build from source
 
@@ -98,7 +98,7 @@ cd bree
 ./scripts/build-bree.sh --package   # dist/Bree-<version>-arm64.zip and .sha256
 ```
 
-The first build compiles GhosttyKit from the vendored `ghostty/` source with Zig and caches it under `~/.cache/cmux/ghosttykit`. For development builds and tests, see [CONTRIBUTING.md](CONTRIBUTING.md). `python3 scripts/verify-local.py` runs the fast local checks.
+The first build compiles GhosttyKit from the vendored `ghostty/` source with Zig and caches it under `~/.cache/bree/ghosttykit`. For development builds and tests, see [CONTRIBUTING.md](CONTRIBUTING.md). `python3 scripts/verify-local.py` runs the fast local checks.
 
 ## How Bree differs from cmux
 

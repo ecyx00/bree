@@ -16,7 +16,7 @@ from typing import Iterable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT = SCRIPT_DIR.parent
-CATALOG_SPEC = importlib.util.spec_from_file_location("cmux_localization_catalog", SCRIPT_DIR / "localization_catalog.py")
+CATALOG_SPEC = importlib.util.spec_from_file_location("bree_localization_catalog", SCRIPT_DIR / "localization_catalog.py")
 if CATALOG_SPEC is None or CATALOG_SPEC.loader is None:
     raise RuntimeError("unable to load scripts/localization_catalog.py")
 CATALOG = importlib.util.module_from_spec(CATALOG_SPEC)
@@ -77,7 +77,7 @@ def resolve_root() -> Path:
 
 
 def resolve_base(root: Path, requested: str | None) -> str:
-    requested = requested or os.environ.get("CMUX_LOCALIZATION_BASE")
+    requested = requested or os.environ.get("BREE_LOCALIZATION_BASE")
     if requested:
         run_git(root, "rev-parse", "--verify", requested)
         return run_git(root, "merge-base", "HEAD", requested).strip()
@@ -757,7 +757,7 @@ def web_work(root: Path, base: str, paths: Iterable[str], locales: tuple[str, ..
 
 
 def default_work_path(root: Path) -> Path:
-    relative = run_git(root, "rev-parse", "--git-path", "cmux-localization/work.json").strip()
+    relative = run_git(root, "rev-parse", "--git-path", "bree-localization/work.json").strip()
     path = Path(relative)
     return path if path.is_absolute() else root / path
 

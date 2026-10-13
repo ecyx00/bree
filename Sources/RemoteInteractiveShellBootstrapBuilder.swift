@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 enum RemoteInteractiveShellBootstrapBuilder {
@@ -19,7 +19,7 @@ enum RemoteInteractiveShellBootstrapBuilder {
             command: initialCommand,
             protectsFromHangup: protectsFromHangup
         )
-        let shellExec = shellExecCommand(shell: #""$CMUX_LOGIN_SHELL""#, protectsFromHangup: protectsFromHangup)
+        let shellExec = shellExecCommand(shell: #""$BREE_LOGIN_SHELL""#, protectsFromHangup: protectsFromHangup)
         let zshExec = shellExecCommand(shell: #""${SHELL:-/bin/zsh}""#, protectsFromHangup: protectsFromHangup)
         let bashExec = shellExecCommand(shell: #""${SHELL:-/bin/bash}""#, protectsFromHangup: protectsFromHangup)
         let fishExec = shellExecCommand(shell: #""${SHELL:-/bin/fish}""#, protectsFromHangup: protectsFromHangup)
@@ -32,11 +32,11 @@ enum RemoteInteractiveShellBootstrapBuilder {
         )
         var zshShellLines = commonShellExportLines
         zshShellLines.append(
-            #"if [ "${CMUX_SHELL_INTEGRATION:-1}" != "0" ] && [ -r "${CMUX_SHELL_INTEGRATION_DIR}/cmux-zsh-integration.zsh" ]; then . "${CMUX_SHELL_INTEGRATION_DIR}/cmux-zsh-integration.zsh"; fi"#
+            #"if [ "${BREE_SHELL_INTEGRATION:-1}" != "0" ] && [ -r "${BREE_SHELL_INTEGRATION_DIR}/bree-zsh-integration.zsh" ]; then . "${BREE_SHELL_INTEGRATION_DIR}/bree-zsh-integration.zsh"; fi"#
         )
         var bashShellLines = commonShellExportLines
         bashShellLines.append(
-            #"if [ "${CMUX_SHELL_INTEGRATION:-1}" != "0" ] && [ -r "${CMUX_SHELL_INTEGRATION_DIR}/cmux-bash-integration.bash" ]; then . "${CMUX_SHELL_INTEGRATION_DIR}/cmux-bash-integration.bash"; fi"#
+            #"if [ "${BREE_SHELL_INTEGRATION:-1}" != "0" ] && [ -r "${BREE_SHELL_INTEGRATION_DIR}/bree-bash-integration.bash" ]; then . "${BREE_SHELL_INTEGRATION_DIR}/bree-bash-integration.bash"; fi"#
         )
         bashShellLines.append(contentsOf: initialCommandBootstrap.posixInteractiveShellLines)
         let zshBootstrap = RemoteRelayZshBootstrap(shellStateDir: shellStateDir)
@@ -55,78 +55,78 @@ enum RemoteInteractiveShellBootstrapBuilder {
         }
 
         var outerLines: [String] = [
-            "mkdir -p \"$HOME/\(CmuxIdentity.remoteDotDirectoryName)/relay\"",
-            "cmux_shell_dir=\"\(shellStateDir)\"",
-            "mkdir -p \"$cmux_shell_dir\"",
+            "mkdir -p \"$HOME/\(BreeIdentity.remoteDotDirectoryName)/relay\"",
+            "bree_shell_dir=\"\(shellStateDir)\"",
+            "mkdir -p \"$bree_shell_dir\"",
         ]
         outerLines.append(contentsOf: claudeWrapperInstallLines)
         outerLines.append(contentsOf: initialCommandBootstrap.preparationLines)
         if let bundledZshIntegration {
             outerLines += [
-                "cat > \"$cmux_shell_dir/cmux-zsh-integration.zsh\" <<'CMUXCMUXZSH'",
+                "cat > \"$bree_shell_dir/bree-zsh-integration.zsh\" <<'BREEBREEZSH'",
                 bundledZshIntegration,
-                "CMUXCMUXZSH",
+                "BREEBREEZSH",
             ]
         }
         if let bundledBashIntegration {
             outerLines += [
-                "cat > \"$cmux_shell_dir/cmux-bash-integration.bash\" <<'CMUXCMUXBASH'",
+                "cat > \"$bree_shell_dir/bree-bash-integration.bash\" <<'BREEBREEBASH'",
                 bundledBashIntegration,
-                "CMUXCMUXBASH",
+                "BREEBREEBASH",
             ]
         }
         if let bundledFishIntegration {
             outerLines += [
-                "mkdir -p \"$cmux_shell_dir/fish\"",
-                "cat > \"$cmux_shell_dir/fish/config.fish\" <<'CMUXCMUXFISH'",
+                "mkdir -p \"$bree_shell_dir/fish\"",
+                "cat > \"$bree_shell_dir/fish/config.fish\" <<'BREEBREEFISH'",
                 bundledFishIntegration,
-                "CMUXCMUXFISH",
+                "BREEBREEFISH",
             ]
         }
         outerLines.append(contentsOf: commonShellExportLines + Self.remoteInitialWorkingDirectoryLines())
         outerLines += [
-            "CMUX_LOGIN_SHELL=\"${SHELL:-/bin/zsh}\"",
+            "BREE_LOGIN_SHELL=\"${SHELL:-/bin/zsh}\"",
             protectsFromHangup
-                ? "if [ -z \"${CMUX_PERSISTENT_PTY_EXEC_HELPER:-}\" ] || [ ! -x \"$CMUX_PERSISTENT_PTY_EXEC_HELPER\" ]; then exit 126; fi"
+                ? "if [ -z \"${BREE_PERSISTENT_PTY_EXEC_HELPER:-}\" ] || [ ! -x \"$BREE_PERSISTENT_PTY_EXEC_HELPER\" ]; then exit 126; fi"
                 : ":",
-            "case \"${CMUX_LOGIN_SHELL##*/}\" in",
+            "case \"${BREE_LOGIN_SHELL##*/}\" in",
             "  zsh)",
-            "    cat > \"$cmux_shell_dir/.zshenv\" <<'CMUXZSHENV'",
+            "    cat > \"$bree_shell_dir/.zshenv\" <<'BREEZSHENV'",
         ]
         outerLines.append(contentsOf: zshBootstrap.zshEnvLines)
         outerLines += [
-            "CMUXZSHENV",
-            "    cat > \"$cmux_shell_dir/.zprofile\" <<'CMUXZSHPROFILE'",
+            "BREEZSHENV",
+            "    cat > \"$bree_shell_dir/.zprofile\" <<'BREEZSHPROFILE'",
         ]
         outerLines.append(contentsOf: zshBootstrap.zshProfileLines)
         outerLines += [
-            "CMUXZSHPROFILE",
-            "    cat > \"$cmux_shell_dir/.zshrc\" <<'CMUXZSHRC'",
+            "BREEZSHPROFILE",
+            "    cat > \"$bree_shell_dir/.zshrc\" <<'BREEZSHRC'",
         ]
         outerLines.append(contentsOf: zshBootstrap.zshRCLines(commonShellLines: zshShellLines))
         outerLines += [
-            "CMUXZSHRC",
-            "    cat > \"$cmux_shell_dir/.zlogin\" <<'CMUXZSHLOGIN'",
+            "BREEZSHRC",
+            "    cat > \"$bree_shell_dir/.zlogin\" <<'BREEZSHLOGIN'",
         ]
         outerLines.append(contentsOf: zshBootstrap.zshLoginLines + initialCommandBootstrap.posixInteractiveShellLines)
         outerLines += [
-            "CMUXZSHLOGIN",
-            "    chmod 600 \"$cmux_shell_dir/.zshenv\" \"$cmux_shell_dir/.zprofile\" \"$cmux_shell_dir/.zshrc\" \"$cmux_shell_dir/.zlogin\" >/dev/null 2>&1 || true",
+            "BREEZSHLOGIN",
+            "    chmod 600 \"$bree_shell_dir/.zshenv\" \"$bree_shell_dir/.zprofile\" \"$bree_shell_dir/.zshrc\" \"$bree_shell_dir/.zlogin\" >/dev/null 2>&1 || true",
         ]
         outerLines.append(contentsOf: relayWarmupLines.map { "    " + $0 })
         outerLines += [
-            "    export CMUX_REAL_ZDOTDIR=\"${ZDOTDIR:-$HOME}\"",
-            "    export ZDOTDIR=\"$cmux_shell_dir\"",
+            "    export BREE_REAL_ZDOTDIR=\"${ZDOTDIR:-$HOME}\"",
+            "    export ZDOTDIR=\"$bree_shell_dir\"",
             terminalLaunchLine(
                 profile: terminalProfile,
                 indentation: "    ",
                 directShellCommand: chainedRemoteCommandLaunch
                     ?? "\(shellExec) -il",
-                tmuxShellCommand: "export CMUX_REAL_ZDOTDIR=\"${CMUX_REAL_ZDOTDIR:-${ZDOTDIR:-$HOME}}\"; export ZDOTDIR=\"\(shellStateDir)\"; \(zshExec) -il"
+                tmuxShellCommand: "export BREE_REAL_ZDOTDIR=\"${BREE_REAL_ZDOTDIR:-${ZDOTDIR:-$HOME}}\"; export ZDOTDIR=\"\(shellStateDir)\"; \(zshExec) -il"
             ),
             "    ;;",
             "  bash)",
-            "    cat > \"$cmux_shell_dir/.bashrc\" <<'CMUXBASHRC'",
+            "    cat > \"$bree_shell_dir/.bashrc\" <<'BREEBASHRC'",
         ]
         outerLines.append(contentsOf: [
             "if [ -f \"$HOME/.bash_profile\" ]; then",
@@ -139,8 +139,8 @@ enum RemoteInteractiveShellBootstrapBuilder {
             "[ -f \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\"",
         ] + bashShellLines)
         outerLines += [
-            "CMUXBASHRC",
-            "    chmod 600 \"$cmux_shell_dir/.bashrc\" >/dev/null 2>&1 || true",
+            "BREEBASHRC",
+            "    chmod 600 \"$bree_shell_dir/.bashrc\" >/dev/null 2>&1 || true",
         ]
         outerLines.append(contentsOf: relayWarmupLines.map { "    " + $0 })
         outerLines += [
@@ -148,31 +148,31 @@ enum RemoteInteractiveShellBootstrapBuilder {
                 profile: terminalProfile,
                 indentation: "    ",
                 directShellCommand: chainedRemoteCommandLaunch
-                    ?? "\(shellExec) --rcfile \"$cmux_shell_dir/.bashrc\" -i",
+                    ?? "\(shellExec) --rcfile \"$bree_shell_dir/.bashrc\" -i",
                 // tmux stores `default-command` at the session level. Resolve
                 // the relay directory from the session environment each time
                 // a pane is created so reconnects cannot leave new panes
                 // pointing at a deleted relay rcfile.
-                tmuxShellCommand: "\(bashExec) --rcfile \"${CMUX_SHELL_INTEGRATION_DIR:-\(shellStateDir)}/.bashrc\" -i"
+                tmuxShellCommand: "\(bashExec) --rcfile \"${BREE_SHELL_INTEGRATION_DIR:-\(shellStateDir)}/.bashrc\" -i"
             ),
             "    ;;",
             "  fish)",
         ]
         outerLines.append(contentsOf: relayWarmupLines.map { "    " + $0 })
-        var fishInitCommands = ["source \"$CMUX_FISH_INTEGRATION_FILE\""]
+        var fishInitCommands = ["source \"$BREE_FISH_INTEGRATION_FILE\""]
         if let initialCommand = initialCommandBootstrap.fishInteractiveShellCommand {
             fishInitCommands.append(initialCommand)
         }
         let fishInitCommand = shellQuote(fishInitCommands.joined(separator: "; "))
         outerLines += [
-            "    export CMUX_FISH_INTEGRATION_FILE=\"$cmux_shell_dir/fish/config.fish\"",
-            "    export CMUX_FISH_USER_CONFIG_ALREADY_LOADED=1",
+            "    export BREE_FISH_INTEGRATION_FILE=\"$bree_shell_dir/fish/config.fish\"",
+            "    export BREE_FISH_USER_CONFIG_ALREADY_LOADED=1",
             terminalLaunchLine(
                 profile: terminalProfile,
                 indentation: "    ",
                 directShellCommand: chainedRemoteCommandLaunch
                     ?? "\(shellExec) -il --init-command \(fishInitCommand)",
-                tmuxShellCommand: "export CMUX_FISH_INTEGRATION_FILE=\"\(shellStateDir)/fish/config.fish\"; export CMUX_FISH_USER_CONFIG_ALREADY_LOADED=1; \(fishExec) -il --init-command \(fishInitCommand)"
+                tmuxShellCommand: "export BREE_FISH_INTEGRATION_FILE=\"\(shellStateDir)/fish/config.fish\"; export BREE_FISH_USER_CONFIG_ALREADY_LOADED=1; \(fishExec) -il --init-command \(fishInitCommand)"
             ),
             "    ;;",
             "  *)",
@@ -198,7 +198,7 @@ enum RemoteInteractiveShellBootstrapBuilder {
     /// shells retain normal hangup handling when their transport goes away.
     static func shellExecCommand(shell: String, protectsFromHangup: Bool) -> String {
         if protectsFromHangup {
-            return "exec \"$CMUX_PERSISTENT_PTY_EXEC_HELPER\" --internal-persistent-pty-exec \(shell) \(shell)"
+            return "exec \"$BREE_PERSISTENT_PTY_EXEC_HELPER\" --internal-persistent-pty-exec \(shell) \(shell)"
         }
         return "exec \(shell)"
     }
@@ -270,29 +270,29 @@ enum RemoteInteractiveShellBootstrapBuilder {
         var lines = terminalSetupLines(terminfoSource: terminfoSource)
         lines.append(contentsOf: RemoteShellEnvironment.utf8LocaleSetupLines())
         lines.append(contentsOf: shellExportLines(shellFeatures: shellFeatures))
-        lines.append("export PATH=\"$HOME/\(CmuxIdentity.remoteDotDirectoryName)/bin:$PATH\"")
-        lines.append("export CMUX_BUNDLED_CLI_PATH=\"$HOME/\(CmuxIdentity.remoteDotDirectoryName)/bin/cmux\"")
-        lines.append("unset CMUX_CODEX_WRAPPER_SHIM; if [ -x \"$HOME/\(CmuxIdentity.remoteDotDirectoryName)/bin/cmux-codex-wrapper\" ] && command -v bash >/dev/null 2>&1; then export CMUX_CODEX_WRAPPER_SHIM=\"$HOME/\(CmuxIdentity.remoteDotDirectoryName)/bin/cmux-codex-wrapper\"; fi")
+        lines.append("export PATH=\"$HOME/\(BreeIdentity.remoteDotDirectoryName)/bin:$PATH\"")
+        lines.append("export BREE_BUNDLED_CLI_PATH=\"$HOME/\(BreeIdentity.remoteDotDirectoryName)/bin/bree\"")
+        lines.append("unset BREE_CODEX_WRAPPER_SHIM; if [ -x \"$HOME/\(BreeIdentity.remoteDotDirectoryName)/bin/bree-codex-wrapper\" ] && command -v bash >/dev/null 2>&1; then export BREE_CODEX_WRAPPER_SHIM=\"$HOME/\(BreeIdentity.remoteDotDirectoryName)/bin/bree-codex-wrapper\"; fi")
         lines.append(
-            "export CMUX_PERSISTENT_PTY_EXEC_HELPER=\"${CMUX_PERSISTENT_PTY_EXEC_HELPER:-$CMUX_BUNDLED_CLI_PATH}\""
+            "export BREE_PERSISTENT_PTY_EXEC_HELPER=\"${BREE_PERSISTENT_PTY_EXEC_HELPER:-$BREE_BUNDLED_CLI_PATH}\""
         )
-        lines.append("export CMUX_SHELL_INTEGRATION_DIR=\"\(shellStateDir)\"")
+        lines.append("export BREE_SHELL_INTEGRATION_DIR=\"\(shellStateDir)\"")
         if let relaySocket {
-            lines.append("export CMUX_SOCKET_PATH=\(relaySocket)")
+            lines.append("export BREE_SOCKET_PATH=\(relaySocket)")
         }
         // The assignment placeholders are replaced by `ssh-pty-attach` before
         // this script runs. Split the sentinel patterns so a missed replacement
         // does not export literal placeholder IDs into the remote shell.
         lines.append(contentsOf: [
-            "cmux_workspace_id='__CMUX_WORKSPACE_ID__'",
-            "case \"$cmux_workspace_id\" in \"\"|'__CMUX_''WORKSPACE_ID__') ;; *) export CMUX_WORKSPACE_ID=\"$cmux_workspace_id\"; export CMUX_TAB_ID=\"$cmux_workspace_id\" ;; esac",
-            "cmux_surface_id='__CMUX_SURFACE_ID__'",
-            "case \"$cmux_surface_id\" in \"\"|'__CMUX_''SURFACE_ID__') ;; *) export CMUX_SURFACE_ID=\"$cmux_surface_id\"; export CMUX_PANEL_ID=\"$cmux_surface_id\" ;; esac",
-            "cmux_terminal_lifecycle_id='__CMUX_TERMINAL_LIFECYCLE_ID__'",
-            "case \"$cmux_terminal_lifecycle_id\" in \"\"|'__CMUX_''TERMINAL_LIFECYCLE_ID__') ;; *) export CMUX_TERMINAL_LIFECYCLE_ID=\"$cmux_terminal_lifecycle_id\" ;; esac",
-            "cmux_ssh_attempt_id='__CMUX_SSH_ATTEMPT_ID__'",
-            "case \"$cmux_ssh_attempt_id\" in \"\"|'__CMUX_''SSH_ATTEMPT_ID__') ;; *) export CMUX_SSH_ATTEMPT_ID=\"$cmux_ssh_attempt_id\" ;; esac",
-            "unset cmux_workspace_id cmux_surface_id cmux_terminal_lifecycle_id cmux_ssh_attempt_id",
+            "bree_workspace_id='__BREE_WORKSPACE_ID__'",
+            "case \"$bree_workspace_id\" in \"\"|'__BREE_''WORKSPACE_ID__') ;; *) export BREE_WORKSPACE_ID=\"$bree_workspace_id\"; export BREE_TAB_ID=\"$bree_workspace_id\" ;; esac",
+            "bree_surface_id='__BREE_SURFACE_ID__'",
+            "case \"$bree_surface_id\" in \"\"|'__BREE_''SURFACE_ID__') ;; *) export BREE_SURFACE_ID=\"$bree_surface_id\"; export BREE_PANEL_ID=\"$bree_surface_id\" ;; esac",
+            "bree_terminal_lifecycle_id='__BREE_TERMINAL_LIFECYCLE_ID__'",
+            "case \"$bree_terminal_lifecycle_id\" in \"\"|'__BREE_''TERMINAL_LIFECYCLE_ID__') ;; *) export BREE_TERMINAL_LIFECYCLE_ID=\"$bree_terminal_lifecycle_id\" ;; esac",
+            "bree_ssh_attempt_id='__BREE_SSH_ATTEMPT_ID__'",
+            "case \"$bree_ssh_attempt_id\" in \"\"|'__BREE_''SSH_ATTEMPT_ID__') ;; *) export BREE_SSH_ATTEMPT_ID=\"$bree_ssh_attempt_id\" ;; esac",
+            "unset bree_workspace_id bree_surface_id bree_terminal_lifecycle_id bree_ssh_attempt_id",
             "hash -r >/dev/null 2>&1 || true",
             "rehash >/dev/null 2>&1 || true",
         ])
@@ -306,11 +306,11 @@ enum RemoteInteractiveShellBootstrapBuilder {
             // Without a bundled terminfo to install we can only probe what the
             // remote already has and fall back to a universally-present entry.
             return [
-                "cmux_term='xterm-256color'",
+                "bree_term='xterm-256color'",
                 "if command -v infocmp >/dev/null 2>&1 && infocmp xterm-ghostty >/dev/null 2>&1; then",
-                "  cmux_term='xterm-ghostty'",
+                "  bree_term='xterm-ghostty'",
                 "fi",
-                "export TERM=\"$cmux_term\"",
+                "export TERM=\"$bree_term\"",
             ]
         }
         // Install the bundled xterm-ghostty terminfo *synchronously*, before
@@ -323,44 +323,44 @@ enum RemoteInteractiveShellBootstrapBuilder {
         // and garble output (#6352). Here we compile into a private temp
         // directory on the same filesystem as ~/.terminfo, then move each
         // compiled entry into place with an atomic rename, so a concurrent reader
-        // in another cmux ssh session sharing $HOME never observes a partially
+        // in another bree ssh session sharing $HOME never observes a partially
         // written database. The temp directory comes from `mktemp` when present,
         // otherwise a per-process `$$` directory (unique among live processes) so
         // the atomic-rename path applies even without `mktemp` — no branch ever
         // compiles terminfo directly into ~/.terminfo.
         return [
-            "cmux_term='xterm-256color'",
+            "bree_term='xterm-256color'",
             "if command -v infocmp >/dev/null 2>&1 && infocmp xterm-ghostty >/dev/null 2>&1; then",
-            "  cmux_term='xterm-ghostty'",
+            "  bree_term='xterm-ghostty'",
             "elif command -v tic >/dev/null 2>&1; then",
             "  mkdir -p \"$HOME/.terminfo\" 2>/dev/null",
-            "  cmux_ti_tmp=$(mktemp -d \"$HOME/.terminfo.cmux.XXXXXX\" 2>/dev/null) || cmux_ti_tmp=''",
-            "  if [ -z \"$cmux_ti_tmp\" ]; then",
-            "    cmux_ti_tmp=\"$HOME/.terminfo.cmux.$$\"",
-            "    rm -rf \"$cmux_ti_tmp\" 2>/dev/null",
-            "    mkdir \"$cmux_ti_tmp\" 2>/dev/null || cmux_ti_tmp=''",
+            "  bree_ti_tmp=$(mktemp -d \"$HOME/.terminfo.bree.XXXXXX\" 2>/dev/null) || bree_ti_tmp=''",
+            "  if [ -z \"$bree_ti_tmp\" ]; then",
+            "    bree_ti_tmp=\"$HOME/.terminfo.bree.$$\"",
+            "    rm -rf \"$bree_ti_tmp\" 2>/dev/null",
+            "    mkdir \"$bree_ti_tmp\" 2>/dev/null || bree_ti_tmp=''",
             "  fi",
             "  {",
-            "    cat <<'CMUXTERMINFO'",
+            "    cat <<'BREEINFO'",
             trimmedTerminfoSource,
-            "CMUXTERMINFO",
+            "BREEINFO",
             "  } | {",
-            "    if [ -n \"$cmux_ti_tmp\" ] && tic -x -o \"$cmux_ti_tmp\" - >/dev/null 2>&1; then",
-            "      find \"$cmux_ti_tmp\" -type f 2>/dev/null | while IFS= read -r cmux_ti_file; do",
-            "        cmux_ti_rel=${cmux_ti_file#\"$cmux_ti_tmp\"/}",
-            "        cmux_ti_dest=\"$HOME/.terminfo/$cmux_ti_rel\"",
-            "        mkdir -p \"$(dirname \"$cmux_ti_dest\")\" 2>/dev/null",
-            "        mv -f \"$cmux_ti_file\" \"$cmux_ti_dest\" 2>/dev/null || cp -f \"$cmux_ti_file\" \"$cmux_ti_dest\" 2>/dev/null",
+            "    if [ -n \"$bree_ti_tmp\" ] && tic -x -o \"$bree_ti_tmp\" - >/dev/null 2>&1; then",
+            "      find \"$bree_ti_tmp\" -type f 2>/dev/null | while IFS= read -r bree_ti_file; do",
+            "        bree_ti_rel=${bree_ti_file#\"$bree_ti_tmp\"/}",
+            "        bree_ti_dest=\"$HOME/.terminfo/$bree_ti_rel\"",
+            "        mkdir -p \"$(dirname \"$bree_ti_dest\")\" 2>/dev/null",
+            "        mv -f \"$bree_ti_file\" \"$bree_ti_dest\" 2>/dev/null || cp -f \"$bree_ti_file\" \"$bree_ti_dest\" 2>/dev/null",
             "      done",
             "    fi",
             "  }",
-            "  [ -n \"$cmux_ti_tmp\" ] && rm -rf \"$cmux_ti_tmp\" 2>/dev/null",
+            "  [ -n \"$bree_ti_tmp\" ] && rm -rf \"$bree_ti_tmp\" 2>/dev/null",
             "  if infocmp xterm-ghostty >/dev/null 2>&1; then",
-            "    cmux_term='xterm-ghostty'",
+            "    bree_term='xterm-ghostty'",
             "  fi",
-            "  unset cmux_ti_tmp cmux_ti_file cmux_ti_rel cmux_ti_dest 2>/dev/null || true",
+            "  unset bree_ti_tmp bree_ti_file bree_ti_rel bree_ti_dest 2>/dev/null || true",
             "fi",
-            "export TERM=\"$cmux_term\"",
+            "export TERM=\"$bree_term\"",
         ]
     }
 
@@ -391,53 +391,53 @@ enum RemoteInteractiveShellBootstrapBuilder {
             return []
         }
         return [
-            "cmux_relay_cli=\"${CMUX_BUNDLED_CLI_PATH:-$HOME/\(CmuxIdentity.remoteDotDirectoryName)/bin/cmux}\"",
-            "if [ ! -x \"$cmux_relay_cli\" ]; then cmux_relay_cli=\"$(command -v cmux 2>/dev/null || true)\"; fi",
-            "cmux_relay_tty=\"${CMUX_BOOTSTRAP_TTY:-}\"",
-            "if [ -z \"$cmux_relay_tty\" ]; then cmux_relay_tty=\"$(tty 2>/dev/null || true)\"; fi",
-            "cmux_relay_tty=\"${cmux_relay_tty##*/}\"",
-            "if [ -n \"$cmux_relay_tty\" ] && [ \"$cmux_relay_tty\" != \"not a tty\" ]; then",
-            "  mkdir -p \"$HOME/\(CmuxIdentity.remoteDotDirectoryName)/relay\" >/dev/null 2>&1 || true",
-            "  printf '%s' \"$cmux_relay_tty\" > \"$HOME/\(CmuxIdentity.remoteDotDirectoryName)/relay/\(remoteRelayPort).tty\" 2>/dev/null || true",
+            "bree_relay_cli=\"${BREE_BUNDLED_CLI_PATH:-$HOME/\(BreeIdentity.remoteDotDirectoryName)/bin/bree}\"",
+            "if [ ! -x \"$bree_relay_cli\" ]; then bree_relay_cli=\"$(command -v bree 2>/dev/null || true)\"; fi",
+            "bree_relay_tty=\"${BREE_BOOTSTRAP_TTY:-}\"",
+            "if [ -z \"$bree_relay_tty\" ]; then bree_relay_tty=\"$(tty 2>/dev/null || true)\"; fi",
+            "bree_relay_tty=\"${bree_relay_tty##*/}\"",
+            "if [ -n \"$bree_relay_tty\" ] && [ \"$bree_relay_tty\" != \"not a tty\" ]; then",
+            "  mkdir -p \"$HOME/\(BreeIdentity.remoteDotDirectoryName)/relay\" >/dev/null 2>&1 || true",
+            "  printf '%s' \"$bree_relay_tty\" > \"$HOME/\(BreeIdentity.remoteDotDirectoryName)/relay/\(remoteRelayPort).tty\" 2>/dev/null || true",
             "fi",
-            "if [ -n \"$cmux_relay_cli\" ] && [ -n \"$CMUX_WORKSPACE_ID\" ] && [ -n \"$CMUX_TERMINAL_LIFECYCLE_ID\" ] && [ -n \"$CMUX_SSH_ATTEMPT_ID\" ] && [ -n \"$cmux_relay_tty\" ] && [ \"$cmux_relay_tty\" != \"not a tty\" ]; then",
-            "  cmux_relay_report_tty=\"{\\\"workspace_id\\\":\\\"$CMUX_WORKSPACE_ID\\\",\\\"tty_name\\\":\\\"$cmux_relay_tty\\\",\\\"terminal_lifecycle_id\\\":\\\"$CMUX_TERMINAL_LIFECYCLE_ID\\\",\\\"attempt_id\\\":\\\"$CMUX_SSH_ATTEMPT_ID\\\"}\"",
-            "  cmux_relay_ports_kick=\"{\\\"workspace_id\\\":\\\"$CMUX_WORKSPACE_ID\\\",\\\"reason\\\":\\\"command\\\"}\"",
-            "  if [ -n \"$CMUX_SURFACE_ID\" ]; then",
-            "    cmux_relay_report_tty=\"{\\\"workspace_id\\\":\\\"$CMUX_WORKSPACE_ID\\\",\\\"surface_id\\\":\\\"$CMUX_SURFACE_ID\\\",\\\"tty_name\\\":\\\"$cmux_relay_tty\\\",\\\"terminal_lifecycle_id\\\":\\\"$CMUX_TERMINAL_LIFECYCLE_ID\\\",\\\"attempt_id\\\":\\\"$CMUX_SSH_ATTEMPT_ID\\\"}\"",
-            "    cmux_relay_ports_kick=\"{\\\"workspace_id\\\":\\\"$CMUX_WORKSPACE_ID\\\",\\\"surface_id\\\":\\\"$CMUX_SURFACE_ID\\\",\\\"reason\\\":\\\"command\\\"}\"",
+            "if [ -n \"$bree_relay_cli\" ] && [ -n \"$BREE_WORKSPACE_ID\" ] && [ -n \"$BREE_TERMINAL_LIFECYCLE_ID\" ] && [ -n \"$BREE_SSH_ATTEMPT_ID\" ] && [ -n \"$bree_relay_tty\" ] && [ \"$bree_relay_tty\" != \"not a tty\" ]; then",
+            "  bree_relay_report_tty=\"{\\\"workspace_id\\\":\\\"$BREE_WORKSPACE_ID\\\",\\\"tty_name\\\":\\\"$bree_relay_tty\\\",\\\"terminal_lifecycle_id\\\":\\\"$BREE_TERMINAL_LIFECYCLE_ID\\\",\\\"attempt_id\\\":\\\"$BREE_SSH_ATTEMPT_ID\\\"}\"",
+            "  bree_relay_ports_kick=\"{\\\"workspace_id\\\":\\\"$BREE_WORKSPACE_ID\\\",\\\"reason\\\":\\\"command\\\"}\"",
+            "  if [ -n \"$BREE_SURFACE_ID\" ]; then",
+            "    bree_relay_report_tty=\"{\\\"workspace_id\\\":\\\"$BREE_WORKSPACE_ID\\\",\\\"surface_id\\\":\\\"$BREE_SURFACE_ID\\\",\\\"tty_name\\\":\\\"$bree_relay_tty\\\",\\\"terminal_lifecycle_id\\\":\\\"$BREE_TERMINAL_LIFECYCLE_ID\\\",\\\"attempt_id\\\":\\\"$BREE_SSH_ATTEMPT_ID\\\"}\"",
+            "    bree_relay_ports_kick=\"{\\\"workspace_id\\\":\\\"$BREE_WORKSPACE_ID\\\",\\\"surface_id\\\":\\\"$BREE_SURFACE_ID\\\",\\\"reason\\\":\\\"command\\\"}\"",
             "  fi",
-            "  \"$cmux_relay_cli\" rpc surface.report_tty \"$cmux_relay_report_tty\" >/dev/null 2>&1 || true",
-            "  ( \"$cmux_relay_cli\" rpc surface.ports_kick \"$cmux_relay_ports_kick\" >/dev/null 2>&1 || true ) </dev/null >/dev/null 2>&1 &",
+            "  \"$bree_relay_cli\" rpc surface.report_tty \"$bree_relay_report_tty\" >/dev/null 2>&1 || true",
+            "  ( \"$bree_relay_cli\" rpc surface.ports_kick \"$bree_relay_ports_kick\" >/dev/null 2>&1 || true ) </dev/null >/dev/null 2>&1 &",
             "fi",
-            "unset CMUX_BOOTSTRAP_TTY cmux_relay_cli cmux_relay_tty cmux_relay_report_tty cmux_relay_ports_kick",
+            "unset BREE_BOOTSTRAP_TTY bree_relay_cli bree_relay_tty bree_relay_report_tty bree_relay_ports_kick",
         ]
     }
 
     /// The shell integration's `claude` shim execs
-    /// `$CMUX_SHELL_INTEGRATION_DIR/bin/cmux-claude-wrapper` when present. On a
+    /// `$BREE_SHELL_INTEGRATION_DIR/bin/bree-claude-wrapper` when present. On a
     /// relay host that wrapper hands off to the remote CLI, which injects the
     /// relay hooks through `--settings`, so launchers that resolve `claude`
     /// from PATH (and set their own CLAUDE_CONFIG_DIR) still report status.
-    /// An older remote CLI without the verb fails the local `--cmux-probe`
+    /// An older remote CLI without the verb fails the local `--bree-probe`
     /// (no relay round trip), so the wrapper falls back to plain `claude`.
     static let claudeWrapperInstallLines: [String] = [
-        "mkdir -p \"$cmux_shell_dir/bin\"",
-        "cat > \"$cmux_shell_dir/bin/cmux-claude-wrapper\" <<'CMUXCLAUDEWRAPPER'",
+        "mkdir -p \"$bree_shell_dir/bin\"",
+        "cat > \"$bree_shell_dir/bin/bree-claude-wrapper\" <<'BREECLAUDEWRAPPER'",
         "#!/bin/sh",
-        "cmux_cli=\"$HOME/\(CmuxIdentity.remoteDotDirectoryName)/bin/cmux\"",
-        "if [ -x \"$cmux_cli\" ] && \"$cmux_cli\" claude-wrapper --cmux-probe >/dev/null 2>&1; then exec \"$cmux_cli\" claude-wrapper \"$@\"; fi",
-        "cmux_path=",
-        "cmux_ifs=$IFS; IFS=:",
-        "for cmux_entry in $PATH; do case \"$cmux_entry\" in *cmux-cli-shims*) ;; *) cmux_path=\"${cmux_path:+$cmux_path:}$cmux_entry\" ;; esac; done",
-        "IFS=$cmux_ifs; PATH=$cmux_path; export PATH",
+        "bree_cli=\"$HOME/\(BreeIdentity.remoteDotDirectoryName)/bin/bree\"",
+        "if [ -x \"$bree_cli\" ] && \"$bree_cli\" claude-wrapper --bree-probe >/dev/null 2>&1; then exec \"$bree_cli\" claude-wrapper \"$@\"; fi",
+        "bree_path=",
+        "bree_ifs=$IFS; IFS=:",
+        "for bree_entry in $PATH; do case \"$bree_entry\" in *bree-cli-shims*) ;; *) bree_path=\"${bree_path:+$bree_path:}$bree_entry\" ;; esac; done",
+        "IFS=$bree_ifs; PATH=$bree_path; export PATH",
         "exec claude \"$@\"",
-        "CMUXCLAUDEWRAPPER",
-        "chmod 700 \"$cmux_shell_dir/bin/cmux-claude-wrapper\"",
+        "BREECLAUDEWRAPPER",
+        "chmod 700 \"$bree_shell_dir/bin/bree-claude-wrapper\"",
     ]
 
     private static func shellStateDirForRemoteRelayPort(_ remoteRelayPort: Int) -> String {
-        "$HOME/\(CmuxIdentity.remoteDotDirectoryName)/relay/\(max(remoteRelayPort, 0)).shell"
+        "$HOME/\(BreeIdentity.remoteDotDirectoryName)/relay/\(max(remoteRelayPort, 0)).shell"
     }
 
     private static func normalizedEnvValue(_ value: String?) -> String? {

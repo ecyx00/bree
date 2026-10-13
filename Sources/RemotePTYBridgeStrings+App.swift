@@ -1,4 +1,4 @@
-import CmuxRemoteWorkspace
+import BreeRemoteWorkspace
 import Foundation
 
 // User-facing PTY-bridge attach-failure strings resolve here, in the app

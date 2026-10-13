@@ -2,7 +2,7 @@ import Foundation
 import OSLog
 
 nonisolated private let claudeHookSessionStoreLogger = Logger(
-    subsystem: "com.cmuxterm.cli",
+    subsystem: "com.bree.cli",
     category: "AgentHookStore"
 )
 
@@ -23,7 +23,7 @@ struct ClaudeHookSessionStoreFile: Codable {
     // active session, so once another pane promotes (e.g. a forked conversation
     // in a split), it can no longer prove that a late hook from a superseded
     // session in this pane is stale. Keyed by surface id.
-    // https://github.com/manaflow-ai/cmux/issues/5908
+    // https://github.com/ecyx00/bree/issues/5908
     var activeSessionsBySurface: [String: ClaudeHookActiveSessionRecord] = [:]
     var agentHookFailureReportTimestamps: [String: TimeInterval] = [:]
     /// Bounded lookup index for Cursor approvals, keyed by stable surface id.

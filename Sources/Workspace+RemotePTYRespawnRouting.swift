@@ -1,6 +1,6 @@
-import CmuxCore
-import CmuxRemoteSession
-import CmuxRemoteWorkspace
+import BreeCore
+import BreeRemoteSession
+import BreeRemoteWorkspace
 import Foundation
 
 @MainActor
@@ -196,7 +196,7 @@ extension Workspace {
                 if let closeError {
                     let nsError = closeError as NSError
                     queueHandoffTimedOut =
-                        nsError.domain == "cmux.remote.pty" && nsError.code == 8
+                        nsError.domain == "bree.remote.pty" && nsError.code == 8
                 } else {
                     queueHandoffTimedOut = false
                 }

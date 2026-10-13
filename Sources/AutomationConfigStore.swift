@@ -1,10 +1,10 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 /// Reads and atomically writes the versioned automation configuration.
 ///
 /// The automation file intentionally lives beside the event log at
-/// `~/.cmuxterm/automations.json`: it is easy to diff, copy between machines,
+/// `~/.bree/automations.json`: it is easy to diff, copy between machines,
 /// and edit without touching the GUI settings file. Callers inject a home URL
 /// in tests; no environment variable is consulted for the default location.
 final class AutomationConfigStore {
@@ -39,7 +39,7 @@ final class AutomationConfigStore {
 
     static func defaultFileURL(homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL {
         homeDirectory
-            .appendingPathComponent(CmuxIdentity.current.dotDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.dotDirectoryName, isDirectory: true)
             .appendingPathComponent(fileName, isDirectory: false)
     }
 

@@ -189,7 +189,7 @@ final class BrowserPaneDropTargetView: NSView {
     override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
         guard let dropContext = activeDropContext() else {
 #if DEBUG
-            cmuxDebugLog("browser.paneDrop.prepare allowed=0 reason=missingContext")
+            breeDebugLog("browser.paneDrop.prepare allowed=0 reason=missingContext")
 #endif
             return false
         }
@@ -201,7 +201,7 @@ final class BrowserPaneDropTargetView: NSView {
             let accepted = webView?.prepareForDragOperation(sender) ?? false
             preparedFileDropWebView = accepted ? webView : nil
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.paneDrop.prepareAsWebView panel=\(dropContext.panelId.uuidString.prefix(5)) " +
                 "accepted=\(accepted ? 1 : 0)"
             )
@@ -239,7 +239,7 @@ final class BrowserPaneDropTargetView: NSView {
 
         guard let dropContext = activeDropContext() else {
 #if DEBUG
-            cmuxDebugLog("browser.paneDrop.perform allowed=0 reason=missingContext")
+            breeDebugLog("browser.paneDrop.perform allowed=0 reason=missingContext")
 #endif
             return false
         }
@@ -267,7 +267,7 @@ final class BrowserPaneDropTargetView: NSView {
                 performedFileDropWebView = nil
             }
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.paneDrop.performAsWebView panel=\(dropContext.panelId.uuidString.prefix(5)) " +
                 "handled=\(handled ? 1 : 0)"
             )
@@ -286,7 +286,7 @@ final class BrowserPaneDropTargetView: NSView {
                 pasteboard: sender.draggingPasteboard
             )
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.paneDrop.perform panel=\(dropContext.panelId.uuidString.prefix(5)) " +
                 "tab=\(plan.transfer.tabId.uuidString.prefix(5)) zone=\(plan.zone) handled=\(handled ? 1 : 0)"
             )
@@ -294,7 +294,7 @@ final class BrowserPaneDropTargetView: NSView {
             return handled
         case .rejected:
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.paneDrop.perform allowed=0 panel=\(dropContext.panelId.uuidString.prefix(5)) " +
                 "reason=rejectedTransfer zone=\(zone)"
             )
@@ -308,7 +308,7 @@ final class BrowserPaneDropTargetView: NSView {
         guard !urls.isEmpty,
               let container = transferDropRouter.container(for: dropContext) else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.paneDrop.perform allowed=0 panel=\(dropContext.panelId.uuidString.prefix(5)) reason=missingTransferAndFiles"
             )
 #endif
@@ -322,7 +322,7 @@ final class BrowserPaneDropTargetView: NSView {
             )
         ))
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.paneDrop.perform panel=\(dropContext.panelId.uuidString.prefix(5)) " +
             "fileURLs=\(urls.count) zone=\(zone) handled=\(handled ? 1 : 0)"
         )
@@ -382,7 +382,7 @@ final class BrowserPaneDropTargetView: NSView {
             activeZone = plan.zone
             slotView?.setPortalDragDropZone(plan.zone)
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.paneDrop.\(phase) panel=\(dropContext.panelId.uuidString.prefix(5)) " +
                 "tab=\(plan.transfer.tabId.uuidString.prefix(5)) zone=\(plan.zone)"
             )
@@ -405,7 +405,7 @@ final class BrowserPaneDropTargetView: NSView {
         activeZone = zone
         slotView?.setPortalDragDropZone(zone)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.paneDrop.\(phase) panel=\(dropContext.panelId.uuidString.prefix(5)) fileURL=1 zone=\(zone)"
         )
 #endif
@@ -442,7 +442,7 @@ final class BrowserPaneDropTargetView: NSView {
         slotView?.setPortalDragDropZone(nil)
 #if DEBUG
         if let dropContext {
-            cmuxDebugLog(
+            breeDebugLog(
                 "browser.paneDrop.\(phase) panel=\(dropContext.panelId.uuidString.prefix(5)) zone=none"
             )
         }
@@ -480,7 +480,7 @@ final class BrowserPaneDropTargetView: NSView {
         lastHitTestSignature = signature
 
         let types = pasteboardTypes?.map(\.rawValue).joined(separator: ",") ?? "-"
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.paneDrop.hitTest capture=\(capture ? 1 : 0) " +
             "hasTransfer=\(hasTransferType ? 1 : 0) hasFileURL=\(hasFileURL ? 1 : 0) context=\(dropContext != nil ? 1 : 0) " +
             "event=\(eventType.map { String($0.rawValue) } ?? "nil") types=\(types)"

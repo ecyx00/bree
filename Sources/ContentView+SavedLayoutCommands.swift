@@ -1,5 +1,5 @@
 import AppKit
-import CmuxCommandPalette
+import BreeCommandPalette
 import Foundation
 
 extension ContentView {
@@ -81,7 +81,7 @@ extension ContentView {
         alert.accessoryView = input
         alert.window.initialFirstResponder = input
 
-        guard alert.runCmuxModal() == .alertFirstButtonReturn else { return }
+        guard alert.runBreeModal() == .alertFirstButtonReturn else { return }
         let name = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else {
             presentSavedLayoutError(
@@ -104,7 +104,7 @@ extension ContentView {
         do {
             let capture = try workspace.captureLayoutDefinition()
             try store.save(
-                CmuxSavedLayout(name: name, description: nil, workspace: capture.workspace),
+                BreeSavedLayout(name: name, description: nil, workspace: capture.workspace),
                 overwrite: overwrite
             )
         } catch {
@@ -120,7 +120,7 @@ extension ContentView {
         alert.informativeText = String.localizedStringWithFormat(format, name)
         alert.addButton(withTitle: String(localized: "dialog.savedLayout.overwrite.confirm", defaultValue: "Replace"))
         alert.addButton(withTitle: String(localized: "common.cancel", defaultValue: "Cancel"))
-        return alert.runCmuxModal() == .alertFirstButtonReturn
+        return alert.runBreeModal() == .alertFirstButtonReturn
     }
 
     private func presentSavedLayoutError(title: String, message: String) {
@@ -129,7 +129,7 @@ extension ContentView {
         alert.messageText = title
         alert.informativeText = message
         alert.addButton(withTitle: String(localized: "common.ok", defaultValue: "OK"))
-        _ = alert.runCmuxModal()
+        _ = alert.runBreeModal()
     }
 
     private func savedLayoutErrorTitle() -> String {
@@ -152,7 +152,7 @@ extension ContentView {
         return String(localized: "dialog.savedLayout.error.unknown", defaultValue: "The saved layout request could not be completed. Try again.")
     }
 
-    private func savedLayoutsForCommandPalette() -> [CmuxSavedLayout] {
+    private func savedLayoutsForCommandPalette() -> [BreeSavedLayout] {
         (try? SavedLayoutStore().list()) ?? []
     }
 
@@ -167,5 +167,5 @@ extension ContentView {
 }
 
 extension Notification.Name {
-    static let savedLayoutSaveRequested = Notification.Name("cmux.savedLayoutSaveRequested")
+    static let savedLayoutSaveRequested = Notification.Name("bree.savedLayoutSaveRequested")
 }

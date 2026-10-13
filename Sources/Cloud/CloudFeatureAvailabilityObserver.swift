@@ -19,7 +19,7 @@ final class CloudFeatureAvailabilityObserver {
         self.didChange = didChange
         // Register synchronously at the legacy notification seam so no closing
         // transition can be missed before async iteration starts.
-        observers = [.cmuxFeatureFlagsDidChange, RightSidebarBetaFeatureSettings.didChangeNotification].map { name in
+        observers = [.breeFeatureFlagsDidChange, RightSidebarBetaFeatureSettings.didChangeNotification].map { name in
             notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.reconcile() }
             }

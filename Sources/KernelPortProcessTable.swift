@@ -1,5 +1,5 @@
-import CmuxCore
-import CmuxFoundation
+import BreeCore
+import BreeFoundation
 import Darwin
 import Foundation
 
@@ -8,7 +8,7 @@ import Foundation
 /// The scanner used to spawn `/bin/ps -t <ttys>` for every panel scan and
 /// `/bin/ps -ax` up to twice per agent scan. Agent scans repeat every two
 /// seconds while an agent runs and panel scans burst after every shell
-/// command, so cmux forked a process many times a minute, and endpoint
+/// command, so bree forked a process many times a minute, and endpoint
 /// security tools log every one of those execs. This reader answers the same
 /// two questions in process with one `proc_listallpids` enumeration per call
 /// (``DarwinProcessEnumerator``) plus a `stat` of each requested terminal.

@@ -1,5 +1,5 @@
-import CmuxTerminalCore
-import CmuxSettings
+import BreeTerminalCore
+import BreeSettings
 import Foundation
 
 /// Debounces prompt candidates and verifies their exact foreground process before notifying.
@@ -14,7 +14,7 @@ actor PromptTurnNotificationHandler {
     private var debounceTasksByAgentID: [String: Task<Void, Never>] = [:]
 
     private var inFlightPID: Int?
-    private var inFlightVerification: Task<CmuxTaskManagerCodingAgentDefinition?, Never>?
+    private var inFlightVerification: Task<BreeTaskManagerCodingAgentDefinition?, Never>?
 
     init(workspaceID: UUID, surfaceID: UUID) {
         self.workspaceID = workspaceID
@@ -160,14 +160,14 @@ actor PromptTurnNotificationHandler {
     private func verifiedDefinition(
         foregroundPID: Int,
         agentID: String
-    ) async -> CmuxTaskManagerCodingAgentDefinition? {
-        let task: Task<CmuxTaskManagerCodingAgentDefinition?, Never>
+    ) async -> BreeTaskManagerCodingAgentDefinition? {
+        let task: Task<BreeTaskManagerCodingAgentDefinition?, Never>
         if inFlightPID == foregroundPID, let inFlightVerification {
             task = inFlightVerification
         } else {
             inFlightVerification?.cancel()
             task = Task.detached(priority: .utility) {
-                CmuxTopProcessSnapshot.promptAgentDefinition(foregroundPID: foregroundPID)
+                BreeTopProcessSnapshot.promptAgentDefinition(foregroundPID: foregroundPID)
             }
             inFlightPID = foregroundPID
             inFlightVerification = task

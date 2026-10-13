@@ -1,4 +1,4 @@
-import CmuxCloud
+import BreeCloud
 import Darwin
 import Foundation
 
@@ -14,7 +14,7 @@ actor RemoteFilePreviewCache {
     init(directory: URL = FileManager.default.temporaryDirectory) {
         let owner = ProcessInfo.processInfo.processIdentifier
         root = directory.appendingPathComponent(
-            "cmux-remote-previews-\(owner)-\(UUID().uuidString)",
+            "bree-remote-previews-\(owner)-\(UUID().uuidString)",
             isDirectory: true
         )
         cleanupTask = Task.detached(priority: .utility) { Self.removeStaleDirectories(in: directory) }
@@ -25,7 +25,7 @@ actor RemoteFilePreviewCache {
         // URL + resource-value prefetch for each one was a launch-time heap burst.
         guard let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path) else { return }
         let cutoff = Date().addingTimeInterval(-staleDirectoryAge)
-        for name in names where name.hasPrefix("cmux-remote-previews-") {
+        for name in names where name.hasPrefix("bree-remote-previews-") {
             let url = directory.appendingPathComponent(name, isDirectory: true)
             let components = url.lastPathComponent.split(separator: "-")
             guard components.count > 3, let owner = Int32(components[3]) else { continue }
@@ -71,7 +71,7 @@ actor RemoteFilePreviewCache {
         let path = lease.remotePath, destination = lease.url
         let task = Task<Void, Error> {
             let temporary = destination.deletingLastPathComponent()
-                .appendingPathComponent(".cmux-refresh-" + UUID().uuidString, isDirectory: false)
+                .appendingPathComponent(".bree-refresh-" + UUID().uuidString, isDirectory: false)
             defer { try? FileManager.default.removeItem(at: temporary) }
             try await provider.downloadFile(path: path, to: temporary)
             try Task.checkCancellation()

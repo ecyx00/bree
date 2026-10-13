@@ -26,17 +26,17 @@ await page.locator("#viewport").evaluate((el) => (el.scrollTop = 30 * 5000));
 await page.getByRole("link", { name: "Row 5000", exact: true }).waitFor();
 emit("virtual-row", await page.getByRole("link", { name: "Row 5000", exact: true }).textContent());
 
-// ---- cell session=stress cmux-only
+// ---- cell session=stress bree-only
 await page.goto(stress("list", 5000));
 const s = await snapshot();
 const printed = String(s);
-emitCmux("list-printed-within-budget", printed.length <= 20000);
-emitCmux("list-tree-complete", (s.tree.match(/link "Item \d+"/g) || []).length);
-emitCmux("list-condensed-note", /^# condensed to [\d,]+ of [\d,]+ characters/.test(printed.split("\n").pop()));
-emitCmux("list-cut-line", printed.split("\n").find((l) => /- … [\d,]+ more listitem/.test(l)).trim().replace(/[\d,]+/g, "N"));
+emitBree("list-printed-within-budget", printed.length <= 20000);
+emitBree("list-tree-complete", (s.tree.match(/link "Item \d+"/g) || []).length);
+emitBree("list-condensed-note", /^# condensed to [\d,]+ of [\d,]+ characters/.test(printed.split("\n").pop()));
+emitBree("list-cut-line", printed.split("\n").find((l) => /- … [\d,]+ more listitem/.test(l)).trim().replace(/[\d,]+/g, "N"));
 const hidden = /link "Item 4000" \[ref=(\w+)\]/.exec(s.tree)[1];
-emitCmux("list-cut-ref-resolves", printed.includes(`[ref=${hidden}]`) ? "printed" : await page.locator(hidden).textContent());
+emitBree("list-cut-ref-resolves", printed.includes(`[ref=${hidden}]`) ? "printed" : await page.locator(hidden).textContent());
 // A new scope has no previous snapshot, so the whole tree prints.
-emitCmux("list-all", String(await snapshot(page.locator("nav"), { maxChars: Infinity })).length > 100000);
+emitBree("list-all", String(await snapshot(page.locator("nav"), { maxChars: Infinity })).length > 100000);
 await page.goto(stress("select", 5000));
-emitCmux("select-inline", (await snapshot()).tree.split("\n").find((l) => l.includes('combobox "Pick"')));
+emitBree("select-inline", (await snapshot()).tree.split("\n").find((l) => l.includes('combobox "Pick"')));

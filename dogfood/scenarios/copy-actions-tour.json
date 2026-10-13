@@ -1,10 +1,10 @@
 {
   "paths": [
-    "Sources/CmuxSurfaceTabBarBuiltInAction.swift",
+    "Sources/BreeSurfaceTabBarBuiltInAction.swift",
     "Sources/ContentView*",
     "Sources/TerminalCopyAction.swift",
     "Sources/Workspace.swift",
-    "Packages/macOS/CmuxTerminal/*"
+    "Packages/macOS/BreeTerminal/*"
   ],
   "steps": [
     {

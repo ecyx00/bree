@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CmuxSettingsUI
+import BreeFoundation
+import BreeSettingsUI
 import SwiftUI
 
 /// Shared Stack sign-in status UI used by the Account and Mobile Pairing panes.
@@ -65,10 +65,10 @@ private struct AccountSignInIdleView: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "person.crop.circle.badge.plus")
-                .cmuxFont(size: 34)
+                .scaledFont(size: 34)
                 .foregroundStyle(.tint)
             Text(title)
-                .cmuxFont(.title2, weight: .semibold)
+                .scaledFont(.title2, weight: .semibold)
             Text(subtitle)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
@@ -93,7 +93,7 @@ private struct AccountSignInLoadingView: View {
                 .controlSize(.small)
                 .accessibilityLabel(stage.title)
             Text(stage.title)
-                .cmuxFont(.headline)
+                .scaledFont(.headline)
             Text(stage.instructions)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -124,10 +124,10 @@ private struct AccountSignInFailureView: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "exclamationmark.triangle")
-                .cmuxFont(size: 30)
-                .foregroundStyle(.orange)
+                .scaledFont(size: 30)
+                .foregroundStyle(BreeChromePalette.currentSnapshot.signalAttention)
             Text(failure.title)
-                .cmuxFont(.headline)
+                .scaledFont(.headline)
             Text(failure.recovery)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -161,9 +161,9 @@ private struct AccountSignInSuccessView: View {
                 size: 56
             )
             Text(String(localized: "account.signIn.successTitle", defaultValue: "You’re signed in now"))
-                .cmuxFont(.title2, weight: .semibold)
+                .scaledFont(.title2, weight: .semibold)
             Text(identity.displayName.isEmpty ? identity.email : identity.displayName)
-                .cmuxFont(.headline)
+                .scaledFont(.headline)
                 .lineLimit(1)
             if !identity.email.isEmpty && identity.email != identity.displayName {
                 Text(identity.email)
@@ -214,7 +214,7 @@ private struct AccountSignInFallbackActions: View {
                     defaultValue: "Couldn’t copy the link. Open it in your browser instead."
                 ))
                     .font(.caption)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(BreeChromePalette.currentSnapshot.signalAttention)
                     .accessibilityIdentifier("AccountSignInCopyFailed")
             } else if browserOpenState == .opened {
                 Text(String(
@@ -230,7 +230,7 @@ private struct AccountSignInFallbackActions: View {
                     defaultValue: "Couldn’t open your browser. Copy the link and paste it into any browser."
                 ))
                     .font(.caption)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(BreeChromePalette.currentSnapshot.signalAttention)
                     .multilineTextAlignment(.center)
                     .accessibilityIdentifier("AccountSignInBrowserOpenFailed")
             }

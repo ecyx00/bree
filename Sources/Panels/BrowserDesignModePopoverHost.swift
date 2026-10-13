@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import SwiftUI
 
 /// Hosts the Design Mode composer overlay above the portal-hosted WKWebView.
@@ -54,7 +54,7 @@ final class BrowserDesignModeComposerHostingView: NSHostingView<BrowserDesignMod
             ? localPoint
             : NSPoint(x: localPoint.x, y: bounds.height - localPoint.y)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "designMode.card.mouseDown local=\(Int(localPoint.x)),\(Int(localPoint.y)) " +
             "topLeft=\(Int(topLeftPoint.x)),\(Int(topLeftPoint.y)) " +
             "card=\(Int(cardFrameInTopLeftCoordinates.minX)),\(Int(cardFrameInTopLeftCoordinates.minY)) " +
@@ -130,7 +130,7 @@ final class BrowserDesignModeComposerHostingView: NSHostingView<BrowserDesignMod
             let now = CACurrentMediaTime()
             if now - Self.lastHitTestRejectLogAt > 1.0 {
                 Self.lastHitTestRejectLogAt = now
-                cmuxDebugLog(
+                breeDebugLog(
                     "designMode.card.hitTest.reject topLeft=\(Int(topLeftPoint.x)),\(Int(topLeftPoint.y)) " +
                     "card=\(Int(cardFrameInTopLeftCoordinates.minX)),\(Int(cardFrameInTopLeftCoordinates.minY)) " +
                     "\(Int(cardFrameInTopLeftCoordinates.width))x\(Int(cardFrameInTopLeftCoordinates.height)) " +
@@ -177,7 +177,7 @@ final class BrowserDesignModeCardDragBridge: ObservableObject {
 /// card through real layout (leading/top padding), so the frame reported to
 /// the hosting view's hit-test shield always matches what is on screen.
 struct BrowserDesignModePopoverHost: View {
-    private static let hostCoordinateSpace = "cmuxDesignModeComposerHost"
+    private static let hostCoordinateSpace = "breeDesignModeComposerHost"
     private static let edgeInset: CGFloat = 8
 
     @Bindable var controller: BrowserDesignModeController

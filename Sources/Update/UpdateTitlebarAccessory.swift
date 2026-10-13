@@ -1,11 +1,11 @@
 import AppKit
 import Bonsplit
 import Combine
-import CmuxFoundation
-import CmuxNotifications
-import CmuxSettings
-import CmuxSettingsUI
-import CmuxTestSupport
+import BreeFoundation
+import BreeNotifications
+import BreeSettings
+import BreeSettingsUI
+import BreeTestSupport
 import Observation
 import SwiftUI
 
@@ -270,7 +270,7 @@ private final class DetachedNotificationsPopoverDelegate: NSObject, NSPopoverDel
 }
 
 extension Notification.Name {
-    static let cmuxNotificationsPopoverVisibilityDidChange = Notification.Name("cmux.notificationsPopoverVisibilityDidChange")
+    static let breeNotificationsPopoverVisibilityDidChange = Notification.Name("bree.notificationsPopoverVisibilityDidChange")
 }
 
 private enum NotificationsPopoverVisibilityUserInfoKey {
@@ -356,7 +356,7 @@ private func postNotificationsPopoverVisibilityDidChange(isShown: Bool, source: 
         userInfo[NotificationsPopoverVisibilityUserInfoKey.windowNumber] = windowNumber
     }
     NotificationCenter.default.post(
-        name: .cmuxNotificationsPopoverVisibilityDidChange,
+        name: .breeNotificationsPopoverVisibilityDidChange,
         object: nil,
         userInfo: userInfo
     )
@@ -929,20 +929,18 @@ private final class TitlebarControlRightClickNSView: NSView {
 private struct TitlebarNotificationBadge: View {
     let unreadModel: SidebarUnreadModel
     let config: TitlebarControlsStyleConfig
-    @Environment(\.cmuxGlobalFontMagnificationPercent) private var globalFontPercent
+    @Environment(\.breeGlobalFontMagnificationPercent) private var globalFontPercent
     private var palette: BreeChromePalette { BreeChromePaletteStore.shared.palette }
 
     var body: some View {
-        let badge = TitlebarControlsVisibility.bellCounts(unread: unreadModel.totalUnreadCount)
+        let badge = TitlebarControlsVisibility.bellCounts()
         if badge.count > 0 {
-            // Attention fill is a signal role (readable against surfaces, so
-            // surfaceBase text on it); the plain count sits on accentFill, which
-            // also carries surfaceBase text.
+            // The count sits on the ivory accentFill, with surfaceBase text.
             Text("\(min(badge.count, 99))")
                 .breeFont(.count, weight: .medium, countRow: .caption)
                 .foregroundColor(palette.surfaceBase)
                 .frame(width: config.badgeSize, height: config.badgeSize)
-                .background(Circle().fill(badge.needsAttention ? palette.signalAttention : palette.accentFill))
+                .background(Circle().fill(palette.accentFill))
                 .offset(x: config.badgeOffset.width, y: config.badgeOffset.height)
         }
     }
@@ -1084,12 +1082,12 @@ struct TitlebarControlsView: View {
                 accessibilityLabel: String(localized: "titlebar.sidebar.accessibilityLabel", defaultValue: "Toggle Sidebar"),
                 action: {
                 #if DEBUG
-                cmuxDebugLog("titlebar.toggleSidebar")
+                breeDebugLog("titlebar.toggleSidebar")
                 #endif
                 onToggleSidebar()
             },
                 rightClickAction: { anchorView, event in
-                    CmuxExtensionSidebarSelection.showMenu(anchorView: anchorView, event: event)
+                    BreeExtensionSidebarSelection.showMenu(anchorView: anchorView, event: event)
                 }) {
                 sidebarIconLabel(config: config, iconGeometryKeyPrefix: "titlebarControl_toggleSidebarIcon")
             }
@@ -1100,7 +1098,7 @@ struct TitlebarControlsView: View {
                 foregroundColor: foregroundColor,
                 onNewTab: {
                     #if DEBUG
-                    cmuxDebugLog("titlebar.newTab")
+                    breeDebugLog("titlebar.newTab")
                     #endif
                     onNewTab()
                 }
@@ -1146,14 +1144,14 @@ struct TitlebarControlsView: View {
                 accessibilityLabel: String(localized: "titlebar.notifications.accessibilityLabel", defaultValue: "Notifications"),
                 action: {
                 #if DEBUG
-                cmuxDebugLog("titlebar.notifications")
+                breeDebugLog("titlebar.notifications")
                 #endif
                 onToggleNotifications()
             }) {
                 ZStack(alignment: .topTrailing) {
                     // Attention is carried by the glyph (bell.badge) as well as the fill colour.
                     iconLabel(
-                        systemName: TitlebarControlsVisibility.bellCounts(unread: unreadModel.totalUnreadCount).needsAttention ? "bell.badge" : "bell",
+                        systemName: TitlebarControlsVisibility.bellCounts().needsAttention ? "bell.badge" : "bell",
                         config: config,
                         foregroundColor: foregroundColor,
                         iconGeometryKeyPrefix: "titlebarControl_showNotificationsIcon"
@@ -1359,7 +1357,7 @@ private struct TitlebarControlSymbol: View {
     @Environment(\.titlebarControlForegroundOpacity) private var foregroundOpacity
 
     var body: some View {
-        CmuxSystemSymbolImage(
+        BreeSystemSymbolImage(
             systemName: systemName,
             pointSize: config.iconSize,
             weight: TitlebarControlIconStyle.weight,
@@ -1530,7 +1528,7 @@ struct HiddenTitlebarSidebarControlsView: View {
                 }
                 #if DEBUG
                 TitlebarChromeUITestRecorder.recordTrafficLightFrames(window: window)
-                _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+                _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
                     payload["minimalSidebarHostWindowNumber"] = String(nextWindowNumber)
                     payload["minimalSidebarHostPinned"] = String(
                         isHoveringHost || nextHoveringWindowChrome || popoverVisibilityState.isShown(in: nextWindowNumber)
@@ -1624,7 +1622,7 @@ struct HiddenTitlebarSidebarControlsView: View {
         .onReceive(MinimalModeSidebarChromeHoverState.shared.$hoveredWindowNumber) { hoveredWindowNumber in
             isHoveringWindowChrome = hostWindowNumber == hoveredWindowNumber
             #if DEBUG
-            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
                 payload["minimalSidebarObservedHoverWindowNumber"] = hoveredWindowNumber.map(String.init) ?? "nil"
                 payload["minimalSidebarObservedHostWindowNumber"] = hostWindowNumber.map(String.init) ?? "nil"
                 payload["minimalSidebarObservedPinned"] = String(shouldPinControls)
@@ -1837,10 +1835,10 @@ private struct PassthroughHoverTrackingView: NSViewRepresentable {
 
         private func recordFrameForUITest() {
             #if DEBUG
-            guard ProcessInfo.processInfo.environment["CMUX_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" else { return }
+            guard ProcessInfo.processInfo.environment["BREE_UI_TEST_BONSPLIT_TAB_DRAG_SETUP"] == "1" else { return }
             guard window != nil else { return }
             let frameInWindow = convert(bounds, to: nil)
-            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "CMUX_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
+            _ = UITestCaptureSink().mutateJSONObjectIfConfigured(envKey: "BREE_UI_TEST_BONSPLIT_TAB_DRAG_PATH") { payload in
                 payload["minimalSidebarHostFrameInWindow"] = NSStringFromRect(frameInWindow)
             }
             #endif
@@ -1968,7 +1966,7 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
             rootView: AnyView(
                 rootView
                     .environment(\.settingsRuntime, settingsRuntime)
-                    .cmuxAccentColorEnvironment()
+                    .breeAccentColorEnvironment()
             )
         )
 
@@ -2218,7 +2216,7 @@ final class TitlebarControlsAccessoryViewController: NSTitlebarAccessoryViewCont
                     notificationsPopover?.performClose(nil)
                 }
             )
-            .cmuxAccentColorEnvironment()
+            .breeAccentColorEnvironment()
         )
         hostingController.view.wantsLayer = true
         hostingController.view.layer?.backgroundColor = .clear
@@ -2333,12 +2331,12 @@ private struct NotificationsPopoverView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let windowLimit: CGSize
     @State private var keyboardShortcutSettingsObserver = KeyboardShortcutSettingsObserver.shared
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     let onDismiss: () -> Void
 
-    @AppStorage("cmux.notifications.popover.width")
+    @AppStorage("bree.notifications.popover.width")
     private var savedWidth: Double = Double(NotificationsPopoverMetrics.defaultWidth)
-    @AppStorage("cmux.notifications.popover.height")
+    @AppStorage("bree.notifications.popover.height")
     private var savedHeight: Double = Double(NotificationsPopoverMetrics.defaultHeight)
 
     // Avoid writing through @AppStorage while dragging because each write hits UserDefaults and posts
@@ -2506,7 +2504,7 @@ private struct NotificationsPopoverView: View {
             Spacer()
             Button(action: jumpToLatestUnread) {
                 HStack(spacing: 5) {
-                    CmuxSystemSymbolImage(
+                    BreeSystemSymbolImage(
                         systemName: "arrow.down.to.line",
                         pointSize: 11,
                         weight: .regular,
@@ -2575,7 +2573,7 @@ private struct NotificationsPopoverView: View {
             // so the row closures don't reach back into the ObservableObject. Reading the
             // store from inside the ForEach builder reintroduces a store dependency below
             // the list boundary, which is the same anti-pattern CLAUDE.md flags for the
-            // sidebar/sessions panel (https://github.com/manaflow-ai/cmux/issues/2586).
+            // sidebar/sessions panel (https://github.com/ecyx00/bree/issues/2586).
             let snapshot = notificationStore.notifications
             let lastIndex = snapshot.count - 1
             // One tabId -> title index per render, not an O(tabs) scan per row (#5794).
@@ -2676,7 +2674,7 @@ private struct NotificationsPopoverView: View {
 
     private func emptyState(systemImage: String, title: String, subtitle: String?) -> some View {
         VStack(spacing: 10) {
-            CmuxSystemSymbolImage(systemName: systemImage, pointSize: 30, weight: .regular, tint: palette.textSecondary)
+            BreeSystemSymbolImage(systemName: systemImage, pointSize: 30, weight: .regular, tint: palette.textSecondary)
             Text(title)
                 .breeFont(.body, weight: .medium)
                 .foregroundColor(palette.textPrimary)
@@ -2732,7 +2730,7 @@ final class UpdateTitlebarAccessoryController {
     private var observers: [NSObjectProtocol] = []
     private var pendingAttachRetries: [ObjectIdentifier: Int] = [:]
     private var startupScanWorkItems: [DispatchWorkItem] = []
-    private let controlsIdentifier = NSUserInterfaceItemIdentifier("cmux.titlebarControls")
+    private let controlsIdentifier = NSUserInterfaceItemIdentifier("bree.titlebarControls")
     private let controlsControllers = NSHashTable<TitlebarControlsAccessoryViewController>.weakObjects()
     private var lastKnownPresentationMode: WorkspacePresentationModeSettings.Mode = WorkspacePresentationModeSettings.mode()
     private var detachedNotificationsPopover: NSPopover?
@@ -2879,7 +2877,7 @@ final class UpdateTitlebarAccessoryController {
                 }
 #if DEBUG
                 let env = ProcessInfo.processInfo.environment
-                if env["CMUX_UI_TEST_MODE"] == "1" {
+                if env["BREE_UI_TEST_MODE"] == "1" {
                     let ids = NSApp.windows.map { $0.identifier?.rawValue ?? "<nil>" }
                     let delayText = String(format: "%.2f", delay)
                     self?.updateLog.append("startup window scan (delay=\(delayText)) count=\(NSApp.windows.count) ids=\(ids.joined(separator: ","))")
@@ -2944,7 +2942,7 @@ final class UpdateTitlebarAccessoryController {
 
 #if DEBUG
         let env = ProcessInfo.processInfo.environment
-        if env["CMUX_UI_TEST_MODE"] == "1" {
+        if env["BREE_UI_TEST_MODE"] == "1" {
             let ident = window.identifier?.rawValue ?? "<nil>"
             updateLog.append("attached titlebar accessories to window id=\(ident)")
         }
@@ -3002,7 +3000,7 @@ final class UpdateTitlebarAccessoryController {
 
 #if DEBUG
         let env = ProcessInfo.processInfo.environment
-        if env["CMUX_UI_TEST_MODE"] == "1" {
+        if env["BREE_UI_TEST_MODE"] == "1" {
             let ident = window.identifier?.rawValue ?? "<nil>"
             updateLog.append("removed titlebar accessories from window id=\(ident)")
         }
@@ -3010,7 +3008,7 @@ final class UpdateTitlebarAccessoryController {
     }
 
     private func isSettingsWindow(_ window: NSWindow) -> Bool {
-        if window.identifier?.rawValue == "cmux.settings" {
+        if window.identifier?.rawValue == "bree.settings" {
             return true
         }
         return window.title == "Settings"
@@ -3018,7 +3016,7 @@ final class UpdateTitlebarAccessoryController {
 
     private func isMainTerminalWindow(_ window: NSWindow) -> Bool {
         guard let raw = window.identifier?.rawValue else { return false }
-        return raw == "cmux.main" || raw.hasPrefix("cmux.main.")
+        return raw == "bree.main" || raw.hasPrefix("bree.main.")
     }
 
     private func canAccessTitlebarAccessories(on window: NSWindow) -> Bool {
@@ -3114,7 +3112,7 @@ final class UpdateTitlebarAccessoryController {
                     popover?.performClose(nil)
                 }
             )
-            .cmuxAccentColorEnvironment()
+            .breeAccentColorEnvironment()
         )
 
         contentView.layoutSubtreeIfNeeded()

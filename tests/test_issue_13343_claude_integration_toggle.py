@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression coverage for https://github.com/manaflow-ai/cmux/issues/13343."""
+"""Regression coverage for https://github.com/ecyx00/bree/issues/13343."""
 
 from __future__ import annotations
 
@@ -12,21 +12,21 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INTEGRATIONS = {
-    "zsh": REPO_ROOT / "Resources/shell-integration/cmux-zsh-integration.zsh",
-    "bash": REPO_ROOT / "Resources/shell-integration/cmux-bash-integration.bash",
-    "nu": REPO_ROOT / "Resources/shell-integration/nushell/cmux-nushell-integration.nu",
+    "zsh": REPO_ROOT / "Resources/shell-integration/bree-zsh-integration.zsh",
+    "bash": REPO_ROOT / "Resources/shell-integration/bree-bash-integration.bash",
+    "nu": REPO_ROOT / "Resources/shell-integration/nushell/bree-nushell-integration.nu",
 }
 
 DRIVERS = {
     "zsh": r"""
-source "$CMUX_TEST_INTEGRATION"
+source "$BREE_TEST_INTEGRATION"
 if (( $+functions[claude] )); then
     print -r -- 'function=1'
 else
     print -r -- 'function=0'
 fi
 print -r -- "command=$(command -v claude)"
-shim="$HOME/.cmuxterm/cmux-cli-shims/$CMUX_SURFACE_ID/claude"
+shim="$HOME/.bree/bree-cli-shims/$BREE_SURFACE_ID/claude"
 if [[ -e "$shim" ]]; then
     print -r -- 'shim=1'
 else
@@ -34,14 +34,14 @@ else
 fi
 """,
     "bash": r"""
-source "$CMUX_TEST_INTEGRATION"
+source "$BREE_TEST_INTEGRATION"
 if declare -F claude >/dev/null 2>&1; then
     printf '%s\n' 'function=1'
 else
     printf '%s\n' 'function=0'
 fi
 printf 'command=%s\n' "$(command -v claude)"
-shim="$HOME/.cmuxterm/cmux-cli-shims/$CMUX_SURFACE_ID/claude"
+shim="$HOME/.bree/bree-cli-shims/$BREE_SURFACE_ID/claude"
 if [[ -e "$shim" ]]; then
     printf '%s\n' 'shim=1'
 else
@@ -55,16 +55,16 @@ def _clean_environment(root: Path, user_bin: Path, shell: str) -> dict[str, str]
     env = {
         key: value
         for key, value in os.environ.items()
-        if not key.startswith("CMUX") and key != "GHOSTTY_RESOURCES_DIR"
+        if not key.startswith("BREE") and key != "GHOSTTY_RESOURCES_DIR"
     }
     env.update(
         {
             "PATH": f"{user_bin}:/usr/bin:/bin",
             "HOME": str(root / "home"),
             "TMPDIR": str(root),
-            "CMUX_SURFACE_ID": f"issue-13343-{shell}",
-            "CMUX_SHELL_INTEGRATION_DIR": str(REPO_ROOT / "Resources/shell-integration"),
-            "CMUX_SOCKET_PATH": "",
+            "BREE_SURFACE_ID": f"issue-13343-{shell}",
+            "BREE_SHELL_INTEGRATION_DIR": str(REPO_ROOT / "Resources/shell-integration"),
+            "BREE_SOCKET_PATH": "",
             "GHOSTTY_RESOURCES_DIR": "",
         }
     )
@@ -77,9 +77,9 @@ def _run_posix_shell(
     shell_path = shutil.which(shell)
     assert shell_path is not None, f"{shell} is unavailable"
 
-    with tempfile.TemporaryDirectory(prefix=f"cmux-13343-{shell}-") as td:
+    with tempfile.TemporaryDirectory(prefix=f"bree-13343-{shell}-") as td:
         root = Path(td)
-        (root / "home" / ".cmuxterm").mkdir(parents=True)
+        (root / "home" / ".bree").mkdir(parents=True)
         user_bin = root / "user-bin"
         user_bin.mkdir()
         user_claude = user_bin / "claude"
@@ -87,15 +87,15 @@ def _run_posix_shell(
         user_claude.chmod(0o700)
 
         env = _clean_environment(root, user_bin, shell)
-        env["CMUX_TEST_INTEGRATION"] = str(INTEGRATIONS[shell])
+        env["BREE_TEST_INTEGRATION"] = str(INTEGRATIONS[shell])
         if shell == "zsh":
-            env["CMUX_LOAD_GHOSTTY_ZSH_INTEGRATION"] = "0"
+            env["BREE_LOAD_GHOSTTY_ZSH_INTEGRATION"] = "0"
             arguments = [shell_path, "-f", "-c", DRIVERS[shell]]
         else:
-            env["CMUX_LOAD_GHOSTTY_BASH_INTEGRATION"] = "0"
+            env["BREE_LOAD_GHOSTTY_BASH_INTEGRATION"] = "0"
             arguments = [shell_path, "--norc", "--noprofile", "-c", DRIVERS[shell]]
         if disabled:
-            env["CMUX_CLAUDE_INTEGRATION_DISABLED"] = "1"
+            env["BREE_CLAUDE_INTEGRATION_DISABLED"] = "1"
 
         result = subprocess.run(
             arguments,
@@ -110,7 +110,7 @@ def _run_posix_shell(
 
 def _find_nu() -> str | None:
     candidates = [
-        os.environ.get("CMUX_TEST_NU_BIN"),
+        os.environ.get("BREE_TEST_NU_BIN"),
         shutil.which("nu"),
         "/opt/homebrew/bin/nu",
         "/usr/local/bin/nu",
@@ -130,22 +130,22 @@ def _run_nushell(
             raise AssertionError("nushell is required on CI for issue #13343 coverage")
         return None
 
-    with tempfile.TemporaryDirectory(prefix="cmux-13343-nu-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-13343-nu-") as td:
         root = Path(td)
-        (root / "home" / ".cmuxterm").mkdir(parents=True)
+        (root / "home" / ".bree").mkdir(parents=True)
         user_bin = root / "user-bin"
         user_bin.mkdir()
         user_claude = user_bin / "claude"
         user_claude.write_text("#!/bin/sh\necho user-claude\n", encoding="utf-8")
         user_claude.chmod(0o700)
-        shim = root / "cmux-claude-shim"
-        shim.write_text("#!/bin/sh\necho cmux-shim\n", encoding="utf-8")
+        shim = root / "bree-claude-shim"
+        shim.write_text("#!/bin/sh\necho bree-shim\n", encoding="utf-8")
         shim.chmod(0o700)
 
         env = _clean_environment(root, user_bin, "nu")
-        env["CMUX_CLAUDE_WRAPPER_SHIM"] = str(shim)
+        env["BREE_CLAUDE_WRAPPER_SHIM"] = str(shim)
         if disabled:
-            env["CMUX_CLAUDE_INTEGRATION_DISABLED"] = "1"
+            env["BREE_CLAUDE_INTEGRATION_DISABLED"] = "1"
 
         integration = str(INTEGRATIONS["nu"]).replace('"', r'\"')
         # Nushell cannot drop a definition at run time (`hide` is parse-time),
@@ -206,7 +206,7 @@ def test_nushell_enabled_defines_claude_wrapper() -> None:
     result, _ = run
     assert result.returncode == 0, result.stderr
     assert "custom=1" in result.stdout, result.stdout
-    assert "ran=cmux-shim" in result.stdout, result.stdout
+    assert "ran=bree-shim" in result.stdout, result.stdout
 
 
 def test_nushell_disabled_leaves_user_claude_unwrapped() -> None:
@@ -230,7 +230,7 @@ if __name__ == "__main__":
         disabled_result, _ = nu_disabled
         assert enabled_result.returncode == 0, enabled_result.stderr
         assert "custom=1" in enabled_result.stdout, enabled_result.stdout
-        assert "ran=cmux-shim" in enabled_result.stdout, enabled_result.stdout
+        assert "ran=bree-shim" in enabled_result.stdout, enabled_result.stdout
         assert disabled_result.returncode == 0, disabled_result.stderr
         assert "ran=user-claude" in disabled_result.stdout, disabled_result.stdout
 

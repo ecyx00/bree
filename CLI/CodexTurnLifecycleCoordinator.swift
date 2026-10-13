@@ -13,7 +13,7 @@ struct CodexTurnLifecycleCoordinator {
         invocation.token == nil && invocation.ownerPID == nil
     }
 
-    init(environment: [String: String], cli: CMUXCLI) {
+    init(environment: [String: String], cli: BREECLI) {
         invocation = cli.codexHookInvocation(environment: environment)
         ledger = cli.codexTurnLedger(environment: environment)
     }

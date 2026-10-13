@@ -1,6 +1,6 @@
 import Foundation
 import Combine
-import CmuxTerminal
+import BreeTerminal
 
 // Swift 6.0 cannot mark nested type declarations `nonisolated`. File scope
 // keeps these concurrency helpers outside the coordinator's main-actor domain.
@@ -153,7 +153,7 @@ final class BackgroundWorkspacePrimeCoordinator {
 
 #if DEBUG
         let startedAt = ProcessInfo.processInfo.systemUptime
-        cmuxDebugLog("workspace.backgroundPrime.start workspace=\(workspaceId.uuidString.prefix(5))")
+        breeDebugLog("workspace.backgroundPrime.start workspace=\(workspaceId.uuidString.prefix(5))")
 #endif
 
         let completionReason: PrimeCompletionReason
@@ -170,7 +170,7 @@ final class BackgroundWorkspacePrimeCoordinator {
 
 #if DEBUG
         let elapsedMs = (ProcessInfo.processInfo.systemUptime - startedAt) * 1000
-        cmuxDebugLog(
+        breeDebugLog(
             "workspace.backgroundPrime.finish workspace=\(workspaceId.uuidString.prefix(5)) " +
             "reason=\(completionReason.rawValue) ms=\(String(format: "%.2f", elapsedMs))"
         )

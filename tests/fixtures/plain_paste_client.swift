@@ -2,7 +2,7 @@ import AppKit
 import Darwin
 import Foundation
 
-/// Exercises the production Swift pipe owner without launching the cmux app.
+/// Exercises the production Swift pipe owner without launching the bree app.
 @main
 struct PlainPasteClientProbe {
     @MainActor
@@ -23,7 +23,7 @@ struct PlainPasteClientProbe {
 
     @MainActor
     private static func restoration(helper: URL) async throws {
-        let board = NSPasteboard(name: .init("cmux-client-restore-\(UUID())"))
+        let board = NSPasteboard(name: .init("bree-client-restore-\(UUID())"))
         defer { board.releaseGlobally() }
         let reader = TerminalPlainTextPasteWorkerPool(executableURL: helper)
         _ = try await reader.request(request(name: board.name.rawValue, generation: -1))
@@ -48,7 +48,7 @@ struct PlainPasteClientProbe {
     private static func cancellation(helper: URL, provider: URL) async throws {
         let root = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: root) }
-        let name = "cmux-client-cancel-\(UUID())"
+        let name = "bree-client-cancel-\(UUID())"
         let ready = root.appendingPathComponent("ready.json")
         let requested = root.appendingPathComponent("requested")
         let config = root.appendingPathComponent("provider.json")
@@ -80,7 +80,7 @@ struct PlainPasteClientProbe {
         } catch is CancellationError {}
         try check(kill(firstPID, 0) == -1 && errno == ESRCH, "Returned before reaping worker")
 
-        let board = NSPasteboard(name: .init("cmux-client-recovery-\(UUID())"))
+        let board = NSPasteboard(name: .init("bree-client-recovery-\(UUID())"))
         defer { board.releaseGlobally() }
         board.setString("after cancellation", forType: .string)
         let response = try await reader.request(request(name: board.name.rawValue, generation: board.changeCount))
@@ -120,7 +120,7 @@ struct PlainPasteClientProbe {
     }
 
     private static func temporaryDirectory() throws -> URL {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("cmux-client-probe-\(UUID())")
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("bree-client-probe-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
         return root
     }

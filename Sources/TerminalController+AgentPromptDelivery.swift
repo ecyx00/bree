@@ -1,4 +1,4 @@
-import CmuxTerminal
+import BreeTerminal
 
 extension TerminalController {
     /// Clears the agent TUI's current prompt through the same line-editor path

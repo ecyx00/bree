@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministically synchronize direct cmuxTests Swift files into project.pbxproj."""
+"""Deterministically synchronize direct breeTests Swift files into project.pbxproj."""
 
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from typing import Iterable
 
 ID_PATTERN = r"[A-Za-z0-9]+"
 DIRECT_SOURCE_TREE = "<group>"
-TARGET_NAME = "cmuxTests"
-PROJECT_RELATIVE_PATH = Path("cmux.xcodeproj/project.pbxproj")
-TESTS_RELATIVE_PATH = Path("cmuxTests")
+TARGET_NAME = "breeTests"
+PROJECT_RELATIVE_PATH = Path("bree.xcodeproj/project.pbxproj")
+TESTS_RELATIVE_PATH = Path("breeTests")
 
 
 class WiringError(RuntimeError):
@@ -179,26 +179,26 @@ def _list_entries(block_text: str, key: str) -> list[tuple[str, str]]:
     return [(match.group("id"), match.group("comment")) for match in entry_re.finditer(body)]
 
 
-def _find_cmux_tests_group(text: str) -> ObjectBlock:
+def _find_bree_tests_group(text: str) -> ObjectBlock:
     groups = [
         block
         for block in _object_blocks(_section(text, "PBXGroup"), "PBXGroup")
-        if block.comment == TARGET_NAME and re.search(r"(?m)^\s*path = cmuxTests;\s*$", block.text)
+        if block.comment == TARGET_NAME and re.search(r"(?m)^\s*path = breeTests;\s*$", block.text)
     ]
     if len(groups) != 1:
-        raise WiringError(f"expected one cmuxTests PBXGroup, found {len(groups)}")
+        raise WiringError(f"expected one breeTests PBXGroup, found {len(groups)}")
     return groups[0]
 
 
-def _find_cmux_tests_target(text: str) -> ObjectBlock:
+def _find_bree_tests_target(text: str) -> ObjectBlock:
     targets = [
         block
         for block in _object_blocks(_section(text, "PBXNativeTarget"), "PBXNativeTarget")
         if block.comment == TARGET_NAME
-        and re.search(r'(?m)^\s*name = "?cmuxTests"?;\s*$', block.text)
+        and re.search(r'(?m)^\s*name = "?breeTests"?;\s*$', block.text)
     ]
     if len(targets) != 1:
-        raise WiringError(f"expected one cmuxTests PBXNativeTarget, found {len(targets)}")
+        raise WiringError(f"expected one breeTests PBXNativeTarget, found {len(targets)}")
     return targets[0]
 
 
@@ -220,7 +220,7 @@ def _target_sources(text: str, source_blocks: dict[str, ObjectBlock]) -> dict[st
     return result
 
 
-def _cmux_tests_sources_id(target: ObjectBlock, source_blocks: dict[str, ObjectBlock]) -> str:
+def _bree_tests_sources_id(target: ObjectBlock, source_blocks: dict[str, ObjectBlock]) -> str:
     candidates = [
         source_id
         for source_id in source_blocks
@@ -228,13 +228,13 @@ def _cmux_tests_sources_id(target: ObjectBlock, source_blocks: dict[str, ObjectB
     ]
     if len(candidates) != 1:
         raise WiringError(
-            f"expected one Sources build phase for cmuxTests, found {len(candidates)}"
+            f"expected one Sources build phase for breeTests, found {len(candidates)}"
         )
     return candidates[0]
 
 
 def _stable_id(kind: str, filename: str) -> str:
-    payload = f"cmux-test-wiring-v1\0{kind}\0{filename}".encode("utf-8")
+    payload = f"bree-test-wiring-v1\0{kind}\0{filename}".encode("utf-8")
     return hashlib.sha256(payload).hexdigest().upper()[:24]
 
 
@@ -545,14 +545,14 @@ def _sort_list_entries(block_text: str, key: str) -> str:
 
 
 def _dirty_disk_filenames(text: str, filenames: list[str]) -> list[str]:
-    """Return disk files whose direct cmuxTests wiring needs inspection."""
+    """Return disk files whose direct breeTests wiring needs inspection."""
     file_refs = _parse_file_references(text)
     build_files = _parse_build_files(text)
-    group = _find_cmux_tests_group(text)
-    target = _find_cmux_tests_target(text)
+    group = _find_bree_tests_group(text)
+    target = _find_bree_tests_target(text)
     source_blocks = _sources_blocks(text)
     target_sources = _target_sources(text, source_blocks)
-    tests_sources_id = _cmux_tests_sources_id(target, source_blocks)
+    tests_sources_id = _bree_tests_sources_id(target, source_blocks)
     group_memberships = _group_memberships(text)
     source_memberships = _source_memberships(source_blocks, target_sources)
     direct_refs_by_name = _direct_group_refs(group, file_refs)
@@ -647,7 +647,7 @@ def _safe_remove_duplicate_ref(
             )
 
     if TARGET_NAME in group_memberships.get(ref.identifier, set()):
-        current_group = _find_cmux_tests_group(text)
+        current_group = _find_bree_tests_group(text)
         matching_comments = [
             comment
             for entry_id, comment in _list_entries(current_group.text, "children")
@@ -655,13 +655,13 @@ def _safe_remove_duplicate_ref(
         ]
         if len(matching_comments) != 1:
             raise WiringError(
-                f"expected one cmuxTests group entry for duplicate ref {ref.identifier}"
+                f"expected one breeTests group entry for duplicate ref {ref.identifier}"
             )
         current_group_text = _remove_list_entry(
             current_group.text, "children", ref.identifier, matching_comments[0]
         )
         text = _replace_block(
-            text, current_group, current_group_text, "cmuxTests PBXGroup"
+            text, current_group, current_group_text, "breeTests PBXGroup"
         )
 
     for build in linked_builds:
@@ -681,7 +681,7 @@ def _safe_remove_duplicate_ref(
                 source_comment,
             )
             text = _replace_block(
-                text, current_sources, current_sources_text, "cmuxTests Sources phase"
+                text, current_sources, current_sources_text, "breeTests Sources phase"
             )
         text = _remove_object_line(text, "PBXBuildFile", build.identifier)
 
@@ -708,11 +708,11 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
     for filename in dirty_filenames:
         file_refs = _parse_file_references(text)
         build_files = _parse_build_files(text)
-        group = _find_cmux_tests_group(text)
-        target = _find_cmux_tests_target(text)
+        group = _find_bree_tests_group(text)
+        target = _find_bree_tests_target(text)
         source_blocks = _sources_blocks(text)
         target_sources = _target_sources(text, source_blocks)
-        tests_sources_id = _cmux_tests_sources_id(target, source_blocks)
+        tests_sources_id = _bree_tests_sources_id(target, source_blocks)
         group_memberships = _group_memberships(text)
         source_memberships = _source_memberships(source_blocks, target_sources)
         direct_refs_by_name = _direct_group_refs(group, file_refs)
@@ -752,7 +752,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
         build_files = _parse_build_files(text)
         source_blocks = _sources_blocks(text)
         target_sources = _target_sources(text, source_blocks)
-        tests_sources_id = _cmux_tests_sources_id(_find_cmux_tests_target(text), source_blocks)
+        tests_sources_id = _bree_tests_sources_id(_find_bree_tests_target(text), source_blocks)
         source_memberships = _source_memberships(source_blocks, target_sources)
         candidate_ref_ids = {ref.identifier for ref in all_candidates} | {
             canonical_ref.identifier
@@ -772,7 +772,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                     + "; refusing to change target membership"
                 )
 
-        # Collapse duplicate direct file references for the same cmuxTests file.
+        # Collapse duplicate direct file references for the same breeTests file.
         for duplicate_ref in sorted(all_candidates, key=lambda item: item.identifier):
             if duplicate_ref.identifier == canonical_ref.identifier:
                 continue
@@ -781,7 +781,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                 filename,
                 duplicate_ref,
                 canonical_ref.identifier,
-                _find_cmux_tests_group(text),
+                _find_bree_tests_group(text),
                 _sources_blocks(text),
                 tests_sources_id,
                 _parse_build_files(text),
@@ -790,8 +790,8 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                 actions,
             )
 
-        # Ensure the canonical file reference appears once in the cmuxTests group.
-        group = _find_cmux_tests_group(text)
+        # Ensure the canonical file reference appears once in the breeTests group.
+        group = _find_bree_tests_group(text)
         group_entries = _list_entries(group.text, "children")
         matching_group_entries = [
             (entry_id, comment)
@@ -802,11 +802,11 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
             new_group = _append_list_entry(
                 group.text, "children", canonical_ref.identifier, filename
             )
-            text = _replace_block(text, group, new_group, "cmuxTests PBXGroup")
-            actions.append(f"added {filename} to cmuxTests group")
+            text = _replace_block(text, group, new_group, "breeTests PBXGroup")
+            actions.append(f"added {filename} to breeTests group")
         elif len(matching_group_entries) > 1:
             for _ in range(len(matching_group_entries) - 1):
-                current_group = _find_cmux_tests_group(text)
+                current_group = _find_bree_tests_group(text)
                 current_matches = [
                     comment
                     for entry_id, comment in _list_entries(current_group.text, "children")
@@ -818,8 +818,8 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                     canonical_ref.identifier,
                     current_matches[0],
                 )
-                text = _replace_block(text, current_group, new_group, "cmuxTests PBXGroup")
-            actions.append(f"removed duplicate cmuxTests group membership for {filename}")
+                text = _replace_block(text, current_group, new_group, "breeTests PBXGroup")
+            actions.append(f"removed duplicate breeTests group membership for {filename}")
 
         before_comments = text
         text = _rewrite_flat_object_comment(
@@ -829,12 +829,12 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
             "PBXFileReference",
             filename,
         )
-        current_group = _find_cmux_tests_group(text)
+        current_group = _find_bree_tests_group(text)
         canonical_group = _rewrite_list_entry_comment(
             current_group.text, "children", canonical_ref.identifier, filename
         )
         text = _replace_block(
-            text, current_group, canonical_group, "cmuxTests PBXGroup"
+            text, current_group, canonical_group, "breeTests PBXGroup"
         )
         if text != before_comments:
             actions.append(f"normalized file-reference comments for {filename}")
@@ -842,8 +842,8 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
         file_refs = _parse_file_references(text)
         build_files = _parse_build_files(text)
         source_blocks = _sources_blocks(text)
-        target = _find_cmux_tests_target(text)
-        tests_sources_id = _cmux_tests_sources_id(target, source_blocks)
+        target = _find_bree_tests_target(text)
+        tests_sources_id = _bree_tests_sources_id(target, source_blocks)
         sources = source_blocks[tests_sources_id]
         source_entries = _list_entries(sources.text, "files")
         expected_source_comment = f"{filename} in Sources"
@@ -889,7 +889,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                 f"{existing_build.file_ref}, expected {canonical_ref.identifier}"
             )
 
-        # Normalize every cmuxTests source membership tied to this file reference,
+        # Normalize every breeTests source membership tied to this file reference,
         # even when an old Xcode edit left stale display comments behind.
         sources = _sources_blocks(text)[tests_sources_id]
         current_entries = _list_entries(sources.text, "files")
@@ -910,7 +910,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                 duplicate_comment,
             )
             text = _replace_block(
-                text, current_sources, new_sources, "cmuxTests Sources phase"
+                text, current_sources, new_sources, "breeTests Sources phase"
             )
             build_files = _parse_build_files(text)
             duplicate_build = build_files.get(duplicate_build_id)
@@ -924,7 +924,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                         "it still belongs to a Sources phase"
                     )
                 text = _remove_object_line(text, "PBXBuildFile", duplicate_build_id)
-            actions.append(f"removed duplicate cmuxTests Sources membership for {filename}")
+            actions.append(f"removed duplicate breeTests Sources membership for {filename}")
 
         sources = _sources_blocks(text)[tests_sources_id]
         canonical_entries = [
@@ -939,8 +939,8 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                 canonical_build_id,
                 expected_source_comment,
             )
-            text = _replace_block(text, sources, new_sources, "cmuxTests Sources phase")
-            actions.append(f"added {filename} to cmuxTests Sources phase")
+            text = _replace_block(text, sources, new_sources, "breeTests Sources phase")
+            actions.append(f"added {filename} to breeTests Sources phase")
         elif len(canonical_entries) > 1:
             for _ in range(len(canonical_entries) - 1):
                 current_sources = _sources_blocks(text)[tests_sources_id]
@@ -956,9 +956,9 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                     current_comments[0],
                 )
                 text = _replace_block(
-                    text, current_sources, new_sources, "cmuxTests Sources phase"
+                    text, current_sources, new_sources, "breeTests Sources phase"
                 )
-            actions.append(f"removed duplicate cmuxTests Sources membership for {filename}")
+            actions.append(f"removed duplicate breeTests Sources membership for {filename}")
 
         before_source_comments = text
         text = _rewrite_flat_object_comment(
@@ -978,7 +978,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
             expected_source_comment,
         )
         text = _replace_block(
-            text, current_sources, canonical_sources, "cmuxTests Sources phase"
+            text, current_sources, canonical_sources, "breeTests Sources phase"
         )
         if text != before_source_comments:
             actions.append(f"normalized build/source comments for {filename}")
@@ -998,17 +998,17 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                 text = _remove_object_line(text, "PBXBuildFile", build.identifier)
                 actions.append(f"removed unused duplicate PBXBuildFile for {filename}")
 
-    # Remove direct cmuxTests file references whose files were deleted. External
+    # Remove direct breeTests file references whose files were deleted. External
     # SOURCE_ROOT references and nested paths are deliberately outside this tool.
     disk = set(filenames)
     file_refs = _parse_file_references(text)
-    group = _find_cmux_tests_group(text)
+    group = _find_bree_tests_group(text)
     direct_refs_by_name = _direct_group_refs(group, file_refs)
     # A partially deleted entry can lose its group child before its Sources
     # membership. That membership still identifies the direct test reference;
     # do not rely on display comments or unrelated direct references elsewhere.
     source_blocks = _sources_blocks(text)
-    tests_sources_id = _cmux_tests_sources_id(_find_cmux_tests_target(text), source_blocks)
+    tests_sources_id = _bree_tests_sources_id(_find_bree_tests_target(text), source_blocks)
     test_build_ids = {entry_id for entry_id, _ in _list_entries(source_blocks[tests_sources_id].text, "files")}
     test_ref_ids = {
         build.file_ref for build in _parse_build_files(text).values()
@@ -1029,7 +1029,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
         for ref in refs:
             source_blocks = _sources_blocks(text)
             target_sources = _target_sources(text, source_blocks)
-            tests_sources_id = _cmux_tests_sources_id(_find_cmux_tests_target(text), source_blocks)
+            tests_sources_id = _bree_tests_sources_id(_find_bree_tests_target(text), source_blocks)
             build_files = _parse_build_files(text)
             memberships = _source_memberships(source_blocks, target_sources)
             linked_builds = [build for build in build_files.values() if build.file_ref == ref.identifier]
@@ -1054,7 +1054,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                     + ", ".join(sorted(group_memberships))
                 )
 
-            current_group = _find_cmux_tests_group(text)
+            current_group = _find_bree_tests_group(text)
             current_group_comments = [
                 comment
                 for entry_id, comment in _list_entries(current_group.text, "children")
@@ -1062,7 +1062,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
             ]
             if len(current_group_comments) > 1:
                 raise WiringError(
-                    f"expected one cmuxTests group entry for deleted {filename}"
+                    f"expected one breeTests group entry for deleted {filename}"
                 )
             if current_group_comments:
                 new_group = _remove_list_entry(
@@ -1071,7 +1071,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                     ref.identifier,
                     current_group_comments[0],
                 )
-                text = _replace_block(text, current_group, new_group, "cmuxTests PBXGroup")
+                text = _replace_block(text, current_group, new_group, "breeTests PBXGroup")
 
             for build in linked_builds:
                 current_sources = _sources_blocks(text)[tests_sources_id]
@@ -1089,7 +1089,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                         source_comment,
                     )
                     text = _replace_block(
-                        text, current_sources, new_sources, "cmuxTests Sources phase"
+                        text, current_sources, new_sources, "breeTests Sources phase"
                     )
                 text = _remove_object_line(text, "PBXBuildFile", build.identifier)
 
@@ -1111,7 +1111,7 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
                     f"{filename} in Sources",
                 )
                 text = _replace_block(
-                    text, current_sources, new_sources, "cmuxTests Sources phase"
+                    text, current_sources, new_sources, "breeTests Sources phase"
                 )
 
             text = _remove_object_line(text, "PBXFileReference", ref.identifier)
@@ -1120,13 +1120,13 @@ def synchronize(project_text: str, test_filenames: Iterable[str]) -> SyncResult:
     text = _sort_flat_section(text, "PBXBuildFile")
     text = _sort_flat_section(text, "PBXFileReference")
     source_blocks = _sources_blocks(text)
-    tests_sources_id = _cmux_tests_sources_id(
-        _find_cmux_tests_target(text), source_blocks
+    tests_sources_id = _bree_tests_sources_id(
+        _find_bree_tests_target(text), source_blocks
     )
     current_sources = source_blocks[tests_sources_id]
     sorted_sources = _sort_list_entries(current_sources.text, "files")
     text = _replace_block(
-        text, current_sources, sorted_sources, "cmuxTests Sources phase"
+        text, current_sources, sorted_sources, "breeTests Sources phase"
     )
 
     return SyncResult(text=text, actions=tuple(actions))
@@ -1136,9 +1136,9 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="sync-test-wiring",
         description=(
-            "Synchronize direct cmuxTests/*.swift files into the cmuxTests Xcode target. "
-            "The command edits only PBXBuildFile, PBXFileReference, the cmuxTests group, "
-            "and the cmuxTests Sources phase."
+            "Synchronize direct breeTests/*.swift files into the breeTests Xcode target. "
+            "The command edits only PBXBuildFile, PBXFileReference, the breeTests group, "
+            "and the breeTests Sources phase."
         ),
     )
     mode = parser.add_mutually_exclusive_group()
@@ -1156,7 +1156,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--repo-root",
         type=Path,
         default=None,
-        help="cmux repository root (defaults to git top-level, then cwd)",
+        help="bree repository root (defaults to git top-level, then cwd)",
     )
     return parser.parse_args(argv)
 

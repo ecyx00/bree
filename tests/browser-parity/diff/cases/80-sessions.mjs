@@ -14,7 +14,7 @@ export default [
     // A browser tab the user has open in another workspace: listed with
     // tabs.list({ all: true }), claimed with tabs.use(id), then driven.
     custom: {
-      async cmux(ctx) {
+      async bree(ctx) {
         const url = `${ctx.origins.primary}/diff/lab.html?claim=${Date.now()}`;
         const ws = await ctx.cli(["new-workspace", "--name", "parity-claim", "--focus", "false"]);
         const wsRef = (ws.out.match(/workspace:\d+|[0-9A-F]{8}-[0-9A-F-]{27}/i) || [])[0];
@@ -46,7 +46,7 @@ return { listedAll: !!row, inOwnList: own, otherWorkspace: !!row.workspace, coun
     id: "edge.sessions-two-tabs",
     edge: "sessions-two-tabs",
     custom: {
-      async cmux(ctx) {
+      async bree(ctx) {
         const [a, b] = await Promise.all([
           ctx.repl(ctx.wrap({ path: null, code: MY("session A") }), { session: ctx.session("two-a") }),
           ctx.repl(ctx.wrap({ path: null, code: MY("session B") }), { session: ctx.session("two-b") }),
@@ -67,7 +67,7 @@ return { listedAll: !!row, inOwnList: own, otherWorkspace: !!row.workspace, coun
     id: "edge.sessions-same-tab",
     edge: "sessions-same-tab",
     custom: {
-      async cmux(ctx) {
+      async bree(ctx) {
         const A = ctx.session("same-a");
         const B = ctx.session("same-b");
         const opened = await ctx.repl(ctx.wrap({ path: null, code: `const p = await tabs.open(U("/diff/lab.html")); return p.id;` }), { session: A });
@@ -91,7 +91,7 @@ return { listedAll: !!row, inOwnList: own, otherWorkspace: !!row.workspace, coun
     edge: "web-process-crash",
     appOnly: true,
     custom: {
-      async cmux(ctx) {
+      async bree(ctx) {
         const S = ctx.session("crash");
         const first = await ctx.repl(ctx.wrap({ path: null, code: `const p = await tabs.open(U("/diff/lab.html")); await p.locator("#counter").click(); return await p._webProcessId();` }), { session: S });
         const pid = first.value;
@@ -117,7 +117,7 @@ return { listedAll: !!row, inOwnList: own, otherWorkspace: !!row.workspace, coun
     // tagged app) while this session types into the name field; the session
     // sees the trusted user click and its own typing is intact.
     custom: {
-      async cmux(ctx) {
+      async bree(ctx) {
         const S = ctx.session("user");
         const setup = await ctx.repl(ctx.wrap({ path: null, code: `const p = await tabs.open(U("/diff/lab.html")); await p.bringToFront(); return p.id;` }), { session: S });
         const marker = process.env.PARITY_USER_CLICK_MARKER;
@@ -144,7 +144,7 @@ return { userClick, status: await page.locator("#status").innerText(), typedInta
     // permissions, and a proxy for tabs opened afterwards (a CONNECT proxy in
     // this process that counts the tunnels it opened).
     custom: {
-      async cmux(ctx) {
+      async bree(ctx) {
         const net = await import("node:net");
         const tunnels = [];
         const proxy = net.createServer((client) => {
@@ -166,7 +166,7 @@ return { userClick, status: await page.locator("#status").innerText(), typedInta
         const S = ctx.session("context");
         try {
           const r = await ctx.repl(ctx.wrap({ path: null, code: `const until = async (f) => { for (let i = 0; i < 60; i++) { const v = await f(); if (v) return v; await sleep(50); } return null; };
-const configured = await session.configure({ userAgent: "cmux-parity-agent/1.0", extraHTTPHeaders: { "X-Parity": "on" }, permissions: ["notifications"] });
+const configured = await session.configure({ userAgent: "bree-parity-agent/1.0", extraHTTPHeaders: { "X-Parity": "on" }, permissions: ["notifications"] });
 await page.goto(U("/headers"));
 const nav = JSON.parse(await page.locator("#headers").innerText());
 const asset = await until(() => page.evaluate(() => window.__assetHeaders));
@@ -181,7 +181,7 @@ const proxied = await tabs.open(U("/diff/next.html", "sub"));
 const proxiedTitle = await proxied.title();
 await proxied.close();
 await session.configure({ proxy: null });
-return { configured, nav, asset, ua, notify, camera, after: { userAgent: after.userAgent === "cmux-parity-agent/1.0" ? "still set" : "restored", parity: after.parity }, proxiedTitle };` }), { session: S });
+return { configured, nav, asset, ua, notify, camera, after: { userAgent: after.userAgent === "bree-parity-agent/1.0" ? "still set" : "restored", parity: after.parity }, proxiedTitle };` }), { session: S });
           const v = r.value ?? r;
           if (v && typeof v === "object" && "proxiedTitle" in v) v.proxied = tunnels.some((t) => t.startsWith("a.lvh.me:")) ? "through the proxy" : `direct (${tunnels.join(", ") || "no tunnels"})`;
           return v;
@@ -192,10 +192,10 @@ return { configured, nav, asset, ua, notify, camera, after: { userAgent: after.u
     },
     scope: { "reference-a": "browser-context options of a running reference A session are fixed at launch", "reference-b": "Reference B drives the user's Chrome profile and exposes no context options" },
     expect: {
-      configured: { userAgent: "cmux-parity-agent/1.0", extraHTTPHeaders: { "X-Parity": "on" }, permissions: ["notifications"] },
-      nav: { userAgent: "cmux-parity-agent/1.0", parity: "on" },
-      asset: { userAgent: "cmux-parity-agent/1.0", parity: null },
-      ua: "cmux-parity-agent/1.0",
+      configured: { userAgent: "bree-parity-agent/1.0", extraHTTPHeaders: { "X-Parity": "on" }, permissions: ["notifications"] },
+      nav: { userAgent: "bree-parity-agent/1.0", parity: "on" },
+      asset: { userAgent: "bree-parity-agent/1.0", parity: null },
+      ua: "bree-parity-agent/1.0",
       notify: "granted",
       camera: "NotAllowedError",
       after: { userAgent: "restored", parity: null },

@@ -10,7 +10,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 from fake_socket_env import cli_environment, unwrap_capability
 
 WORKSPACE_ID = "11111111-1111-4111-8111-111111111111"
@@ -22,7 +22,7 @@ WINDOW_ID = "66666666-6666-4666-8666-666666666666"
 WINDOW_REF = "window:7"
 
 
-class FakeCmuxState:
+class FakeBreeState:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, object]]] = []
 
@@ -79,10 +79,10 @@ class FakeCmuxState:
                 "surface_id": SURFACE_ID,
                 "surface_ref": "surface:1",
             }
-        raise RuntimeError(f"Unsupported fake cmux method: {method}")
+        raise RuntimeError(f"Unsupported fake bree method: {method}")
 
 
-class FakeCmuxHandler(socketserver.StreamRequestHandler):
+class FakeBreeHandler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         while True:
             line = self.rfile.readline()
@@ -107,7 +107,7 @@ class FakeCmuxHandler(socketserver.StreamRequestHandler):
 
 class ThreadedUnixServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
     daemon_threads = True
-    state: FakeCmuxState
+    state: FakeBreeState
 
 
 def run_cli(
@@ -153,7 +153,7 @@ def assert_cli_fails(cli: str, socket_path: str, args: list[str], expected: str)
 
 
 def assert_last_call(
-    state: FakeCmuxState,
+    state: FakeBreeState,
     method: str,
     expected_params: dict[str, object],
 ) -> None:
@@ -169,11 +169,11 @@ def assert_last_call(
 
 
 def main() -> int:
-    cli = resolve_cmux_cli()
-    with tempfile.TemporaryDirectory(prefix="cmux-layout-focus-") as tmp:
-        socket_path = str(Path(tmp) / "cmux.sock")
-        state = FakeCmuxState()
-        server = ThreadedUnixServer(socket_path, FakeCmuxHandler)
+    cli = resolve_bree_cli()
+    with tempfile.TemporaryDirectory(prefix="bree-layout-focus-") as tmp:
+        socket_path = str(Path(tmp) / "bree.sock")
+        state = FakeBreeState()
+        server = ThreadedUnixServer(socket_path, FakeBreeHandler)
         server.state = state
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -186,8 +186,8 @@ def main() -> int:
                 socket_path,
                 ["new-workspace", "--name", "caller-target"],
                 env_overrides={
-                    "CMUX_WORKSPACE_ID": WORKSPACE_ID,
-                    "CMUX_SURFACE_ID": SURFACE_ID,
+                    "BREE_WORKSPACE_ID": WORKSPACE_ID,
+                    "BREE_SURFACE_ID": SURFACE_ID,
                 },
             )
             assert_last_call(
@@ -206,8 +206,8 @@ def main() -> int:
                 socket_path,
                 ["new-workspace", "--window", WINDOW_REF, "--name", "explicit-window"],
                 env_overrides={
-                    "CMUX_WORKSPACE_ID": WORKSPACE_ID,
-                    "CMUX_SURFACE_ID": SURFACE_ID,
+                    "BREE_WORKSPACE_ID": WORKSPACE_ID,
+                    "BREE_SURFACE_ID": SURFACE_ID,
                 },
             )
             assert_last_call(

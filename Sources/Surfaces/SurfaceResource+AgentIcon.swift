@@ -1,4 +1,4 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension SurfaceResource {
@@ -8,7 +8,7 @@ extension SurfaceResource {
         guard kind == .terminal, lifecycle != .exited,
               let badge = agent, badge.state != "done" else { return nil }
 
-        let definitions = CmuxTaskManagerCodingAgentDefinition.builtIns
+        let definitions = BreeTaskManagerCodingAgentDefinition.builtIns
         let identities = [badge.agent, badge.source]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
             .filter { !$0.isEmpty && !["hook", "socket", "detected", "plugin", "unknown"].contains($0) }

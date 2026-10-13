@@ -139,7 +139,7 @@ final class TabObservationScopeTests: XCTestCase {
     }
 
     /// The tab bar reads this complete per-tab projection while laying out its
-    /// rows. A title plus an unchanged custom-title flag is cmux's update shape.
+    /// rows. A title plus an unchanged custom-title flag is bree's update shape.
     @MainActor
     func testTitleWithUnchangedCustomTitleDoesNotInvalidateTheTabBarProjection() throws {
         let controller = BonsplitController()

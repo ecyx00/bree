@@ -4,7 +4,7 @@
 # mirror can be exercised manually against a real server over real ssh:
 #
 #   scripts/remote-tmux-shape-zoo.sh <ssh-host> [session-name]
-#   cmux ssh-tmux <ssh-host>          # then put the mirror through its paces
+#   bree ssh-tmux <ssh-host>          # then put the mirror through its paces
 #
 # Windows: even3, nested, rows3, grid4, deep, sixcol, mainh, plain. Every
 # pane runs scripts/remote-tmux-width-probe.sh (shipped inline), whose
@@ -170,4 +170,4 @@ echo ">> connecting to $HOST — answer your usual login prompts (key touch / PI
 # payload decodes and runs in one shot on the far side.
 ssh -tt -- "$HOST" "echo $PAYLOAD | base64 -d | bash"
 
-echo "mirror it with: cmux ssh-tmux $HOST   (session: $SESSION)"
+echo "mirror it with: bree ssh-tmux $HOST   (session: $SESSION)"

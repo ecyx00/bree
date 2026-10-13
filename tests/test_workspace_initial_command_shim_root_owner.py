@@ -32,7 +32,7 @@ def available_shells() -> dict[str, str]:
 class WorkspaceInitialCommandShimRootOwner(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.temp = tempfile.TemporaryDirectory(prefix="cmux-login-shell-test-")
+        cls.temp = tempfile.TemporaryDirectory(prefix="bree-login-shell-test-")
         cls.addClassCleanup(cls.temp.cleanup)
         cls.binary = Path(cls.temp.name) / "login-shell-fixture"
         build = subprocess.run([
@@ -60,10 +60,10 @@ class WorkspaceInitialCommandShimRootOwner(unittest.TestCase):
             "TMPDIR": str(self.sandbox),
             "XDG_CONFIG_HOME": str(self.home / ".config"),
             "XDG_DATA_HOME": str(self.home / ".local/share"),
-            "CMUX_CLAUDE_WRAPPER_SHIM_ROOT": shim_root,
+            "BREE_CLAUDE_WRAPPER_SHIM_ROOT": shim_root,
         }
         if agent_root is not None:
-            env["CMUX_AGENT_COMMAND_SHIM_ROOT"] = agent_root
+            env["BREE_AGENT_COMMAND_SHIM_ROOT"] = agent_root
         result = subprocess.run(["/bin/sh", "-c", wrapped], env=env, cwd=self.home,
                                 capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, f"{shell}: {result.stderr}")

@@ -2,7 +2,7 @@
   "launch": {"args": ["-fileExplorer.isVisible", "YES"]},
   "paths": [
     "Sources/Cloud/*",
-    "Packages/macOS/CmuxCloud/*",
+    "Packages/macOS/BreeCloud/*",
     "Sources/RightSidebar*",
     "Sources/Surfaces/CloudWorkspace*"
   ],

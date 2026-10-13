@@ -1,4 +1,4 @@
-# Contributing to cmux
+# Contributing to bree
 
 New here? Read [docs/start-here.md](docs/start-here.md) first: how to pick an
 issue, what you can fix without a Mac, and what happens to your pull request.
@@ -9,7 +9,7 @@ and pull requests the way the short [writing guide](STYLE.md) says.
 
 ## Prerequisites
 
-Only needed for the native app. Docs, translations, Python tooling, `cmux-tui` and
+Only needed for the native app. Docs, translations, Python tooling, `bree-tui` and
 `web/` work on Linux; see [what you can fix without a Mac build](docs/start-here.md#2-things-you-can-fix-without-a-mac-build).
 
 - macOS 14+
@@ -36,24 +36,24 @@ Only needed for the native app. Docs, translations, Python tooling, `cmux-tui` a
 ## Getting Started
 
 ```bash
-git clone --recursive https://github.com/manaflow-ai/cmux.git
-cd cmux
+git clone --recursive https://github.com/ecyx00/bree.git
+cd bree
 ./scripts/setup.sh
-CMUX_DEV_BACKEND_MODE=local ./scripts/reload.sh --tag my-feature
+BREE_DEV_BACKEND_MODE=local ./scripts/reload.sh --tag my-feature
 ```
 
 - `setup.sh` initializes any remaining submodules, installs the pinned Rust toolchain, and
   fetches a checksum-pinned prebuilt `GhosttyKit.xcframework` (it builds from source
-  with Zig if that fails; force that with `CMUX_GHOSTTYKIT_NO_PREBUILT=1`).
+  with Zig if that fails; force that with `BREE_GHOSTTYKIT_NO_PREBUILT=1`).
 - `reload.sh --tag <tag>` builds a tagged Debug app and prints its path. Add
   `--launch` to open it, or `--build-only` to only compile.
-  `CMUX_DEV_BACKEND_MODE=local` points it at the local dev origin; without it a
+  `BREE_DEV_BACKEND_MODE=local` points it at the local dev origin; without it a
   tagged build expects the maintainers' shared backend and stops. See
   tagged builds for cache
   reuse and Release variants.
 - On Xcode 26.3, `reload.sh` can stop at `MergeSwiftModule` with
   `error: type mismatch of function ... but used in a swift module as ...`. Rerun
-  with `CMUX_RELOAD_APP_EMIT_MODULE=1`, which turns off reload's shortcut of not
+  with `BREE_RELOAD_APP_EMIT_MODULE=1`, which turns off reload's shortcut of not
   emitting the app's Swift module. App rebuilds get a little slower.
 
 <a id="fast-checks-before-building-or-pushing"></a>
@@ -105,7 +105,7 @@ for CI:
 - The broad macOS suite is label-gated. A maintainer adds `full-ci` when a change
   needs it (PR CI coverage).
   It is not a merge requirement.
-- No pull request job runs `cmuxUITests/` in full. If you touch that directory, the
+- No pull request job runs `breeUITests/` in full. If you touch that directory, the
   `suite-coverage` check stays red until a maintainer runs the affected classes and
   records it with `no-full-ci`.
 - On your first pull request, checks wait for a maintainer to approve the workflow
@@ -119,7 +119,7 @@ skipped job is green and is not coverage.
 `ghostty/` is Ghostty (a fork of manaflow-ai/ghostty) vendored as plain files in
 this repo. Changes to it are ordinary commits here, not submodule pushes. To
 change it, rebuild `GhosttyKit.xcframework` or pull in upstream, follow the
-cmux-ghostty skill. Fork changes and conflict
+bree-ghostty skill. Fork changes and conflict
 notes are in [docs/ghostty-fork.md](docs/ghostty-fork.md).
 
 ## Pull Requests
@@ -148,5 +148,5 @@ ships. How review works and what makes a patch wait is in
 
 By contributing to this repository, you agree that:
 
-1. Your contributions are licensed under the license of the directory you contribute to: the Business Source License 1.1 (`BUSL-1.1`) for the server directories listed in [LICENSE](LICENSE) (`web/`, `workers/ci-artifacts/`, `workers/iroh-v2/`, `workers/presence/`, `services/iroh-relay-minter/`, `cmux-tui/relays/cloudflare-do/`), and the project's GNU General Public License v3.0 or later (`GPL-3.0-or-later`) everywhere else unless a file states otherwise.
+1. Your contributions are licensed under the license of the directory you contribute to: the Business Source License 1.1 (`BUSL-1.1`) for the server directories listed in [LICENSE](LICENSE) (`web/`, `workers/ci-artifacts/`, `workers/iroh-v2/`, `workers/presence/`, `services/iroh-relay-minter/`, `bree-tui/relays/cloudflare-do/`), and the project's GNU General Public License v3.0 or later (`GPL-3.0-or-later`) everywhere else unless a file states otherwise.
 2. You grant Manaflow, Inc. a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license to use, reproduce, modify, sublicense, and distribute your contributions under any license, including a commercial license offered to third parties.

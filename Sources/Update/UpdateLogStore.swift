@@ -4,7 +4,7 @@ import AppKit
 // @unchecked Sendable: all mutable state (`entries`) is confined to the serial `queue`; the
 // other stored properties are immutable.
 final class UpdateLogStore: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "cmux.update.log")
+    private let queue = DispatchQueue(label: "bree.update.log")
     private var entries: [String] = []
     private let maxEntries = 200
     private let logURL: URL
@@ -15,7 +15,7 @@ final class UpdateLogStore: @unchecked Sendable {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let logsDir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        logURL = logsDir.appendingPathComponent("Logs/cmux-update.log")
+        logURL = logsDir.appendingPathComponent("Logs/bree-update.log")
         ensureLogFile()
     }
 
@@ -68,7 +68,7 @@ final class UpdateLogStore: @unchecked Sendable {
 // stored properties are immutable. Owned and injected by `AppDelegate` (see `AppDelegate.focusLog`)
 // rather than self-vending a global, so its lifecycle has a single composition root.
 final class FocusLogStore: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "cmux.focus.log")
+    private let queue = DispatchQueue(label: "bree.focus.log")
     private var entries: [String] = []
     private let maxEntries = 400
     private let logURL: URL
@@ -79,7 +79,7 @@ final class FocusLogStore: @unchecked Sendable {
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let logsDir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        logURL = logsDir.appendingPathComponent("Logs/cmux-focus.log")
+        logURL = logsDir.appendingPathComponent("Logs/bree-focus.log")
         ensureLogFile()
     }
 

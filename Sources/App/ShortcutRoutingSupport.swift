@@ -1,9 +1,9 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import Bonsplit
-import CmuxCommandPalette
+import BreeCommandPalette
 import Foundation
-import CmuxTerminal
+import BreeTerminal
 
 /// Stateless matching policy for configured application shortcuts.
 ///
@@ -330,7 +330,7 @@ func shouldDispatchBrowserArrowViaFirstResponderKeyDown(
         // Selection and word/paragraph navigation need WebKit's native defaults.
         return true
     }
-    // Cmd+Option+Arrow remains reserved for cmux pane-focus shortcuts.
+    // Cmd+Option+Arrow remains reserved for bree pane-focus shortcuts.
     if normalizedFlags == [.command] {
         return keyCode == 125 || keyCode == 126
     }
@@ -414,7 +414,7 @@ func shouldDispatchCommandPaletteHorizontalArrowViaFirstResponderKeyDown(
 /// Owns the four arrows (keyCodes 123–126) for the modifier combos a text
 /// editor handles itself: plain (move), Shift (extend selection), Option
 /// (word/paragraph), and Command (line/document boundary) plus their Shift
-/// combos. Cmd+Option+Arrow is excluded so it still reaches cmux's pane-focus
+/// combos. Cmd+Option+Arrow is excluded so it still reaches bree's pane-focus
 /// shortcuts. Marked text (IME composition) is left to the input method.
 private func standaloneTextResponderOwnsArrowKeyDown(
     keyCode: UInt16,
@@ -454,7 +454,7 @@ func shouldDispatchTextBoxInputArrowViaFirstResponderKeyDown(
 ///
 /// This generalizes the per-surface arrow-forwarding seam (browser, omnibar,
 /// command palette, text-box input) to cover the whole class of standalone
-/// editable `NSTextView`s cmux hosts, the file-preview editor today, any
+/// editable `NSTextView`s bree hosts, the file-preview editor today, any
 /// future one tomorrow. Field editors (the omnibar / command-palette / find
 /// field editors) are excluded by the caller because they have their own
 /// dedicated routing or work through the normal field-editor path. Shares the
@@ -743,7 +743,7 @@ func shouldRouteTerminalFontZoomShortcutToGhostty(
 }
 // Main-actor isolated: TerminalSurface.searchState carries the legacy
 // main-thread-only contract as compiler-enforced isolation after the
-// CmuxTerminal lift; both callers (TabManager, overlay tests) are @MainActor.
+// BreeTerminal lift; both callers (TabManager, overlay tests) are @MainActor.
 @MainActor
 @discardableResult
 func startOrFocusTerminalSearch(
@@ -778,7 +778,7 @@ func startOrFocusTerminalSearch(
 /// Let AppKit own native Cmd+` window cycling so key-window changes do not
 /// re-enter our direct-to-menu shortcut path.
 func shouldRouteCommandEquivalentDirectlyToMainMenu(_ event: NSEvent) -> Bool {
-    event.cmuxRoutesDirectlyToMainMenu
+    event.breeRoutesDirectlyToMainMenu
 }
 
 private enum BrowserFindCommandEquivalent: CaseIterable {
@@ -800,7 +800,7 @@ private enum BrowserFindCommandEquivalent: CaseIterable {
         }
     }
 
-    var keepsCmuxBrowserFindBarOwnershipWhenVisible: Bool {
+    var keepsBreeBrowserFindBarOwnershipWhenVisible: Bool {
         switch self {
         case .find, .findNext, .findPrevious, .hideFind:
             return true
@@ -810,12 +810,12 @@ private enum BrowserFindCommandEquivalent: CaseIterable {
     }
 }
 
-func cmuxIsWebInspectorClassName(_ className: String) -> Bool {
-    className.cmuxNamesWebInspectorClass
+func breeIsWebInspectorClassName(_ className: String) -> Bool {
+    className.breeNamesWebInspectorClass
 }
 
-func cmuxIsWebInspectorObject(_ object: NSObject) -> Bool {
-    object.cmuxBelongsToWebInspector
+func breeIsWebInspectorObject(_ object: NSObject) -> Bool {
+    object.breeBelongsToWebInspector
 }
 
 private enum BrowserDocumentEditingCommandEquivalent: CaseIterable {
@@ -880,8 +880,8 @@ private enum BrowserDocumentEditingCommandEquivalent: CaseIterable {
     }
 }
 
-func cmuxIsLikelyWebInspectorResponder(_ responder: NSResponder?) -> Bool {
-    responder?.cmuxIsInsideWebInspector ?? false
+func breeIsLikelyWebInspectorResponder(_ responder: NSResponder?) -> Bool {
+    responder?.breeIsInsideWebInspector ?? false
 }
 
 private func browserFindCommandEquivalent(
@@ -900,7 +900,7 @@ private func browserDocumentEditingCommandEquivalent(for event: NSEvent) -> Brow
 }
 
 /// For browser content, let the focused document/editor try native editing commands
-/// before cmux's menu fallback. Rich web apps often implement copy/cut/select-all
+/// before bree's menu fallback. Rich web apps often implement copy/cut/select-all
 /// in contentEditable handlers that AppKit's Edit menu path cannot reproduce.
 func shouldRouteBrowserDocumentEditingCommandEquivalentThroughWebContentFirst(
     _ event: NSEvent,
@@ -910,20 +910,20 @@ func shouldRouteBrowserDocumentEditingCommandEquivalentThroughWebContentFirst(
         return false
     }
 
-    if cmuxIsLikelyWebInspectorResponder(responder) {
+    if breeIsLikelyWebInspectorResponder(responder) {
         return false
     }
 
     return true
 }
 
-/// For browser content, let the page try browser-local Find-family commands before cmux's menu fallback.
-/// Cmd+F is excluded because cmux chooses terminal, browser, or right-sidebar
+/// For browser content, let the page try browser-local Find-family commands before bree's menu fallback.
+/// Cmd+F is excluded because bree chooses terminal, browser, or right-sidebar
 /// find from the current focus owner.
 func shouldRouteBrowserFindCommandEquivalentThroughWebContentFirst(
     _ event: NSEvent,
     responder: NSResponder? = nil,
-    owningWebView: CmuxWebView? = nil
+    owningWebView: BreeWebView? = nil
 ) -> Bool {
     guard let shortcut = browserFindCommandEquivalent(for: event) else {
         return false
@@ -937,11 +937,11 @@ func shouldRouteBrowserFindCommandEquivalentThroughWebContentFirst(
         return false
     }
 
-    if cmuxIsLikelyWebInspectorResponder(responder) {
+    if breeIsLikelyWebInspectorResponder(responder) {
         return false
     }
 
-    if shortcut.keepsCmuxBrowserFindBarOwnershipWhenVisible,
+    if shortcut.keepsBreeBrowserFindBarOwnershipWhenVisible,
        let owningWebView {
         let browserFindBarIsVisible = MainActor.assumeIsolated {
             AppDelegate.shared?.browserFindBarIsVisible(for: owningWebView) == true
@@ -967,38 +967,38 @@ func shouldRouteInlineVSCodeCommandPaletteShortcutThroughWebContentFirst(
 extension NSResponder {
     /// Strict owner lookup for direct Ghostty responder chains, sidebar ownership,
     /// and call sites that must not treat hosted surface descendants as Ghostty.
-    func cmuxStrictOwningGhosttyView() -> GhosttyNSView? {
-        cmuxOwningGhosttyView(for: self, includingHostedSurfaceDescendants: false)
+    func breeStrictOwningGhosttyView() -> GhosttyNSView? {
+        breeOwningGhosttyView(for: self, includingHostedSurfaceDescendants: false)
     }
 
     /// Terminal focus lookup for AppKit responders hosted below
     /// GhosttySurfaceScrollView, where keyboard focus still belongs to Ghostty.
-    func cmuxTerminalFocusOwningGhosttyView() -> GhosttyNSView? {
-        cmuxOwningGhosttyView(for: self, includingHostedSurfaceDescendants: true)
+    func breeTerminalFocusOwningGhosttyView() -> GhosttyNSView? {
+        breeOwningGhosttyView(for: self, includingHostedSurfaceDescendants: true)
     }
 
     /// Terminal key-equivalent routing lookup; hosted surface descendants should
     /// count as terminal-owned so app shortcuts can be repaired or forwarded.
-    func cmuxTerminalKeyEquivalentOwningGhosttyView() -> GhosttyNSView? {
-        cmuxTerminalFocusOwningGhosttyView()
+    func breeTerminalKeyEquivalentOwningGhosttyView() -> GhosttyNSView? {
+        breeTerminalFocusOwningGhosttyView()
     }
 }
 
 extension Optional where Wrapped: NSResponder {
-    func cmuxStrictOwningGhosttyView() -> GhosttyNSView? {
-        self?.cmuxStrictOwningGhosttyView()
+    func breeStrictOwningGhosttyView() -> GhosttyNSView? {
+        self?.breeStrictOwningGhosttyView()
     }
 
-    func cmuxTerminalFocusOwningGhosttyView() -> GhosttyNSView? {
-        self?.cmuxTerminalFocusOwningGhosttyView()
+    func breeTerminalFocusOwningGhosttyView() -> GhosttyNSView? {
+        self?.breeTerminalFocusOwningGhosttyView()
     }
 
-    func cmuxTerminalKeyEquivalentOwningGhosttyView() -> GhosttyNSView? {
-        self?.cmuxTerminalKeyEquivalentOwningGhosttyView()
+    func breeTerminalKeyEquivalentOwningGhosttyView() -> GhosttyNSView? {
+        self?.breeTerminalKeyEquivalentOwningGhosttyView()
     }
 }
 
-private func cmuxOwningGhosttyView(
+private func breeOwningGhosttyView(
     for responder: NSResponder?,
     includingHostedSurfaceDescendants: Bool
 ) -> GhosttyNSView? {
@@ -1008,7 +1008,7 @@ private func cmuxOwningGhosttyView(
     }
 
     if let view = responder as? NSView,
-       let ghosttyView = cmuxOwningGhosttyView(
+       let ghosttyView = breeOwningGhosttyView(
            for: view,
            includingHostedSurfaceDescendants: includingHostedSurfaceDescendants
        ) {
@@ -1017,8 +1017,8 @@ private func cmuxOwningGhosttyView(
 
     if let textView = responder as? NSTextView {
         if textView.isFieldEditor,
-           let ownerView = cmuxFieldEditorOwnerView(textView),
-           let ghosttyView = cmuxOwningGhosttyView(
+           let ownerView = breeFieldEditorOwnerView(textView),
+           let ghosttyView = breeOwningGhosttyView(
                for: ownerView,
                includingHostedSurfaceDescendants: includingHostedSurfaceDescendants
            ) {
@@ -1032,7 +1032,7 @@ private func cmuxOwningGhosttyView(
             return ghosttyView
         }
         if let view = next as? NSView,
-           let ghosttyView = cmuxOwningGhosttyView(
+           let ghosttyView = breeOwningGhosttyView(
                for: view,
                includingHostedSurfaceDescendants: includingHostedSurfaceDescendants
            ) {
@@ -1044,7 +1044,7 @@ private func cmuxOwningGhosttyView(
     return nil
 }
 
-private func cmuxOwningGhosttyView(
+private func breeOwningGhosttyView(
     for view: NSView,
     includingHostedSurfaceDescendants: Bool
 ) -> GhosttyNSView? {
@@ -1067,9 +1067,9 @@ private func cmuxOwningGhosttyView(
     return nil
 }
 
-func cmuxFieldEditorOwnerView(_ editor: NSTextView) -> NSView? {
+func breeFieldEditorOwnerView(_ editor: NSTextView) -> NSView? {
     guard editor.isFieldEditor else { return nil }
-    if let owner = cmuxTrackedFindFieldEditorOwner(editor) { return owner }
+    if let owner = breeTrackedFindFieldEditorOwner(editor) { return owner }
     var current = editor.nextResponder
     while let next = current {
         if let view = next as? NSView {
@@ -1149,7 +1149,7 @@ func shouldSuppressWindowMoveForFolderDrag(window: NSWindow, event: NSEvent) -> 
         return false
     }
 
-    let hitView = contentView.cmuxHitTest(windowPoint: event.locationInWindow)
+    let hitView = contentView.breeHitTest(windowPoint: event.locationInWindow)
     return shouldSuppressWindowMoveForFolderDrag(hitView: hitView)
 }
 

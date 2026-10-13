@@ -1,5 +1,5 @@
 import Foundation
-import CMUXMobileCore
+import BREEMobileCore
 
 /// Owns the boundary between SwiftUI/AppKit callbacks and terminal portal mutations.
 ///

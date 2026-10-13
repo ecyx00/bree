@@ -41,7 +41,7 @@ def extract(text, source):
 
 
 def known_top_level():
-    src = read(CLI / "cmux.swift")
+    src = read(CLI / "bree.swift")
     names = set()
     for m in re.finditer(r'^ {8}case ((?:"[^"]+"\s*,?\s*)+):', src, re.M):
         names.update(re.findall(r'"([^"]+)"', m.group(1)))
@@ -53,14 +53,14 @@ def known_top_level():
 
 def known_subcommands():
     subs = {}
-    wiki = read(CLI / "CMUXCLI+WikiCheck.swift")
+    wiki = read(CLI / "BREECLI+WikiCheck.swift")
     subs["wiki"] = set(re.findall(r'args\.first == "([\w-]+)"', wiki)) | {"help"}
-    arch = read(CLI / "CMUXCLI+Architecture.swift")
+    arch = read(CLI / "BREECLI+Architecture.swift")
     m = re.search(r'\[((?:"[\w-]+",?\s*)+)\]\.contains\(action\)', arch)
     subs["architecture"] = set(re.findall(r'"([\w-]+)"', m.group(1))) if m else set()
-    guide = read(CLI / "CMUXCLI+Guide.swift")
-    subs["guide"] = set(re.findall(r'^\s*\("([a-z]+)", CMUXDiffViewerLocalization', guide, re.M))
-    docs = read(CLI / "CMUXCLI+DocsSettings.swift")
+    guide = read(CLI / "BREECLI+Guide.swift")
+    subs["guide"] = set(re.findall(r'^\s*\("([a-z]+)", BREEDiffViewerLocalization', guide, re.M))
+    docs = read(CLI / "BREECLI+DocsSettings.swift")
     topics = set(re.findall(r'topic: "([\w-]+)"', docs))
     for m in re.finditer(r'aliases: \[([^\]]*)\]', docs):
         topics.update(re.findall(r'"([\w-]+)"', m.group(1)))
@@ -72,7 +72,7 @@ def collect_invocations(gdir):
     inv = []
     for md in sorted(gdir.glob("*.md")):
         inv += extract(read(md), md.name)
-    inv += extract(read(CLI / "CMUXCLI+Guide.swift"), "CLI/CMUXCLI+Guide.swift")
+    inv += extract(read(CLI / "BREECLI+Guide.swift"), "CLI/BREECLI+Guide.swift")
     return inv
 
 

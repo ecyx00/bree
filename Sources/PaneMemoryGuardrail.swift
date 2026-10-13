@@ -1,6 +1,6 @@
 import AppKit
-import CmuxFoundation
-import CmuxSettings
+import BreeFoundation
+import BreeSettings
 import Foundation
 import Observation
 
@@ -33,7 +33,7 @@ final class PaneMemoryGuardrail {
     @ObservationIgnored
     private var engine = PaneMemoryGuardrailEngine()
     @ObservationIgnored
-    private let timerQueue = DispatchQueue(label: "com.cmux.pane-memory-guardrail", qos: .utility)
+    private let timerQueue = DispatchQueue(label: "com.bree.pane-memory-guardrail", qos: .utility)
     @ObservationIgnored
     private var timer: DispatchSourceTimer?
     @ObservationIgnored
@@ -153,13 +153,13 @@ final class PaneMemoryGuardrail {
             return false
         }
         let thresholdBytes = thresholdBytes()
-        let includeCMUXScope = consumeScopedScanIfDue(now: Date())
+        let includeBREEScope = consumeScopedScanIfDue(now: Date())
         isScanning = true
         let sampleTask = Task.detached(priority: .utility) {
             await Self.computeCachedSamples(
                 descriptors: descriptors,
                 thresholdBytes: thresholdBytes,
-                includeCMUXScope: includeCMUXScope
+                includeBREEScope: includeBREEScope
             )
         }
         scanApplyTask = Task { @MainActor [weak self] in
@@ -181,7 +181,7 @@ final class PaneMemoryGuardrail {
     nonisolated static func computeCachedSamples(
         descriptors: [PaneMemoryDescriptor],
         thresholdBytes: Int64,
-        includeCMUXScope: Bool = false
+        includeBREEScope: Bool = false
     ) async -> PaneMemoryGuardrailSampleBatch {
         // The unscoped maximumAge must stay below pollInterval (4s): serving the
         // guardrail its own previous tick's snapshot would silently halve its
@@ -189,15 +189,15 @@ final class PaneMemoryGuardrail {
         // subsystem (autosave, task manager) captured moments earlier; when the
         // guardrail is the sole sampler it still captures fresh each tick, which
         // is the cheap no-details tier and the intended freshness floor.
-        let snapshot = includeCMUXScope
-            ? await CmuxTopProcessSnapshot.captureCached(includeCMUXScope: true, maximumAge: 5)
-            : await CmuxTopProcessSnapshot.captureCached(includeCMUXScope: false, maximumAge: 3)
+        let snapshot = includeBREEScope
+            ? await BreeTopProcessSnapshot.captureCached(includeBREEScope: true, maximumAge: 5)
+            : await BreeTopProcessSnapshot.captureCached(includeBREEScope: false, maximumAge: 3)
         let samples = computeSamples(
             descriptors: descriptors,
             thresholdBytes: thresholdBytes,
             snapshot: snapshot
         )
-        let scopedOnlySamples = snapshot.hasCMUXScope
+        let scopedOnlySamples = snapshot.hasBREEScope
             ? computeScopedOnlySamples(
                 descriptors: descriptors,
                 thresholdBytes: thresholdBytes,
@@ -210,18 +210,18 @@ final class PaneMemoryGuardrail {
                 scopedOnlySamples.map { ($0.key, $0) },
                 uniquingKeysWith: { _, last in last }
             ),
-            includesCMUXScope: snapshot.hasCMUXScope
+            includesBREEScope: snapshot.hasBREEScope
         )
     }
 
     nonisolated static func computeSamples(
         descriptors: [PaneMemoryDescriptor],
         thresholdBytes: Int64,
-        snapshot: CmuxTopProcessSnapshot
+        snapshot: BreeTopProcessSnapshot
     ) -> [PaneMemorySample] {
         let clearBytes = Int64(Double(thresholdBytes) * PaneMemoryGuardrailEngine.clearFraction)
         return descriptors.map { descriptor in
-            var rootPIDs = snapshot.pids(forCMUXSurfaceID: descriptor.panelId)
+            var rootPIDs = snapshot.pids(forBREESurfaceID: descriptor.panelId)
             if let foregroundPID = descriptor.foregroundPID {
                 rootPIDs.insert(foregroundPID)
             }
@@ -252,12 +252,12 @@ final class PaneMemoryGuardrail {
     nonisolated static func computeScopedOnlySamples(
         descriptors: [PaneMemoryDescriptor],
         thresholdBytes: Int64,
-        snapshot: CmuxTopProcessSnapshot
+        snapshot: BreeTopProcessSnapshot
     ) -> [PaneMemorySample] {
         let clearBytes = Int64(Double(thresholdBytes) * PaneMemoryGuardrailEngine.clearFraction)
         return descriptors.map { descriptor in
             let cheapPIDs = snapshot.expandedPIDs(rootPIDs: cheapRootPIDs(for: descriptor, in: snapshot))
-            let scopedPIDs = snapshot.expandedPIDs(rootPIDs: snapshot.pids(forCMUXSurfaceID: descriptor.panelId))
+            let scopedPIDs = snapshot.expandedPIDs(rootPIDs: snapshot.pids(forBREESurfaceID: descriptor.panelId))
             let scopedOnlyPIDs = scopedPIDs.subtracting(cheapPIDs)
             let summary = snapshot.summary(for: scopedOnlyPIDs)
             let pgids = memoryPressureProcessGroupIDs(
@@ -280,7 +280,7 @@ final class PaneMemoryGuardrail {
     }
 
     nonisolated static func hottestProcessName(
-        in snapshot: CmuxTopProcessSnapshot,
+        in snapshot: BreeTopProcessSnapshot,
         pids: Set<Int>
     ) -> String? {
         var best: (cpu: Double, memory: Int64, name: String)?
@@ -294,7 +294,7 @@ final class PaneMemoryGuardrail {
 
     nonisolated static func cheapRootPIDs(
         for descriptor: PaneMemoryDescriptor,
-        in snapshot: CmuxTopProcessSnapshot
+        in snapshot: BreeTopProcessSnapshot
     ) -> Set<Int> {
         var rootPIDs: Set<Int> = []
         if let foregroundPID = descriptor.foregroundPID {
@@ -318,7 +318,7 @@ final class PaneMemoryGuardrail {
         samples: [PaneMemorySample],
         currentScopedOnlySamplesByKey: [PaneMemoryPaneKey: PaneMemorySample],
         previousScopedOnlySamplesByKey: [PaneMemoryPaneKey: PaneMemorySample],
-        includesCMUXScope: Bool,
+        includesBREEScope: Bool,
         clearBytes: Int64
     ) -> (
         samples: [PaneMemorySample],
@@ -327,7 +327,7 @@ final class PaneMemoryGuardrail {
         let liveKeys = Set(samples.map(\.key))
         let previousScopedOnlySamplesByKey = previousScopedOnlySamplesByKey.filter { liveKeys.contains($0.key) }
 
-        if includesCMUXScope {
+        if includesBREEScope {
             let scopedOnlySamplesByKey = currentScopedOnlySamplesByKey.filter {
                 liveKeys.contains($0.key) && $0.value.memoryBytes > 0
             }
@@ -369,7 +369,7 @@ final class PaneMemoryGuardrail {
     }
 
     nonisolated static func memoryPressureProcessGroupIDs(
-        in snapshot: CmuxTopProcessSnapshot,
+        in snapshot: BreeTopProcessSnapshot,
         pids: Set<Int>,
         clearBytes: Int64
     ) -> [Int] {
@@ -413,7 +413,7 @@ final class PaneMemoryGuardrail {
             samples: batch.samples,
             currentScopedOnlySamplesByKey: batch.scopedOnlySamplesByKey,
             previousScopedOnlySamplesByKey: lastScopedOnlySamplesByKey,
-            includesCMUXScope: batch.includesCMUXScope,
+            includesBREEScope: batch.includesBREEScope,
             clearBytes: clearBytes
         )
         lastScopedOnlySamplesByKey = reconciled.scopedOnlySamplesByKey
@@ -427,21 +427,21 @@ final class PaneMemoryGuardrail {
         ResourceGuard.shared.ingest(samples: samples)
         guard isEnabled else { return }
         let output = engine.ingest(samples: samples, thresholdBytes: thresholdBytes)
-        emitScanDebugLog(samples: samples, output: output, thresholdBytes: thresholdBytes, includesCMUXScope: batch.includesCMUXScope)
+        emitScanDebugLog(samples: samples, output: output, thresholdBytes: thresholdBytes, includesBREEScope: batch.includesBREEScope)
     }
 
     private func emitScanDebugLog(
         samples: [PaneMemorySample],
         output: PaneMemoryGuardrailEngineOutput,
         thresholdBytes: Int64,
-        includesCMUXScope: Bool
+        includesBREEScope: Bool
     ) {
 #if DEBUG
         let maxBytes = samples.map(\.memoryBytes).max() ?? 0
-        cmuxDebugLog(
+        breeDebugLog(
             "paneMemGuard.scan panes=\(samples.count) maxMB=\(maxBytes / 1_048_576) " +
             "thresholdMB=\(thresholdBytes / 1_048_576) warned=\(output.warnedWorkspaceIds.count) " +
-            "scope=\(includesCMUXScope ? 1 : 0)"
+            "scope=\(includesBREEScope ? 1 : 0)"
         )
 #endif
     }

@@ -1,7 +1,7 @@
 # Shared terminal sizing
 
 A terminal has one PTY grid. Several people and devices can view it: Macs, iPhones,
-iPads, the cmux-tui frontend. This document is the contract for who sets that grid,
+iPads, the bree-tui frontend. This document is the contract for who sets that grid,
 how every viewer shows the bounds, and how a viewer is disconnected. It applies the
 same way to local Mac terminals and to Cloud VM terminals.
 
@@ -11,8 +11,8 @@ The process that owns the PTY decides the size. It is the **host**.
 
 | Terminal | Host | Relays | Views |
 | --- | --- | --- | --- |
-| Local Mac terminal | cmux macOS app (`TerminalController`) | none | the host Mac's own pane, paired iPhones/iPads, other Macs viewing it through Devices |
-| Cloud VM terminal | cmux-tui daemon on the VM | each Mac mirror (`CloudTuiManualMirrorSession`) | each Mac's own pane, iPhones/iPads behind a Mac, TUI clients |
+| Local Mac terminal | bree macOS app (`TerminalController`) | none | the host Mac's own pane, paired iPhones/iPads, other Macs viewing it through Devices |
+| Cloud VM terminal | bree-tui daemon on the VM | each Mac mirror (`CloudTuiManualMirrorSession`) | each Mac's own pane, iPhones/iPads behind a Mac, TUI clients |
 
 Three roles are separate. The **host** owns the PTY and decides. A **relay**
 is a connection that carries other views (a Cloud Mac carries the phones
@@ -22,7 +22,7 @@ separate lifetimes: detaching the Mac's view never drops the relay or the
 phones it carries.
 
 A relay never decides. It forwards each leaf behind it to the host as its own
-participant (for cmux-tui, one attached-view lease per leaf) and forwards the
+participant (for bree-tui, one attached-view lease per leaf) and forwards the
 host's size state and detach events back down unchanged.
 
 Several Macs can view one Cloud terminal at once, each with its own window
@@ -42,8 +42,8 @@ a smaller viewing Mac therefore shrinks the grid, as a phone does.
 
 Both hosts run the same reducer:
 
-- Swift: `Packages/Shared/CmuxTerminalSizing` (`TerminalSizingEngine`).
-- Rust: `cmux-tui/crates/cmux-tui-core/src/sizing_policy.rs`.
+- Swift: `Packages/Shared/BreeTerminalSizing` (`TerminalSizingEngine`).
+- Rust: `bree-tui/crates/bree-tui-core/src/sizing_policy.rs`.
 
 `schemas/terminal-sizing/fixtures.json` is the conformance corpus. Both test suites
 replay every case. A behavior change starts with a new fixture.
@@ -60,7 +60,7 @@ A participant is one attached view: `id` (host-scoped, unique while attached),
 `device_id` is a stable per-install id that tells two devices of one user
 apart. A Mac sends a one-way digest of its host device id (so the size state
 never carries its pairing identity; every view from one Mac shares it), an
-iPhone or iPad its vendor identifier, and a cmux-tui client its host name.
+iPhone or iPad its vendor identifier, and a bree-tui client its host name.
 Older clients send none.
 
 A participant **counts toward size** when it is attached, has a viewport, and:
@@ -125,14 +125,14 @@ Hosts publish one JSON object per change, the same shape on both hosts:
 `generation` increases by one whenever any other field changes. Activity is not
 published; it changes the state only when it changes the owner.
 
-- cmux-tui: event `size-state` on the attach stream and to subscribers; command
+- bree-tui: event `size-state` on the attach stream and to subscribers; command
   `get-size-state`.
 - Mac mobile RPC: `mobile.terminal.size_state` push and a `size_state` field in
   `mobile.terminal.replay`.
 
 ## Commands
 
-| Action | cmux-tui | Mac mobile RPC / socket |
+| Action | bree-tui | Mac mobile RPC / socket |
 | --- | --- | --- |
 | Set policy | `set-size-policy {surface?, workspace?, policy}` | `terminal.size_policy.set` |
 | Counts override | `set-size-counts {surface, client?, lease?, counts}` | `mobile.terminal.viewport` `counts_override` |
@@ -150,7 +150,7 @@ and every other viewer keeps its session, including the device that asked.
 Who may disconnect whom: any participant of the terminal may disconnect any
 other participant. Every path that can ask is already limited to the
 terminal's signed-in account or workspace members (the Mac mobile RPC accepts
-only same-account connections; the cmux-tui daemon accepts only authorized
+only same-account connections; the bree-tui daemon accepts only authorized
 clients). A Mac's own UI never disconnects its own view; another participant
 may:
 
@@ -186,7 +186,7 @@ actor's `user_id`, `display_name` and `device_name`.
   lost their path to the terminal, and drops their sub-views. After the relay
   reattaches, each leaf reattaches normally.
 
-The Mac socket `terminal.size_state` (and `cmux surface size`) adds
+The Mac socket `terminal.size_state` (and `bree surface size`) adds
 `detachment {reason, by, at}` while this Mac view is detached, else `null`; the
 grid it reports is then the last state seen before the detach.
 
@@ -234,7 +234,7 @@ the theme (dark when white text reads better on the background). A
 translucent divider color composites over the terminal background, the
 backdrop the divider itself draws on. The hatch is that color at 60% over the
 background (`BonsplitSizingChromePalette` on the Mac,
-`TerminalSizingChromePalette` in `CmuxMobileTerminalKit` on iOS). The chip is
+`TerminalSizingChromePalette` in `BreeMobileTerminalKit` on iOS). The chip is
 filled with the terminal background and outlined in the divider color.
 
 Only text keeps a contrast floor. Text and glyph colors derive from the
@@ -291,8 +291,8 @@ grid it is about to change. While the displayed grid's top edge is inside the
 viewport (scaled or letterboxed), the phone hides the scroll-edge band of
 scrollback above the grid, so that area shows only the hatch and the chip.
 
-The cmux-tui frontend joins as `device_kind: "tui"` named after its host
-(`cmux-tui` when the host name is unknown). It takes the size state from the
+The bree-tui frontend joins as `device_kind: "tui"` named after its host
+(`bree-tui` when the host name is unknown). It takes the size state from the
 `attach-surface` answer, so it never waits for the first change event. Focus
 and input on its pane are activity only; against a `shared-sizing-v1` daemon it
 never sends the legacy `set-client-sizing`, so a counts choice made on another
@@ -332,7 +332,7 @@ sees one shape for both.
   pane (`mac:<surface>`) on a local terminal, or the relaying Mac's host id on
   a Cloud terminal; the phone confirms first, naming that Mac.
 
-For a Cloud terminal the Mac forwards the phone to cmux-tui as a relay
+For a Cloud terminal the Mac forwards the phone to bree-tui as a relay
 sub-view with the same identity (created or updated from the replay's
 viewport before anything is captured). Until the host's state shows that
 viewport (at most 3 s), the replay answers `viewport_transition` and the phone
@@ -343,7 +343,7 @@ retries, so its first frame is already at the host's new grid. The Mac forwards
 for the Mac's own attachment goes to every phone viewing the terminal through
 this Mac as `mobile.terminal.detached` with the same `reason`, `by` and `at`.
 
-## cmux-tui wire parameters
+## bree-tui wire parameters
 
 The daemon advertises `shared-sizing-v1` in `identify`. Without it a Mac mirror
 keeps the legacy claim and resize path, and phones behind it are not forwarded.

@@ -1,5 +1,5 @@
 import AppKit
-import CmuxSettings
+import BreeSettings
 import SwiftUI
 
 /// Read-only, searchable list of every bound shortcut, grouped like the

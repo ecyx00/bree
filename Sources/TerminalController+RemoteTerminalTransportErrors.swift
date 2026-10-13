@@ -1,6 +1,6 @@
-import CmuxCore
-import CmuxControlSocket
-import CmuxFoundation
+import BreeCore
+import BreeControlSocket
+import BreeFoundation
 import Foundation
 
 extension TerminalController {

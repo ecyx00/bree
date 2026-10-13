@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Shell integrations keep command shims and state files in private directories.
 
-Each shell writes its claude shim to ${TMPDIR:-/tmp}/cmux-cli-shims/<surface>
+Each shell writes its claude shim to ${TMPDIR:-/tmp}/bree-cli-shims/<surface>
 unless the app handed it a root, then puts that directory at the front of PATH.
 Bash also keeps history scratch files under TMPDIR. A directory
 that another user could have created or can write to must not hold anything
@@ -29,12 +29,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INTEGRATION_DIR = REPO_ROOT / "Resources/shell-integration"
 SURFACE_ID = "88888888-8888-4888-8888-888888888888"
-MARKER_SCRIPT = '#!/bin/sh\nprintf "%s\\n" {name} >> "$CMUX_TEST_MARKERS"\n'
+MARKER_SCRIPT = '#!/bin/sh\nprintf "%s\\n" {name} >> "$BREE_TEST_MARKERS"\n'
 
 POSIX_DRIVER = r'''
-source "$CMUX_TEST_INTEGRATION"
-printf 'root=%s\n' "${CMUX_CLAUDE_WRAPPER_SHIM_ROOT:-}"
-printf 'shim=%s\n' "${CMUX_CLAUDE_WRAPPER_SHIM:-}"
+source "$BREE_TEST_INTEGRATION"
+printf 'root=%s\n' "${BREE_CLAUDE_WRAPPER_SHIM_ROOT:-}"
+printf 'shim=%s\n' "${BREE_CLAUDE_WRAPPER_SHIM:-}"
 printf 'path=%s\n' "$PATH"
 claude >/dev/null 2>&1
 command claude >/dev/null 2>&1
@@ -42,9 +42,9 @@ exit 0
 '''
 
 FISH_DRIVER = r'''
-source "$CMUX_TEST_INTEGRATION"
-printf 'root=%s\n' "$CMUX_CLAUDE_WRAPPER_SHIM_ROOT"
-printf 'shim=%s\n' "$CMUX_CLAUDE_WRAPPER_SHIM"
+source "$BREE_TEST_INTEGRATION"
+printf 'root=%s\n' "$BREE_CLAUDE_WRAPPER_SHIM_ROOT"
+printf 'shim=%s\n' "$BREE_CLAUDE_WRAPPER_SHIM"
 printf 'path=%s\n' (string join : -- $PATH)
 claude >/dev/null 2>&1
 command claude >/dev/null 2>&1
@@ -52,48 +52,48 @@ exit 0
 '''
 
 BASH_STATE_DRIVER = r'''
-source "$CMUX_TEST_INTEGRATION"
-printf 'history=%s\n' "${_CMUX_BASH_HISTORY_LAST_FILE:-}"
-_cmux_start_tracked_bg bg_pid /bin/sleep 0
+source "$BREE_TEST_INTEGRATION"
+printf 'history=%s\n' "${_BREE_BASH_HISTORY_LAST_FILE:-}"
+_bree_start_tracked_bg bg_pid /bin/sleep 0
 printf 'bgpid=%s\n' "$bg_pid"
 set -o history
 # history -s replaces this line's own entry, so read it back on the same line.
-history -s 'echo private-history'; historycmd="$(_cmux_bash_history_command)"
+history -s 'echo private-history'; historycmd="$(_bree_bash_history_command)"
 printf 'historycmd=%s\n' "$historycmd"
 exit 0
 '''
 
 NONSTICKY_ANCESTOR_POSIX_DRIVER = r'''
-source "$CMUX_TEST_INTEGRATION"
-old="$TMPDIR/cmux-cli-shims"
-/bin/mv "$old" "$TMPDIR/cmux-cli-shims-old"
+source "$BREE_TEST_INTEGRATION"
+old="$TMPDIR/bree-cli-shims"
+/bin/mv "$old" "$TMPDIR/bree-cli-shims-old"
 /bin/mkdir -m 700 "$old"
-/bin/mkdir -m 700 "$old/$CMUX_SURFACE_ID"
-printf '#!/bin/sh\nprintf "attacker\\n" >> "$CMUX_TEST_MARKERS"\n' > "$old/$CMUX_SURFACE_ID/claude"
-/bin/chmod 700 "$old/$CMUX_SURFACE_ID/claude"
+/bin/mkdir -m 700 "$old/$BREE_SURFACE_ID"
+printf '#!/bin/sh\nprintf "attacker\\n" >> "$BREE_TEST_MARKERS"\n' > "$old/$BREE_SURFACE_ID/claude"
+/bin/chmod 700 "$old/$BREE_SURFACE_ID/claude"
 claude >/dev/null 2>&1
 '''
 
 NONSTICKY_ANCESTOR_FISH_DRIVER = r'''
-source "$CMUX_TEST_INTEGRATION"
-set old "$TMPDIR/cmux-cli-shims"
-/bin/mv "$old" "$TMPDIR/cmux-cli-shims-old"
+source "$BREE_TEST_INTEGRATION"
+set old "$TMPDIR/bree-cli-shims"
+/bin/mv "$old" "$TMPDIR/bree-cli-shims-old"
 /bin/mkdir -m 700 "$old"
-/bin/mkdir -m 700 "$old/$CMUX_SURFACE_ID"
-printf '#!/bin/sh\nprintf "attacker\\n" >> "$CMUX_TEST_MARKERS"\n' > "$old/$CMUX_SURFACE_ID/claude"
-/bin/chmod 700 "$old/$CMUX_SURFACE_ID/claude"
+/bin/mkdir -m 700 "$old/$BREE_SURFACE_ID"
+printf '#!/bin/sh\nprintf "attacker\\n" >> "$BREE_TEST_MARKERS"\n' > "$old/$BREE_SURFACE_ID/claude"
+/bin/chmod 700 "$old/$BREE_SURFACE_ID/claude"
 claude >/dev/null 2>&1
 '''
 
 
 def shells() -> dict[str, tuple[str, list[str], Path, str]]:
     found: dict[str, tuple[str, list[str], Path, str]] = {}
-    bash_integration = INTEGRATION_DIR / "cmux-bash-integration.bash"
+    bash_integration = INTEGRATION_DIR / "bree-bash-integration.bash"
     # macOS ships bash 3.2 as /bin/bash; also cover a newer bash when present.
     for bash in dict.fromkeys(filter(None, ["/bin/bash", shutil.which("bash")])):
         found[bash] = (bash, ["--noprofile", "--norc", "-c"], bash_integration, POSIX_DRIVER)
     zsh = shutil.which("zsh") or "/bin/zsh"
-    found[zsh] = (zsh, ["-f", "-c"], INTEGRATION_DIR / "cmux-zsh-integration.zsh", POSIX_DRIVER)
+    found[zsh] = (zsh, ["-f", "-c"], INTEGRATION_DIR / "bree-zsh-integration.zsh", POSIX_DRIVER)
     fish = shutil.which("fish")
     if fish is not None:
         found[fish] = (fish, ["--no-config", "-c"], INTEGRATION_DIR / "fish/config.fish", FISH_DRIVER)
@@ -123,38 +123,38 @@ class Case:
         integration.mkdir(parents=True)
         (base / "bundle/Resources/bin").mkdir()
         self.integration_dir = integration
-        self.wrapper = base / "bundle/Resources/bin/cmux-claude-wrapper"
+        self.wrapper = base / "bundle/Resources/bin/bree-claude-wrapper"
         write_script(self.wrapper, "wrapper")
         self.markers = base / "markers"
-        self.state = self.home / ".cmuxterm"
+        self.state = self.home / ".bree"
         self.state.mkdir(mode=0o700)
-        self.parent = self.state / "cmux-cli-shims"
+        self.parent = self.state / "bree-cli-shims"
         self.root = self.parent / SURFACE_ID
         self.env = {
-            key: value for key, value in os.environ.items() if not key.startswith("CMUX_")
+            key: value for key, value in os.environ.items() if not key.startswith("BREE_")
         }
         self.env.update(
             {
                 "HOME": str(self.home),
                 "TMPDIR": str(self.tmp),
                 "PATH": "/usr/bin:/bin",
-                "CMUX_LOAD_GHOSTTY_ZSH_INTEGRATION": "0",
-                "CMUX_SHELL_INTEGRATION_DIR": str(integration),
-                "CMUX_SOCKET_PATH": "",
-                "CMUX_SURFACE_ID": SURFACE_ID,
-                "CMUX_TEST_MARKERS": str(self.markers),
+                "BREE_LOAD_GHOSTTY_ZSH_INTEGRATION": "0",
+                "BREE_SHELL_INTEGRATION_DIR": str(integration),
+                "BREE_SOCKET_PATH": "",
+                "BREE_SURFACE_ID": SURFACE_ID,
+                "BREE_TEST_MARKERS": str(self.markers),
                 "GHOSTTY_RESOURCES_DIR": "",
             }
         )
 
     def inherit_root(self, root: Path) -> None:
-        self.env["CMUX_CLAUDE_WRAPPER_SHIM_ROOT"] = str(root)
-        self.env["CMUX_CLAUDE_WRAPPER_SHIM"] = str(root / "claude")
+        self.env["BREE_CLAUDE_WRAPPER_SHIM_ROOT"] = str(root)
+        self.env["BREE_CLAUDE_WRAPPER_SHIM"] = str(root / "claude")
         self.env["PATH"] = f"{root}:{self.env['PATH']}"
 
     def run(self, shell: tuple[str, list[str], Path, str], driver: str | None = None) -> dict[str, str]:
         executable, argv, integration, default_driver = shell
-        env = dict(self.env, CMUX_TEST_INTEGRATION=str(integration))
+        env = dict(self.env, BREE_TEST_INTEGRATION=str(integration))
         proc = subprocess.run(
             [executable, *argv, driver or default_driver],
             capture_output=True,
@@ -195,7 +195,7 @@ class CliShimPrivateDirectory(unittest.TestCase):
 
     def for_each_shell(self, scenario, **labels) -> None:
         for name, shell in shells().items():
-            with self.subTest(shell=name, **labels), new_case("cmux-shim-private-") as case:
+            with self.subTest(shell=name, **labels), new_case("bree-shim-private-") as case:
                 scenario(shell, case)
 
     def assert_no_shim(self, case: Case, out: dict[str, str], *unsafe: Path) -> None:
@@ -207,7 +207,7 @@ class CliShimPrivateDirectory(unittest.TestCase):
         self.assertNotIn("planted", case.marker_lines())
 
     def plant_inherited_root(self, case: Case, parent_mode: int, root_mode: int) -> tuple[Path, str]:
-        inherited = case.base / "app/cmux-cli-shims" / SURFACE_ID
+        inherited = case.base / "app/bree-cli-shims" / SURFACE_ID
         inherited.mkdir(parents=True)
         inherited.parent.chmod(parent_mode)
         planted = inherited / "claude"
@@ -330,9 +330,9 @@ class BashStateFilePrivateDirectory(unittest.TestCase):
         for name, shell in shells().items():
             if "bash" not in Path(name).name:
                 continue
-            with self.subTest(shell=name), new_case("cmux-bash-state-") as case:
-                case.env["CMUX_SHELL_INTEGRATION_DIR"] = ""
-                scenario(shell, case, case.tmp / f"cmux-bash-{os.geteuid()}")
+            with self.subTest(shell=name), new_case("bree-bash-state-") as case:
+                case.env["BREE_SHELL_INTEGRATION_DIR"] = ""
+                scenario(shell, case, case.tmp / f"bree-bash-{os.geteuid()}")
 
     def test_state_files_live_in_private_directory(self) -> None:
         def scenario(shell, case: Case, state: Path) -> None:

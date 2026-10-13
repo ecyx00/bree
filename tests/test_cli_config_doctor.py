@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Behavior checks for the no-socket `cmux config doctor` command."""
+"""Behavior checks for the no-socket `bree config doctor` command."""
 
 from __future__ import annotations
 
@@ -13,21 +13,21 @@ from pathlib import Path
 from typing import Any
 
 
-def resolve_cmux_cli() -> str:
-    explicit = os.environ.get("CMUX_CLI_BIN") or os.environ.get("CMUX_CLI")
+def resolve_bree_cli() -> str:
+    explicit = os.environ.get("BREE_CLI_BIN") or os.environ.get("BREE_CLI")
     if explicit and os.path.isfile(explicit) and os.access(explicit, os.X_OK):
         return explicit
 
     candidates = [
         path
-        for path in glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/cmux"))
+        for path in glob.glob(os.path.expanduser("~/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug/bree"))
         if os.path.isfile(path) and os.access(path, os.X_OK)
     ]
     if candidates:
         candidates.sort(key=os.path.getmtime, reverse=True)
         return candidates[0]
 
-    raise RuntimeError("Unable to find cmux CLI binary. Set CMUX_CLI_BIN.")
+    raise RuntimeError("Unable to find bree CLI binary. Set BREE_CLI_BIN.")
 
 
 def run_cli(
@@ -38,13 +38,13 @@ def run_cli(
 ) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["HOME"] = str(home)
-    env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-    env["CMUX_SOCKET_PATH"] = str(home / "missing.sock")
-    env.pop("CMUX_SOCKET", None)
-    env.pop("CMUX_SOCKET_PASSWORD", None)
-    env.pop("CMUX_WORKSPACE_ID", None)
-    env.pop("CMUX_SURFACE_ID", None)
-    env.pop("CMUX_TAB_ID", None)
+    env["BREE_CLI_SENTRY_DISABLED"] = "1"
+    env["BREE_SOCKET_PATH"] = str(home / "missing.sock")
+    env.pop("BREE_SOCKET", None)
+    env.pop("BREE_SOCKET_PASSWORD", None)
+    env.pop("BREE_WORKSPACE_ID", None)
+    env.pop("BREE_SURFACE_ID", None)
+    env.pop("BREE_TAB_ID", None)
     return subprocess.run(
         [cli_path, *args],
         text=True,
@@ -100,12 +100,12 @@ def semantic_issues(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def main() -> int:
-    cli_path = resolve_cmux_cli()
+    cli_path = resolve_bree_cli()
     failures: list[str] = []
     repo_root = Path(__file__).resolve().parents[1]
 
     generator_result = subprocess.run(
-        [sys.executable, str(repo_root / "scripts" / "generate-cmux-config-schema.py"), "--check"],
+        [sys.executable, str(repo_root / "scripts" / "generate-bree-config-schema.py"), "--check"],
         text=True,
         capture_output=True,
         check=False,
@@ -116,19 +116,19 @@ def main() -> int:
             + (generator_result.stdout.strip() or generator_result.stderr.strip())
         )
 
-    with tempfile.TemporaryDirectory(prefix="cmux-config-doctor-") as temp:
+    with tempfile.TemporaryDirectory(prefix="bree-config-doctor-") as temp:
         home = Path(temp)
         workspace = home / "workspace" / "child"
         workspace.mkdir(parents=True)
-        helper = repo_root / "skills" / "cmux-settings" / "scripts" / "cmux-settings"
+        helper = repo_root / "skills" / "bree-settings" / "scripts" / "bree-settings"
         helper_env = dict(os.environ)
         helper_env["HOME"] = str(home)
-        helper_env["CMUX_CLI_BIN"] = cli_path
-        helper_env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        (home / "cmux.json").write_text('{"homeLevel": true,,}\n', encoding="utf-8")
-        config_path = home / ".config" / "cmux" / "cmux.json"
+        helper_env["BREE_CLI_BIN"] = cli_path
+        helper_env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        (home / "bree.json").write_text('{"homeLevel": true,,}\n', encoding="utf-8")
+        config_path = home / ".config" / "bree" / "bree.json"
         config_path.parent.mkdir(parents=True)
-        custom_global_path = home / "custom-global" / "cmux.json"
+        custom_global_path = home / "custom-global" / "bree.json"
         custom_global_path.parent.mkdir()
         custom_global_path.write_text(
             json.dumps({"app": {"appearance": "dark"}}) + "\n",
@@ -151,7 +151,7 @@ def main() -> int:
         )
         if custom_global_validate.returncode != 0:
             failures.append(
-                "custom global cmux.json was misclassified as project-local: "
+                "custom global bree.json was misclassified as project-local: "
                 + custom_global_validate.stderr
             )
 
@@ -173,17 +173,17 @@ def main() -> int:
             check=False,
         )
         if explicit_project_validate.returncode == 0:
-            failures.append("cmux-settings --scope project did not reject global-only app settings")
+            failures.append("bree-settings --scope project did not reject global-only app settings")
         if "$.app" not in explicit_project_validate.stderr:
             failures.append(
-                "cmux-settings --scope project did not report the rejected app path: "
+                "bree-settings --scope project did not report the rejected app path: "
                 + explicit_project_validate.stderr
             )
 
         config_path.write_text(
             """
             {
-              // JSONC comments and trailing commas are valid in cmux.json.
+              // JSONC comments and trailing commas are valid in bree.json.
               "schemaVersion": 1,
               "app": {
                 "appearance": "system",
@@ -306,7 +306,7 @@ def main() -> int:
                 issues = semantic_issues(payload)
                 if not any(
                     issue.get("path") == "$.app"
-                    and "global cmux.json" in str(issue.get("message", ""))
+                    and "global bree.json" in str(issue.get("message", ""))
                     for issue in issues
                 ):
                     failures.append(
@@ -346,11 +346,11 @@ def main() -> int:
 }
 """
         config_path.write_bytes(original_bytes)
-        helper = repo_root / "skills" / "cmux-settings" / "scripts" / "cmux-settings"
+        helper = repo_root / "skills" / "bree-settings" / "scripts" / "bree-settings"
         helper_env = dict(os.environ)
         helper_env["HOME"] = str(home)
-        helper_env["CMUX_CLI_BIN"] = cli_path
-        helper_env["CMUX_CLI_SENTRY_DISABLED"] = "1"
+        helper_env["BREE_CLI_BIN"] = cli_path
+        helper_env["BREE_CLI_SENTRY_DISABLED"] = "1"
         helper_result = subprocess.run(
             [
                 sys.executable,
@@ -368,12 +368,12 @@ def main() -> int:
             check=False,
         )
         if helper_result.returncode == 0:
-            failures.append("cmux-settings set accepted an invalid enum value")
+            failures.append("bree-settings set accepted an invalid enum value")
         if config_path.read_bytes() != original_bytes:
-            failures.append("rejected cmux-settings set changed the source bytes")
+            failures.append("rejected bree-settings set changed the source bytes")
         if "$.app.appearance" not in helper_result.stderr:
             failures.append(
-                "rejected cmux-settings set did not report the config path: "
+                "rejected bree-settings set did not report the config path: "
                 + helper_result.stderr
             )
 
@@ -390,17 +390,17 @@ def main() -> int:
             check=False,
         )
         if helper_validate_result.returncode == 0:
-            failures.append("cmux-settings validate accepted an invalid enum value")
+            failures.append("bree-settings validate accepted an invalid enum value")
         if "$.app.appearance" not in helper_validate_result.stderr:
             failures.append(
-                "cmux-settings validate did not report the config path: "
+                "bree-settings validate did not report the config path: "
                 + helper_validate_result.stderr
             )
 
         config_path.write_text(
             """
             {
-              // JSONC comments and trailing commas are valid in cmux.json.
+              // JSONC comments and trailing commas are valid in bree.json.
               "schemaVersion": 1,
               "app": {
                 "appearance": "system",
@@ -431,10 +431,10 @@ def main() -> int:
                     if primary is None or primary.get("status") != "ok":
                         failures.append(f"default scan primary finding was not ok: {default_result.stdout}")
                     if any(
-                        isinstance(finding, dict) and finding.get("path") == str(home / "cmux.json")
+                        isinstance(finding, dict) and finding.get("path") == str(home / "bree.json")
                         for finding in findings
                     ):
-                        failures.append(f"default scan included home-level cmux.json: {default_result.stdout}")
+                        failures.append(f"default scan included home-level bree.json: {default_result.stdout}")
 
         config_path.write_text('{"agent": true,,}\n', encoding="utf-8")
         bad_result = run_cli(cli_path, ["--json", "config", "doctor", "--path", str(config_path)], home)
@@ -446,7 +446,7 @@ def main() -> int:
                 finding = first_finding(payload, "invalid JSON", bad_result.stdout, failures)
                 if finding is not None and (payload.get("ok") is not False or finding.get("status") != "error"):
                     failures.append(f"invalid JSON did not report an error: {bad_result.stdout}")
-            if "cmux config doctor found 1 error(s)" not in bad_result.stderr:
+            if "bree config doctor found 1 error(s)" not in bad_result.stderr:
                 failures.append(f"invalid JSON stderr was unexpected: {bad_result.stderr}")
 
         directory_path = home / "config-directory"
@@ -475,7 +475,7 @@ def main() -> int:
             print(f"FAIL: {failure}")
         return 1
 
-    print("PASS: cmux config doctor validates JSONC and reports syntax errors")
+    print("PASS: bree config doctor validates JSONC and reports syntax errors")
     return 0
 
 

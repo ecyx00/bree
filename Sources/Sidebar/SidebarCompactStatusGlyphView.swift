@@ -7,7 +7,7 @@ import SwiftUI
 /// window is occluded, the row is suspended, or Reduce Motion is on; it asks
 /// for at most 30 Hz; and every pulsing row shares one phase.
 final class SidebarCompactStatusGlyphImageView: NSImageView {
-    private static let pulseKey = "cmux.compactStatus.pulse"
+    private static let pulseKey = "bree.compactStatus.pulse"
     private static let pulseDuration: CFTimeInterval = 0.9
     private var pulses = false
 

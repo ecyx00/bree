@@ -2,14 +2,14 @@ import AppKit
 import WebKit
 
 /// Routes browser-pane file drops by intent only: a file drag over browser page content is
-/// always delivered to the page unless Shift explicitly asks for a cmux preview; delivery
+/// always delivered to the page unless Shift explicitly asks for a bree preview; delivery
 /// failure refuses the drop instead of reinterpreting it.
 enum BrowserPaneFileDropRouting {
     /// How a file-URL drag over a browser pane should be handled.
     enum Disposition: Equatable {
         /// Forward the drag to the hosted WKWebView (HTML5 page upload).
         case forwardToPage
-        /// Open the file in cmux (file-preview pane / split) via the workspace handlers.
+        /// Open the file in bree (file-preview pane / split) via the workspace handlers.
         case previewInWorkspace
     }
 

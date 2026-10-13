@@ -1,7 +1,7 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
-import CMUXAgentLaunch
-import CmuxAgentJournal
+import BREEAgentLaunch
+import BreeAgentJournal
 import SwiftUI
 
 struct AgentInboxView: View {
@@ -178,7 +178,7 @@ struct AgentInboxView: View {
                         exchangeBlock(
                             label: item.agentName,
                             text: item.agentText ?? item.preview,
-                            tint: .accentColor
+                            tint: BreeChromePalette.currentSnapshot.accentFill
                         )
                         decisionControls(for: item)
                     }
@@ -327,9 +327,9 @@ struct AgentInboxView: View {
                 )
             }
             if let replyError {
-                Text(replyError)
+                Label(replyError, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(BreeChromePalette.currentSnapshot.signalError)
             }
         }
         .padding(12)
@@ -477,7 +477,7 @@ private struct AgentInboxRow: View {
                             .font(.subheadline.weight(.semibold))
                             .lineLimit(1)
                         if item.isUnread {
-                            Circle().fill(Color.accentColor).frame(width: 6, height: 6)
+                            Circle().fill(BreeChromePalette.currentSnapshot.accentFill).frame(width: 6, height: 6)
                         }
                         Spacer()
                         Text(item.createdAt.formatted(.relative(presentation: .named)))
@@ -499,7 +499,7 @@ private struct AgentInboxRow: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+            .background(isSelected ? BreeChromePalette.currentSnapshot.accentFill.opacity(0.14) : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -520,11 +520,9 @@ private extension AgentInboxItemKind {
 
     var tint: Color {
         switch self {
-        case .agentMessage: return .blue
-        case .permissionRequest: return .orange
-        case .planApproval: return .purple
-        case .question: return .cyan
-        case .finishedTurn: return .green
+        case .agentMessage: return BreeChromePalette.currentSnapshot.textSecondary
+        case .permissionRequest, .planApproval, .question: return BreeChromePalette.currentSnapshot.signalAttention
+        case .finishedTurn: return BreeChromePalette.currentSnapshot.signalSuccess
         }
     }
 }

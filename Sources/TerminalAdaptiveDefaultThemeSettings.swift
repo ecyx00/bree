@@ -1,18 +1,18 @@
-import CmuxSettings
-import CmuxTerminalCore
+import BreeSettings
+import BreeTerminalCore
 import Foundation
 
-/// App-owned access to cmux's managed adaptive terminal palette preference.
+/// App-owned access to bree's managed adaptive terminal palette preference.
 ///
 /// Ghostty's own `theme = light:X,dark:Y` setting remains independent and
-/// appearance-adaptive. This setting only controls whether cmux supplies its
+/// appearance-adaptive. This setting only controls whether bree supplies its
 /// managed light/dark palette when the Ghostty config contains no authored
 /// theme or terminal colors. Non-color settings preserve the adaptive base.
 struct TerminalAdaptiveDefaultThemeSettings {
     private static let key = SettingCatalog().terminal.adaptiveDefaultTheme
 
     static let didChangeNotification = Notification.Name(
-        "cmux.terminalAdaptiveDefaultThemeSettingsDidChange"
+        "bree.terminalAdaptiveDefaultThemeSettingsDidChange"
     )
 
     static var userDefaultsKey: String { key.userDefaultsKey }
@@ -36,10 +36,10 @@ struct TerminalAdaptiveDefaultThemeSettings {
 }
 
 extension GhosttyConfig {
-    /// Loads the resolved Ghostty config with cmux's adaptive-default
+    /// Loads the resolved Ghostty config with bree's adaptive-default
     /// preference. App code uses this wrapper so every config consumer shares
-    /// the same setting, while `CmuxTerminalCore` remains settings-independent.
-    static func loadForCmux(
+    /// the same setting, while `BreeTerminalCore` remains settings-independent.
+    static func loadForBree(
         preferredColorScheme: ColorSchemePreference? = nil,
         useCache: Bool = true,
         globalFontMagnificationPercent: Int? = nil,

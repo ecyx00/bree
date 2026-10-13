@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 
 /// Files-tree colours, read from the Bree chrome palette.
 ///
@@ -32,10 +32,10 @@ struct FileExplorerPalette {
     static let bree = FileExplorerPalette(
         fileIconTint: role("icon.file", \.textSecondary),
         folderIconTint: role("icon.folder", \.textSecondary),
-        modifiedText: role("status.modified", \.signalAttention),
+        modifiedText: role("status.modified", \.textSecondary),
         addedText: role("status.added", \.signalSuccess),
         deletedText: role("status.deleted", \.signalError),
-        renamedText: role("status.renamed", \.signalInfo),
+        renamedText: role("status.renamed", \.textSecondary),
         untrackedText: role("status.untracked", \.textSecondary)
     )
 
@@ -51,7 +51,7 @@ struct FileExplorerPalette {
         _ name: String,
         _ pick: @escaping @Sendable (BreeChromePalette.AppKitColors) -> NSColor
     ) -> NSColor {
-        NSColor(name: NSColor.Name("cmux.fileExplorer.\(name)")) { _ in
+        NSColor(name: NSColor.Name("bree.fileExplorer.\(name)")) { _ in
             pick(currentPalette().ns)
         }
     }

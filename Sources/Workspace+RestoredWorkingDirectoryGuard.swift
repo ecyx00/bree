@@ -30,7 +30,7 @@ extension Workspace {
         if Self.unmountedVolumeRoot(for: restoredDirectory) != nil {
             // Keep guarding until the restored volume remounts and reports its cwd (#5278).
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "session.restore.cwdReport.ignored panel=\(panelId.uuidString.prefix(5)) " +
                 "saved=\(restoredDirectory) reported=\(reportedDirectory)"
             )
@@ -52,7 +52,7 @@ extension Workspace {
             restoredResumeSessionWorkingDirectoriesByPanelId.removeValue(forKey: panelId)
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "session.restore.cwdReport.\(restoredDirectoryStillExists ? "ignoredOnce" : "accepted") " +
             "panel=\(panelId.uuidString.prefix(5)) saved=\(restoredDirectory) reported=\(reportedDirectory)"
         )

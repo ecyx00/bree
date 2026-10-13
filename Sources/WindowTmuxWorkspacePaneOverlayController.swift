@@ -3,7 +3,7 @@ import ObjectiveC
 import SwiftUI
 
 private var tmuxWorkspacePaneWindowOverlayKey: UInt8 = 0
-private let tmuxWorkspacePaneOverlayContainerIdentifier = NSUserInterfaceItemIdentifier("cmux.tmuxWorkspacePane.overlay.container")
+private let tmuxWorkspacePaneOverlayContainerIdentifier = NSUserInterfaceItemIdentifier("bree.tmuxWorkspacePane.overlay.container")
 
 @MainActor
 final class WindowTmuxWorkspacePaneOverlayController: NSObject {

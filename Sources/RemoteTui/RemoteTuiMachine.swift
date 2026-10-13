@@ -1,7 +1,7 @@
-import CmuxCloud
-import CmuxCloudTui
-import CmuxCore
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeCloudTui
+import BreeCore
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// Hosting metadata for the shared terminal provider. SSH never requires a Cloud account.

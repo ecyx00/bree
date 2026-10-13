@@ -1,6 +1,6 @@
 import Bonsplit
-import CmuxControlSocket
-import CmuxSurfaceCatalogModel
+import BreeControlSocket
+import BreeSurfaceCatalogModel
 import Foundation
 import WebKit
 
@@ -9,7 +9,7 @@ import WebKit
 /// `surface.create` machinery the CLI uses, so a drop from the sidebar lands exactly where a
 /// drop of a Vault session or a file would.
 ///
-/// Focus policy (`cmux-socket-policy`): `focus: false` never activates the app, raises a
+/// Focus policy (`bree-socket-policy`): `focus: false` never activates the app, raises a
 /// window, or moves selection; the pane is created quietly behind the current focus.
 @MainActor
 enum SurfacePaneFactory {
@@ -104,7 +104,7 @@ enum SurfacePaneFactory {
     /// This is not ``close(panelID:in:)``: the socket close refuses a
     /// workspace's last surface, so an agent cannot empty a workspace by
     /// accident. A shell that ended is not an accident, and a cloud workspace
-    /// opened by `cmux vm workspace new` holds exactly one pane, so the socket
+    /// opened by `bree vm workspace new` holds exactly one pane, so the socket
     /// rule would leave the dead pane on screen forever.
     static func closeExited(panelID: UUID, in workspaceID: UUID) {
         guard let appDelegate = AppDelegate.shared,

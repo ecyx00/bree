@@ -1,6 +1,6 @@
-import CmuxCloud
+import BreeCloud
 import Foundation
-import CmuxTerminalCore
+import BreeTerminalCore
 
 /// Title and description ownership: which of the process title, the custom
 /// title, and the custom description a workspace presents, who set them, and
@@ -18,7 +18,7 @@ extension Workspace {
         case auto
         case remote
 
-        /// Session manifests are also read by older cmux builds. Those builds
+        /// Session manifests are also read by older bree builds. Those builds
         /// know `user` and `auto`, but not `remote`. Decode unknown values as
         /// user-owned so a newer source can never make an older title unsafe
         /// to overwrite. New session snapshots carry a separate compatibility
@@ -64,7 +64,7 @@ extension Workspace {
         if processTitle != title { processTitle = title }
         guard customTitle == nil, self.title != title else { return }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "workspace.title.applyProcess workspace=\(id.uuidString.prefix(5)) " +
             "from=\"\(debugWorkspaceDescriptionPreview(self.title, limit: 80))\" " +
             "to=\"\(debugWorkspaceDescriptionPreview(title, limit: 80))\""
@@ -186,7 +186,7 @@ extension Workspace {
         }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "workspace.title.updatePanel workspace=\(id.uuidString.prefix(5)) " +
             "panel=\(panelId.uuidString.prefix(5)) panels=\(panels.count) custom=\(customTitle == nil ? 0 : 1) " +
             "panelChanged=1 workspaceChanged=\(didMutateWorkspaceTitle ? 1 : 0) " +
@@ -256,7 +256,7 @@ extension Workspace {
             self.title = trimmed
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "workspace.customTitle.write workspace=\(id.uuidString.prefix(8)) " +
             "source=\(source) title=\"\(debugWorkspaceDescriptionPreview(trimmed, limit: 40))\""
         )
@@ -273,7 +273,7 @@ extension Workspace {
         let normalizedNewlines = normalizedDescription?.reduce(into: 0) { count, character in
             if character == "\n" { count += 1 }
         } ?? 0
-        cmuxDebugLog(
+        breeDebugLog(
             "workspace.customDescription.update workspace=\(id.uuidString.prefix(8)) " +
             "inputLen=\((description as NSString?)?.length ?? 0) " +
             "inputNewlines=\(inputNewlines) " +

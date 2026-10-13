@@ -1,5 +1,5 @@
 #if DEBUG
-import CMUXDebugLog
+import BREEDebugLog
 import Dispatch
 import Foundation
 import os
@@ -9,8 +9,8 @@ enum HostLatencyTrace {
     private static let writer = HostLatencyTraceWriter(capacity: 4_096)
 
     static let isEnabled =
-        ProcessInfo.processInfo.environment["CMUX_LATENCY_TRACE"] == "1"
-        || UserDefaults.standard.bool(forKey: "cmux.debug.latency-trace")
+        ProcessInfo.processInfo.environment["BREE_LATENCY_TRACE"] == "1"
+        || UserDefaults.standard.bool(forKey: "bree.debug.latency-trace")
 
     @inline(__always)
     static func stamp(
@@ -153,7 +153,7 @@ enum HostLatencyTrace {
                 return
             }
             let fileDescriptor = open(
-                CMUXDebugLog.DebugEventLog.currentLogPath(),
+                BREEDebugLog.DebugEventLog.currentLogPath(),
                 O_WRONLY | O_APPEND | O_CREAT,
                 0o644
             )

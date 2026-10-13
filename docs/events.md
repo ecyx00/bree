@@ -1,32 +1,32 @@
-# cmux Events
+# bree Events
 
-cmux exposes a reconnectable event stream for local tools that need to observe
+bree exposes a reconnectable event stream for local tools that need to observe
 workspace, pane, surface, notification, browser, Feed, and agent-hook activity.
 
-The same events are appended to `~/.cmuxterm/events.jsonl` as newline-delimited
-JSON. The live stream is delivered over the existing cmux socket. Clients call
+The same events are appended to `~/.bree/events.jsonl` as newline-delimited
+JSON. The live stream is delivered over the existing bree socket. Clients call
 the v2 method `events.stream`, then keep reading newline-delimited JSON frames
 from the same connection.
 
 ## Quick start
 
 ```bash
-cmux events --cursor-file ~/.cache/cmux/events.seq --reconnect
-cmux events --category window --category workspace --category pane --category surface
-cmux events --category notification
-cmux events --category feed --category agent --no-heartbeat
+bree events --cursor-file ~/.cache/bree/events.seq --reconnect
+bree events --category window --category workspace --category pane --category surface
+bree events --category notification
+bree events --category feed --category agent --no-heartbeat
 ```
 
 Every event has a monotonically increasing process-local `seq` and a `boot_id`.
 Persist the latest processed `seq`, then reconnect with `after_seq` or use
-`cmux events --cursor-file`. If cmux restarts, `boot_id` changes and the server
+`bree events --cursor-file`. If bree restarts, `boot_id` changes and the server
 marks stale cursors as a resume gap.
 
 Use the JSONL log for audit and catch-up tools. Use the socket stream for live
 delivery with bounded replay.
 
 Lifecycle events with `source: "window.lifecycle"` or
-`source: "workspace.lifecycle"` are emitted from the cmux model, so they cover
+`source: "workspace.lifecycle"` are emitted from the bree model, so they cover
 UI actions, CLI/socket commands, shortcuts, startup creation, restore paths, and
 AppKit focus/key transitions. Socket-sourced events are reserved for command
 effects that do not have an authoritative model lifecycle event.
@@ -65,7 +65,7 @@ heartbeats.
 ```json
 {
   "type": "ack",
-  "protocol": "cmux-events",
+  "protocol": "bree-events",
   "version": 1,
   "boot_id": "0F221057-0320-41B7-8CB3-083C8D927D95",
   "subscription_id": "8F6F1E66-0D6E-4B4D-A0F8-0F7B0B7B92CA",
@@ -86,7 +86,7 @@ heartbeats.
 }
 ```
 
-`resume.gap` is `true` when the requested cursor is older than cmux still keeps
+`resume.gap` is `true` when the requested cursor is older than bree still keeps
 in memory, or newer than the current process after an app restart. In that case,
 process the replayed tail, then refresh any state you need through
 snapshot-style commands such as `list-workspaces`, `list-notifications`, `tree`,
@@ -97,7 +97,7 @@ snapshot-style commands such as `list-workspaces`, `list-notifications`, `tree`,
 ```json
 {
   "type": "event",
-  "protocol": "cmux-events",
+  "protocol": "bree-events",
   "version": 1,
   "boot_id": "0F221057-0320-41B7-8CB3-083C8D927D95",
   "seq": 126,
@@ -129,8 +129,8 @@ Event fields:
 | Field | Meaning |
 | --- | --- |
 | `seq` | Process-local sequence. Increases by one for every emitted event. |
-| `boot_id` | UUID process-boot identifier for this in-memory event log. Changes when cmux restarts. |
-| `id` | Stable event id for the current cmux process. Use it for dedupe. |
+| `boot_id` | UUID process-boot identifier for this in-memory event log. Changes when bree restarts. |
+| `id` | Stable event id for the current bree process. Use it for dedupe. |
 | `name` | Specific event name, such as `feed.item.received`. |
 | `category` | Coarse subscription group. |
 | `source` | Producer, such as `socket.v2`, `notification.store`, or `codex`. |
@@ -147,7 +147,7 @@ Event fields:
 ```json
 {
   "type": "heartbeat",
-  "protocol": "cmux-events",
+  "protocol": "bree-events",
   "version": 1,
   "boot_id": "0F221057-0320-41B7-8CB3-083C8D927D95",
   "subscription_id": "8F6F1E66-0D6E-4B4D-A0F8-0F7B0B7B92CA",
@@ -163,7 +163,7 @@ the server's latest sequence.
 
 The intended client loop is:
 
-1. Connect to the cmux socket and authenticate if required.
+1. Connect to the bree socket and authenticate if required.
 2. Send `events.stream` with the last fully processed `seq`.
 3. Read `ack`.
 4. If `ack.resume.gap` is true, refresh state through snapshot commands.
@@ -176,19 +176,19 @@ event frames are capped to 16 KiB after JSON encoding; oversized payloads are
 replaced with a small payload that sets `payload_truncated: true`.
 
 Each live subscriber also has a bounded pending queue of 1,024 events. If a
-client stops reading and falls behind that queue, cmux closes that subscription
+client stops reading and falls behind that queue, bree closes that subscription
 with a `slow_consumer` error. The client should reconnect with the last `seq` it
 successfully processed.
 
-The durable event log is bounded too. cmux writes current events to
-`~/.cmuxterm/events.jsonl`, rotates the previous file to
-`~/.cmuxterm/events.jsonl.1`, and caps each file at 16 MiB. Disk writes are
+The durable event log is bounded too. bree writes current events to
+`~/.bree/events.jsonl`, rotates the previous file to
+`~/.bree/events.jsonl.1`, and caps each file at 16 MiB. Disk writes are
 batched behind a bounded 1,024-line queue. Under sustained disk backpressure,
-cmux drops the oldest pending disk-only lines and keeps the live socket stream
+bree drops the oldest pending disk-only lines and keeps the live socket stream
 and in-memory replay buffer moving. Clients can read those files for recent
 auditing, but should treat the socket `ack.resume.gap` contract plus snapshot
 commands as the source of truth for catch-up after long outages. Feed still
-writes its specialized long-term audit log to `~/.cmuxterm/workstream.jsonl`.
+writes its specialized long-term audit log to `~/.bree/workstream.jsonl`.
 
 ## Submitted prompt size
 
@@ -219,7 +219,7 @@ not a prompt-size field. Other tool-event length semantics are unchanged.
 
 ## CLI
 
-`cmux events` prints the stream as newline-delimited JSON.
+`bree events` prints the stream as newline-delimited JSON.
 
 Options:
 
@@ -241,11 +241,11 @@ Window:
 
 | Name | Trigger |
 | --- | --- |
-| `window.created` | A main cmux window is registered in the app model. Covers startup, session restore, shortcuts, menus, and socket commands. |
-| `window.focused` | A cmux window focus request succeeded. This is an app-level focus action, not necessarily a new AppKit key transition. |
-| `window.keyed` | AppKit reported a main cmux window became the key window. Use this to track the window receiving keyboard input. |
-| `window.unkeyed` | AppKit reported a main cmux window resigned key status. |
-| `window.closed` | A main cmux window was unregistered during close. |
+| `window.created` | A main bree window is registered in the app model. Covers startup, session restore, shortcuts, menus, and socket commands. |
+| `window.focused` | A bree window focus request succeeded. This is an app-level focus action, not necessarily a new AppKit key transition. |
+| `window.keyed` | AppKit reported a main bree window became the key window. Use this to track the window receiving keyboard input. |
+| `window.unkeyed` | AppKit reported a main bree window resigned key status. |
+| `window.closed` | A main bree window was unregistered during close. |
 
 Window lifecycle payloads include `window_id`, `workspace_id`,
 `workspace_count`, `selected_workspace_index`, `is_key_window`,
@@ -274,7 +274,7 @@ local sensitive data, so consumers should only forward it with explicit user
 opt-in.
 
 Extension sidebars should bootstrap from the v2 socket method
-`extension.sidebar.snapshot`, then subscribe to `cmux events --category
+`extension.sidebar.snapshot`, then subscribe to `bree events --category
 workspace --category notification --category sidebar --reconnect` and reduce
 events from the returned `seq`. The snapshot returns `selected_workspace_id`
 and an ordered `workspaces` array containing workspace ids/refs, title,
@@ -339,12 +339,12 @@ Notifications:
 
 | Name | Trigger |
 | --- | --- |
-| `notification.requested` | Socket command asked cmux to create a notification. |
-| `notification.clear_requested` | Socket command asked cmux to clear notifications. |
-| `notification.dismiss_requested` | Socket command asked cmux to remove one notification or already-read notifications. |
-| `notification.mark_read_requested` | Socket command asked cmux to mark notifications read. |
-| `notification.open_requested` | Socket command asked cmux to open a notification by id. |
-| `notification.jump_to_unread_requested` | Socket command asked cmux to jump to the latest unread notification. |
+| `notification.requested` | Socket command asked bree to create a notification. |
+| `notification.clear_requested` | Socket command asked bree to clear notifications. |
+| `notification.dismiss_requested` | Socket command asked bree to remove one notification or already-read notifications. |
+| `notification.mark_read_requested` | Socket command asked bree to mark notifications read. |
+| `notification.open_requested` | Socket command asked bree to open a notification by id. |
+| `notification.jump_to_unread_requested` | Socket command asked bree to jump to the latest unread notification. |
 | `notification.created` | Notification store created a notification. |
 | `notification.read` | Notification was marked read. |
 | `notification.removed` | One notification was removed. |
@@ -358,7 +358,7 @@ Feed and agent hooks:
 | `feed.item.completed` | `feed.push` returned a hook decision, timeout, or no-op result. |
 | `feed.item.resolved` | A Feed reply command resolved a permission, question, or plan item. |
 | `agent.hook.<HookEventName>` | Agent hook event received through Feed. Examples include Claude Code and Codex permission requests when their hooks are installed. |
-| `agent.message.queued` | `cmux agent message` stored a message for an agent. Payload: `id`, `thread_id`, `sender_name`, `sender_surface_id`, `body_length`. |
+| `agent.message.queued` | `bree agent message` stored a message for an agent. Payload: `id`, `thread_id`, `sender_name`, `sender_surface_id`, `body_length`. |
 | `agent.message.delivered` | An agent hook handed a message to its agent (`delivered_via`). |
 | `agent.message.read` | The recipient finished the turn it was delivered in, or someone marked it read. |
 
@@ -375,7 +375,7 @@ App, browser, and config:
 
 ## Agent hooks
 
-Agent integrations use `cmux hooks feed --source <agent>` or an equivalent
+Agent integrations use `bree hooks feed --source <agent>` or an equivalent
 plugin bridge. The event stream publishes both agent and Feed events:
 
 ```json

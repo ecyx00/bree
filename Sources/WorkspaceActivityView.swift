@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// Right sidebar "Activity" mode: Artifact Shelf on top, Mods (live sections and stream written by the journal mod) below, both for the active workspace.
@@ -104,7 +104,7 @@ struct WorkspaceActivityView: View {
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
             .breeFont(.secondary, weight: .semibold)
-            .foregroundStyle(.cmuxSecondaryText)
+            .foregroundStyle(.breeSecondaryText)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -125,15 +125,15 @@ struct WorkspaceActivityView: View {
         return HStack(spacing: 8) {
             Image(systemName: WorkspaceActivityRules.symbolName(forPath: artifact.path))
                 .frame(width: 16)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
             VStack(alignment: .leading, spacing: 1) {
                 Text((artifact.path as NSString).lastPathComponent).breeFont(.body).lineLimit(1)
-                Text(relativeDir).breeFont(.caption).foregroundStyle(.cmuxSecondaryText).lineLimit(1).truncationMode(.head)
+                Text(relativeDir).breeFont(.caption).foregroundStyle(.breeSecondaryText).lineLimit(1).truncationMode(.head)
             }
             Spacer(minLength: 4)
             Text(Self.relativeFormatter.localizedString(for: Date(timeIntervalSince1970: artifact.at), relativeTo: Date()))
                 .breeFont(.caption)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
@@ -164,7 +164,7 @@ struct WorkspaceActivityView: View {
         HStack(spacing: 8) {
             Text(String(localized: "activity.mods.title", defaultValue: "Plugin status"))
                 .breeFont(.secondary, weight: .semibold)
-                .foregroundStyle(.cmuxSecondaryText)
+                .foregroundStyle(.breeSecondaryText)
             Spacer(minLength: 4)
             ModFilterSwitch(
                 warningsOnly: $warningsOnly,
@@ -385,7 +385,7 @@ struct WorkspaceActivityView: View {
                 ModPress.write(press, sessionId: sessionId)
             }.value
 #if DEBUG
-            cmuxDebugLog("mods.press written=\(written) id=\(press.id.prefix(8)) consumer=\(consumer) label=\(button.label)")
+            breeDebugLog("mods.press written=\(written) id=\(press.id.prefix(8)) consumer=\(consumer) label=\(button.label)")
 #endif
             let deadline = Date().addingTimeInterval(ModAnswerRules.timeoutSeconds)
             while written, Date() < deadline {
@@ -396,7 +396,7 @@ struct WorkspaceActivityView: View {
                     mods.answers[sessionId] = answer
                     pending = nil
 #if DEBUG
-                    cmuxDebugLog("mods.answer received id=\(press.id.prefix(8)) failed=\(answer.failed)")
+                    breeDebugLog("mods.answer received id=\(press.id.prefix(8)) failed=\(answer.failed)")
 #endif
                     return
                 }
@@ -407,7 +407,7 @@ struct WorkspaceActivityView: View {
                 text: String(localized: "activity.mods.noAnswer", defaultValue: "No answer. Is the Claude session still running?"))
             pending = nil
 #if DEBUG
-            cmuxDebugLog("mods.answer timeout id=\(press.id.prefix(8)) consumer=\(consumer) label=\(button.label)")
+            breeDebugLog("mods.answer timeout id=\(press.id.prefix(8)) consumer=\(consumer) label=\(button.label)")
 #endif
         }
     }

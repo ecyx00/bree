@@ -1,8 +1,8 @@
 import AppKit
 import Bonsplit
-import CmuxAppKitSupportUI
-import CmuxFoundation
-import CmuxNotifications
+import BreeAppKitSupportUI
+import BreeFoundation
+import BreeNotifications
 import Combine
 import SwiftUI
 
@@ -287,7 +287,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         }
 
         resizeDidEndObserver = NotificationCenter.default.addObserver(
-            forName: .cmuxInteractiveGeometryResizeDidEnd,
+            forName: .breeInteractiveGeometryResizeDidEnd,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -539,7 +539,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
                     case .idle: kind = "idle"
                     default: kind = "agent"
                     }
-                    cmuxDebugLog("sidebar.card.line2 ws=\(configuration.workspaceId.uuidString.prefix(8)) kind=\(kind)")
+                    breeDebugLog("sidebar.card.line2 ws=\(configuration.workspaceId.uuidString.prefix(8)) kind=\(kind)")
                 }
 #endif
             }
@@ -901,7 +901,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
 
 #if DEBUG
         if hasStructuralChanges || !contentChanges.isEmpty {
-            cmuxDebugLog(
+            breeDebugLog(
                 "sidebar.table.apply structural=\(hasStructuralChanges ? 1 : 0) " +
                 "contentChanges=\(contentChanges.count) rows=\(nextRows.count)"
             )
@@ -1021,7 +1021,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
                     ?? rows[row].estimatedHeight
                 let actual = table.rect(ofRow: row).height - spacing
                 if abs(served - actual) > 0.5 {
-                    cmuxDebugLog(
+                    breeDebugLog(
                         "sidebar.heightDrift row=\(row) served=\(served) actual=\(actual) width=\(probeWidth)"
                     )
                 }
@@ -1079,7 +1079,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         guard let table = containerView?.tableView else { return }
         let row = table.clickedRow
 #if DEBUG
-        cmuxDebugLog("sidebar.table.click row=\(row) rows=\(rows.count)")
+        breeDebugLog("sidebar.table.click row=\(row) rows=\(rows.count)")
 #endif
         guard rows.indices.contains(row) else { return }
         // Capture modifiers from the clicking EVENT at action time: a
@@ -1102,7 +1102,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
             // physical click (never from a replay re-park), so a request per
             // click is the ceiling and a pathological apply cannot loop.
 #if DEBUG
-            cmuxDebugLog("sidebar.table.applyRequest row=\(row)")
+            breeDebugLog("sidebar.table.applyRequest row=\(row)")
 #endif
             onDeferredRowClickAwaitingApply?()
         case .invalid:
@@ -1168,7 +1168,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         guard let table = containerView?.tableView else { return }
         let row = table.clickedRow
 #if DEBUG
-        cmuxDebugLog("sidebar.table.doubleClick row=\(row) rows=\(rows.count)")
+        breeDebugLog("sidebar.table.doubleClick row=\(row) rows=\(rows.count)")
 #endif
         guard rows.indices.contains(row),
               rows[row].appKitWorkspaceRowModel != nil,
@@ -1900,7 +1900,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         // Every silent "the workspace I dragged didn't move" report needs
         // this line: where the drop landed, which commit source ran, and
         // whether the shared planner accepted it.
-        cmuxDebugLog(
+        breeDebugLog(
             "sidebar.drop.perform point=(\(Int(point.x)),\(Int(point.y))) " +
             "source=\(commitSource) performed=\(performed ? 1 : 0)"
         )
@@ -2062,7 +2062,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
             ?? pasteboard.data(forType: type).flatMap { String(data: $0, encoding: .utf8) }
         let parsed = SidebarTabDragPayload.workspaceId(fromPasteboardString: raw)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "sidebar.drop.payload raw=\(raw.map { String($0.prefix(24)) } ?? "nil") " +
             "parsed=\(parsed.map { String($0.uuidString.prefix(5)) } ?? "nil")"
         )
@@ -2240,6 +2240,10 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
     /// `windowPoint` is the location an event just delivered; recomputes
     /// without one read the live pointer.
     func recomputeHoveredRow(windowPoint: NSPoint? = nil) {
+        if windowPoint != nil, SidebarWorkspaceRowTableCellView.closeRevealHeld {
+            SidebarWorkspaceRowTableCellView.closeRevealHeld = false
+            refreshCloseRevealOnVisibleCells()
+        }
         guard contextMenuRowId == nil,
               let table = containerView?.tableView else {
             return
@@ -2264,7 +2268,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         let width = currentColumnWidth()
 #if DEBUG
         if width != lastMeasuredWidth {
-            cmuxDebugLog("sidebar.viewport width=\(width) lastMeasured=\(lastMeasuredWidth)")
+            breeDebugLog("sidebar.viewport width=\(width) lastMeasured=\(lastMeasuredWidth)")
         }
 #endif
         if width > 0, width != lastMeasuredWidth {
@@ -2319,7 +2323,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         }
         guard !diverged.isEmpty else { return }
 #if DEBUG
-        cmuxDebugLog("sidebar.heightDrift.corrected rows=\(diverged.count)")
+        breeDebugLog("sidebar.heightDrift.corrected rows=\(diverged.count)")
 #endif
         noteHeightOfRowsWithoutAnimation(table, diverged)
     }
@@ -2334,14 +2338,14 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         guard floor(width) != floor(lastLiveMeasuredWidth) else { return }
         guard let table = containerView?.tableView else {
 #if DEBUG
-            cmuxDebugLog("sidebar.liveReflow.skip reason=noTable width=\(width)")
+            breeDebugLog("sidebar.liveReflow.skip reason=noTable width=\(width)")
 #endif
             return
         }
         let visibleRange = table.rows(in: table.visibleRect)
         guard visibleRange.length > 0 else {
 #if DEBUG
-            cmuxDebugLog("sidebar.liveReflow.skip reason=noVisibleRows width=\(width)")
+            breeDebugLog("sidebar.liveReflow.skip reason=noVisibleRows width=\(width)")
 #endif
             return
         }
@@ -2367,7 +2371,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
             noteHeightOfRowsWithoutAnimation(table, rowsToNote)
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "sidebar.liveReflow width=\(width) tableWidth=\(table.bounds.width) " +
             "rows=\(start)..<\(end) changed=\(changed.count)"
         )
@@ -2564,6 +2568,15 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         let idSet = Set(ids)
         let indexes = IndexSet(rows.indices.filter { idSet.contains(rows[$0].id) })
         reconfigureVisibleRows(indexes)
+    }
+
+    private func refreshCloseRevealOnVisibleCells() {
+        guard let table = containerView?.tableView else { return }
+        let visible = table.rows(in: table.visibleRect)
+        for row in visible.lowerBound..<(visible.lowerBound + visible.length) {
+            (table.view(atColumn: 0, row: row, makeIfNecessary: false) as? SidebarWorkspaceRowTableCellView)?
+                .refreshCloseReveal()
+        }
     }
 
     /// Authoritative pass over visible cells so hover-revealed chrome (close

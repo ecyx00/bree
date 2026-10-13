@@ -8,18 +8,18 @@ import base64
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
-SOCKET_PATH = os.environ.get("CMUX_SOCKET_PATH", "/tmp/cmux-debug.sock")
+SOCKET_PATH = os.environ.get("BREE_SOCKET_PATH", "/tmp/bree-debug.sock")
 
 
 def _must(cond: bool, msg: str) -> None:
     if not cond:
-        raise cmuxError(msg)
+        raise breeError(msg)
 
 
-def _wait_for_text(c: cmux, workspace_id: str, needle: str, timeout_s: float = 8.0) -> str:
+def _wait_for_text(c: bree, workspace_id: str, needle: str, timeout_s: float = 8.0) -> str:
     deadline = time.time() + timeout_s
     last_text = ""
     while time.time() < deadline:
@@ -36,11 +36,11 @@ def _wait_for_text(c: cmux, workspace_id: str, needle: str, timeout_s: float = 8
         if needle in last_text:
             return last_text
         time.sleep(0.1)
-    raise cmuxError(f"Timed out waiting for {needle!r} in panel text: {last_text!r}")
+    raise breeError(f"Timed out waiting for {needle!r} in panel text: {last_text!r}")
 
 
 def main() -> int:
-    with cmux(SOCKET_PATH) as c:
+    with bree(SOCKET_PATH) as c:
         baseline_workspace = c.current_workspace()
         created_workspace = ""
         try:
@@ -48,7 +48,7 @@ def main() -> int:
             payload = c._call(
                 "workspace.create",
                 {
-                    "initial_env": {"CMUX_INITIAL_ENV_TOKEN": token},
+                    "initial_env": {"BREE_INITIAL_ENV_TOKEN": token},
                 },
             ) or {}
             created_workspace = str(payload.get("workspace_id") or "")
@@ -64,10 +64,10 @@ def main() -> int:
             terminal_row = next((row for row in rows if str(row.get("type") or "") == "terminal"), None)
             _must(terminal_row is not None, f"Expected a terminal surface in workspace.create result: {rows}")
 
-            c.send("printf 'CMUX_ENV_CHECK=%s\\n' \"$CMUX_INITIAL_ENV_TOKEN\"\\n")
-            text = _wait_for_text(c, created_workspace, f"CMUX_ENV_CHECK={token}")
+            c.send("printf 'BREE_ENV_CHECK=%s\\n' \"$BREE_INITIAL_ENV_TOKEN\"\\n")
+            text = _wait_for_text(c, created_workspace, f"BREE_ENV_CHECK={token}")
             _must(
-                f"CMUX_ENV_CHECK={token}" in text,
+                f"BREE_ENV_CHECK={token}" in text,
                 f"initial_env token missing from terminal output: {text!r}",
             )
             c.select_workspace(baseline_workspace)

@@ -1,7 +1,7 @@
-import CmuxWorkspaces
+import BreeWorkspaces
 import Foundation
 
-/// Transition notifications for a workspace's todo state: a single cmux
+/// Transition notifications for a workspace's todo state: a single bree
 /// notification when the checklist first becomes fully complete (n/n, n > 0).
 /// This reuses the same delivery path as the app's other workspace-level
 /// notifications (`AppDelegate.shared.notificationStore.addNotification`,

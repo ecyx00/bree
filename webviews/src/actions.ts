@@ -13,11 +13,11 @@ export function resolveDiffNavigationURL(rawURL: string): string {
   try {
     const target = new URL(rawURL, window.location.href);
     if (
-      window.location.protocol === "cmux-diff-viewer:" &&
+      window.location.protocol === "bree-diff-viewer:" &&
       (target.protocol === "http:" || target.protocol === "https:")
     ) {
       const rest = target.pathname.split("/").filter(Boolean).slice(1).join("/");
-      return `cmux-diff-viewer://${window.location.host}/${rest}`;
+      return `bree-diff-viewer://${window.location.host}/${rest}`;
     }
     return target.href;
   } catch {
@@ -26,7 +26,7 @@ export function resolveDiffNavigationURL(rawURL: string): string {
 }
 
 // Whether `url` begins with an explicit `scheme://` or `scheme:` prefix (e.g.
-// `http://`, `cmux-diff-viewer://`, `data:`). A root-relative path (`/foo?x`)
+// `http://`, `bree-diff-viewer://`, `data:`). A root-relative path (`/foo?x`)
 // or a protocol-relative/relative path has no scheme and is left for the
 // browser to resolve against the current document.
 function hasURLScheme(url: string): boolean {
@@ -85,7 +85,7 @@ const UNSAFE_SHELL_PASTE_CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007
 // A bare CR submits a line just like LF, so it must split lines here too.
 const SHELL_LINE_BOUNDARY = /\r\n|\r|\n/;
 
-const GIT_APPLY_DELIMITER_PREFIX = "CMUX_DIFF_PATCH_";
+const GIT_APPLY_DELIMITER_PREFIX = "BREE_DIFF_PATCH_";
 
 /**
  * Builds a `git apply` command that feeds `patchText` through a quoted heredoc.

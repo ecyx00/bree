@@ -26,8 +26,8 @@ enum WorkspaceInitialCommandLoginShell {
     /// Wraps a command in a supported login shell while preserving the command verbatim.
     ///
     /// Login profiles can prepend other tool directories (Homebrew's `shellenv` puts
-    /// `/opt/homebrew/bin` first) ahead of the per-surface shim directory that cmux
-    /// seeds into the spawned PATH, which would route `claude`/`codex` around cmux's
+    /// `/opt/homebrew/bin` first) ahead of the per-surface shim directory that bree
+    /// seeds into the spawned PATH, which would route `claude`/`codex` around bree's
     /// wrapper hooks. The payload therefore re-prepends the shim directory after
     /// profiles run; a duplicate PATH entry is harmless and matches what interactive
     /// shell integration already produces. The directory can sit in a shared
@@ -46,14 +46,14 @@ enum WorkspaceInitialCommandLoginShell {
         switch (shellPath as NSString).lastPathComponent {
         case "fish":
             payload = """
-            set -l _cmux_previous_shim ""
-            for _cmux_candidate_shim in "$CMUX_CLAUDE_WRAPPER_SHIM_ROOT" "$CMUX_AGENT_COMMAND_SHIM_ROOT"
-                if test -n "$_cmux_candidate_shim"; and test "$_cmux_candidate_shim" != "$_cmux_previous_shim"; and /bin/sh -c \(check) cmux "$_cmux_candidate_shim"
-                    set -gx PATH "$_cmux_candidate_shim" $PATH
-                    set _cmux_previous_shim "$_cmux_candidate_shim"
+            set -l _bree_previous_shim ""
+            for _bree_candidate_shim in "$BREE_CLAUDE_WRAPPER_SHIM_ROOT" "$BREE_AGENT_COMMAND_SHIM_ROOT"
+                if test -n "$_bree_candidate_shim"; and test "$_bree_candidate_shim" != "$_bree_previous_shim"; and /bin/sh -c \(check) bree "$_bree_candidate_shim"
+                    set -gx PATH "$_bree_candidate_shim" $PATH
+                    set _bree_previous_shim "$_bree_candidate_shim"
                 end
             end
-            set -e _cmux_previous_shim _cmux_candidate_shim
+            set -e _bree_previous_shim _bree_candidate_shim
             \(command)
             """
         case "zsh", "bash", "sh", "ksh", "dash":
@@ -74,54 +74,54 @@ enum WorkspaceInitialCommandLoginShell {
 
     private static var posixShimRootPrepend: String {
         """
-        _cmux_previous_shim=''
-        for _cmux_candidate_shim in "${CMUX_CLAUDE_WRAPPER_SHIM_ROOT:-}" "${CMUX_AGENT_COMMAND_SHIM_ROOT:-}"; do
-            if [ -n "$_cmux_candidate_shim" ] && [ "$_cmux_candidate_shim" != "$_cmux_previous_shim" ] && /bin/sh -c \(shellSingleQuoted(shimRootCheck)) cmux "$_cmux_candidate_shim"; then
-                PATH="$_cmux_candidate_shim${PATH:+:$PATH}"; export PATH
-                _cmux_previous_shim=$_cmux_candidate_shim
+        _bree_previous_shim=''
+        for _bree_candidate_shim in "${BREE_CLAUDE_WRAPPER_SHIM_ROOT:-}" "${BREE_AGENT_COMMAND_SHIM_ROOT:-}"; do
+            if [ -n "$_bree_candidate_shim" ] && [ "$_bree_candidate_shim" != "$_bree_previous_shim" ] && /bin/sh -c \(shellSingleQuoted(shimRootCheck)) bree "$_bree_candidate_shim"; then
+                PATH="$_bree_candidate_shim${PATH:+:$PATH}"; export PATH
+                _bree_previous_shim=$_bree_candidate_shim
             fi
         done
-        unset _cmux_previous_shim _cmux_candidate_shim
+        unset _bree_previous_shim _bree_candidate_shim
         """
     }
 
     /// The same fixed POSIX predicate runs from every supported login shell;
     /// the candidate is argv data and never interpolated into executable code.
     private static let shimRootCheck = #"""
-    _cmux_root=$1
-    case "$_cmux_root" in /*) ;; *) exit 1 ;; esac
-    while [ "$_cmux_root" != / ] && [ "${_cmux_root%/}" != "$_cmux_root" ]; do _cmux_root=${_cmux_root%/}; done
-    [ -d "$_cmux_root" ] && [ ! -L "$_cmux_root" ] || exit 1
-    _cmux_uid=$(/usr/bin/id -u) || exit 1
-    _cmux_meta() {
-        _cmux_info=$(/usr/bin/stat -f '%HT:%u:%Mp%Lp' -- "$1" 2>/dev/null) || _cmux_info=$(/usr/bin/stat -c '%F:%u:%a' -- "$1" 2>/dev/null) || return 1
-        _cmux_kind=${_cmux_info%%:*}
-        _cmux_info=${_cmux_info#*:}
-        _cmux_owner=${_cmux_info%%:*}
-        _cmux_mode=${_cmux_info#*:}
-        case "$_cmux_mode" in ''|*[!0-7]*) return 1 ;; esac
-        _cmux_mode=$((0$_cmux_mode))
+    _bree_root=$1
+    case "$_bree_root" in /*) ;; *) exit 1 ;; esac
+    while [ "$_bree_root" != / ] && [ "${_bree_root%/}" != "$_bree_root" ]; do _bree_root=${_bree_root%/}; done
+    [ -d "$_bree_root" ] && [ ! -L "$_bree_root" ] || exit 1
+    _bree_uid=$(/usr/bin/id -u) || exit 1
+    _bree_meta() {
+        _bree_info=$(/usr/bin/stat -f '%HT:%u:%Mp%Lp' -- "$1" 2>/dev/null) || _bree_info=$(/usr/bin/stat -c '%F:%u:%a' -- "$1" 2>/dev/null) || return 1
+        _bree_kind=${_bree_info%%:*}
+        _bree_info=${_bree_info#*:}
+        _bree_owner=${_bree_info%%:*}
+        _bree_mode=${_bree_info#*:}
+        case "$_bree_mode" in ''|*[!0-7]*) return 1 ;; esac
+        _bree_mode=$((0$_bree_mode))
     }
-    _cmux_chain_safe() {
-        _cmux_current=$1
+    _bree_chain_safe() {
+        _bree_current=$1
         while :; do
-            _cmux_meta "$_cmux_current" || return 1
-            [ "$_cmux_owner" = "$_cmux_uid" ] || [ "$_cmux_owner" = 0 ] || return 1
-            case "$_cmux_kind" in
-                Directory|directory) [ $((_cmux_mode & 0022)) -eq 0 ] || [ $((_cmux_mode & 01000)) -ne 0 ] || return 1 ;;
+            _bree_meta "$_bree_current" || return 1
+            [ "$_bree_owner" = "$_bree_uid" ] || [ "$_bree_owner" = 0 ] || return 1
+            case "$_bree_kind" in
+                Directory|directory) [ $((_bree_mode & 0022)) -eq 0 ] || [ $((_bree_mode & 01000)) -ne 0 ] || return 1 ;;
                 'Symbolic Link'|'symbolic link') ;;
                 *) return 1 ;;
             esac
-            [ "$_cmux_current" = / ] && return 0
-            _cmux_current=${_cmux_current%/*}
-            [ -n "$_cmux_current" ] || _cmux_current=/
+            [ "$_bree_current" = / ] && return 0
+            _bree_current=${_bree_current%/*}
+            [ -n "$_bree_current" ] || _bree_current=/
         done
     }
-    _cmux_meta "$_cmux_root" || exit 1
-    [ "$_cmux_owner" = "$_cmux_uid" ] && [ $((_cmux_mode & 0022)) -eq 0 ] || exit 1
-    _cmux_chain_safe "$_cmux_root" || exit 1
-    _cmux_resolved=$(CDPATH='' command cd -P "$_cmux_root" >/dev/null && /bin/pwd -P) || exit 1
-    _cmux_chain_safe "$_cmux_resolved"
+    _bree_meta "$_bree_root" || exit 1
+    [ "$_bree_owner" = "$_bree_uid" ] && [ $((_bree_mode & 0022)) -eq 0 ] || exit 1
+    _bree_chain_safe "$_bree_root" || exit 1
+    _bree_resolved=$(CDPATH='' command cd -P "$_bree_root" >/dev/null && /bin/pwd -P) || exit 1
+    _bree_chain_safe "$_bree_resolved"
     """#
 
     private static func shellSingleQuoted(_ value: String) -> String {

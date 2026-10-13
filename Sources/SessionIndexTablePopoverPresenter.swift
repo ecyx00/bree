@@ -1,5 +1,5 @@
 import AppKit
-import CmuxAppKitSupportUI
+import BreeAppKitSupportUI
 import SwiftUI
 
 /// Owns the single Vault popover outside recycled SwiftUI row graphs.
@@ -11,7 +11,7 @@ import SwiftUI
 @MainActor
 final class SessionIndexTablePopoverPresenter: NSObject, NSPopoverDelegate {
     private lazy var hostingController = NSHostingController(rootView: AnyView(EmptyView()))
-    private let visibleUpdateScheduler = CmuxPopoverVisibleUpdateScheduler()
+    private let visibleUpdateScheduler = BreePopoverVisibleUpdateScheduler()
     private let transcriptLayout: SessionTranscriptPopoverLayout
     private let transcriptSizeModel: SessionTranscriptPopoverSizeModel
     private var popover: NSPopover?
@@ -93,7 +93,7 @@ final class SessionIndexTablePopoverPresenter: NSObject, NSPopoverDelegate {
                 // association in place so a recycled/native row anchor can
                 // replace a geometry fallback without closing and reopening
                 // the transcript (which was the source of the visible flash).
-                CmuxPopoverMutation.performWithoutImplicitAnimation {
+                BreePopoverMutation.performWithoutImplicitAnimation {
                     popover?.show(
                         relativeTo: anchorRect,
                         of: anchorView,
@@ -279,7 +279,7 @@ final class SessionIndexTablePopoverPresenter: NSObject, NSPopoverDelegate {
                 height: transcriptSizeModel.size.height
             )
         }
-        CmuxPopoverMutation.setContentSize(size, on: popover)
+        BreePopoverMutation.setContentSize(size, on: popover)
     }
 
     private func resetPresentedContent() {

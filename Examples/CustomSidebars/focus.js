@@ -1,6 +1,6 @@
 // Focus: the selected workspace, front and center, then whatever needs you.
 // Minimal zen sidebar showing off the reactive JS lane: signals, hover, taps.
-//   cp Examples/CustomSidebars/focus.js ~/.config/cmux/sidebars/ && cmux sidebar open focus
+//   cp Examples/CustomSidebars/focus.js ~/.config/bree/sidebars/ && bree sidebar open focus
 
 const unreadRows = () =>
   (data.workspaces() ?? []).filter((w) => w.unread > 0 && !w.selected);
@@ -33,7 +33,7 @@ sidebar(() =>
           .cornerRadius(8)
           .hoverBackground("#7f7f7f24")
           .frame({ maxWidth: "infinity" })
-          .onTap(() => cmux("workspace.select", { workspace_id: w().id }))
+          .onTap(() => bree("workspace.select", { workspace_id: w().id }))
     ),
   ]),
   { surface: "glass" }

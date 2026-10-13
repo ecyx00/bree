@@ -1,4 +1,4 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension SurfaceCatalog {
@@ -14,7 +14,7 @@ extension SurfaceCatalog {
             activeDisplayCreations.remove(machine)
             notifyChange()
         }
-        guard let provider = provider(for: machine) as? CmuxTuiSurfaceProvider else {
+        guard let provider = provider(for: machine) as? BreeTuiSurfaceProvider else {
             throw SurfaceCatalogError.noProvider(machine)
         }
         let resource = try await provider.createDisplay()
@@ -56,7 +56,7 @@ extension SurfaceCatalog {
         at destination: SurfaceDestination,
         bestEffortOpen: Bool
     ) async throws {
-        guard let provider = provider(for: machine) as? CmuxTuiSurfaceProvider else {
+        guard let provider = provider(for: machine) as? BreeTuiSurfaceProvider else {
             throw SurfaceCatalogError.noProvider(machine)
         }
         // A second click while this machine is already creating is dropped, as

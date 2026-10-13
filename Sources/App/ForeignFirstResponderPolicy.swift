@@ -10,7 +10,7 @@ import AppKit
 /// leaving the main window as key, so child-window membership is the designed arrangement for
 /// popover typing.
 ///
-/// cmux hosts terminal surfaces through a portal that reparents views between windows; a focus owner
+/// bree hosts terminal surfaces through a portal that reparents views between windows; a focus owner
 /// can be reparented out of a window without resigning, leaving `window.firstResponder` pointing at
 /// a view that no longer belongs to the window (a "stranded" responder, see issue #5269). Requiring
 /// membership in `window` or one of its attached child windows lets the terminal reclaim focus from a

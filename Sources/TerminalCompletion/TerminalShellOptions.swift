@@ -1,4 +1,4 @@
-import CmuxTerminalCore
+import BreeTerminalCore
 import Darwin
 import Foundation
 
@@ -93,7 +93,7 @@ enum TerminalShellOptions {
             let words = context.words + [context.word]
             let output = TerminalShellProcess.run(
                 executable: bash,
-                arguments: ["--noprofile", "--norc", "-c", bashScript, "cmux-bash", linePrefix] + words,
+                arguments: ["--noprofile", "--norc", "-c", bashScript, "bree-bash", linePrefix] + words,
                 environment: environment(),
                 cwd: cwd,
                 timeout: timeout,
@@ -118,7 +118,7 @@ enum TerminalShellOptions {
         let fileManager = FileManager.default
         let home = NSHomeDirectory()
         guard let support = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return [] }
-        let directory = support.appendingPathComponent("cmux/completion", isDirectory: true)
+        let directory = support.appendingPathComponent("bree/completion", isDirectory: true)
         try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         // Versioned name: a new script version never meets an old file.
         let script = directory.appendingPathComponent("capture-v1.zsh")
@@ -140,11 +140,11 @@ enum TerminalShellOptions {
         defer { try? fileManager.removeItem(at: out) }
 
         var env = environment()
-        env["CMUX_SCRIPT"] = script.path
-        env["CMUX_OUT"] = out.path
-        env["CMUX_DUMP"] = dump.path
-        env["CMUX_FPATH"] = fpath.joined(separator: ":")
-        env["CMUX_BUF"] = buffer
+        env["BREE_SCRIPT"] = script.path
+        env["BREE_OUT"] = out.path
+        env["BREE_DUMP"] = dump.path
+        env["BREE_FPATH"] = fpath.joined(separator: ":")
+        env["BREE_BUF"] = buffer
         guard TerminalShellProcess.run(
             executable: "/bin/zsh",
             arguments: ["-f", script.path],
@@ -262,13 +262,13 @@ enum TerminalShellOptions {
     # pty, bind Tab to a completion widget, wrap compadd) comes from
     # zsh-capture-completion by Vincent Breitmoser (MIT),
     # https://github.com/Valodim/zsh-capture-completion
-    # Inputs come as data through CMUX_* environment variables; the buffer is
-    # never interpolated into code. Results are appended to $CMUX_OUT as
+    # Inputs come as data through BREE_* environment variables; the buffer is
+    # never interpolated into code. Results are appended to $BREE_OUT as
     # `match<TAB>description` lines.
-    if [[ -n $CMUX_INNER ]]; then
-      fpath=(${(s.:.)CMUX_FPATH} $fpath)
+    if [[ -n $BREE_INNER ]]; then
+      fpath=(${(s.:.)BREE_FPATH} $fpath)
       autoload -Uz compinit
-      compinit -C -d "$CMUX_DUMP"
+      compinit -C -d "$BREE_DUMP"
       zstyle ':completion:*' list-prompt ''
       zstyle ':completion:*' menu no
       zstyle ':completion:*' verbose yes
@@ -277,60 +277,60 @@ enum TerminalShellOptions {
       compadd() {
         emulate -L zsh
         setopt extendedglob
-        local -a __cmux_ms __cmux_disp
-        local -A __cmux_desc
-        local __cmux_i __cmux_k
+        local -a __bree_ms __bree_disp
+        local -A __bree_desc
+        local __bree_i __bree_k
         # Find -O/-A/-D (internal calls) and the -d display array, also in clusters like -ld.
-        local __cmux_n=1 __cmux_a __cmux_c __cmux_internal=
-        local __cmux_dn=
-        while (( __cmux_n <= $# )); do
-          __cmux_a=${@[__cmux_n]}
-          [[ $__cmux_a == (-|--) ]] && break
-          if [[ $__cmux_a == -[a-zA-Z0-9]* ]]; then
-            for __cmux_c in ${(s::)__cmux_a#-}; do
-              if [[ JVXxPSpsiIWFMOADdEorR == *$__cmux_c* ]]; then
-                case $__cmux_c in
-                  d) __cmux_dn=${@[__cmux_n+1]} ;;
-                  O|A|D) __cmux_internal=1 ;;
+        local __bree_n=1 __bree_a __bree_c __bree_internal=
+        local __bree_dn=
+        while (( __bree_n <= $# )); do
+          __bree_a=${@[__bree_n]}
+          [[ $__bree_a == (-|--) ]] && break
+          if [[ $__bree_a == -[a-zA-Z0-9]* ]]; then
+            for __bree_c in ${(s::)__bree_a#-}; do
+              if [[ JVXxPSpsiIWFMOADdEorR == *$__bree_c* ]]; then
+                case $__bree_c in
+                  d) __bree_dn=${@[__bree_n+1]} ;;
+                  O|A|D) __bree_internal=1 ;;
                 esac
-                (( __cmux_n++ ))
+                (( __bree_n++ ))
                 break
               fi
             done
           fi
-          (( __cmux_n++ ))
+          (( __bree_n++ ))
         done
-        if [[ -n $__cmux_internal ]]; then builtin compadd "$@"; return; fi
-        builtin compadd -O __cmux_ms "$@"
-        [[ -n $__cmux_dn ]] && __cmux_disp=("${(@P)__cmux_dn}")
-        for __cmux_i in "${__cmux_disp[@]}"; do
-          if [[ $__cmux_i == *' -- '* ]]; then
-            __cmux_k=${${__cmux_i%% -- *}%%[[:space:]]##}
-            __cmux_desc[$__cmux_k]=${__cmux_i#* -- }
+        if [[ -n $__bree_internal ]]; then builtin compadd "$@"; return; fi
+        builtin compadd -O __bree_ms "$@"
+        [[ -n $__bree_dn ]] && __bree_disp=("${(@P)__bree_dn}")
+        for __bree_i in "${__bree_disp[@]}"; do
+          if [[ $__bree_i == *' -- '* ]]; then
+            __bree_k=${${__bree_i%% -- *}%%[[:space:]]##}
+            __bree_desc[$__bree_k]=${__bree_i#* -- }
           fi
         done
-        for __cmux_i in "${__cmux_ms[@]}"; do
-          print -r -- "$__cmux_i"$'\t'"${__cmux_desc[${__cmux_i%=}]-}" >>"$CMUX_OUT"
+        for __bree_i in "${__bree_ms[@]}"; do
+          print -r -- "$__bree_i"$'\t'"${__bree_desc[${__bree_i%=}]-}" >>"$BREE_OUT"
         done
         builtin compadd "$@"
       }
-      _cmux_done() { print CMUX_DONE }
-      _cmux_widget() { comppostfuncs=(_cmux_done); _main_complete }
-      zle -C cmux-capture complete-word _cmux_widget
-      bindkey '^I' cmux-capture
-      print CMUX_READY
+      _bree_done() { print BREE_DONE }
+      _bree_widget() { comppostfuncs=(_bree_done); _main_complete }
+      zle -C bree-capture complete-word _bree_widget
+      bindkey '^I' bree-capture
+      print BREE_READY
       return 0
     fi
     zmodload zsh/zpty || exit 1
-    export CMUX_INNER=1 TERM=xterm-256color
-    : >"$CMUX_OUT"
+    export BREE_INNER=1 TERM=xterm-256color
+    : >"$BREE_OUT"
     zpty z zsh -f -i
-    zpty -w z "source ${(q)CMUX_SCRIPT}"
-    zpty -r z __cmux_b '*CMUX_READY*' || exit 1
-    zpty -w -n z "${CMUX_BUF}"$'\t'
-    zpty -r z __cmux_b '*CMUX_DONE*'
+    zpty -w z "source ${(q)BREE_SCRIPT}"
+    zpty -r z __bree_b '*BREE_READY*' || exit 1
+    zpty -w -n z "${BREE_BUF}"$'\t'
+    zpty -r z __bree_b '*BREE_DONE*'
     zpty -d z
-    cat "$CMUX_OUT"
+    cat "$BREE_OUT"
     """#
 }
 

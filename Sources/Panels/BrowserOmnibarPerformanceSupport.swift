@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import Observation
-import CmuxBrowser
+import BreeBrowser
 
 struct BrowserOpenTabSuggestionSnapshot: Equatable {
     let host: PanelHost
@@ -88,8 +88,8 @@ struct OmnibarOpenTabMatch: Equatable {
 extension BrowserHistoryStore {
     static func uiTestSeedEntriesIfConfigured() -> [Entry]? {
         let env = ProcessInfo.processInfo.environment
-        guard env["CMUX_UI_TEST_MODE"] == "1",
-              let rawSeed = env["CMUX_UI_TEST_BROWSER_HISTORY_JSON"],
+        guard env["BREE_UI_TEST_MODE"] == "1",
+              let rawSeed = env["BREE_UI_TEST_BROWSER_HISTORY_JSON"],
               let data = rawSeed.data(using: .utf8) else {
             return nil
         }
@@ -391,7 +391,7 @@ extension Workspace {
 }
 
 extension Notification.Name {
-    static let commandPaletteVisibilityDidChange = Notification.Name("cmux.commandPaletteVisibilityDidChange")
+    static let commandPaletteVisibilityDidChange = Notification.Name("bree.commandPaletteVisibilityDidChange")
 }
 
 func postCommandPaletteVisibilityDidChangeIfNeeded(

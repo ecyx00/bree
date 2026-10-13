@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 struct AboutPropertyRow: View {
@@ -31,11 +31,12 @@ struct AboutPropertyRow: View {
                 Link(destination: url) {
                     textView
                 }
+                .foregroundStyle(Color(nsColor: BreeAccentColor.ivory))
             } else {
                 textView
             }
         }
-        .cmuxFont(.callout)
+        .scaledFont(.callout)
         .textSelection(.enabled)
         .frame(maxWidth: .infinity)
     }

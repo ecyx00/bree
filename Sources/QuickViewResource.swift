@@ -69,7 +69,7 @@ enum QuickViewResource: Equatable {
                     filePath: path,
                     fileContentChangeCoordinator: workspace.fileContentChangeCoordinator
                 )
-                // Obsidian and cmux have no lock between them (last writer wins): vault notes open read-only.
+                // Obsidian and bree have no lock between them (last writer wins): vault notes open read-only.
                 // The "Read-only · Edit" button unlocks them.
                 // Wiki pages (the global wiki folder) are written by a memory tool only: also read-only.
                 if ObsidianVault.isVaultMarkdown(path) || WikiPaths.isWikiPage(path) { panel.isReadOnly = true }

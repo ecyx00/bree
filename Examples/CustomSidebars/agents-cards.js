@@ -1,7 +1,7 @@
 // agents-cards: one card per subagent with a status-tinted edge. The card
 // shape gives each agent room for a second line of context (kind, cwd tail)
 // without the row noise of a table - good at a dozen agents or fewer.
-//   cmux right-sidebar set custom agents-cards
+//   bree right-sidebar set custom agents-cards
 
 const TINT = {
   needs_input: "#FF9F0A",
@@ -41,8 +41,8 @@ const cards = computed(() => {
 });
 
 function jump(e) {
-  cmux("workspace.select", { workspace_id: e.ws.id });
-  if (e.a.surfaceId) cmux("surface.focus", { surface_id: e.a.surfaceId });
+  bree("workspace.select", { workspace_id: e.ws.id });
+  if (e.a.surfaceId) bree("surface.focus", { surface_id: e.a.surfaceId });
 }
 
 sidebar(() =>
@@ -91,7 +91,7 @@ sidebar(() =>
         .onTap(() => jump(e()))
     ),
 
-    Text(() => (cards().length === 0 ? "No agents. Sessions started in cmux terminals appear here." : ""))
+    Text(() => (cards().length === 0 ? "No agents. Sessions started in bree terminals appear here." : ""))
       .font(11).color("tertiary").paddingHorizontal(10),
     Spacer(),
   ]).paddingHorizontal(6),

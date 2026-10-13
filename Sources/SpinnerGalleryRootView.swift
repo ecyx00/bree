@@ -18,7 +18,7 @@ struct SpinnerGalleryRootView: View {
                 makeView: { AnyView(GPUSpinner(style: .macOSSpokes, color: color).frame(width: dim, height: dim)) }
             ),
             SpinnerSpec(
-                title: "GPU arc (legacy cmux)",
+                title: "GPU arc (legacy bree)",
                 mechanism: "Core Animation transform.rotation.z, continuous linear. GPU-composited, 0 main-thread work per frame. Same energy profile as spokes, different look.",
                 energy: .low,
                 shipping: false,

@@ -1,13 +1,13 @@
-import CmuxFoundation
-import CmuxSidebar
-import CmuxSurfaceCatalogModel
+import BreeFoundation
+import BreeSidebar
+import BreeSurfaceCatalogModel
 import Foundation
 
-/// Mirrors agent rows of `cmux ssh` terminals into the sidebar, the way local
+/// Mirrors agent rows of `bree ssh` terminals into the sidebar, the way local
 /// agent hooks drive it: a Running / Needs input / Idle status per agent kind
 /// and a per-panel lifecycle for the activity spinner and task status.
 ///
-/// The cmux-tui daemon on the host folds the provider hooks into its agent
+/// The bree-tui daemon on the host folds the provider hooks into its agent
 /// roster (hook > plugin > detected); the catalog carries each row as the
 /// terminal's `agent` badge. Completion and approval notifications already
 /// arrive through the daemon's notification ledger, and the tab icon through
@@ -111,10 +111,10 @@ final class SSHTuiAgentStatusProjector {
         switch activity {
         case .running:
             SidebarStatusEntry(key: key, value: String(localized: "agent.generic.status.running", defaultValue: "Running"),
-                               icon: "bolt.fill", color: CmuxAccentColor.builtInAgentStatusHex, timestamp: Date())
+                               icon: "bolt.fill", color: BreeAccentColor.builtInAgentStatusHex, timestamp: Date())
         case .needsInput:
             SidebarStatusEntry(key: key, value: String(localized: "feed.status.needsInput", defaultValue: "Needs input"),
-                               icon: "bell.fill", color: CmuxAccentColor.builtInAgentStatusHex, priority: 100, timestamp: Date())
+                               icon: "bell.fill", color: BreeAccentColor.builtInAgentStatusHex, priority: 100, timestamp: Date())
         case .idle:
             SidebarStatusEntry(key: key, value: String(localized: "agent.generic.notification.status.idle", defaultValue: "Idle"),
                                icon: "pause.circle.fill", color: "#8E8E93", timestamp: Date())

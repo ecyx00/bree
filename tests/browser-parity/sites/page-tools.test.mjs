@@ -87,7 +87,7 @@ test("browserAuth.request: the app fills marked fields and submits; no value rea
   assert.equal(sent.origin, "https://login.example");
   assert.ok(!JSON.stringify(sent).includes("correct horse"));
   assert.equal(await s.value('page.locator("#out").textContent()'), "submitted as ada@example.com with a 13-character password");
-  assert.deepEqual(await s.value("page.evaluate(() => [document.querySelectorAll('[data-cmux-auth]').length, [...new Set(window.seen)]])"), [0, ["email", "password"]]);
+  assert.deepEqual(await s.value("page.evaluate(() => [document.querySelectorAll('[data-bree-auth]').length, [...new Set(window.seen)]])"), [0, ["email", "password"]]);
   const scope = Object.keys(s.repl.scope).map((k) => { try { return JSON.stringify(s.repl.scope[k]); } catch { return ""; } }).join("\n");
   assert.ok(!scope.includes("correct horse"));
 });
@@ -113,7 +113,7 @@ test("browserAuth.request: cancel, wrong origin, bad selectors, and no native sh
   assert.match(await s.error(`sites.browserAuth.request({ origin: "https://login.example", fields: [{ id: "e", label: "Enter your email\\nand password", type: "email", selector: "input" }] })`), /label: expected a short noun phrase/);
   globalThis.__authAnswer = (params, { call }) => call("auth.request", params);
   assert.deepEqual(await s.value(`sites.browserAuth.request({ origin: "https://login.example", fields: [${field}] })`), { status: "unavailable" });
-  assert.equal(await s.value("page.evaluate(() => document.querySelectorAll('[data-cmux-auth]').length)"), 0);
+  assert.equal(await s.value("page.evaluate(() => document.querySelectorAll('[data-bree-auth]').length)"), 0);
 });
 
 test("browserAuth.request: only credential fields (password, username, one-time code) are filled", async () => {
@@ -136,7 +136,7 @@ test("sites.list names every tool; help lists methods; drafts list", async () =>
 });
 
 test("embeddedJSON reads page data given as an object or as an escaped string (YouTube's mobile pages)", () => {
-  const { embeddedJSON } = globalThis.CmuxBrowserRepl.sites;
+  const { embeddedJSON } = globalThis.BreeBrowserRepl.sites;
   assert.deepEqual(embeddedJSON('<script>var ytInitialData = {"a":"}{","b":[1]};</script>', "ytInitialData = "), { a: "}{", b: [1] });
   const escaped = String.raw`<script>var ytInitialData = '\x7b\x22a\x22:\x22it\x5c\x22s \u00e9\x22\x7d';</script>`;
   assert.deepEqual(embeddedJSON(escaped, "ytInitialData = "), { a: 'it"s é' });
@@ -150,7 +150,7 @@ test("the tools load and parse without Node's URL (JavaScriptCore has none)", ()
   const ctx = vm.createContext({ console });
   for (const f of manifest.repl) vm.runInContext(fs.readFileSync(path.join(dir, f), "utf8"), ctx, { filename: f });
   const out = vm.runInContext(`
-    const ns = globalThis.CmuxBrowserRepl;
+    const ns = globalThis.BreeBrowserRepl;
     const sites = ns.sites.createSites({ session: { now: () => 0, sleep: async () => {} }, host: { tmpdir: "/tmp" }, fetch: null, fs: null, path: null, Buffer: ns.core.Buffer, URL: ns.core.URL, currentPage: () => null });
     const g = ns.sites.shared.google;
     [typeof URL, g.exportURL(g.parse("https://docs.google.com/spreadsheets/u/2/d/SHEETID_0123456789abcdef/edit#gid=42", "t"), "csv", "t"),

@@ -1,7 +1,7 @@
 import AppKit
-import CmuxCloud
-import CmuxAuthRuntime
-import CmuxSettingsUI
+import BreeCloud
+import BreeAuthRuntime
+import BreeSettingsUI
 import Foundation
 
 /// Failures of the members-and-invites actions that are not API refusals.

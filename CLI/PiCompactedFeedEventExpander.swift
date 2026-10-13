@@ -41,14 +41,14 @@ struct PiCompactedFeedEventExpander {
     }
 
     private func events(from rawObject: [String: Any]) -> [[String: Any]] {
-        guard let summaries = rawObject["cmux_compacted_terminal_events"] as? [[String: Any]],
+        guard let summaries = rawObject["bree_compacted_terminal_events"] as? [[String: Any]],
               !summaries.isEmpty,
               summaries.count <= Self.maxCompactedTerminalEvents
         else {
             return []
         }
 
-        let rawOmittedCount = rawObject["cmux_compacted_terminal_omitted_count"] as? Int ?? 0
+        let rawOmittedCount = rawObject["bree_compacted_terminal_omitted_count"] as? Int ?? 0
         let omittedCount = max(0, rawOmittedCount)
         let needsOverflow = omittedCount > 0 || summaries.count > maximumRequestCount
         let retainedSummaryLimit = needsOverflow
@@ -71,7 +71,7 @@ struct PiCompactedFeedEventExpander {
             let (representedOmittedCount, overflowed) = omittedCount.addingReportingOverflow(displacedCount)
             var summary: [String: Any] = [
                 "tool_call_id": "compacted-omitted-\(overflowed ? Int.max : representedOmittedCount)",
-                "tool_name": "cmux_compacted_terminal_overflow",
+                "tool_name": "bree_compacted_terminal_overflow",
                 "tool_result": ["omitted_terminal_count": overflowed ? Int.max : representedOmittedCount],
             ]
             summary["session_id"] = rawObject["session_id"]

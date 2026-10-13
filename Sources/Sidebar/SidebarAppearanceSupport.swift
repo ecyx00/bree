@@ -1,13 +1,13 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxFoundation
+import BreeAppKitSupportUI
+import BreeFoundation
 import Foundation
 import SwiftUI
-import CmuxSettings
+import BreeSettings
 
 enum SidebarMatchTerminalBackgroundSettings {
     static let userDefaultsKey = "sidebarMatchTerminalBackground"
-    static let legacyAppliedSettingsFileDefaultKey = "cmux.settingsFile.sidebarMatchTerminalBackground.appliedDefault.v1"
+    static let legacyAppliedSettingsFileDefaultKey = "bree.settingsFile.sidebarMatchTerminalBackground.appliedDefault.v1"
 }
 
 enum SidebarTabItemFontScale {
@@ -120,10 +120,10 @@ enum SidebarRowType {
     }
 }
 
-/// Resolves AppKit colors against cmux's concrete terminal light/dark scheme.
+/// Resolves AppKit colors against bree's concrete terminal light/dark scheme.
 ///
 /// AppKit semantic colors otherwise resolve against the window's effective
-/// appearance, which can differ from the active cmux theme. This value type is
+/// appearance, which can differ from the active bree theme. This value type is
 /// shared by the SwiftUI and pure-AppKit sidebar paths so they never ask
 /// AppKit to make an independent appearance decision.
 struct SidebarAppearanceColorResolver {
@@ -132,7 +132,7 @@ struct SidebarAppearanceColorResolver {
         GhosttyApp.shared.effectiveTerminalColorSchemePreference == .dark ? .dark : .light
     }
 
-    /// Resolves an AppKit semantic color against a concrete cmux scheme.
+    /// Resolves an AppKit semantic color against a concrete bree scheme.
     func resolvedColor(
         _ color: NSColor,
         for colorScheme: ColorScheme,
@@ -166,7 +166,7 @@ struct SidebarAppearanceColorResolver {
         )
     }
 
-    /// Returns the active-control foreground for a concrete cmux scheme.
+    /// Returns the active-control foreground for a concrete bree scheme.
     func activeForegroundColor(
         opacity: CGFloat,
         for colorScheme: ColorScheme
@@ -236,7 +236,7 @@ func titlebarControlAppearance() -> WindowAppearanceSnapshot {
 /// palette matches the icons instead of the window appearance.
 @MainActor
 func titlebarControlColorScheme() -> ColorScheme {
-    cmuxReadableColorScheme(for: titlebarControlAppearance().compositedTerminalBackgroundColor)
+    breeReadableColorScheme(for: titlebarControlAppearance().compositedTerminalBackgroundColor)
 }
 
 @MainActor
@@ -245,13 +245,13 @@ func titlebarControlForegroundNSColor(opacity: CGFloat) -> NSColor {
 }
 
 func titlebarControlForegroundNSColor(opacity: CGFloat, appearance: WindowAppearanceSnapshot) -> NSColor {
-    cmuxReadableForegroundNSColor(
+    breeReadableForegroundNSColor(
         on: appearance.compositedTerminalBackgroundColor,
         opacity: opacity
     )
 }
 
-extension CmuxAccentColor {
+extension BreeAccentColor {
     /// The accent for a SwiftUI color scheme.
     func nsColor(for colorScheme: ColorScheme) -> NSColor {
         nsColor(isDark: colorScheme == .dark)
@@ -267,41 +267,41 @@ extension CmuxAccentColor {
 /// Fill for an unread notification badge: the Notification Badge color
 /// setting when it holds a valid hex, else `fallback`. Workspace rows and
 /// group headers both resolve through here so the setting reaches every badge.
-func cmuxNotificationBadgeNSColor(hex: String?, fallback: @autoclosure () -> NSColor) -> NSColor {
+func breeNotificationBadgeNSColor(hex: String?, fallback: @autoclosure () -> NSColor) -> NSColor {
     if let hex, let color = NSColor(hex: hex) {
         return color
     }
     return fallback()
 }
 
-func cmuxReadableColorScheme(for backgroundColor: NSColor) -> ColorScheme {
-    let backgroundLuminance = cmuxRelativeLuminance(backgroundColor)
-    let whiteContrast = cmuxContrastRatio(backgroundLuminance, 1.0)
-    let blackContrast = cmuxContrastRatio(backgroundLuminance, 0.0)
+func breeReadableColorScheme(for backgroundColor: NSColor) -> ColorScheme {
+    let backgroundLuminance = breeRelativeLuminance(backgroundColor)
+    let whiteContrast = breeContrastRatio(backgroundLuminance, 1.0)
+    let blackContrast = breeContrastRatio(backgroundLuminance, 0.0)
     return whiteContrast >= blackContrast ? .dark : .light
 }
 
-func cmuxReadableForegroundNSColor(on backgroundColor: NSColor, opacity: CGFloat) -> NSColor {
+func breeReadableForegroundNSColor(on backgroundColor: NSColor, opacity: CGFloat) -> NSColor {
     let clampedOpacity = max(0, min(opacity, 1))
-    return cmuxReadableForegroundBaseColor(on: backgroundColor)
+    return breeReadableForegroundBaseColor(on: backgroundColor)
         .withAlphaComponent(clampedOpacity)
 }
 
-func cmuxReadableForegroundNSColor(
+func breeReadableForegroundNSColor(
     preferred preferredColor: NSColor,
     on backgroundColor: NSColor,
     minimumContrast: CGFloat = 4.5
 ) -> NSColor {
     let foregroundForComparison = preferredColor.alphaComponent < 1
-        ? cmuxCompositedNSColor(preferredColor, over: backgroundColor)
+        ? breeCompositedNSColor(preferredColor, over: backgroundColor)
         : preferredColor
-    guard cmuxContrastRatio(foreground: foregroundForComparison, background: backgroundColor) < minimumContrast else {
+    guard breeContrastRatio(foreground: foregroundForComparison, background: backgroundColor) < minimumContrast else {
         return preferredColor
     }
-    return cmuxReadableForegroundNSColor(on: backgroundColor, opacity: preferredColor.alphaComponent)
+    return breeReadableForegroundNSColor(on: backgroundColor, opacity: preferredColor.alphaComponent)
 }
 
-func cmuxCompositedNSColor(_ foreground: NSColor, over background: NSColor) -> NSColor {
+func breeCompositedNSColor(_ foreground: NSColor, over background: NSColor) -> NSColor {
     let fg = foreground.usingColorSpace(.sRGB) ?? foreground
     let bg = background.usingColorSpace(.sRGB) ?? background
     var foregroundRed: CGFloat = 0
@@ -325,18 +325,18 @@ func cmuxCompositedNSColor(_ foreground: NSColor, over background: NSColor) -> N
     )
 }
 
-func cmuxContrastRatio(foreground: NSColor, background: NSColor) -> CGFloat {
-    cmuxContrastRatio(
-        cmuxRelativeLuminance(foreground),
-        cmuxRelativeLuminance(background)
+func breeContrastRatio(foreground: NSColor, background: NSColor) -> CGFloat {
+    breeContrastRatio(
+        breeRelativeLuminance(foreground),
+        breeRelativeLuminance(background)
     )
 }
 
-private func cmuxReadableForegroundBaseColor(on backgroundColor: NSColor) -> NSColor {
-    cmuxReadableColorScheme(for: backgroundColor) == .dark ? .white : .black
+private func breeReadableForegroundBaseColor(on backgroundColor: NSColor) -> NSColor {
+    breeReadableColorScheme(for: backgroundColor) == .dark ? .white : .black
 }
 
-private func cmuxRelativeLuminance(_ color: NSColor) -> CGFloat {
+private func breeRelativeLuminance(_ color: NSColor) -> CGFloat {
     let srgb = color.usingColorSpace(.sRGB) ?? color
     var red: CGFloat = 0
     var green: CGFloat = 0
@@ -356,7 +356,7 @@ private func cmuxRelativeLuminance(_ color: NSColor) -> CGFloat {
         + 0.0722 * linearized(blue)
 }
 
-private func cmuxContrastRatio(_ lhs: CGFloat, _ rhs: CGFloat) -> CGFloat {
+private func breeContrastRatio(_ lhs: CGFloat, _ rhs: CGFloat) -> CGFloat {
     let lighter = max(lhs, rhs)
     let darker = min(lhs, rhs)
     return (lighter + 0.05) / (darker + 0.05)
@@ -405,8 +405,8 @@ enum SidebarRemoteErrorCopySupport {
 /// neutral wash and edge when it isn't, the way Finder dims an inactive
 /// window's selection. Increase Contrast strengthens both. Picked from a
 /// pairwise comparison of eight treatments across accents and sidebar themes
-/// (manaflow-ai/cmux#14890).
-struct CmuxSelectionFill: Equatable {
+/// (ecyx00/bree#14890).
+struct BreeSelectionFill: Equatable {
     let color: NSColor
     let edgeColor: NSColor?
 
@@ -415,13 +415,13 @@ struct CmuxSelectionFill: Equatable {
         isEmphasized: Bool,
         increaseContrast: Bool = false,
         isSecondary: Bool = false
-    ) -> CmuxSelectionFill {
+    ) -> BreeSelectionFill {
         let isDark = colorScheme == .dark
         let base: NSColor
         let fillAlpha: CGFloat
         let edgeAlpha: CGFloat
         if isEmphasized {
-            base = .controlAccentColor
+            base = BreeAccentColor.ivory
             fillAlpha = increaseContrast ? 0.26 : (isDark ? 0.14 : 0.11)
             edgeAlpha = increaseContrast ? 0.95 : 0.60
         } else {
@@ -433,7 +433,7 @@ struct CmuxSelectionFill: Equatable {
         // primary strength so the active row stays the clear anchor.
         let scale: CGFloat = isSecondary ? 0.55 : 1
         let resolver = SidebarAppearanceColorResolver()
-        return CmuxSelectionFill(
+        return BreeSelectionFill(
             color: resolver.resolvedColor(base, for: colorScheme, opacity: fillAlpha * scale),
             edgeColor: resolver.resolvedColor(base, for: colorScheme, opacity: edgeAlpha * scale)
         )
@@ -452,7 +452,7 @@ func sidebarSelectedWorkspaceBackgroundNSColor(
     subtleSelection: Bool = false,
     isEmphasized: Bool = true,
     increaseContrast: Bool = false,
-    accent: CmuxAccentColor = CmuxAccentColor()
+    accent: BreeAccentColor = BreeAccentColor()
 ) -> NSColor {
     if let hex = sidebarSelectionColorHex,
        let parsed = NSColor(hex: hex) {
@@ -462,12 +462,12 @@ func sidebarSelectedWorkspaceBackgroundNSColor(
         return accent.selectedFill(isDark: colorScheme == .dark)
     }
     let surface = NSColor(white: colorScheme == .dark ? 0.16 : 0.93, alpha: 1)
-    let fill = CmuxSelectionFill.resolve(
+    let fill = BreeSelectionFill.resolve(
         colorScheme: colorScheme,
         isEmphasized: isEmphasized,
         increaseContrast: increaseContrast
     )
-    return cmuxCompositedNSColor(fill.color, over: surface)
+    return breeCompositedNSColor(fill.color, over: surface)
 }
 
 func sidebarSelectedWorkspaceForegroundNSColor(opacity: CGFloat) -> NSColor {
@@ -482,11 +482,11 @@ func sidebarSelectedWorkspaceForegroundNSColor(
     opacity: CGFloat
 ) -> NSColor {
     let clampedOpacity = max(0, min(opacity, 1))
-    let whiteContrast = cmuxContrastRatio(foreground: .white, background: backgroundColor)
+    let whiteContrast = breeContrastRatio(foreground: .white, background: backgroundColor)
     guard whiteContrast < 2.75 else {
         return NSColor.white.withAlphaComponent(clampedOpacity)
     }
-    return cmuxReadableForegroundNSColor(on: backgroundColor, opacity: clampedOpacity)
+    return breeReadableForegroundNSColor(on: backgroundColor, opacity: clampedOpacity)
 }
 
 /// Whether selected rows paint the subtle tint and hairline. Only the
@@ -518,7 +518,7 @@ func sidebarGroupHeaderAnchorActiveEdgeNSColor(
         subtleSelection: subtleSelection,
         sidebarSelectionColorHex: sidebarSelectionColorHex
     ) else { return nil }
-    return CmuxSelectionFill.resolve(
+    return BreeSelectionFill.resolve(
         colorScheme: colorScheme,
         isEmphasized: false,
         increaseContrast: increaseContrast
@@ -559,7 +559,7 @@ func sidebarWorkspaceRowBackgroundStyle(
     subtleSelection: Bool = false,
     isEmphasized: Bool = true,
     increaseContrast: Bool = false,
-    accent: CmuxAccentColor = CmuxAccentColor()
+    accent: BreeAccentColor = BreeAccentColor()
 ) -> SidebarWorkspaceRowBackgroundStyle {
     // Increase Contrast: the multi-selection wash is otherwise too faint to
     // read against the sidebar material.
@@ -580,7 +580,7 @@ func sidebarWorkspaceRowBackgroundStyle(
         sidebarSelectionColorHex: sidebarSelectionColorHex
     )
     func calmFill(isSecondary: Bool) -> SidebarWorkspaceRowBackgroundStyle {
-        let fill = CmuxSelectionFill.resolve(
+        let fill = BreeSelectionFill.resolve(
             colorScheme: colorScheme,
             isEmphasized: isEmphasized,
             increaseContrast: increaseContrast,
@@ -698,7 +698,7 @@ extension SidebarRowType {
 /// size (explicit `sidebar-font-size`, else the Interface Text Size), given
 /// the sidebar font scale the legacy SwiftUI rows already carry.
 struct SidebarRoleFontModifier: ViewModifier {
-    @Environment(\.cmuxGlobalFontMagnificationPercent) private var percent
+    @Environment(\.breeGlobalFontMagnificationPercent) private var percent
     let role: BreeTextRole
     let weight: Font.Weight?
     let countRow: BreeTextRole

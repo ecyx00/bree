@@ -1,7 +1,7 @@
 // kitchen-sink: every runtime feature on one scrolling panel. Use it as a
 // living demo and as a quick visual regression check for the JS lane.
-//   cp Examples/CustomSidebars/kitchen-sink.js ~/.config/cmux/sidebars/
-//   cmux right-sidebar set custom kitchen-sink    (or open it on the left)
+//   cp Examples/CustomSidebars/kitchen-sink.js ~/.config/bree/sidebars/
+//   bree right-sidebar set custom kitchen-sink    (or open it on the left)
 
 const [count, setCount] = signal(0);
 const [spun, setSpun] = signal(false);
@@ -125,7 +125,7 @@ sidebar(() =>
         .contextMenu([
           Button("Log hello", () => log("hello from kitchen-sink")),
           Menu("Submenu", [
-            Button("Open cmux repo", () => openURL("https://github.com/manaflow-ai/cmux")),
+            Button("Open bree repo", () => openURL("https://github.com/ecyx00/bree")),
           ]),
           Divider(),
           Button("Destructive", () => log("boom")).destructive(),

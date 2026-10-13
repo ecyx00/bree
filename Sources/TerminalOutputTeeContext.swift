@@ -1,4 +1,4 @@
-import CmuxTerminalCore
+import BreeTerminalCore
 import Foundation
 import os
 
@@ -56,7 +56,7 @@ final class TerminalOutputTeeContext: @unchecked Sendable {
     init(
         workspaceID: UUID,
         surfaceID: UUID,
-        agentDefinitions: [CmuxTaskManagerCodingAgentDefinition],
+        agentDefinitions: [BreeTaskManagerCodingAgentDefinition],
         promptDetectionGate: PromptDetectionGate,
         scrollbackCheckpointFlags: TerminalScrollbackOutputFlags
     ) {

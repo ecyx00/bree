@@ -14,14 +14,14 @@ class ExtensionPointTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        self.extensions = self.root / "cmux DEV.app/Contents/Extensions"
-        self.point = "com.cmuxterm.app.debug.alpha.cmux.sidebar"
+        self.extensions = self.root / "Bree Dev.app/Contents/Extensions"
+        self.point = "com.bree.app.debug.alpha.bree.sidebar"
 
     def run_script(self, point=None):
         point = self.point if point is None else point
         env = dict(os.environ, BUILT_PRODUCTS_DIR=str(self.root),
-                   CONTENTS_FOLDER_PATH="cmux DEV.app/Contents",
-                   CMUX_SIDEBAR_EXTENSION_POINT_ID=point)
+                   CONTENTS_FOLDER_PATH="Bree Dev.app/Contents",
+                   BREE_SIDEBAR_EXTENSION_POINT_ID=point)
         subprocess.run(["bash", str(SCRIPT)], env=env, check=True,
                        capture_output=True, text=True)
         return self.extensions / (point + ".appextensionpoint")
@@ -53,7 +53,7 @@ class ExtensionPointTests(unittest.TestCase):
         previous = self.run_script()
         unrelated = self.extensions / "preserve.txt"
         unrelated.write_text("keep")
-        point = "com.cmuxterm.app.debug.beta.cmux.sidebar"
+        point = "com.bree.app.debug.beta.bree.sidebar"
         dest = self.run_script(point)
         self.check_declaration(dest, point)
         self.assertFalse(previous.exists())
@@ -88,7 +88,7 @@ class ExtensionPointTests(unittest.TestCase):
         dest = self.run_script()
         os.utime(dest, ns=(1_600_000_000_000_000_000,) * 2)
         before = dest.stat()
-        stale = self.extensions / "com.cmuxterm.stale.appextensionpoint"
+        stale = self.extensions / "com.bree.stale.appextensionpoint"
         stale.write_bytes(b"stale")
         self.run_script()
         self.assertFalse(stale.exists())

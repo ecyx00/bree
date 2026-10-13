@@ -1,6 +1,6 @@
 import AppKit
-import CmuxFoundation
-import CmuxSyntaxHighlighting
+import BreeFoundation
+import BreeSyntaxHighlighting
 
 /// Applies Highlightr token colors onto a TextKit 1 `NSTextStorage` in place.
 ///

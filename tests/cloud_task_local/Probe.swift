@@ -10,7 +10,7 @@ struct CloudTaskLocalProbe {
         try await failureRestoresParent()
         try await cancellationRestoresParent()
         try await concurrentOperationsStaySeparate()
-        if ProcessInfo.processInfo.environment["CMUX_TEST_LEGACY_TASK_LOCAL"] != nil {
+        if ProcessInfo.processInfo.environment["BREE_TEST_LEGACY_TASK_LOCAL"] != nil {
             precondition(legacyCheckCount() > 0, "The regression must execute the legacy branch")
         }
         print("PASS: 4 Cloud task-local lifecycle scenarios")

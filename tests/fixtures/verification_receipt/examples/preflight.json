@@ -244,7 +244,7 @@
       "feature-flags"
     ],
     "claim_class": "pre_build_static_sanity",
-    "id": "cmux-fast-static-checks/v1",
+    "id": "bree-fast-static-checks/v1",
     "revision": "5a3a23cdd5a6a1b30fb29a72e8a9d52199691ff249e79db91c85bcc414200274"
   },
   "review": {
@@ -253,7 +253,7 @@
     "reviewed_head": null,
     "status": "unsupported"
   },
-  "schema_version": "cmux-verification/v1",
+  "schema_version": "bree-verification/v1",
   "source": {
     "after": {
       "clean": false,
@@ -274,7 +274,7 @@
     "exact_snapshot": null,
     "head_sha": "543a7b4529929d8b04d885ad0f058da24874cc89",
     "merge_sha": null,
-    "repository": "cmux (caller-supplied checkout)",
+    "repository": "bree (caller-supplied checkout)",
     "semantics": "latest_checkout_at_execution",
     "tree": "4995acd624adf1b6dce39ccfd4f51eca81fc6c30"
   },

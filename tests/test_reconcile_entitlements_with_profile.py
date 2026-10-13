@@ -17,13 +17,13 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "reconcile-entitlements-with-profile.py"
 
 DESIRED = {
-    "com.apple.application-identifier": "7WLXT3NR37.com.cmuxterm.app",
+    "com.apple.application-identifier": "7WLXT3NR37.com.bree.app",
     "com.apple.developer.team-identifier": "7WLXT3NR37",
-    "keychain-access-groups": ["7WLXT3NR37.com.cmuxterm.app"],
+    "keychain-access-groups": ["7WLXT3NR37.com.bree.app"],
     "com.apple.developer.web-browser.public-key-credential": True,
     "com.apple.developer.networking.networkextension": ["packet-tunnel-provider-systemextension"],
     "com.apple.developer.system-extension.install": True,
-    "com.apple.security.application-groups": ["7WLXT3NR37.com.cmuxterm.app"],
+    "com.apple.security.application-groups": ["7WLXT3NR37.com.bree.app"],
     "com.apple.security.cs.allow-jit": True,
     "com.apple.security.cs.allow-unsigned-executable-memory": True,
     "com.apple.security.cs.disable-library-validation": True,
@@ -31,7 +31,7 @@ DESIRED = {
 
 PROFILE_WITHOUT_TUNNEL = {
     "Entitlements": {
-        "com.apple.application-identifier": "7WLXT3NR37.com.cmuxterm.app",
+        "com.apple.application-identifier": "7WLXT3NR37.com.bree.app",
         "com.apple.developer.team-identifier": "7WLXT3NR37",
         "keychain-access-groups": ["7WLXT3NR37.*"],
         "com.apple.developer.web-browser.public-key-credential": True,
@@ -47,7 +47,7 @@ PROFILE_WITH_TUNNEL = {
             "app-proxy-provider-systemextension",
         ],
         "com.apple.developer.system-extension.install": True,
-        "com.apple.security.application-groups": ["7WLXT3NR37.com.cmuxterm.app"],
+        "com.apple.security.application-groups": ["7WLXT3NR37.com.bree.app"],
     },
     "ProvisionsAllDevices": True,
 }
@@ -95,7 +95,7 @@ class ReconcileEntitlementsTests(unittest.TestCase):
                     "com.apple.developer.web-browser.public-key-credential", "com.apple.security.cs.allow-jit"):
             self.assertEqual(effective[key], DESIRED[key])
         self.assertIn("::warning::", proc.stderr)
-        self.assertEqual(summary["profile_app_id"], "7WLXT3NR37.com.cmuxterm.app")
+        self.assertEqual(summary["profile_app_id"], "7WLXT3NR37.com.bree.app")
 
     def test_profile_with_tunnel_drops_runtime_relaxations_required_by_system_extensions(self):
         proc, effective = run(DESIRED, PROFILE_WITH_TUNNEL)
@@ -167,7 +167,7 @@ class ReconcileEntitlementsTests(unittest.TestCase):
         self.assertIn("com.apple.developer.web-browser.public-key-credential", effective)
 
     def test_repo_entitlement_files_request_the_tunnel(self):
-        for name in ("cmux.release.entitlements", "cmux.nightly.entitlements", "cmux.rc.entitlements"):
+        for name in ("bree.release.entitlements", "bree.nightly.entitlements", "bree.rc.entitlements"):
             desired = plistlib.load((ROOT / name).open("rb"))
             proc, effective = run(desired, PROFILE_WITHOUT_TUNNEL)
             self.assertEqual(proc.returncode, 0, proc.stderr)

@@ -1,9 +1,9 @@
 import AppKit
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeTerminal
+import BreeTerminalCore
 import GhosttyKit
 
-/// Adapts Ghostty intents to the existing cmux owners; it owns no workspace state.
+/// Adapts Ghostty intents to the existing bree owners; it owns no workspace state.
 @MainActor
 struct GhosttyHostActionHandler {
     let app: AppDelegate

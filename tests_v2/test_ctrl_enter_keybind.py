@@ -3,7 +3,7 @@
 Automated test for ctrl+enter keybind using real keystrokes.
 
 Requires:
-  - cmux running
+  - bree running
   - Accessibility permissions for System Events (osascript)
   - keybind = ctrl+enter=text:\\r (or \\n/\\x0d) configured in Ghostty config
 """
@@ -15,10 +15,10 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-# Add the directory containing cmux.py to the path
+# Add the directory containing bree.py to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from cmux import cmux, cmuxError
+from bree import bree, breeError
 
 
 class SkipTest(Exception):
@@ -29,24 +29,24 @@ def infer_app_name_for_osascript(socket_path: str) -> str:
     Infer the app display name from the socket path.
 
     Examples:
-      - /tmp/cmux-debug.sock          -> "cmux DEV"
-      - /tmp/cmux-debug-foo.sock      -> "cmux DEV foo"
-      - ~/Library/Application Support/cmux/cmux.sock -> "cmux"
-      - /tmp/cmux-foo.sock            -> "cmux foo"
+      - /tmp/bree-debug.sock          -> "Bree Dev"
+      - /tmp/bree-debug-foo.sock      -> "Bree Dev foo"
+      - ~/Library/Application Support/bree/bree.sock -> "bree"
+      - /tmp/bree-foo.sock            -> "bree foo"
     """
     base = Path(socket_path).name
-    if base.startswith("cmux-debug") and base.endswith(".sock"):
-        suffix = base[len("cmux-debug") : -len(".sock")]
+    if base.startswith("bree-debug") and base.endswith(".sock"):
+        suffix = base[len("bree-debug") : -len(".sock")]
         if suffix.startswith("-") and suffix[1:]:
-            return f"cmux DEV {suffix[1:]}"
-        return "cmux DEV"
-    if base.startswith("cmux") and base.endswith(".sock"):
-        suffix = base[len("cmux") : -len(".sock")]
+            return f"Bree Dev {suffix[1:]}"
+        return "Bree Dev"
+    if base.startswith("bree") and base.endswith(".sock"):
+        suffix = base[len("bree") : -len(".sock")]
         if suffix.startswith("-") and suffix[1:]:
-            return f"cmux {suffix[1:]}"
-        return "cmux"
+            return f"bree {suffix[1:]}"
+        return "bree"
     # Fallback: tests usually run against Debug builds.
-    return "cmux DEV"
+    return "Bree Dev"
 
 
 def run_osascript(script: str) -> None:
@@ -120,7 +120,7 @@ def find_config_with_keybind() -> Optional[Path]:
     return None
 
 
-def test_ctrl_enter_keybind(client: cmux) -> tuple[bool, str]:
+def test_ctrl_enter_keybind(client: bree) -> tuple[bool, str]:
     marker = Path("/tmp") / f"ghostty_ctrl_enter_{os.getpid()}"
     marker.unlink(missing_ok=True)
 
@@ -162,14 +162,14 @@ def test_ctrl_enter_keybind(client: cmux) -> tuple[bool, str]:
 
 def run_tests() -> int:
     print("=" * 60)
-    print("cmux Ctrl+Enter Keybind Test")
+    print("bree Ctrl+Enter Keybind Test")
     print("=" * 60)
     print()
 
-    socket_path = cmux.DEFAULT_SOCKET_PATH
+    socket_path = bree.DEFAULT_SOCKET_PATH
     if not os.path.exists(socket_path):
         print(f"Error: Socket not found at {socket_path}")
-        print("Please make sure cmux is running.")
+        print("Please make sure bree is running.")
         return 1
 
     config_path = find_config_with_keybind()
@@ -182,12 +182,12 @@ def run_tests() -> int:
     print()
 
     try:
-        with cmux() as client:
+        with bree() as client:
             ok, message = test_ctrl_enter_keybind(client)
             status = "✅" if ok else "❌"
             print(f"{status} {message}")
             return 0 if ok else 1
-    except cmuxError as e:
+    except breeError as e:
         print(f"Error: {e}")
         return 1
     except SkipTest as e:

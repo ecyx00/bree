@@ -1,0 +1,28 @@
+{
+  "name": "bree",
+  "version": "0.0.0-managed",
+  "description": "bree — a tmux-like terminal multiplexer TUI backed by libghostty-vt. Run with `npx bree`.",
+  "bin": {
+    "bree": "bin/bree.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ecyx00/bree.git",
+    "directory": "bree-tui/dist/npm/bree"
+  },
+  "homepage": "https://github.com/ecyx00/bree/tree/main/bree-tui",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin/bree.js"
+  ],
+  "optionalDependencies": {
+    "bree-tui-darwin-arm64": "0.0.0-managed",
+    "bree-tui-darwin-x64": "0.0.0-managed",
+    "bree-tui-linux-x64": "0.0.0-managed",
+    "bree-tui-linux-arm64": "0.0.0-managed",
+    "bree-tui-win32-x64": "0.0.0-managed"
+  }
+}

@@ -1,5 +1,5 @@
 import AppKit
-import CmuxPanes
+import BreePanes
 
 /// Executes browser commands against an explicitly captured panel target.
 @MainActor

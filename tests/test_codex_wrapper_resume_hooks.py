@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "cmux-codex-wrapper"
+SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "bree-codex-wrapper"
 SESSION_ID = "0198f073-0a5b-7000-8000-000000000059"
 
 
@@ -36,7 +36,7 @@ def run_wrapper(
     inject_args_available: bool = True,
     subrouter_marker: str | None = None,
 ) -> tuple[int, list[str], list[str], dict[str, str], str]:
-    with tempfile.TemporaryDirectory(prefix="cmux-codex-wrapper-test-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-codex-wrapper-test-") as td:
         tmp = Path(td)
         wrapper_dir = tmp / "wrapper-bin"
         real_dir = tmp / "real-bin"
@@ -45,14 +45,14 @@ def run_wrapper(
         real_dir.mkdir()
         bundled_dir.mkdir()
 
-        wrapper = wrapper_dir / "cmux-codex-wrapper"
+        wrapper = wrapper_dir / "bree-codex-wrapper"
         shutil.copy2(SOURCE_WRAPPER, wrapper)
         wrapper.chmod(0o755)
 
         real_args_log = tmp / "real-args.log"
         real_env_log = tmp / "real-env.log"
-        cmux_log = tmp / "cmux.log"
-        socket_path = tmp / "cmux.sock"
+        bree_log = tmp / "bree.log"
+        socket_path = tmp / "bree.sock"
 
         make_executable(
             real_dir / "codex",
@@ -63,15 +63,15 @@ for arg in "$@"; do
   printf '%s\\n' "$arg" >> "$FAKE_REAL_ARGS_LOG"
 done
 {
-  printf 'CMUX_CODEX_PID=%s\\n' "${CMUX_CODEX_PID-__UNSET__}"
-  printf 'CMUX_CODEX_HOOK_CMUX_BIN=%s\\n' "${CMUX_CODEX_HOOK_CMUX_BIN-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_KIND=%s\\n' "${CMUX_AGENT_LAUNCH_KIND-__UNSET__}"
-  printf 'CMUX_AGENT_RESUME_LAUNCH=%s\\n' "${CMUX_AGENT_RESUME_LAUNCH-__UNSET__}"
-  printf 'CMUX_AGENT_RESTORE_LAUNCH=%s\\n' "${CMUX_AGENT_RESTORE_LAUNCH-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND=%s\\n' "${CMUX_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND-__UNSET__}"
-  printf 'CMUX_WORKSPACE_ID=%s\\n' "${CMUX_WORKSPACE_ID-__UNSET__}"
-  printf 'CMUX_SURFACE_ID=%s\\n' "${CMUX_SURFACE_ID-__UNSET__}"
-  printf 'CMUX_CODEX_HEADLESS=%s\\n' "${CMUX_CODEX_HEADLESS-__UNSET__}"
+  printf 'BREE_CODEX_PID=%s\\n' "${BREE_CODEX_PID-__UNSET__}"
+  printf 'BREE_CODEX_HOOK_BREE_BIN=%s\\n' "${BREE_CODEX_HOOK_BREE_BIN-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_KIND=%s\\n' "${BREE_AGENT_LAUNCH_KIND-__UNSET__}"
+  printf 'BREE_AGENT_RESUME_LAUNCH=%s\\n' "${BREE_AGENT_RESUME_LAUNCH-__UNSET__}"
+  printf 'BREE_AGENT_RESTORE_LAUNCH=%s\\n' "${BREE_AGENT_RESTORE_LAUNCH-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND=%s\\n' "${BREE_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND-__UNSET__}"
+  printf 'BREE_WORKSPACE_ID=%s\\n' "${BREE_WORKSPACE_ID-__UNSET__}"
+  printf 'BREE_SURFACE_ID=%s\\n' "${BREE_SURFACE_ID-__UNSET__}"
+  printf 'BREE_CODEX_HEADLESS=%s\\n' "${BREE_CODEX_HEADLESS-__UNSET__}"
 } > "$FAKE_REAL_ENV_LOG"
 """,
         )
@@ -81,7 +81,7 @@ done
             bundled_cli,
             """#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\\n' "$*" >> "$FAKE_CMUX_LOG"
+printf '%s\\n' "$*" >> "$FAKE_BREE_LOG"
 if [[ "${1:-}" == "--socket" ]]; then
   shift 2
 fi
@@ -117,33 +117,33 @@ exit 1
         env = os.environ.copy()
         env["PATH"] = f"{wrapper_dir}:{real_dir}:{env.get('PATH', '/usr/bin:/bin')}"
         env["HOME"] = str(tmp / "home")
-        env["CMUX_SURFACE_ID"] = "11111111-1111-1111-1111-111111111111"
-        env["CMUX_WORKSPACE_ID"] = "22222222-2222-2222-2222-222222222222"
-        env["CMUX_SOCKET_PATH"] = str(socket_path)
-        env["CMUX_BUNDLED_CLI_PATH"] = str(bundled_cli)
+        env["BREE_SURFACE_ID"] = "11111111-1111-1111-1111-111111111111"
+        env["BREE_WORKSPACE_ID"] = "22222222-2222-2222-2222-222222222222"
+        env["BREE_SOCKET_PATH"] = str(socket_path)
+        env["BREE_BUNDLED_CLI_PATH"] = str(bundled_cli)
         env["FAKE_REAL_ARGS_LOG"] = str(real_args_log)
         env["FAKE_REAL_ENV_LOG"] = str(real_env_log)
-        env["FAKE_CMUX_LOG"] = str(cmux_log)
+        env["FAKE_BREE_LOG"] = str(bree_log)
         env["FAKE_SOCKET_STATE"] = socket_state
         env["FAKE_INJECT_ARGS_AVAILABLE"] = "1" if inject_args_available else "0"
-        # Keep this hook-only fixture independent of any ambient cmux CUA
+        # Keep this hook-only fixture independent of any ambient bree CUA
         # installation on the developer or CI machine.
-        env["CMUX_COMPUTER_USE_APP_ENABLED"] = "0"
-        env["CMUX_COMPUTER_USE_MCP_DISABLED"] = "1"
+        env["BREE_COMPUTER_USE_APP_ENABLED"] = "0"
+        env["BREE_COMPUTER_USE_MCP_DISABLED"] = "1"
         if hooks_disabled:
-            env["CMUX_CODEX_HOOKS_DISABLED"] = "1"
+            env["BREE_CODEX_HOOKS_DISABLED"] = "1"
         else:
-            env.pop("CMUX_CODEX_HOOKS_DISABLED", None)
+            env.pop("BREE_CODEX_HOOKS_DISABLED", None)
         if restore_token is not None:
-            env["CMUX_AGENT_RESTORE_LAUNCH"] = restore_token
+            env["BREE_AGENT_RESTORE_LAUNCH"] = restore_token
         else:
-            env.pop("CMUX_AGENT_RESTORE_LAUNCH", None)
+            env.pop("BREE_AGENT_RESTORE_LAUNCH", None)
         if subrouter_marker is not None:
             env["SUBROUTER_CODEX_RESUME_COMMAND"] = subrouter_marker
-            env["CMUX_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND"] = "inherited ancestor marker"
+            env["BREE_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND"] = "inherited ancestor marker"
         else:
             env.pop("SUBROUTER_CODEX_RESUME_COMMAND", None)
-            env.pop("CMUX_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND", None)
+            env.pop("BREE_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND", None)
 
         try:
             proc = subprocess.run(
@@ -159,7 +159,7 @@ exit 1
                 test_socket.close()
 
         observed_env = dict(line.split("=", 1) for line in read_lines(real_env_log))
-        return proc.returncode, read_lines(real_args_log), read_lines(cmux_log), observed_env, proc.stderr.strip()
+        return proc.returncode, read_lines(real_args_log), read_lines(bree_log), observed_env, proc.stderr.strip()
 
 
 def expect(condition: bool, message: str, failures: list[str]) -> None:
@@ -167,7 +167,7 @@ def expect(condition: bool, message: str, failures: list[str]) -> None:
         failures.append(message)
 
 
-# Bree removed the cmux-cua Computer Use provider, so the wrapper no longer
+# Bree removed the bree-cua Computer Use provider, so the wrapper no longer
 # prepends `--disable computer_use`; argv starts directly with the hook args.
 NATIVE_COMPUTER_USE_POLICY: list[str] = []
 
@@ -181,7 +181,7 @@ def assert_session_entrypoint_is_instrumented(
     restore_token: str | None = None,
     expect_synthetic_resume: bool = False,
 ) -> None:
-    code, real_argv, cmux_log, observed_env, stderr = run_wrapper(
+    code, real_argv, bree_log, observed_env, stderr = run_wrapper(
         socket_state=socket_state,
         argv=argv,
         restore_token=restore_token,
@@ -199,26 +199,26 @@ def assert_session_entrypoint_is_instrumented(
            f"{label}: missing Stop hook: {real_argv}", failures)
     expect(real_argv[-len(argv):] == argv if argv else len(hook_args) == 7,
            f"{label}: original argv was not preserved: {real_argv}", failures)
-    expect(any("hooks codex inject-args" in line for line in cmux_log),
-           f"{label}: wrapper never requested local hook args: {cmux_log}", failures)
-    expect(not any("ping" in line for line in cmux_log),
-           f"{label}: transient socket health must not decide session instrumentation: {cmux_log}", failures)
-    synthetic_resume = any("hooks enqueue codex session-start" in line for line in cmux_log)
+    expect(any("hooks codex inject-args" in line for line in bree_log),
+           f"{label}: wrapper never requested local hook args: {bree_log}", failures)
+    expect(not any("ping" in line for line in bree_log),
+           f"{label}: transient socket health must not decide session instrumentation: {bree_log}", failures)
+    synthetic_resume = any("hooks enqueue codex session-start" in line for line in bree_log)
     expect(synthetic_resume == expect_synthetic_resume,
-           f"{label}: synthetic resume SessionStart mismatch: {cmux_log}", failures)
-    expect(not any("hooks codex session-start" in line for line in cmux_log),
-           f"{label}: wrapper must use the queued SessionStart path: {cmux_log}", failures)
-    expect(observed_env.get("CMUX_CODEX_PID") not in {None, "", "__UNSET__"},
+           f"{label}: synthetic resume SessionStart mismatch: {bree_log}", failures)
+    expect(not any("hooks codex session-start" in line for line in bree_log),
+           f"{label}: wrapper must use the queued SessionStart path: {bree_log}", failures)
+    expect(observed_env.get("BREE_CODEX_PID") not in {None, "", "__UNSET__"},
            f"{label}: missing Codex process identity: {observed_env}", failures)
-    expect(observed_env.get("CMUX_AGENT_LAUNCH_KIND") == "codex",
+    expect(observed_env.get("BREE_AGENT_LAUNCH_KIND") == "codex",
            f"{label}: missing launch kind: {observed_env}", failures)
-    expect(observed_env.get("CMUX_AGENT_RESUME_LAUNCH") == "__UNSET__",
+    expect(observed_env.get("BREE_AGENT_RESUME_LAUNCH") == "__UNSET__",
            f"{label}: argv-derived resume marker leaked to Codex: {observed_env}", failures)
-    expect(observed_env.get("CMUX_AGENT_RESTORE_LAUNCH") == "__UNSET__",
+    expect(observed_env.get("BREE_AGENT_RESTORE_LAUNCH") == "__UNSET__",
            f"{label}: app restore marker leaked to Codex: {observed_env}", failures)
-    expect(observed_env.get("CMUX_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
+    expect(observed_env.get("BREE_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
            f"{label}: workspace binding was stripped: {observed_env}", failures)
-    expect(observed_env.get("CMUX_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
+    expect(observed_env.get("BREE_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
            f"{label}: surface binding was stripped: {observed_env}", failures)
 
 
@@ -255,14 +255,14 @@ def test_direct_fork_is_instrumented(failures: list[str]) -> None:
 
 
 def test_explicit_disable_still_bypasses_hooks(failures: list[str]) -> None:
-    code, real_argv, cmux_log, _, stderr = run_wrapper(
+    code, real_argv, bree_log, _, stderr = run_wrapper(
         socket_state="stale",
         argv=["resume", SESSION_ID],
         hooks_disabled=True,
     )
     expect(code == 0, f"disabled: wrapper exited {code}: {stderr}", failures)
     expect(real_argv == ["resume", SESSION_ID], f"disabled: expected passthrough, got {real_argv}", failures)
-    expect(cmux_log == [], f"disabled: expected no cmux calls, got {cmux_log}", failures)
+    expect(bree_log == [], f"disabled: expected no bree calls, got {bree_log}", failures)
 
 
 def test_stale_socket_fresh_launch_is_instrumented(failures: list[str]) -> None:
@@ -290,8 +290,8 @@ def test_restore_tokens_do_not_gate_instrumentation(failures: list[str]) -> None
         )
 
 
-def test_injection_failure_preserves_cmux_context(failures: list[str]) -> None:
-    code, real_argv, cmux_log, observed_env, stderr = run_wrapper(
+def test_injection_failure_preserves_bree_context(failures: list[str]) -> None:
+    code, real_argv, bree_log, observed_env, stderr = run_wrapper(
         socket_state="missing",
         argv=["resume"],
         inject_args_available=False,
@@ -299,26 +299,26 @@ def test_injection_failure_preserves_cmux_context(failures: list[str]) -> None:
     expect(code == 0, f"inject-failure: wrapper exited {code}: {stderr}", failures)
     expect(real_argv == [*NATIVE_COMPUTER_USE_POLICY, "resume"],
            f"inject-failure: original argv changed: {real_argv}", failures)
-    expect(any("hooks codex inject-args" in line for line in cmux_log),
-           f"inject-failure: injection was never attempted: {cmux_log}", failures)
-    expect(observed_env.get("CMUX_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
+    expect(any("hooks codex inject-args" in line for line in bree_log),
+           f"inject-failure: injection was never attempted: {bree_log}", failures)
+    expect(observed_env.get("BREE_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
            f"inject-failure: surface binding was stripped: {observed_env}", failures)
-    expect(observed_env.get("CMUX_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
+    expect(observed_env.get("BREE_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
            f"inject-failure: workspace binding was stripped: {observed_env}", failures)
-    expect(observed_env.get("CMUX_CODEX_PID") not in {None, "", "__UNSET__"},
+    expect(observed_env.get("BREE_CODEX_PID") not in {None, "", "__UNSET__"},
            f"inject-failure: missing Codex process identity: {observed_env}", failures)
-    expect(observed_env.get("CMUX_AGENT_LAUNCH_KIND") == "codex",
+    expect(observed_env.get("BREE_AGENT_LAUNCH_KIND") == "codex",
            f"inject-failure: missing launch kind: {observed_env}", failures)
 
 
 def test_non_session_command_still_bypasses_hooks(failures: list[str]) -> None:
-    code, real_argv, cmux_log, _, stderr = run_wrapper(
+    code, real_argv, bree_log, _, stderr = run_wrapper(
         socket_state="stale",
         argv=["--help"],
     )
     expect(code == 0, f"help: wrapper exited {code}: {stderr}", failures)
     expect(real_argv == ["--help"], f"help: expected passthrough, got {real_argv}", failures)
-    expect(cmux_log == [], f"help: expected no cmux calls, got {cmux_log}", failures)
+    expect(bree_log == [], f"help: expected no bree calls, got {bree_log}", failures)
 
 
 def test_subrouter_marker_is_bound_to_current_launch_argv(failures: list[str]) -> None:
@@ -329,7 +329,7 @@ def test_subrouter_marker_is_bound_to_current_launch_argv(failures: list[str]) -
         subrouter_marker=marker,
     )
     expect(
-        routed_env.get("CMUX_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND") == marker,
+        routed_env.get("BREE_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND") == marker,
         f"routed launch did not bind its marker: {routed_env}",
         failures,
     )
@@ -340,7 +340,7 @@ def test_subrouter_marker_is_bound_to_current_launch_argv(failures: list[str]) -
         subrouter_marker=marker,
     )
     expect(
-        direct_env.get("CMUX_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND") == "__UNSET__",
+        direct_env.get("BREE_AGENT_LAUNCH_SUBROUTER_CODEX_RESUME_COMMAND") == "__UNSET__",
         f"direct nested launch retained an inherited marker: {direct_env}",
         failures,
     )
@@ -365,8 +365,8 @@ def test_headless_marker_follows_the_subcommand(failures: list[str]) -> None:
     for argv, expected in cases:
         _, _, _, observed_env, stderr = run_wrapper(socket_state="stale", argv=argv)
         expect(
-            observed_env.get("CMUX_CODEX_HEADLESS") == expected,
-            f"headless {argv}: expected {expected}, got {observed_env.get('CMUX_CODEX_HEADLESS')} ({stderr})",
+            observed_env.get("BREE_CODEX_HEADLESS") == expected,
+            f"headless {argv}: expected {expected}, got {observed_env.get('BREE_CODEX_HEADLESS')} ({stderr})",
             failures,
         )
 
@@ -378,7 +378,7 @@ def main() -> int:
     test_explicit_disable_still_bypasses_hooks(failures)
     test_stale_socket_fresh_launch_is_instrumented(failures)
     test_restore_tokens_do_not_gate_instrumentation(failures)
-    test_injection_failure_preserves_cmux_context(failures)
+    test_injection_failure_preserves_bree_context(failures)
     test_non_session_command_still_bypasses_hooks(failures)
     test_subrouter_marker_is_bound_to_current_launch_argv(failures)
     test_headless_marker_follows_the_subcommand(failures)
@@ -387,7 +387,7 @@ def main() -> int:
         for failure in failures:
             print(f"- {failure}")
         return 1
-    print("PASS: every cmux-owned Codex session entrypoint retains SessionStart and Stop hooks")
+    print("PASS: every bree-owned Codex session entrypoint retains SessionStart and Stop hooks")
     return 0
 
 

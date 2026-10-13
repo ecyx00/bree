@@ -1,5 +1,5 @@
 #if DEBUG
-import CmuxFoundation
+import BreeFoundation
 
 /// Bounds each screenshot backend independently until its task retires.
 final class WindowScreenshotCaptureCoordinator: Sendable {

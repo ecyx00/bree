@@ -6,7 +6,7 @@ import Foundation
 /// loop runs on a GCD queue so the actor remains available for cancellation.
 actor AgentForkCommandOutputDrain {
     private static let queue = DispatchQueue(
-        label: "com.cmux.agent-fork-support.output-drain",
+        label: "com.bree.agent-fork-support.output-drain",
         qos: .utility,
         attributes: .concurrent
     )

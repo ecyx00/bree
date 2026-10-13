@@ -211,7 +211,7 @@ final class FileDropOverlayView: NSView {
             // dragged/up event even though its down was delivered underneath.
             // Recover the normal target in that case instead of dropping the
             // event and leaving the underlying selection gesture incomplete.
-            target = contentView.cmuxHitTest(windowPoint: event.locationInWindow)
+            target = contentView.breeHitTest(windowPoint: event.locationInWindow)
         }
 
         guard let target, target !== self else {

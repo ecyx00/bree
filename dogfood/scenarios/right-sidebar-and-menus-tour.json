@@ -1,5 +1,5 @@
 {
-  "paths": ["Sources/*RightSidebar*", "Sources/*FileExplorer*", "Sources/*Vault*", "Sources/*ContextMenu*", "Sources/*Find*", "Sources/AppDelegate+*Menu*", "Packages/macOS/CmuxCloudMachines/*"],
+  "paths": ["Sources/*RightSidebar*", "Sources/*FileExplorer*", "Sources/*Vault*", "Sources/*ContextMenu*", "Sources/*Find*", "Sources/AppDelegate+*Menu*", "Packages/macOS/BreeCloudMachines/*"],
   "steps": [
     {"socket": "workspace.create", "params": {"title": "Notes", "initial_input": "printf 'one\\ntwo\\nthree\\n' > /tmp/dogfood-notes.md; echo ready\n", "focus": true}, "save": "notes"},
     {"wait": 1},
@@ -22,7 +22,7 @@
     {"shot": "workspace-context-menu"},
     {"tree": "workspace-context-menu"},
     {"key": "escape"},
-    {"socket": "notification.create", "params": {"title": "Build finished", "body": "cmux-dev built in 41 s with 0 warnings"}},
+    {"socket": "notification.create", "params": {"title": "Build finished", "body": "bree-dev built in 41 s with 0 warnings"}},
     {"socket": "notification.create", "params": {"title": "Agent needs input", "body": "Claude is waiting for approval to run `git push`"}},
     {"wait": 1},
     {"shot": "sidebar-with-unread"},

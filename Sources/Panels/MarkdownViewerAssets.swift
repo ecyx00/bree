@@ -1,4 +1,4 @@
-import CmuxAgentChat
+import BreeAgentChat
 import Foundation
 
 /// Loads the bundled markdown web renderer assets from Resources/markdown-viewer.
@@ -73,7 +73,7 @@ final class MarkdownViewerAssets {
             css.replaceSubrange(whole, with: "url(data:font/woff2;base64,\(data.base64EncodedString())) format(\"woff2\")")
         }
         let literal = (try? JSONSerialization.data(withJSONObject: [css])).flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
-        let js = "(function(){var s=document.createElement('style');s.id='cmux-katex-css';s.textContent=\(literal)[0];document.head.appendChild(s);})();"
+        let js = "(function(){var s=document.createElement('style');s.id='bree-katex-css';s.textContent=\(literal)[0];document.head.appendChild(s);})();"
         lazyCache[key] = js
         return js
     }

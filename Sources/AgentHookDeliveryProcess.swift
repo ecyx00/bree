@@ -1,10 +1,10 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 import OSLog
 
 nonisolated private let agentHookDeliveryProcessLogger = Logger(
-    subsystem: "com.cmuxterm.app",
+    subsystem: "com.bree.app",
     category: "AgentHookDelivery"
 )
 
@@ -188,7 +188,7 @@ struct AgentHookDeliveryProcess: Sendable {
         let ambientEnvironment = ProcessInfo.processInfo.environment
         let ambientKeys = [
             "HOME", "LANG", "LC_ALL", "LC_CTYPE", "LOGNAME", "PATH", "SHELL", "TMPDIR", "USER",
-            "CMUX_BUNDLE_ID", "CMUX_CLI_SENTRY_DISABLED", "CMUX_SOCKET_PASSWORD", "CMUX_TAG",
+            "BREE_BUNDLE_ID", "BREE_CLI_SENTRY_DISABLED", "BREE_SOCKET_PASSWORD", "BREE_TAG",
         ]
         var environment: [String: String] = [:]
         for key in ambientKeys {
@@ -203,31 +203,31 @@ struct AgentHookDeliveryProcess: Sendable {
             // routing that the relay has alias-rewritten plus explicit
             // notification/subagent policy bits.
             let relayDeliveryKeys: Set<String> = [
-                "CMUX_AGENT_HOOK_SUPPRESS_VISIBLE_MUTATIONS",
-                "CMUX_AGENT_MANAGED_SUBAGENT",
-                "CMUX_SUPPRESS_SUBAGENT_NOTIFICATIONS",
-                "CMUX_SURFACE_ID",
-                "CMUX_WORKSPACE_ID",
+                "BREE_AGENT_HOOK_SUPPRESS_VISIBLE_MUTATIONS",
+                "BREE_AGENT_MANAGED_SUBAGENT",
+                "BREE_SUPPRESS_SUBAGENT_NOTIFICATIONS",
+                "BREE_SURFACE_ID",
+                "BREE_WORKSPACE_ID",
             ]
             deliveredEventEnvironment = event.environment.filter { relayDeliveryKeys.contains($0.key) }
         } else {
             deliveredEventEnvironment = event.environment
         }
         environment.merge(deliveredEventEnvironment, uniquingKeysWith: { _, eventValue in eventValue })
-        environment["CMUX_SOCKET_PATH"] = event.socketPath
-        environment["CMUX_BUNDLED_CLI_PATH"] = executableURL.path
-        environment["CMUX_AGENT_HOOK_DELIVERY_PROCESS_GROUP"] = "1"
+        environment["BREE_SOCKET_PATH"] = event.socketPath
+        environment["BREE_BUNDLED_CLI_PATH"] = executableURL.path
+        environment["BREE_AGENT_HOOK_DELIVERY_PROCESS_GROUP"] = "1"
         if event.relayBacked {
-            environment["CMUX_AGENT_HOOK_RELAY_ORIGIN"] = "1"
-            environment["CMUX_AGENT_HOOK_ROUTE_SNAPSHOT"] = "1"
-            environment["CMUX_AGENT_HOOK_STATE_DIR"] = relayStateDirectory(
+            environment["BREE_AGENT_HOOK_RELAY_ORIGIN"] = "1"
+            environment["BREE_AGENT_HOOK_ROUTE_SNAPSHOT"] = "1"
+            environment["BREE_AGENT_HOOK_STATE_DIR"] = relayStateDirectory(
                 event: event,
                 ambientEnvironment: ambientEnvironment
             )
         } else {
-            environment.removeValue(forKey: "CMUX_AGENT_HOOK_RELAY_ORIGIN")
+            environment.removeValue(forKey: "BREE_AGENT_HOOK_RELAY_ORIGIN")
         }
-        environment["CMUXTERM_CLI_RESPONSE_TIMEOUT_SEC"] = "12"
+        environment["BREE_CLI_RESPONSE_TIMEOUT_SEC"] = "12"
         return environment
     }
 
@@ -242,17 +242,17 @@ struct AgentHookDeliveryProcess: Sendable {
         let homePath = ambientEnvironment["HOME"]
             ?? FileManager.default.homeDirectoryForCurrentUser.path
         let appScope = Self.safePathComponent(
-            ambientEnvironment["CMUX_BUNDLE_ID"]
+            ambientEnvironment["BREE_BUNDLE_ID"]
                 ?? Bundle.main.bundleIdentifier
-                ?? "com.cmuxterm.app"
+                ?? "com.bree.app"
         )
         let routeScope = Self.safePathComponent(
-            event.environment["CMUX_WORKSPACE_ID"]
-                ?? event.environment["CMUX_SURFACE_ID"]
+            event.environment["BREE_WORKSPACE_ID"]
+                ?? event.environment["BREE_SURFACE_ID"]
                 ?? "unrouted"
         )
         return URL(fileURLWithPath: homePath, isDirectory: true)
-            .appendingPathComponent(CmuxIdentity.current.dotDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.dotDirectoryName, isDirectory: true)
             .appendingPathComponent("relay-hook-state", isDirectory: true)
             .appendingPathComponent(appScope, isDirectory: true)
             .appendingPathComponent(routeScope, isDirectory: true)
@@ -315,7 +315,7 @@ struct AgentHookDeliveryProcess: Sendable {
     }
 
     private static func makeAnonymousInputFile(payload: Data) throws -> FileHandle {
-        var template = Array("\(NSTemporaryDirectory())cmux-agent-hook.XXXXXX".utf8CString)
+        var template = Array("\(NSTemporaryDirectory())bree-agent-hook.XXXXXX".utf8CString)
         let descriptor = template.withUnsafeMutableBufferPointer { buffer -> Int32 in
             guard let baseAddress = buffer.baseAddress else { return -1 }
             return Darwin.mkstemp(baseAddress)

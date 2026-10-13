@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Darwin
 import Foundation
 
@@ -12,23 +12,23 @@ struct SharedLiveAgentIndexLoader {
 
     private let homeDirectory: String
     private let fileManager: FileManager
-    private let registry: CmuxVaultAgentRegistry?
-    private let processSnapshotProvider: () -> CmuxTopProcessSnapshot
+    private let registry: BreeVaultAgentRegistry?
+    private let processSnapshotProvider: () -> BreeTopProcessSnapshot
     private let capturedAtProvider: () -> TimeInterval
-    private let processArgumentsProvider: (Int) -> CmuxTopProcessArguments?
+    private let processArgumentsProvider: (Int) -> BreeTopProcessArguments?
     private let processIdentityProvider: (Int) -> AgentPIDProcessIdentity?
     private let cachedAgentProcessValidator: CachedAgentProcessIdentityValidator
 
     init(
         homeDirectory: String = NSHomeDirectory(),
         fileManager: FileManager = .default,
-        registry: CmuxVaultAgentRegistry? = nil,
-        processSnapshotProvider: @escaping () -> CmuxTopProcessSnapshot,
+        registry: BreeVaultAgentRegistry? = nil,
+        processSnapshotProvider: @escaping () -> BreeTopProcessSnapshot,
         capturedAtProvider: @escaping () -> TimeInterval = {
             Date().timeIntervalSince1970
         },
-        processArgumentsProvider: @escaping (Int) -> CmuxTopProcessArguments? = {
-            CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
+        processArgumentsProvider: @escaping (Int) -> BreeTopProcessArguments? = {
+            BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: $0)
         },
         processIdentityProvider: @escaping (Int) -> AgentPIDProcessIdentity? = {
             guard $0 > 0, $0 <= Int(Int32.max) else { return nil }
@@ -52,13 +52,13 @@ struct SharedLiveAgentIndexLoader {
     @Sendable
     #endif
     static func loadFreshResult() async -> LoadResult {
-        let snapshot = await CmuxTopProcessSnapshot.capture(includeProcessDetails: true, includeResources: false)
+        let snapshot = await BreeTopProcessSnapshot.capture(includeProcessDetails: true, includeResources: false)
         return SharedLiveAgentIndexLoader(
             processSnapshotProvider: { snapshot },
             capturedAtProvider: { snapshot.sampledAt.timeIntervalSince1970 },
             processArgumentsProvider: { pid in
                 guard let process = snapshot.process(pid: pid) else { return nil }
-                return CmuxTopProcessSnapshot.processArgumentsAndEnvironment(for: process)
+                return BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: process)
             }
         ).loadResultSynchronously()
     }
@@ -69,7 +69,7 @@ struct SharedLiveAgentIndexLoader {
 
     func loadResultSynchronously() -> LoadResult {
         let resolvedRegistry = registry
-            ?? CmuxVaultAgentRegistry.load(homeDirectory: homeDirectory, fileManager: fileManager)
+            ?? BreeVaultAgentRegistry.load(homeDirectory: homeDirectory, fileManager: fileManager)
         let processSnapshot = processSnapshotProvider()
         guard processSnapshot.captureIsAvailable, processSnapshot.enumerationIsComplete, !Task.isCancelled else {
             return (.unavailable, [], [], [])
@@ -113,11 +113,11 @@ struct SharedLiveAgentIndexLoader {
         )
     }
 
-    static func processScopeFingerprint(from snapshot: CmuxTopProcessSnapshot) -> Set<String> {
-        Set(snapshot.cmuxScopedProcesses().map { process in
+    static func processScopeFingerprint(from snapshot: BreeTopProcessSnapshot) -> Set<String> {
+        Set(snapshot.breeScopedProcesses().map { process in
             [
-                process.cmuxWorkspaceID?.uuidString ?? "",
-                process.cmuxSurfaceID?.uuidString ?? "",
+                process.breeWorkspaceID?.uuidString ?? "",
+                process.breeSurfaceID?.uuidString ?? "",
                 String(process.pid),
                 String(process.parentPID)
             ].joined(separator: "|")
@@ -126,9 +126,9 @@ struct SharedLiveAgentIndexLoader {
 
     /// Fingerprints the process scope and generation metadata consumed by
     /// hibernation safety checks, so cache reloads publish scope changes even
-    /// when the cmux-attributed process set is unchanged.
+    /// when the bree-attributed process set is unchanged.
     static func processScopeFingerprint(
-        from snapshot: CmuxTopProcessSnapshot,
+        from snapshot: BreeTopProcessSnapshot,
         hibernationProcessScopes: [
             RestorableAgentSessionIndex.PanelKey:
                 RestorableAgentSessionIndex.HibernationProcessScope
@@ -191,7 +191,7 @@ struct SharedLiveAgentIndexLoader {
 
     private static func forkValidatedPanels(
         in index: RestorableAgentSessionIndex,
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments?,
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments?,
         processIdentityProvider: (Int) -> AgentPIDProcessIdentity?,
         validator: CachedAgentProcessIdentityValidator
     ) -> Set<RestorableAgentSessionIndex.PanelKey> {
@@ -209,7 +209,7 @@ struct SharedLiveAgentIndexLoader {
     private static func forkEntryIsValidForForkAvailability(
         _ entry: RestorableAgentSessionIndex.Entry,
         panelKey: RestorableAgentSessionIndex.PanelKey,
-        processArgumentsProvider: (Int) -> CmuxTopProcessArguments?,
+        processArgumentsProvider: (Int) -> BreeTopProcessArguments?,
         processIdentityProvider: (Int) -> AgentPIDProcessIdentity?,
         validator: CachedAgentProcessIdentityValidator
     ) -> Bool {
@@ -218,7 +218,7 @@ struct SharedLiveAgentIndexLoader {
             guard let expectedIdentity = entry.agentProcessIdentities[processID],
                   processIdentityProvider(processID) == expectedIdentity,
                   let process = processArgumentsProvider(processID),
-                  process.matchesCMUXScope(
+                  process.matchesBREEScope(
                       workspaceId: panelKey.workspaceId,
                       surfaceId: panelKey.panelId
                   ),

@@ -4,6 +4,10 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundleDocumentTypes</key>
@@ -98,7 +102,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSDockTilePlugIn</key>
-	<string>CmuxDockTilePlugin.plugin</string>
+	<string>BreeDockTilePlugin.plugin</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>LSArchitecturePriority</key>
@@ -111,61 +115,61 @@
 	<key>NSMainStoryboardFile</key>
 	<string></string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>A program running within cmux would like to use your microphone.</string>
+	<string>A program running within bree would like to use your microphone.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>A program running within cmux would like to use your camera.</string>
+	<string>A program running within bree would like to use your camera.</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>A program running within cmux would like to access your calendars.</string>
+	<string>A program running within bree would like to access your calendars.</string>
 	<key>NSRemindersUsageDescription</key>
-	<string>A program running within cmux would like to access your reminders.</string>
+	<string>A program running within bree would like to access your reminders.</string>
 	<key>NSContactsUsageDescription</key>
-	<string>A program running within cmux would like to access your contacts.</string>
+	<string>A program running within bree would like to access your contacts.</string>
 	<key>NSLocationUsageDescription</key>
-	<string>A program running within cmux would like to access your location.</string>
+	<string>A program running within bree would like to access your location.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>A program running within cmux would like to access your photo library.</string>
+	<string>A program running within bree would like to access your photo library.</string>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>A program running within cmux would like to access your system's audio.</string>
+	<string>A program running within bree would like to access your system's audio.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>A program running within cmux would like to use speech recognition.</string>
+	<string>A program running within bree would like to use speech recognition.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>A program running within cmux would like to access motion data.</string>
+	<string>A program running within bree would like to access motion data.</string>
 	<key>NSSystemExtensionUsageDescription</key>
-	<string>cmux installs a network extension so this Mac can reach your Cloud machines on their private network. It runs only while you use cmux Cloud.</string>
+	<string>bree installs a network extension so this Mac can reach your Cloud machines on their private network. It runs only while you use bree Cloud.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>A program running within cmux would like to use Bluetooth to discover passkeys and security keys.</string>
+	<string>A program running within bree would like to use Bluetooth to discover passkeys and security keys.</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>A program running within cmux would like to use AppleScript.</string>
+	<string>A program running within bree would like to use AppleScript.</string>
 	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
 	<true/>
 	<key>NSAppBundlesUsageDescription</key>
-	<string>A program running within cmux would like to access the contents of other apps.</string>
+	<string>A program running within bree would like to access the contents of other apps.</string>
 	<key>NSAppDataUsageDescription</key>
-	<string>A program running within cmux would like to access data from other apps.</string>
+	<string>A program running within bree would like to access data from other apps.</string>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>A program running within cmux would like to access files in your Desktop folder.</string>
+	<string>A program running within bree would like to access files in your Desktop folder.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>A program running within cmux would like to access files in your Documents folder.</string>
+	<string>A program running within bree would like to access files in your Documents folder.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>A program running within cmux would like to access files in your Downloads folder.</string>
+	<string>A program running within bree would like to access files in your Downloads folder.</string>
 	<key>NSFileProviderDomainUsageDescription</key>
-	<string>A program running within cmux would like to access files managed by a file provider.</string>
+	<string>A program running within bree would like to access files managed by a file provider.</string>
 	<key>NSNetworkVolumesUsageDescription</key>
-	<string>A program running within cmux would like to access files on a network volume.</string>
+	<string>A program running within bree would like to access files on a network volume.</string>
 	<key>NSRemovableVolumesUsageDescription</key>
-	<string>A program running within cmux would like to access files on a removable volume.</string>
+	<string>A program running within bree would like to access files on a removable volume.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>A program running within cmux would like to read and write your calendars.</string>
+	<string>A program running within bree would like to read and write your calendars.</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
-	<string>A program running within cmux would like to add events to your calendars.</string>
+	<string>A program running within bree would like to add events to your calendars.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
-	<string>A program running within cmux would like to read and write your reminders.</string>
+	<string>A program running within bree would like to read and write your reminders.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>A program running within cmux would like to access your location.</string>
+	<string>A program running within bree would like to access your location.</string>
 	<key>NSSystemAdministrationUsageDescription</key>
-	<string>A program running within cmux would like to perform system administration tasks.</string>
+	<string>A program running within bree would like to perform system administration tasks.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>A program running within cmux would like to discover devices on your local network.</string>
+	<string>A program running within bree would like to discover devices on your local network.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -188,7 +192,7 @@
 			<string>$(PRODUCT_BUNDLE_IDENTIFIER).auth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>$(CMUX_AUTH_CALLBACK_SCHEME)</string>
+				<string>$(BREE_AUTH_CALLBACK_SCHEME)</string>
 			</array>
 			<key>LSHandlerRank</key>
 			<string>Default</string>
@@ -206,15 +210,15 @@
 			<string>Alternate</string>
 		</dict>
 	</array>
-	<key>CMUXSidebarExtensionPointIdentifier</key>
-	<string>$(CMUX_SIDEBAR_EXTENSION_POINT_ID)</string>
+	<key>BREESidebarExtensionPointIdentifier</key>
+	<string>$(BREE_SIDEBAR_EXTENSION_POINT_ID)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<true/>
 		<key>NSExceptionDomains</key>
 		<dict>
-			<key>cmux-loopback.localtest.me</key>
+			<key>bree-loopback.localtest.me</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
@@ -223,6 +227,8 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>NSAccentColorName</key>
+	<string>AccentColor</string>
 	<key>NSAppleScriptEnabled</key>
 	<true/>
 	<key>NSPrincipalClass</key>
@@ -269,7 +275,7 @@
 		</dict>
 	</array>
 	<key>OSAScriptingDefinition</key>
-	<string>cmux.sdef</string>
+	<string>bree.sdef</string>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
 		<dict>
@@ -319,7 +325,7 @@
 	<array>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.cmux.cloud-sidebar-row</string>
+			<string>com.bree.cloud-sidebar-row</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
@@ -339,9 +345,9 @@
 		</dict>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.cmux.sidebar-tab-reorder</string>
+			<string>com.bree.sidebar-tab-reorder</string>
 			<key>UTTypeDescription</key>
-			<string>cmux Sidebar Tab Reorder</string>
+			<string>bree Sidebar Tab Reorder</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
@@ -349,9 +355,9 @@
 		</dict>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.cmux.right-sidebar-mode-reorder</string>
+			<string>com.bree.right-sidebar-mode-reorder</string>
 			<key>UTTypeDescription</key>
-			<string>cmux Right Sidebar Tab Reorder</string>
+			<string>bree Right Sidebar Tab Reorder</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
@@ -359,9 +365,9 @@
 		</dict>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.cmux.filepreview.transfer</string>
+			<string>com.bree.filepreview.transfer</string>
 			<key>UTTypeDescription</key>
-			<string>cmux File Preview Transfer</string>
+			<string>bree File Preview Transfer</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
@@ -369,9 +375,9 @@
 		</dict>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>com.cmux.surface-resource</string>
+			<string>com.bree.surface-resource</string>
 			<key>UTTypeDescription</key>
-			<string>cmux Surface Resource</string>
+			<string>bree Surface Resource</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>

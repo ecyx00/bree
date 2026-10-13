@@ -133,7 +133,7 @@ struct RemoteActionToastCoalescer: Sendable {
 enum RemoteActionClientName {
     static let fallback = "bree"
     private static let transparent: Set<String> = [
-        "bree", "cmux", "sh", "bash", "zsh", "fish", "dash", "ksh", "env", "sudo", "login", "script", "timeout",
+        "bree", "bree", "sh", "bash", "zsh", "fish", "dash", "ksh", "env", "sudo", "login", "script", "timeout",
     ]
 
     static func resolve(

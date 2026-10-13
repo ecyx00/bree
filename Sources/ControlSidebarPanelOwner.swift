@@ -1,4 +1,4 @@
-import CmuxSidebar
+import BreeSidebar
 import Darwin
 import Foundation
 

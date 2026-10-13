@@ -1,4 +1,4 @@
-import CmuxTerminal
+import BreeTerminal
 import Foundation
 
 extension TerminalSurface {
@@ -75,12 +75,12 @@ extension TerminalSurface {
         }
         // The fast check reads this surface's own PTY. It applies only when the
         // reported TTY is that PTY: inside tmux the report can name a tmux
-        // pane's TTY, whose foreground job the cmux PTY cannot see. Without a
+        // pane's TTY, whose foreground job the bree PTY cannot see. Without a
         // live PTY, on a mismatch, or when the group cannot be read at all
         // (`nil` rather than `false`), keep the async lookup so an unknown job
         // is never assumed local.
         if let surfaceDevice = controllingTTYDeviceIdentifier,
-           surfaceDevice == CmuxTopProcessSnapshot.deviceIdentifier(forTTYName: ttyName),
+           surfaceDevice == BreeTopProcessSnapshot.deviceIdentifier(forTTYName: ttyName),
            let processGroupID = foregroundProcessID(),
            TerminalSSHSessionDetector.foregroundJobHasRemoteShell(
                processGroupID: Int32(processGroupID),

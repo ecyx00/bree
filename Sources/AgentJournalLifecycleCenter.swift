@@ -1,4 +1,4 @@
-import CmuxAgentJournal
+import BreeAgentJournal
 import Foundation
 
 /// App-side owner of the agent journal: the single writer for
@@ -79,13 +79,13 @@ final class AgentJournalLifecycleCenter: Sendable {
                     // Fail closed: without alias state, canonicalization
                     // could attach lifecycle to a stale identity. Drop the
                     // operation with a diagnostic and retry on the next one.
-                    CmuxEventBus.shared.publish(
+                    BreeEventBus.shared.publish(
                         name: "agent.journal.aliases_unavailable",
                         category: "agent",
                         source: "journal"
                     )
 #if DEBUG
-                    cmuxDebugLog("agentJournal.aliases.loadError \(String(describing: error))")
+                    breeDebugLog("agentJournal.aliases.loadError \(String(describing: error))")
 #endif
                     return nil
                 }
@@ -147,7 +147,7 @@ final class AgentJournalLifecycleCenter: Sendable {
                     // failure itself was reported on the event bus, and each
                     // dropped operation is visible in the debug log.
 #if DEBUG
-                    cmuxDebugLog("agentJournal.op.dropped reason=storeUnavailable")
+                    breeDebugLog("agentJournal.op.dropped reason=storeUnavailable")
 #endif
                     admissions.complete(operation.admissionID, accepted: false)
                     continue
@@ -177,14 +177,14 @@ final class AgentJournalLifecycleCenter: Sendable {
                             )
                         )
                     } catch {
-                        CmuxEventBus.shared.publish(
+                        BreeEventBus.shared.publish(
                             name: "agent.journal.append_failed",
                             category: "agent",
                             source: "journal",
                             payload: ["kind": draft.kind.rawValue]
                         )
 #if DEBUG
-                        cmuxDebugLog("agentJournal.append.error \(String(describing: error))")
+                        breeDebugLog("agentJournal.append.error \(String(describing: error))")
 #endif
                     }
                 case .recordAliases(let workspaces, let surfaces):
@@ -195,7 +195,7 @@ final class AgentJournalLifecycleCenter: Sendable {
                             surfaceAliases: surfaces
                         )
 #if DEBUG
-                        cmuxDebugLog(
+                        breeDebugLog(
                             "agentJournal.aliases.recorded surfaces=\(surfaces.count) " +
                                 "workspaces=\(workspaces.count)"
                         )
@@ -204,14 +204,14 @@ final class AgentJournalLifecycleCenter: Sendable {
                         // In-memory state above keeps the live run correct;
                         // the persistence gap (replay after relaunch) is
                         // recorded in release builds too.
-                        CmuxEventBus.shared.publish(
+                        BreeEventBus.shared.publish(
                             name: "agent.journal.alias_persist_failed",
                             category: "agent",
                             source: "journal",
                             payload: ["surfaces": surfaces.count, "workspaces": workspaces.count]
                         )
 #if DEBUG
-                        cmuxDebugLog("agentJournal.aliases.error \(String(describing: error))")
+                        breeDebugLog("agentJournal.aliases.error \(String(describing: error))")
 #endif
                     }
                 case .startupReplay:
@@ -289,7 +289,7 @@ final class AgentJournalLifecycleCenter: Sendable {
             // Stable product-level reply; implementation detail stays in the
             // debug log (the caller's dead-letter keeps the draft itself).
 #if DEBUG
-            cmuxDebugLog("agentJournal.append.invalid \(String(describing: error))")
+            breeDebugLog("agentJournal.append.invalid \(String(describing: error))")
 #endif
             return "ERROR: invalid agent journal event"
         }
@@ -305,7 +305,7 @@ final class AgentJournalLifecycleCenter: Sendable {
                 )
             )
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "agentJournal.append kind=\(draft.kind.rawValue) agent=\(draft.agentKey) " +
                     "seq=\(outcome.sequence) replayed=\(outcome.replayed ? 1 : 0) " +
                     "attributed=\(draft.unattributedReason == nil ? 1 : 0)"
@@ -313,14 +313,14 @@ final class AgentJournalLifecycleCenter: Sendable {
 #endif
             return outcome.replayed ? "OK \(outcome.sequence) replayed" : "OK \(outcome.sequence)"
         } catch {
-            CmuxEventBus.shared.publish(
+            BreeEventBus.shared.publish(
                 name: "agent.journal.append_failed",
                 category: "agent",
                 source: "journal",
                 payload: ["kind": draft.kind.rawValue]
             )
 #if DEBUG
-            cmuxDebugLog("agentJournal.append.error \(String(describing: error))")
+            breeDebugLog("agentJournal.append.error \(String(describing: error))")
 #endif
             return "ERROR: agent journal append failed"
         }
@@ -349,7 +349,7 @@ final class AgentJournalLifecycleCenter: Sendable {
             surfaces[old.uuidString] = new.uuidString
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "agentJournal.aliases.note workspace=\(newWorkspaceId.uuidString.prefix(8)) " +
                 "pairs=\(oldToNewPanelIds.count) remapped=\(surfaces.count) " +
                 "workspaceRemapped=\(workspaces.count)"

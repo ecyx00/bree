@@ -2,9 +2,9 @@ import Foundation
 
 /// Source identity persisted beside a staged custom notification sound.
 struct NotificationSoundSourceMetadata: Codable, Equatable, Sendable {
-    /// Marker used to distinguish cmux-managed artifacts from user files in
+    /// Marker used to distinguish bree-managed artifacts from user files in
     /// the shared `~/Library/Sounds` directory.
-    static let ownerMarker = "cmux.notification-sound.v1"
+    static let ownerMarker = "bree.notification-sound.v1"
 
     let sourcePath: String
     let sourceSize: UInt64

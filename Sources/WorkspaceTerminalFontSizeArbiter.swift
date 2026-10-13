@@ -1,5 +1,5 @@
 import Foundation
-import CmuxTerminal
+import BreeTerminal
 
 /// App-lifecycle owner for ordering work that spans window coordinators.
 /// Production injects one instance into every window. Unit tests receive a

@@ -1,6 +1,6 @@
 import AppKit
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import SwiftUI
 
 // MARK: - Manual status glyph
@@ -18,7 +18,7 @@ final class SidebarRowTaskStatusGlyphButton: NSControl {
         let usesMonochrome: Bool
         let fontScale: CGFloat
         let colorScheme: ColorScheme
-        let accent: CmuxAccentColor
+        let accent: BreeAccentColor
         var differentiateWithoutColor = false
 
         var glyph: SidebarWorkspaceTaskStatusGlyphModel {
@@ -82,10 +82,10 @@ final class SidebarRowTaskStatusGlyphButton: NSControl {
         case .working:
             return BreeChromePalette.currentSnapshot.ns.activeIndicator
         case .attention:
-            // Loudest lane: the theme's attention signal (the mark differs per state).
-            return BreeChromePalette.currentSnapshot.ns.signalAttention
+            // Lane glyphs are neutral; the mark (fill, bang, check) carries the state.
+            return BreeChromePalette.currentSnapshot.ns.textSecondary
         case .review:
-            return BreeChromePalette.currentSnapshot.ns.signalSuccess
+            return BreeChromePalette.currentSnapshot.ns.textSecondary
         case .done:
             // Quiet tertiary glyph so finished rows read as settled, not celebratory.
             return BreeChromePalette.currentSnapshot.ns.glyphTertiary

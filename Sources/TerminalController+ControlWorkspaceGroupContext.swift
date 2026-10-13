@@ -1,7 +1,7 @@
-import CmuxControlSocket
-import CmuxWorkspaces
+import BreeControlSocket
+import BreeWorkspaces
 import Foundation
-import CmuxSettings
+import BreeSettings
 
 /// The workspace-group-domain witnesses for the stage-3c
 /// ``ControlCommandCoordinator``: app-model witnesses for the former
@@ -322,7 +322,7 @@ extension TerminalController: ControlWorkspaceGroupContext {
             return .tabManagerUnavailable
         }
         // Placement resolution: explicit `placement` param wins, then the group's
-        // per-cwd `newWorkspacePlacement` from cmux.json, then the global default.
+        // per-cwd `newWorkspacePlacement` from bree.json, then the global default.
         let explicitPlacement = WorkspaceGroupNewPlacement(rawString: placementRaw)
         if let raw = placementRaw,
            !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -336,7 +336,7 @@ extension TerminalController: ControlWorkspaceGroupContext {
             .flatMap { anchorId in
                 tabManager.tabs.first(where: { $0.id == anchorId })?.currentDirectory
             }
-        let configStore = AppDelegate.shared?.mainWindowContexts.values.first(where: { $0.tabManager === tabManager })?.cmuxConfigStore
+        let configStore = AppDelegate.shared?.mainWindowContexts.values.first(where: { $0.tabManager === tabManager })?.breeConfigStore
         let configured = configStore?.resolveWorkspaceGroupConfig(forCwd: anchorCwd)?.newWorkspacePlacement
         let placement = explicitPlacement
             ?? configured

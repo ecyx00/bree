@@ -1,9 +1,9 @@
 import AppKit
-import CmuxAppKitSupportUI
+import BreeAppKitSupportUI
 import Combine
-import CmuxFoundation
-import CmuxSidebar
-import CmuxWorkspaces
+import BreeFoundation
+import BreeSidebar
+import BreeWorkspaces
 import SwiftUI
 
 /// Pure-AppKit workspace row cell: renders every TabItemView slot without
@@ -47,7 +47,8 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
     /// Age of the last state change, right-aligned on line 1.
     private let ageView = SidebarRowTextView(lines: 1)
     /// 6 pt dot left of the age/close slot: an unseen mod warning or error for this workspace.
-    private let modDotView = NSView()
+    /// Mod attention marker: a glyph (triangle for warn, x-circle for error), not only a coloured dot.
+    private let modDotView = NSImageView()
     private var modAttention: ModAttentionKind?
     private var modAttentionSub: AnyCancellable?
     private var baseAccessibilityLabel = ""
@@ -312,7 +313,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         let logKey = "\(model.workspaceId.uuidString)|\(plain)"
         if lastLoggedAgentLine != logKey {
             lastLoggedAgentLine = logKey
-            cmuxDebugLog("sidebar.agentLine ws=\(model.workspaceId.uuidString.prefix(8)) text=\"\(plain)\"")
+            breeDebugLog("sidebar.agentLine ws=\(model.workspaceId.uuidString.prefix(8)) text=\"\(plain)\"")
         }
 #endif
         agentLineView.configurePlainText(text.string, font: font, color: secondary)
@@ -324,7 +325,8 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         if let since = line?.since {
             ageView.stringValue = SidebarRowAgentLine.ageText(since: since)
             ageView.font = ageFont
-            ageView.textColor = model.isActive ? palette.secondary(0.6) : ns.glyphTertiary
+            // textSecondary carries a 4.5:1 floor; glyphTertiary (3:1) measured 4.21:1.
+            ageView.textColor = palette.secondary()
             ageView.lineBreakMode = .byClipping
         }
         return plain
@@ -472,8 +474,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         contentContainer.addSubview(leadingBadge)
         contentContainer.addSubview(markerView)
         contentContainer.addSubview(ageView)
-        modDotView.wantsLayer = true
-        modDotView.layer?.cornerRadius = 3
+        modDotView.imageScaling = .scaleProportionallyDown
         modDotView.isHidden = true
         contentContainer.addSubview(modDotView)
         ModAttentionStore.shared.start()
@@ -483,7 +484,10 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
                 MainActor.assumeIsolated { self?.applyModAttention(kinds) }
             }
         contentContainer.addSubview(titleView)
-        closeButton.onClick = { [weak self] in self?.actions?.commands.closeWorkspace() }
+        closeButton.onClick = { [weak self] in
+            Self.closeRevealHeld = true
+            self?.actions?.commands.closeWorkspace()
+        }
         closeButton.setAccessibilityRole(.button)
         closeButton.setAccessibilityIdentifier("sidebarWorkspaceCloseButton")
         closeButton.setAccessibilityElement(false)
@@ -717,14 +721,14 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
             mediaMicView.image = RenderableSystemSymbol.configuredAppKitImage(
                 systemName: "mic.fill", pointSize: model.glyphSize, weight: nil
             )
-            mediaMicView.contentTintColor = palette.chrome.ns.signalInfo
+            mediaMicView.contentTintColor = palette.chrome.ns.textSecondary
         }
         mediaCameraView.isHidden = !media.isUsingCamera
         if media.isUsingCamera {
             mediaCameraView.image = RenderableSystemSymbol.configuredAppKitImage(
                 systemName: "video.fill", pointSize: model.glyphSize, weight: nil
             )
-            mediaCameraView.contentTintColor = palette.chrome.ns.signalInfo
+            mediaCameraView.contentTintColor = palette.chrome.ns.textSecondary
         }
 
         // Manual task-status glyph (legacy `SidebarWorkspaceManualStatusIndicatorMenu`):
@@ -761,7 +765,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         )
 #if DEBUG
         if titleView.stringValue != boundedTitle {
-            cmuxDebugLog(
+            breeDebugLog(
                 "sidebar.row.titlePaint workspace=\(model.workspaceId.uuidString.prefix(8)) " +
                 "title=\"\(boundedTitle.prefix(40))\""
             )
@@ -892,7 +896,10 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         modDotView.isHidden = kind == nil
         if let kind {
             let colors = BreeChromePalette.currentSnapshot.ns
-            modDotView.layer?.backgroundColor = (kind == .error ? colors.signalError : colors.signalAttention).cgColor
+            modDotView.image = RenderableSystemSymbol.configuredAppKitImage(
+                systemName: kind == .error ? "xmark.circle.fill" : "exclamationmark.triangle.fill", pointSize: 9, weight: nil
+            )
+            modDotView.contentTintColor = kind == .error ? colors.signalError : colors.signalAttention
         }
         let suffix: String?
         switch kind {
@@ -910,7 +917,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
     func paintControllerDropIndicator(top: Bool, bottom: Bool) {
         let colorScheme = model.map { $0.colorSchemeIsDark ? ColorScheme.dark : .light }
             ?? SidebarAppearanceColorResolver().currentColorScheme()
-        let accent = (model?.settings.accentColor ?? CmuxAccentColor()).nsColor(for: colorScheme)
+        let accent = (model?.settings.accentColor ?? BreeAccentColor()).nsColor(for: colorScheme)
         topDropIndicator.layer?.backgroundColor = accent.cgColor
         bottomDropIndicator.layer?.backgroundColor = accent.cgColor
         topDropIndicator.isHidden = !top
@@ -932,12 +939,11 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         palette: SidebarRowPalette,
         badgeVisible: Bool
     ) {
-        let badgeFill = cmuxNotificationBadgeNSColor(
+        let badgeFill = breeNotificationBadgeNSColor(
             hex: model.settings.notificationBadgeColorHex,
-            fallback: palette.chrome.ns.signalAttention
+            fallback: palette.chrome.ns.accentFill
         )
-        // Text on the attention fill uses the surface colour: every signal
-        // role clears 4.5:1 against the surfaces, and contrast is symmetric.
+        // Text on the ivory accent fill uses the surface colour (dark on dark themes).
         let badgeText: NSColor = model.settings.notificationBadgeColorHex == nil
             ? palette.chrome.ns.surfaceBase
             : .white
@@ -949,8 +955,14 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         }
     }
 
+    /// After a close click the next row slides under the parked pointer. Like macOS, its X
+    /// stays hidden until the pointer moves, so a second click cannot close another row.
+    static var closeRevealHeld = false
+
+    func refreshCloseReveal() { updateCloseVisibility() }
+
     private var showsCloseNow: Bool {
-        guard let model else { return false }
+        guard let model, !Self.closeRevealHeld else { return false }
         return isPointerHovering
             && !contextMenuVisible
             && model.canCloseWorkspace
@@ -961,7 +973,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         let revealed = showsCloseNow
 #if DEBUG
         if closeButton.isHidden == revealed {
-            cmuxDebugLog("sidebar.card.close hover=\(revealed ? 1 : 0) ws=\(model?.workspaceId.uuidString.prefix(8) ?? "-") frame=\(NSStringFromRect(closeButton.frame))")
+            breeDebugLog("sidebar.card.close hover=\(revealed ? 1 : 0) ws=\(model?.workspaceId.uuidString.prefix(8) ?? "-") frame=\(NSStringFromRect(closeButton.frame))")
         }
 #endif
         closeButton.setRevealed(revealed)
@@ -1283,7 +1295,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         renameSession = session
         titleView.isHidden = true
 #if DEBUG
-        cmuxDebugLog("sidebar.card.rename begin ws=\(model.workspaceId.uuidString.prefix(8))")
+        breeDebugLog("sidebar.card.rename begin ws=\(model.workspaceId.uuidString.prefix(8))")
 #endif
         // Give the field its title-slot frame BEFORE it enters the window:
         // the attach-time focus grab sizes the field editor from the current
@@ -1299,7 +1311,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         contentContainer.addSubview(session.field)
         SidebarRowChecklistFieldBridge.clearFieldEditorBackground(session.field)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "sidebar.row.beginInlineRename tookFocus=\(session.field.currentEditor() != nil ? 1 : 0) window=\(window == nil ? 0 : 1)"
         )
 #endif
@@ -1320,7 +1332,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         session.field.removeFromSuperview()
         titleView.isHidden = false
 #if DEBUG
-        cmuxDebugLog("sidebar.card.rename end ws=\(model?.workspaceId.uuidString.prefix(8) ?? "-")")
+        breeDebugLog("sidebar.card.rename end ws=\(model?.workspaceId.uuidString.prefix(8) ?? "-")")
 #endif
         if let model { applyModel(paintedModel(model)) }
         needsLayout = true
@@ -1453,7 +1465,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
             slotWidth = max(slotWidth, ageWidth)
         }
         // The mod attention dot sits just left of the slot, never over the hover close button.
-        let dotSide: CGFloat = 6
+        let dotSide: CGFloat = 10
         let dotReserve: CGFloat = modAttention == nil ? 0 : dotSide + 4
         if apply, modAttention != nil {
             modDotView.frame = NSRect(

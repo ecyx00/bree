@@ -12,17 +12,17 @@ export function annotateDiffMetadata(fileDiff: any, patchText?: string): void {
     typeof fileDiff.prevObjectId === "string" && typeof fileDiff.newObjectId === "string" &&
     fileDiff.prevMode == null;
   if (hasBinaryMarker || isParsedBinary) {
-    fileDiff.cmuxDiffMetadataKind = "binary" satisfies DiffMetadataKind;
+    fileDiff.breeDiffMetadataKind = "binary" satisfies DiffMetadataKind;
   } else if (typeof fileDiff.prevMode === "string" && typeof fileDiff.mode === "string" && fileDiff.prevMode !== fileDiff.mode) {
-    fileDiff.cmuxDiffMetadataKind = "mode" satisfies DiffMetadataKind;
+    fileDiff.breeDiffMetadataKind = "mode" satisfies DiffMetadataKind;
   }
 }
 
 export function resolveDiffHeaderMetadata(fileDiff: any, label: DiffViewerLabelResolver): string | undefined {
-  if (fileDiff?.cmuxDiffMetadataKind === "binary") {
+  if (fileDiff?.breeDiffMetadataKind === "binary") {
     return label("binaryFile");
   }
-  if (fileDiff?.cmuxDiffMetadataKind === "mode") {
+  if (fileDiff?.breeDiffMetadataKind === "mode") {
     return label("modeChange")
       .replace("{old}", fileDiff.prevMode ?? "")
       .replace("{new}", fileDiff.mode ?? "");
@@ -35,5 +35,5 @@ export function DiffHeaderMetadata({ fileDiff, label }: { fileDiff: any; label: 
   if (metadata == null) {
     return null;
   }
-  return <span data-cmux-diff-metadata={fileDiff.cmuxDiffMetadataKind}>{metadata}</span>;
+  return <span data-bree-diff-metadata={fileDiff.breeDiffMetadataKind}>{metadata}</span>;
 }

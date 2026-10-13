@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>cmux Cloud Tunnel</string>
+	<string>bree Cloud Tunnel</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -25,11 +25,11 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Manaflow, Inc. WireGuard engine © WireGuard LLC (MIT).</string>
 	<key>NSSystemExtensionUsageDescription</key>
-	<string>cmux installs a network extension so this Mac can reach your Cloud machines on their private network. It runs only while you use cmux Cloud.</string>
+	<string>bree installs a network extension so this Mac can reach your Cloud machines on their private network. It runs only while you use bree Cloud.</string>
 	<key>NetworkExtension</key>
 	<dict>
 		<key>NEMachServiceName</key>
-		<string>$(CMUX_TEAM_ID_PREFIX)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		<string>$(BREE_TEAM_ID_PREFIX)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 		<key>NEProviderClasses</key>
 		<dict>
 			<key>com.apple.networkextension.packet-tunnel</key>

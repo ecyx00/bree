@@ -1,14 +1,14 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 import os
 
-nonisolated private let cloudTerminalCreationLogger = Logger(subsystem: "com.cmuxterm.app", category: "CloudTerminalCreation")
+nonisolated private let cloudTerminalCreationLogger = Logger(subsystem: "com.bree.app", category: "CloudTerminalCreation")
 
 /// Coordinates one asynchronous Cloud terminal creation behind a reserved pane.
 ///
 /// The coordinator retains a creation result after the remote terminal is born. If the
-/// first local projection fails while `cmux-tui` is restarting, Retry reuses that terminal
+/// first local projection fails while `bree-tui` is restarting, Retry reuses that terminal
 /// instead of creating a second one.
 @MainActor
 final class CloudTerminalCreationCoordinator {

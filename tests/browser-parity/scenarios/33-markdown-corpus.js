@@ -3,7 +3,7 @@
 // render appears, no HTML or frame placeholder is left outside code, and
 // every line of { main: true } is a line of the page (all of it when the page
 // has no <main> or single <article> and no landmarks to leave out).
-// oracle: skip (cmux-defined Markdown checked against Chrome records made by lib/corpus.mjs)
+// oracle: skip (bree-defined Markdown checked against Chrome records made by lib/corpus.mjs)
 // ---- cell session=md
 // Whitespace and Markdown marks (escapes, code, emphasis) do not count.
 const squash = (s) => String(s).replace(/[\s\u200b-\u200d\u2060\ufeff\\`*]+/g, "").toLowerCase();
@@ -38,8 +38,8 @@ globalThis.markdownCheck = async (name) => {
 // ---- cell session=md
 for (const name of ["wikipedia", "hackernews", "github", "mdn", "mdn-iframe", "npr", "bbc", "books", "vercel"]) {
   const r = await markdownCheck(name);
-  emitCmux(`${name}:missing-links`, r.missing);
-  emitCmux(`${name}:leaks`, r.leaks);
-  emitCmux(`${name}:main-is-a-part`, r.mainIsPart);
-  emitCmux(`${name}:no-markup`, r.noMarkup);
+  emitBree(`${name}:missing-links`, r.missing);
+  emitBree(`${name}:leaks`, r.leaks);
+  emitBree(`${name}:main-is-a-part`, r.mainIsPart);
+  emitBree(`${name}:no-markup`, r.noMarkup);
 }

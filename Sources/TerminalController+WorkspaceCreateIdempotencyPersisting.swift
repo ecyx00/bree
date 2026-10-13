@@ -2,7 +2,7 @@ import Foundation
 import OSLog
 
 let workspaceCreateIdempotencyLogger = Logger(
-    subsystem: "com.cmuxterm.app",
+    subsystem: "com.bree.app",
     category: "WorkspaceCreateIdempotency"
 )
 

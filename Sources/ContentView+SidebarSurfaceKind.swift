@@ -1,7 +1,7 @@
-import CmuxExtensionKit
+import BreeExtensionKit
 
 extension VerticalTabsSidebar {
-    func cmuxSidebarSurfaceKind(for panelType: PanelType) -> CmuxSidebarSurfaceKind {
+    func breeSidebarSurfaceKind(for panelType: PanelType) -> BreeSidebarSurfaceKind {
         switch panelType {
         case .terminal:
             return .terminal

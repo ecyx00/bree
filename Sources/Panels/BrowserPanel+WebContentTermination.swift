@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 import WebKit
 
@@ -70,7 +70,7 @@ extension BrowserPanel {
         refreshWebViewLifecycleState()
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.webcontent.terminated panel=\(id.uuidString.prefix(5)) " +
             "renderable=\(wasRenderable ? 1 : 0) recoveryURL=\(recoveryURLString ?? "nil") " +
             "restoresWhenShown=\(webContentState.restoresWhenShown ? 1 : 0)"
@@ -88,9 +88,9 @@ extension BrowserPanel {
         )
         terminatedWebView.navigationDelegate = nil
         terminatedWebView.uiDelegate = nil
-        if let terminatedCmuxWebView = terminatedWebView as? CmuxWebView {
-            terminatedCmuxWebView.cmuxDownloadDelegate = nil
-            terminatedCmuxWebView.clearBrowserDownloadCallbacks()
+        if let terminatedBreeWebView = terminatedWebView as? BreeWebView {
+            terminatedBreeWebView.breeDownloadDelegate = nil
+            terminatedBreeWebView.clearBrowserDownloadCallbacks()
         }
     }
 
@@ -126,7 +126,7 @@ extension BrowserPanel {
         }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.webview.replace.begin panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) " +
             "renderable=\(wasRenderable ? 1 : 0) restoreURL=\(restoreURLString ?? "nil") " +
@@ -190,7 +190,7 @@ extension BrowserPanel {
         }
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.webview.replace.end panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) " +
             "instance=\(webViewInstanceID.uuidString.prefix(6)) " +
@@ -220,7 +220,7 @@ extension BrowserPanel {
             return true
         }
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.webcontent.recover panel=\(id.uuidString.prefix(5)) " +
             "reason=\(reason) url=\(recoveryURL?.absoluteString ?? "nil")"
         )

@@ -1,8 +1,8 @@
-import CmuxControlSocket
-import CmuxRemoteSession
+import BreeControlSocket
+import BreeRemoteSession
 import Foundation
-import CmuxWorkspaces
-import CmuxSidebar
+import BreeWorkspaces
+import BreeSidebar
 /// The live-app half of the v1 sidebar telemetry/report commands
 /// (`report_git_branch` / `report_ports` / `report_pwd` /
 /// `report_shell_state` / `report_tty` / `ports_kick` / `sidebar_state` /

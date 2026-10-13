@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "notes": "Conformance corpus for docs/shared-terminal-sizing.md. Replayed by Packages/Shared/CmuxTerminalSizing tests and cmux-tui-core sizing_policy tests. Steps run in order; 'expect' checks the published state. 'expect.priority_keys' checks each named participant's published priority_key.",
+  "notes": "Conformance corpus for docs/shared-terminal-sizing.md. Replayed by Packages/Shared/BreeTerminalSizing tests and bree-tui-core sizing_policy tests. Steps run in order; 'expect' checks the published state. 'expect.priority_keys' checks each named participant's published priority_key.",
   "cases": [
     {
       "name": "default policy is fit everyone",

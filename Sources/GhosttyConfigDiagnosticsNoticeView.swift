@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CmuxTerminalCore
+import BreeFoundation
+import BreeTerminalCore
 import SwiftUI
 
 /// Compact card listing the first Ghostty config errors, shown by
@@ -14,18 +14,18 @@ struct GhosttyConfigDiagnosticsNoticeView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(BreeChromePalette.currentSnapshot.signalAttention)
                 Text(String(
                     localized: "ghosttyConfigDiagnostics.notice.title",
                     defaultValue: "Ghostty config errors"
                 ))
-                .cmuxFont(.headline)
+                .scaledFont(.headline)
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(notice.listedDiagnostics, id: \.message) { diagnostic in
                     Text(verbatim: abbreviated(diagnostic.message))
-                        .cmuxFont(size: 11, design: .monospaced)
+                        .scaledFont(size: 11, design: .monospaced)
                         .lineLimit(2)
                         .truncationMode(.middle)
                 }
@@ -34,7 +34,7 @@ struct GhosttyConfigDiagnosticsNoticeView: View {
                         localized: "ghosttyConfigDiagnostics.notice.more",
                         defaultValue: "More errors are not shown."
                     ))
-                    .cmuxFont(.caption)
+                    .scaledFont(.caption)
                     .foregroundStyle(.secondary)
                 }
             }
@@ -43,7 +43,7 @@ struct GhosttyConfigDiagnosticsNoticeView: View {
                 localized: "ghosttyConfigDiagnostics.notice.hint",
                 defaultValue: "Fix the file and save it; Bree reloads the config automatically."
             ))
-            .cmuxFont(.caption)
+            .scaledFont(.caption)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
 

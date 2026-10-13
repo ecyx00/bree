@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 import WebKit
 
@@ -138,7 +138,7 @@ extension BrowserDesignModeController {
             }
             let value = try await evaluate(
                 """
-                return globalThis.__cmuxDesignMode?.completeAnnotationCapture(
+                return globalThis.__breeDesignMode?.completeAnnotationCapture(
                     id, x, y, width, height,
                     scrollX, scrollY, viewportWidth, viewportHeight
                 );
@@ -194,7 +194,7 @@ extension BrowserDesignModeController {
         let geometry = BrowserDesignModeAnnotationCapture(contextPadding: 48)
         for _ in 0..<2 {
             let prepared = try await evaluate(
-                "return globalThis.__cmuxDesignMode?.prepareAnnotationCapture(id);",
+                "return globalThis.__breeDesignMode?.prepareAnnotationCapture(id);",
                 arguments: ["id": id],
                 in: webView
             )
@@ -207,7 +207,7 @@ extension BrowserDesignModeController {
             let image = try await screenshotEvaluator.captureVisibleViewport(from: webView)
             let after = try BrowserDesignModeSupport.decodeAnnotationCaptureRequest(
                 try await evaluate(
-                    "return globalThis.__cmuxDesignMode?.annotationCaptureDescriptor(id);",
+                    "return globalThis.__breeDesignMode?.annotationCaptureDescriptor(id);",
                     arguments: ["id": id],
                     in: webView
                 )
@@ -235,7 +235,7 @@ extension BrowserDesignModeController {
         let lease = await artifactStore.beginHandoff()
         var artifactURLs: [URL] = []
         do {
-            let prepared = try await evaluate("return globalThis.__cmuxDesignMode?.prepareCapture();", in: webView)
+            let prepared = try await evaluate("return globalThis.__breeDesignMode?.prepareCapture();", in: webView)
             let before = try BrowserDesignModeSupport.decodeSnapshot(prepared)
             let beforeViewBounds = webView.bounds
             let pageScreenshotPath: String?
@@ -297,7 +297,7 @@ extension BrowserDesignModeController {
                 selectionScreenshotPaths[selection.selector] = selectionURL.path
             }
             let after = try BrowserDesignModeSupport.decodeSnapshot(
-                try await evaluate("return globalThis.__cmuxDesignMode?.snapshot();", in: webView)
+                try await evaluate("return globalThis.__breeDesignMode?.snapshot();", in: webView)
             )
             let afterViewBounds = webView.bounds
             try await restoreCapturePresentation(in: webView)
@@ -317,7 +317,7 @@ extension BrowserDesignModeController {
             let cleanup = Task { @MainActor [weak self, weak webView] in
                 guard let self, let webView else { return }
                 _ = try? await self.evaluate(
-                    "return globalThis.__cmuxDesignMode?.finishCapture();",
+                    "return globalThis.__breeDesignMode?.finishCapture();",
                     in: webView
                 )
                 _ = try? await self.screenshotEvaluator.captureVisibleViewport(from: webView)
@@ -345,7 +345,7 @@ extension BrowserDesignModeController {
 
     private func restoreCapturePresentation(in webView: WKWebView) async throws {
         _ = try await evaluate(
-            "return globalThis.__cmuxDesignMode?.finishCapture();",
+            "return globalThis.__breeDesignMode?.finishCapture();",
             in: webView
         )
         // `afterScreenUpdates` makes this callback the paint-completion signal;
@@ -359,7 +359,7 @@ extension BrowserDesignModeController {
         reportError: Bool
     ) async {
         _ = try? await evaluate(
-            "return globalThis.__cmuxDesignMode?.cancelAnnotationCapture(id);",
+            "return globalThis.__breeDesignMode?.cancelAnnotationCapture(id);",
             arguments: ["id": id],
             in: webView
         )

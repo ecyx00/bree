@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test for https://github.com/manaflow-ai/cmux/issues/8743.
+Regression test for https://github.com/ecyx00/bree/issues/8743.
 
 `FileManager.isExecutableFile(atPath:)` returns true for directories on macOS, so a
 directory named like a provider binary earlier on PATH used to shadow the real
@@ -15,9 +15,9 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 
-# cmux subcommand -> executable name its PATH walk looks for.
+# bree subcommand -> executable name its PATH walk looks for.
 PROVIDERS = (("omx", "omx"), ("omc", "omc"))
 
 
@@ -27,7 +27,7 @@ def make_executable(path: Path, content: str) -> None:
 
 
 def check_provider(cli_path: str, command: str, executable: str) -> int:
-    with tempfile.TemporaryDirectory(prefix=f"cmux-{command}-shadow-") as td:
+    with tempfile.TemporaryDirectory(prefix=f"bree-{command}-shadow-") as td:
         root = Path(td)
 
         # A directory named exactly like the provider binary, earlier on PATH.
@@ -48,8 +48,8 @@ printf 'real-{executable}:%s\\n' "$0"
         env = os.environ.copy()
         env["HOME"] = str(root)
         env["PATH"] = f"{shadow_dir}:{real_bin}:/usr/bin:/bin"
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_SOCKET_PATH"] = str(root / "missing.sock")
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_SOCKET_PATH"] = str(root / "missing.sock")
 
         proc = subprocess.run(
             [cli_path, command, "--version"],
@@ -62,14 +62,14 @@ printf 'real-{executable}:%s\\n' "$0"
 
         expected = f"real-{executable}:{real_bin / executable}"
         if proc.returncode != 0 or expected not in proc.stdout:
-            print(f"FAIL: `cmux {command} --version` did not run the real executable")
+            print(f"FAIL: `bree {command} --version` did not run the real executable")
             print(f"exit={proc.returncode}")
             print(f"stdout={proc.stdout.strip()}")
             print(f"stderr={proc.stderr.strip()}")
             return 1
 
         if str(shadow_dir / executable) in proc.stdout or str(shadow_dir / executable) in proc.stderr:
-            print(f"FAIL: `cmux {command}` selected the shadowing directory")
+            print(f"FAIL: `bree {command}` selected the shadowing directory")
             return 1
 
     return 0
@@ -77,7 +77,7 @@ printf 'real-{executable}:%s\\n' "$0"
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1

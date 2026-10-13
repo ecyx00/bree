@@ -11,13 +11,13 @@
         "deviceId": "77116c35",
         "instanceTag": "irx",
         "clientNamespace": "irx",
-        "homeRelayUrl": "https://usw1.relay.cmux.dev/",
+        "homeRelayUrl": "https://usw1.relay.bree.dev/",
         "updatedAt": "2026-08-27T02:49:45Z",
         "status": "active",
         "revoked": false,
         "appVersion": "0.31.4",
         "releaseTrack": "internal",
-        "capabilities": ["cmux.irx.v1"],
+        "capabilities": ["bree.irx.v1"],
         "lastConfirmedAt": "2026-08-27T02:49:40Z"
       },
       {
@@ -33,8 +33,8 @@
       }
     ],
     "relayFleet": [
-      "https://usw1.relay.cmux.dev/",
-      "https://usc1.relay.cmux.dev/"
+      "https://usw1.relay.bree.dev/",
+      "https://usc1.relay.bree.dev/"
     ],
     "grantVerificationKeys": [
       {

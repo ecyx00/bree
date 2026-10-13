@@ -1,5 +1,5 @@
 import Foundation
-import CmuxFoundation
+import BreeFoundation
 
 /// Durable, bounded owner and settlement state for Codex hooks.
 ///
@@ -45,7 +45,7 @@ final class CodexTurnLedger {
     ) {
         let rawPath = Self.normalized(environment[CodexHookInvocation.ledgerPathEnvironmentKey])
             .map { Self.homeExpandedPath($0, environment: environment) }
-            ?? Self.normalized(environment["CMUX_AGENT_HOOK_STATE_DIR"]).map {
+            ?? Self.normalized(environment["BREE_AGENT_HOOK_STATE_DIR"]).map {
                 URL(
                     fileURLWithPath: Self.homeExpandedPath($0, environment: environment),
                     isDirectory: true
@@ -54,7 +54,7 @@ final class CodexTurnLedger {
                     .path
             }
             ?? URL(
-                fileURLWithPath: Self.homeExpandedPath(CmuxIdentity.current.dotDirectoryTildePath, environment: environment),
+                fileURLWithPath: Self.homeExpandedPath(BreeIdentity.current.dotDirectoryTildePath, environment: environment),
                 isDirectory: true
             )
                 .appendingPathComponent(Self.defaultFilename, isDirectory: false)

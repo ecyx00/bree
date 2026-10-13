@@ -1,16 +1,16 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
 import Bonsplit
 import Carbon
-import CmuxSettings
-import CmuxSettingsUI
+import BreeSettings
+import BreeSettingsUI
 import SwiftUI
 
 /// Stores customizable keyboard shortcuts (definitions + persistence).
 enum KeyboardShortcutSettings {
-    static let didChangeNotification = Notification.Name("cmux.keyboardShortcutSettingsDidChange")
+    static let didChangeNotification = Notification.Name("bree.keyboardShortcutSettingsDidChange")
     static let actionUserInfoKey = "action"
-    static var settingsFileDisplayPath: String { CmuxIdentity.current.configFileDisplayPath }
+    static var settingsFileDisplayPath: String { BreeIdentity.current.configFileDisplayPath }
     static var settingsFileStore: KeyboardShortcutSettingsFileStore = .appLive {
         didSet { notifySettingsFileDidChange() }
     }
@@ -123,6 +123,7 @@ enum KeyboardShortcutSettings {
         case toggleArchitecture
         case toggleWiki
         case showKeyboardShortcuts
+        case showBoard
         // Navigation
         case nextSurface
         case prevSurface
@@ -231,7 +232,7 @@ enum KeyboardShortcutSettings {
             case .newWindow: return String(localized: "shortcut.newWindow.label", defaultValue: "New Window")
             case .closeWindow: return String(localized: "shortcut.closeWindow.label", defaultValue: "Close Window")
             case .toggleFullScreen: return String(localized: "command.toggleFullScreen.title", defaultValue: "Toggle Full Screen")
-            case .quit: return String(localized: "menu.quitCmux", defaultValue: "Quit Bree")
+            case .quit: return String(localized: "menu.quitBree", defaultValue: "Quit Bree")
             case .toggleSidebar: return String(localized: "shortcut.toggleLeftSidebar.label", defaultValue: "Toggle Left Sidebar")
             case .newTab: return String(localized: "shortcut.newWorkspace.label", defaultValue: "New Workspace")
             case .newBrowserWorkspace: return String(localized: "shortcut.newBrowserWorkspace.label", defaultValue: "New Browser Workspace")
@@ -267,6 +268,7 @@ enum KeyboardShortcutSettings {
             case .toggleArchitecture: return String(localized: "shortcut.toggleArchitecture.label", defaultValue: "Toggle Architecture")
             case .toggleWiki: return String(localized: "shortcut.toggleWiki.label", defaultValue: "Toggle Wiki")
             case .showKeyboardShortcuts: return String(localized: "settings.section.keyboardShortcuts", defaultValue: "Keyboard Shortcuts")
+            case .showBoard: return String(localized: "shortcut.showBoard.label", defaultValue: "Show Board")
             case .nextSurface: return String(localized: "shortcut.nextSurface.label", defaultValue: "Next Surface")
             case .prevSurface: return String(localized: "shortcut.previousSurface.label", defaultValue: "Previous Surface")
             case .moveSurfaceLeft: return String(localized: "shortcut.moveSurfaceLeft.label", defaultValue: "Reorder Surface Left")
@@ -416,7 +418,7 @@ enum KeyboardShortcutSettings {
                 return StoredShortcut(key: "n", command: true, shift: false, option: false, control: false)
             case .newBrowserWorkspace:
                 // Option+Cmd+N: sits next to New Workspace (Cmd+N) and New Window (Cmd+Shift+N)
-                // without colliding with any cmux default or an AppKit-reserved keystroke.
+                // without colliding with any bree default or an AppKit-reserved keystroke.
                 return StoredShortcut(key: "n", command: true, shift: false, option: true, control: false)
             case .saveLayoutTemplate:
                 return StoredShortcut(key: "s", command: true, shift: false, option: false, control: true)
@@ -477,6 +479,9 @@ enum KeyboardShortcutSettings {
                 return StoredShortcut(key: "k", command: true, shift: false, option: true, control: false)
             case .showKeyboardShortcuts:
                 return StoredShortcut(key: "/", command: true, shift: false, option: false, control: true)
+            case .showBoard:
+                // Cmd+Opt+J: free in the defaults and in macOS (Cmd+J is the bottom panel).
+                return StoredShortcut(key: "j", command: true, shift: false, option: true, control: false)
             case .nextSidebarTab:
                 return StoredShortcut(key: "]", command: true, shift: false, option: false, control: true)
             case .prevSidebarTab:
@@ -587,17 +592,17 @@ enum KeyboardShortcutSettings {
                 // would be self-referential, so users opt in via Settings; it stays reachable through the command palette and the `send_key ctrl-f` socket command.
                 return .unbound
             case .sizeTerminalToMyWindow:
-                // Ctrl+Opt+Cmd+=: "make the shared terminal my size". Unused by cmux
+                // Ctrl+Opt+Cmd+=: "make the shared terminal my size". Unused by bree
                 // and Ghostty defaults (Cmd+= zooms, Ctrl+Cmd+= and Opt+Cmd+= are taken).
                 return StoredShortcut(key: "=", command: true, shift: false, option: true, control: true)
             case .pasteLastScreenshot:
                 // Unbound by default: reachable through the command palette; users opt into a
-                // key in Settings or cmux.json.
+                // key in Settings or bree.json.
                 return .unbound
             case .clearScreenKeepScrollback:
                 // Cmd+Shift+K: the less-destructive sibling of Ghostty's Cmd+K (clear_screen),
                 // which also wipes scrollback. Shift+K is unbound in both Ghostty defaults and
-                // cmux, and sits next to the full-clear chord. Rebindable in Settings → Keyboard Shortcuts.
+                // bree, and sits next to the full-clear chord. Rebindable in Settings → Keyboard Shortcuts.
                 return StoredShortcut(key: "k", command: true, shift: true, option: false, control: false)
             case .toggleShellEditor: return StoredShortcut(key: "e", command: true, shift: false, option: false, control: true)
             case .selectWorkspaceByNumber:
@@ -664,8 +669,8 @@ enum KeyboardShortcutSettings {
             case .toggleBrowserFocusMode:
                 // Option+Cmd+Return: "enter" focus mode mnemonic. Option+Cmd is a modifier tier web
                 // pages rarely bind, so it stays out of the page's way while focus mode is off and
-                // cmux owns the shortcut, and it avoids the Ctrl+Cmd+Return global hotkey some
-                // screen recorders use. Exit stays double-Escape; rebind in Settings or cmux.json.
+                // bree owns the shortcut, and it avoids the Ctrl+Cmd+Return global hotkey some
+                // screen recorders use. Exit stays double-Escape; rebind in Settings or bree.json.
                 return StoredShortcut(key: "\r", command: true, shift: false, option: true, control: false)
             case .toggleBrowserDesignMode:
                 return StoredShortcut(key: "d", command: true, shift: false, option: true, control: true)
@@ -675,7 +680,7 @@ enum KeyboardShortcutSettings {
                 // Cmd+Ctrl+Shift+D. The plain Cmd+Ctrl+D chord is reserved by macOS for "Look Up &
                 // data detectors" — the OS swallows it before it reaches the app's key monitor — and
                 // the rest of the Cmd-based "D" family is taken by split actions (Cmd+D, Cmd+Shift+D,
-                // Cmd+Opt+D, Cmd+Shift+Opt+D). Adding Shift yields a chord that reaches cmux while
+                // Cmd+Opt+D, Cmd+Shift+Opt+D). Adding Shift yields a chord that reaches bree while
                 // keeping the "D for Diff" mnemonic. Rebindable in Settings → Keyboard Shortcuts.
                 return StoredShortcut(key: "d", command: true, shift: true, option: false, control: true)
             case .diffViewerScrollDown:
@@ -735,10 +740,10 @@ enum KeyboardShortcutSettings {
             }
 
             // Defer system-wide reservation checks for the global hotkey until
-            // cmux-owned bindings have had a chance to report their more useful
+            // bree-owned bindings have had a chance to report their more useful
             // conflict reason. The reservation helper includes those bindings
             // so Carbon registration fails safely, but that must not hide a
-            // conflict with a cmux action from the recorder UI.
+            // conflict with a bree action from the recorder UI.
             let resolved = resolvedRecordedShortcutIgnoringConflicts(
                 shortcut,
                 checkingSystemWideConflicts: self != .showHideAllWindows
@@ -758,7 +763,7 @@ enum KeyboardShortcutSettings {
         }
 
         func normalizedSettingsFileShortcut(_ shortcut: StoredShortcut) -> StoredShortcut? {
-            // cmux.json can load while the global settings store is still initializing.
+            // bree.json can load while the global settings store is still initializing.
             // Keep this path free of conflict and hotkey checks that consult global shortcut state.
             if shortcut.isUnbound {
                 return .unbound
@@ -1220,7 +1225,7 @@ final class SystemWideHotkeyController {
         ) { [weak self] _ in
             self?.refreshRegistration()
         }
-        // The live Settings UI uses the CmuxSettingsUI package recorder, which signals
+        // The live Settings UI uses the BreeSettingsUI package recorder, which signals
         // arm/disarm through its own notification (it cannot post the app-target
         // `KeyboardShortcutRecorderActivity` one). Without this, recording a system-wide
         // hotkey in Settings would not unregister the existing Carbon hotkey, so the
@@ -1254,7 +1259,7 @@ final class SystemWideHotkeyController {
 
     private func refreshRegistration() {
         let shortcut = SystemWideHotkeySettings.shortcut()
-        // Stand down while either recorder is armed (legacy app-target recorder or the CmuxSettingsUI
+        // Stand down while either recorder is armed (legacy app-target recorder or the BreeSettingsUI
         // package recorder) so the opt-in hotkey is captured rather than fired while being rebound.
         let isShortcutRecordingActive = KeyboardShortcutRecorderActivity.isAnyRecorderActive
             || RecorderHostButton.isActivelyRecording
@@ -1297,7 +1302,7 @@ final class SystemWideHotkeyController {
 
         guard status == noErr, let hotKeyRef else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "globalHotkey.register failed action=\(Self.action.rawValue) shortcut=\(normalizedShortcut.displayString) " +
                 "keyCode=\(registration.keyCode) modifiers=\(registration.modifiers) status=\(status)"
             )
@@ -1310,7 +1315,7 @@ final class SystemWideHotkeyController {
         registeredHotKeyRegistration = registration
 
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "globalHotkey.register success action=\(Self.action.rawValue) shortcut=\(normalizedShortcut.displayString) " +
             "keyCode=\(registration.keyCode) modifiers=\(registration.modifiers)"
         )
@@ -1337,7 +1342,7 @@ final class SystemWideHotkeyController {
 
 #if DEBUG
         if status != noErr {
-            cmuxDebugLog("globalHotkey.handlerInstall failed status=\(status)")
+            breeDebugLog("globalHotkey.handlerInstall failed status=\(status)")
         }
 #endif
     }
@@ -1381,7 +1386,7 @@ final class SystemWideHotkeyController {
 
 #if DEBUG
         let shortcut = registeredShortcut?.displayString ?? "unknown"
-        cmuxDebugLog(
+        breeDebugLog(
             "globalHotkey.fire action=\(Self.action.rawValue) " +
             "shortcut=\(shortcut) active=\(NSApp.isActive ? 1 : 0)"
         )
@@ -2504,8 +2509,8 @@ extension StoredShortcut {
 }
 
 enum KeyboardShortcutRecorderActivity {
-    static let didChangeNotification = Notification.Name("cmux.keyboardShortcutRecorderActivityDidChange")
-    static let stopAllNotification = Notification.Name("cmux.keyboardShortcutRecorderActivityStopAll")
+    static let didChangeNotification = Notification.Name("bree.keyboardShortcutRecorderActivityDidChange")
+    static let stopAllNotification = Notification.Name("bree.keyboardShortcutRecorderActivityStopAll")
     private static var activeRecorderCount = 0
 
     static var isAnyRecorderActive: Bool {

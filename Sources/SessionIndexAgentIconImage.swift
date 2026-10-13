@@ -1,5 +1,5 @@
 import AppKit
-import CmuxAppKitSupportUI
+import BreeAppKitSupportUI
 import SwiftUI
 
 /// Renders a session agent's branded asset or a resolved system-symbol fallback.
@@ -13,7 +13,7 @@ struct SessionIndexAgentIconImage: View, Equatable {
 
     var body: some View {
         if let assetName = agent.assetName {
-            CmuxResolvedIconImage(request: CmuxResolvedIconRequest(
+            BreeResolvedIconImage(request: BreeResolvedIconRequest(
                 source: .asset(name: assetName, bundle: .main),
                 size: NSSize(width: size, height: size),
                 // Monochrome: the brand colours (Claude orange) stay out of the chrome.

@@ -1,5 +1,5 @@
-import CMUXAgentLaunch
-import CmuxControlSocket
+import BREEAgentLaunch
+import BreeControlSocket
 import Foundation
 
 extension TerminalController {

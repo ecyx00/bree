@@ -1,5 +1,5 @@
-import CmuxCloudBannerCore
-import CmuxCloud
+import BreeCloudBannerCore
+import BreeCloud
 import Foundation
 import Observation
 

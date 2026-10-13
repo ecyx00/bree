@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cmux-bundled-resources-test.XXXXXX")"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/bree-bundled-resources-test.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE \
   GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_PREFIX
@@ -14,17 +14,17 @@ mkdir -p "$SRCROOT/ghostty/zig-out/share/ghostty/nested" \
   "$SRCROOT/ghostty/src/shell-integration/zsh" \
   "$SRCROOT/Resources/shell-integration" \
   "$SRCROOT/Resources/terminfo-overlay" \
-  "$BUILD_DIR/cmux.app/Contents/Resources/CmuxFoundation_CmuxFoundation.bundle/Contents" \
+  "$BUILD_DIR/bree.app/Contents/Resources/BreeFoundation_BreeFoundation.bundle/Contents" \
   "$SRCROOT/scripts" "$BUILD_DIR/Resources" "$BUILD_DIR/Products"
 
 printf 'resource-v1\n' > "$SRCROOT/ghostty/zig-out/share/ghostty/nested/file"
 printf 'shell\n' > "$SRCROOT/ghostty/src/shell-integration/zsh/ghostty-integration"
 printf 'term\n' > "$SRCROOT/ghostty/zig-out/share/terminfo/x"
-printf 'cmux\n' > "$SRCROOT/Resources/shell-integration/cmux.zsh"
+printf 'bree\n' > "$SRCROOT/Resources/shell-integration/bree.zsh"
 printf 'alternate\n' > "$SRCROOT/Resources/shell-integration/alternate.zsh"
-ln -s cmux.zsh "$SRCROOT/Resources/shell-integration/current.zsh"
+ln -s bree.zsh "$SRCROOT/Resources/shell-integration/current.zsh"
 printf 'plist\n' > "$BUILD_DIR/Products/Info.plist"
-printf 'localized-v1\n' > "$BUILD_DIR/cmux.app/Contents/Resources/CmuxFoundation_CmuxFoundation.bundle/Contents/Localizable.strings"
+printf 'localized-v1\n' > "$BUILD_DIR/bree.app/Contents/Resources/BreeFoundation_BreeFoundation.bundle/Contents/Localizable.strings"
 # A tracked source file outside every directory the phase copies, so only the
 # Ghostty worktree part of the stamp can notice it changing.
 printf 'helper-source-v1\n' > "$SRCROOT/ghostty/src/main.zig"
@@ -57,19 +57,19 @@ mkdir -p "$(dirname "$output")"
 printf 'cua-helper\n' > "$output"
 printf 'license\n' > "${output}-LICENSE.md"
 chmod +x "$output"
-if [[ "$output" == *.app/Contents/Resources/bin/cmux-cua ]]; then
-  resources_dir="${output%/bin/cmux-cua}"
-  helper_app="$resources_dir/../Library/cmux Computer Use.app"
+if [[ "$output" == *.app/Contents/Resources/bin/bree-cua ]]; then
+  resources_dir="${output%/bin/bree-cua}"
+  helper_app="$resources_dir/../Library/bree Computer Use.app"
   mkdir -p "$helper_app/Contents/MacOS" "$helper_app/Contents/Resources"
-  printf 'cua-helper-app\n' > "$helper_app/Contents/MacOS/cmux-cua"
-  chmod +x "$helper_app/Contents/MacOS/cmux-cua"
+  printf 'cua-helper-app\n' > "$helper_app/Contents/MacOS/bree-cua"
+  chmod +x "$helper_app/Contents/MacOS/bree-cua"
   printf 'plist\n' > "$helper_app/Contents/Info.plist"
-  printf 'managed\n' > "$helper_app/Contents/Resources/.cmux-cua-managed-helper"
+  printf 'managed\n' > "$helper_app/Contents/Resources/.bree-cua-managed-helper"
 fi
 EOF
 chmod +x "$SRCROOT/scripts-build-helper" "$SRCROOT/scripts-build-cua"
 ln -s "$SRCROOT/scripts-build-helper" "$SRCROOT/scripts/build-ghostty-cli-helper.sh"
-ln -s "$SRCROOT/scripts-build-cua" "$SRCROOT/scripts/build-cmux-cua.sh"
+ln -s "$SRCROOT/scripts-build-cua" "$SRCROOT/scripts/build-bree-cua.sh"
 ln -s "$ROOT_DIR/scripts/build-app-bundled-resources.sh" "$SRCROOT/scripts/build-app-bundled-resources.sh"
 
 run_phase() {
@@ -85,7 +85,7 @@ run_phase() {
 run_app_phase() {
   TARGET_BUILD_DIR="$BUILD_DIR" \
   DERIVED_FILE_DIR="$BUILD_DIR/Derived" \
-  UNLOCALIZED_RESOURCES_FOLDER_PATH="cmux.app/Contents/Resources" \
+  UNLOCALIZED_RESOURCES_FOLDER_PATH="bree.app/Contents/Resources" \
   INFOPLIST_PATH=Products/Info.plist \
   SRCROOT="$SRCROOT" \
   ARCHS=arm64 \
@@ -126,8 +126,8 @@ fi
 [[ -f "$BUILD_DIR/Resources/ghostty/nested/file" ]]
 
 run_app_phase > "$TMP_DIR/app-first.log"
-RESOURCE_BUNDLE="$BUILD_DIR/cmux.app/Contents/Resources/CmuxFoundation_CmuxFoundation.bundle"
-CLI_RESOURCE_BUNDLE="$BUILD_DIR/cmux.app/Contents/Resources/bin/CmuxFoundation_CmuxFoundation.bundle"
+RESOURCE_BUNDLE="$BUILD_DIR/bree.app/Contents/Resources/BreeFoundation_BreeFoundation.bundle"
+CLI_RESOURCE_BUNDLE="$BUILD_DIR/bree.app/Contents/Resources/bin/BreeFoundation_BreeFoundation.bundle"
 [[ -d "$CLI_RESOURCE_BUNDLE" && ! -L "$CLI_RESOURCE_BUNDLE" ]]
 [[ "$(cat "$CLI_RESOURCE_BUNDLE/Contents/Localizable.strings")" == 'localized-v1' ]]
 run_app_phase > "$TMP_DIR/app-second.log"
@@ -141,22 +141,22 @@ if grep -q 'skipping helper rebuilds' "$TMP_DIR/app-bundle-changed.log"; then
 fi
 [[ "$(cat "$CLI_RESOURCE_BUNDLE/Contents/Localizable.strings")" == 'localized-v2' ]]
 
-HELPER_APP="$BUILD_DIR/cmux.app/Contents/Library/cmux Computer Use.app"
+HELPER_APP="$BUILD_DIR/bree.app/Contents/Library/bree Computer Use.app"
 rm "$HELPER_APP/Contents/Info.plist"
 run_app_phase > "$TMP_DIR/app-missing-plist.log"
 if grep -q 'skipping helper rebuilds' "$TMP_DIR/app-missing-plist.log"; then
-  echo 'FAIL: missing cmux-cua helper Info.plist did not invalidate the manifest' >&2
+  echo 'FAIL: missing bree-cua helper Info.plist did not invalidate the manifest' >&2
   exit 1
 fi
 [[ -f "$HELPER_APP/Contents/Info.plist" ]]
 
-rm "$HELPER_APP/Contents/Resources/.cmux-cua-managed-helper"
+rm "$HELPER_APP/Contents/Resources/.bree-cua-managed-helper"
 run_app_phase > "$TMP_DIR/app-missing-owner.log"
 if grep -q 'skipping helper rebuilds' "$TMP_DIR/app-missing-owner.log"; then
-  echo 'FAIL: missing cmux-cua ownership marker did not invalidate the manifest' >&2
+  echo 'FAIL: missing bree-cua ownership marker did not invalidate the manifest' >&2
   exit 1
 fi
-[[ -f "$HELPER_APP/Contents/Resources/.cmux-cua-managed-helper" ]]
+[[ -f "$HELPER_APP/Contents/Resources/.bree-cua-managed-helper" ]]
 
 echo 'PASS: bundled-resource invalidation covers copied trees, Git environment, and complete helper bundles'
 
@@ -204,14 +204,14 @@ cat > "$SRCROOT/fake-zig" <<'EOF'
 printf '%s\n' "${FAKE_ZIG_VERSION:-test-zig-v1}"
 EOF
 chmod +x "$SRCROOT/fake-zig"
-CMUX_ZIG="$SRCROOT/fake-zig" run_phase > "$TMP_DIR/toolchain.log"
+BREE_ZIG="$SRCROOT/fake-zig" run_phase > "$TMP_DIR/toolchain.log"
 if grep -q 'skipping helper rebuilds' "$TMP_DIR/toolchain.log"; then
   echo 'FAIL: changed Zig toolchain did not invalidate the stamp' >&2
   exit 1
 fi
-CMUX_ZIG="$SRCROOT/fake-zig" run_phase > "$TMP_DIR/toolchain-settled.log"
+BREE_ZIG="$SRCROOT/fake-zig" run_phase > "$TMP_DIR/toolchain-settled.log"
 grep -q 'skipping helper rebuilds' "$TMP_DIR/toolchain-settled.log"
-FAKE_ZIG_VERSION=test-zig-v2 CMUX_ZIG="$SRCROOT/fake-zig" run_phase > "$TMP_DIR/toolchain-version.log"
+FAKE_ZIG_VERSION=test-zig-v2 BREE_ZIG="$SRCROOT/fake-zig" run_phase > "$TMP_DIR/toolchain-version.log"
 if grep -q 'skipping helper rebuilds' "$TMP_DIR/toolchain-version.log"; then
   echo 'FAIL: changed Zig version did not invalidate the stamp' >&2
   exit 1

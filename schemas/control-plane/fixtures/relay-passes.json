@@ -6,7 +6,7 @@
     "endpointId": "0fbffe130b96",
     "passes": [
       {
-        "relayUrl": "https://usw1.relay.cmux.dev/",
+        "relayUrl": "https://usw1.relay.bree.dev/",
         "token": "eyJ...",
         "expiresAt": "2026-08-27T03:10:48Z",
         "generation": 7,

@@ -1,5 +1,5 @@
-import CmuxBrowser
-import CmuxControlSocket
+import BreeBrowser
+import BreeControlSocket
 import Foundation
 
 /// Process-wide REPL state: live sessions and the bundled runtime.
@@ -11,10 +11,10 @@ final class BrowserReplHost: @unchecked Sendable {
     private var cachedBundle: Result<BrowserReplRuntimeBundle, BrowserReplRuntimeBundleError>?
 
     /// The runtime bundled in the app, in the order its `manifest.json`
-    /// gives. `CMUX_BROWSER_REPL_RUNTIME_DIR` points a development build at a
+    /// gives. `BREE_BROWSER_REPL_RUNTIME_DIR` points a development build at a
     /// source checkout instead, re-read per session.
     func bundle() -> Result<BrowserReplRuntimeBundle, BrowserReplRuntimeBundleError> {
-        if let override = ProcessInfo.processInfo.environment["CMUX_BROWSER_REPL_RUNTIME_DIR"], !override.isEmpty {
+        if let override = ProcessInfo.processInfo.environment["BREE_BROWSER_REPL_RUNTIME_DIR"], !override.isEmpty {
             return Self.load(URL(fileURLWithPath: override, isDirectory: true))
         }
         return lock.withLock {
@@ -143,7 +143,7 @@ extension TerminalController {
 
     /// The workspace a new session binds to. `workspace_id` is an explicit
     /// choice and must exist; `caller_workspace_id` (the CLI's
-    /// `CMUX_WORKSPACE_ID`) falls back to the focused workspace of the key or
+    /// `BREE_WORKSPACE_ID`) falls back to the focused workspace of the key or
     /// frontmost window when this instance does not know it.
     private nonisolated func v2BrowserReplWorkspaceID(
         params: [String: Any]

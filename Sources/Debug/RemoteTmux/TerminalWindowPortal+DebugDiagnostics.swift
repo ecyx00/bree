@@ -70,7 +70,7 @@ extension WindowTerminalPortal {
         var node: NSView? = anchor
         var depth = 0
         while let current = node, depth < 60 {
-            cmuxDebugLog(
+            breeDebugLog(
                 "portal.anchor.chain [\(depth)] \(String(describing: type(of: current)))"
                     + " w=\(Int(current.frame.width))"
             )

@@ -1,6 +1,6 @@
 # Custom Sidebar Examples
 
-These are vibe-coded cmux sidebars that run as interpreted SwiftUI-style files.
+These are vibe-coded bree sidebars that run as interpreted SwiftUI-style files.
 They do not need Xcode, signing, or a build step.
 
 The examples intentionally keep their labels inline because interpreted
@@ -9,10 +9,10 @@ sidebars do not have a localization catalog yet.
 Start with one of the six curated built-in templates from the app or CLI:
 
 ```bash
-cmux sidebar templates
-cmux sidebar try agents-board
-cmux sidebar new agents-board --from agents-board
-cmux sidebar open agents-board
+bree sidebar templates
+bree sidebar try agents-board
+bree sidebar new agents-board --from agents-board
+bree sidebar open agents-board
 ```
 
 In the app, right-click the sidebar toggle button and choose **Browse Sidebar Templates…**
@@ -22,15 +22,15 @@ The curated previews are also shown in the [custom-sidebar guide](../../docs/cus
 
 | Template | Light | Dark |
 | --- | --- | --- |
-| Workspaces | ![Workspaces](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/workspaces-light.png) | ![Workspaces dark](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/workspaces-dark.png) |
-| Agents Board | ![Agents Board](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/agents-board-light.png) | ![Agents Board dark](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/agents-board-dark.png) |
-| Panel Sessions | ![Panel Sessions](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-sessions-light.png) | ![Panel Sessions dark](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-sessions-dark.png) |
-| Panel Subagents | ![Panel Subagents](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-subagents-light.png) | ![Panel Subagents dark](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-subagents-dark.png) |
-| btop Agents | ![btop Agents](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/btop-agents-light.png) | ![btop Agents dark](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/btop-agents-dark.png) |
-| Panel Todo | ![Panel Todo](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-todo-light.png) | ![Panel Todo dark](../../Packages/macOS/CmuxSettingsUI/Sources/CmuxSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-todo-dark.png) |
+| Workspaces | ![Workspaces](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/workspaces-light.png) | ![Workspaces dark](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/workspaces-dark.png) |
+| Agents Board | ![Agents Board](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/agents-board-light.png) | ![Agents Board dark](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/agents-board-dark.png) |
+| Panel Sessions | ![Panel Sessions](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-sessions-light.png) | ![Panel Sessions dark](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-sessions-dark.png) |
+| Panel Subagents | ![Panel Subagents](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-subagents-light.png) | ![Panel Subagents dark](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-subagents-dark.png) |
+| btop Agents | ![btop Agents](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/btop-agents-light.png) | ![btop Agents dark](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/btop-agents-dark.png) |
+| Panel Todo | ![Panel Todo](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-todo-light.png) | ![Panel Todo dark](../../Packages/macOS/BreeSettingsUI/Sources/BreeSettingsUI/Resources/CustomSidebarTemplatePreviews/panel-todo-dark.png) |
 
 You can also copy any source file from this directory into
-`~/.config/cmux/sidebars/`. Enable **Settings -> Beta features -> Custom sidebars**
+`~/.config/bree/sidebars/`. Enable **Settings -> Beta features -> Custom sidebars**
 then pick it from the sidebar toggle button's right-click menu. The manifest lists
 the bundled templates' display name, description, and intended placement. The other
 examples remain available here as authoring references.
@@ -48,7 +48,7 @@ examples remain available here as authoring references.
   a tiny progress meter, unread count and PR number. The header graphs busy
   workspaces over twelve minutes. Click a row to select it, drag to reorder,
   and use BUSY to hide quiet workspaces. Install with
-  `cp Examples/CustomSidebars/btop-agents.js ~/.config/cmux/sidebars/` and
-  `cmux sidebar select btop-agents`.
+  `cp Examples/CustomSidebars/btop-agents.js ~/.config/bree/sidebars/` and
+  `bree sidebar select btop-agents`.
 
 See `docs/custom-sidebars.md` for the full authoring contract.

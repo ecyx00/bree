@@ -3,7 +3,7 @@
 Regression: zsh integration hooks should degrade quietly when the job table is full.
 
 The zsh job table has a fixed maximum size. Once user jobs or prompt plugins fill
-it, cmux's injected Ghostty zsh integration must not keep surfacing hook errors on
+it, bree's injected Ghostty zsh integration must not keep surfacing hook errors on
 every prompt redraw.
 """
 
@@ -82,11 +82,11 @@ def _run_pty_session(
 def _capture_saturated_session(env: dict[str, str], zsh_path: str) -> bytes:
     def interact(master: int, output: bytearray) -> None:
         _read_available(master, output, time.time() + 0.75)
-        _send(master, "print __CMUX_READY__\n")
+        _send(master, "print __BREE_READY__\n")
         _read_available(master, output, time.time() + 1.0)
         _send(master, f"for i in {{1..1100}}; do sleep {BACKGROUND_SLEEP_SECONDS} & done\n")
         _read_available(master, output, time.time() + 20.0)
-        _send(master, "print __CMUX_AFTER_FILL__\n")
+        _send(master, "print __BREE_AFTER_FILL__\n")
         _read_available(master, output, time.time() + 1.0)
         for _ in range(3):
             _send(master, "\n")
@@ -107,7 +107,7 @@ def _capture_status_marker_session(env: dict[str, str], zsh_path: str) -> bytes:
 def _capture_initial_prompt(env: dict[str, str], zsh_path: str) -> bytes:
     def interact(master: int, output: bytearray) -> None:
         _read_available(master, output, time.time() + 1.0)
-        _send(master, "print __CMUX_READY__\n")
+        _send(master, "print __BREE_READY__\n")
         _read_available(master, output, time.time() + 1.0)
 
     return _run_pty_session(env, zsh_path, interact)
@@ -122,10 +122,10 @@ def _prepare_home(home: Path, zshrc: str = "") -> None:
 
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
-    cmux_wrapper_dir = root / "Resources" / "shell-integration"
+    bree_wrapper_dir = root / "Resources" / "shell-integration"
     ghostty_resources_dir = root / "ghostty" / "src"
-    if not (cmux_wrapper_dir / ".zshenv").exists():
-        print(f"SKIP: missing cmux zsh wrapper at {cmux_wrapper_dir}")
+    if not (bree_wrapper_dir / ".zshenv").exists():
+        print(f"SKIP: missing bree zsh wrapper at {bree_wrapper_dir}")
         return 0
     if not (ghostty_resources_dir / "shell-integration" / "zsh" / "ghostty-integration").exists():
         print(f"SKIP: missing Ghostty zsh integration at {ghostty_resources_dir}")
@@ -136,18 +136,18 @@ def main() -> int:
         print("SKIP: zsh not installed")
         return 0
 
-    base = Path(tempfile.mkdtemp(prefix="cmux_ghostty_zsh_jobs_"))
+    base = Path(tempfile.mkdtemp(prefix="bree_ghostty_zsh_jobs_"))
     try:
         home = base / "home"
         _prepare_home(home)
 
         env = dict(os.environ)
         env["HOME"] = str(home)
-        env["ZDOTDIR"] = str(cmux_wrapper_dir)
-        env["CMUX_ZSH_ZDOTDIR"] = str(home)
-        env["CMUX_SHELL_INTEGRATION"] = "1"
-        env["CMUX_SHELL_INTEGRATION_DIR"] = str(cmux_wrapper_dir)
-        env["CMUX_LOAD_GHOSTTY_ZSH_INTEGRATION"] = "1"
+        env["ZDOTDIR"] = str(bree_wrapper_dir)
+        env["BREE_ZSH_ZDOTDIR"] = str(home)
+        env["BREE_SHELL_INTEGRATION"] = "1"
+        env["BREE_SHELL_INTEGRATION_DIR"] = str(bree_wrapper_dir)
+        env["BREE_LOAD_GHOSTTY_ZSH_INTEGRATION"] = "1"
         env["GHOSTTY_RESOURCES_DIR"] = str(ghostty_resources_dir)
         env["GHOSTTY_SHELL_FEATURES"] = "cursor,title"
         env.pop("GHOSTTY_BIN_DIR", None)
@@ -162,10 +162,10 @@ def main() -> int:
         _prepare_home(initial_home, f"sleep {BACKGROUND_SLEEP_SECONDS} &\n")
         initial_env = dict(env)
         initial_env["HOME"] = str(initial_home)
-        initial_env["CMUX_ZSH_ZDOTDIR"] = str(initial_home)
-        initial_env["CMUX_ZSH_JOB_TABLE_SOFT_LIMIT"] = "1"
+        initial_env["BREE_ZSH_ZDOTDIR"] = str(initial_home)
+        initial_env["BREE_ZSH_JOB_TABLE_SOFT_LIMIT"] = "1"
         initial_output = _capture_initial_prompt(initial_env, zsh_path)
-        if b"__CMUX_READY__" not in initial_output:
+        if b"__BREE_READY__" not in initial_output:
             print("FAIL: initially saturated zsh session did not reach the prompt")
             print(initial_output.decode("utf-8", "replace")[-4000:])
             return 1
@@ -175,7 +175,7 @@ def main() -> int:
             return 1
 
         output = _capture_saturated_session(env, zsh_path)
-        if b"__CMUX_AFTER_FILL__" not in output:
+        if b"__BREE_AFTER_FILL__" not in output:
             print("FAIL: saturated zsh session did not reach the post-fill prompt")
             print(output.decode("utf-8", "replace")[-4000:])
             return 1

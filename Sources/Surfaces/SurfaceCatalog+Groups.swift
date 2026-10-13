@@ -1,8 +1,8 @@
-import CmuxCloud
-import CmuxCore
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeCore
+import BreeSurfaceCatalogModel
 import Foundation
-/// A collection of resources that travels as one drag or one "open all": a cmux-tui
+/// A collection of resources that travels as one drag or one "open all": a bree-tui
 /// workspace on a machine, or a local workspace (the panes it projects). The canonical
 /// payload is typed placements. `resources` and the group workspace id remain as derived
 /// compatibility views for older callers and persisted drag records.
@@ -234,7 +234,7 @@ extension SurfaceCatalog {
                     .reserveCloudTerminalPane(machine: machine, at: destination, focus: focus)
             },
             attach: { reservation, resource, remoteTabID in
-                guard let provider = SurfaceCatalog.shared.provider(for: resource.machine) as? CmuxTuiSurfaceProvider else {
+                guard let provider = SurfaceCatalog.shared.provider(for: resource.machine) as? BreeTuiSurfaceProvider else {
                     Workspace.liveWorkspace(id: reservation.workspaceID)?
                         .failReservedCloudTerminalPane(reservation, error: SurfaceCatalogError.noProvider(resource.machine))
                     return
@@ -352,7 +352,7 @@ extension SurfaceCatalog {
     /// Splits are created parent-first: a split node makes its second pane BEFORE its
     /// first child's own splits subdivide the first pane. That is the order in which the
     /// local Bonsplit tree ends up mirroring the layout node for node (the same order
-    /// `Workspace.applyCustomLayout` builds cmux.json layouts in), which is what lets the
+    /// `Workspace.applyCustomLayout` builds bree.json layouts in), which is what lets the
     /// ratio pass walk both trees in step afterwards. The walk returns the tree it really
     /// built, so a placement that failed to materialize cannot misalign the two.
     @MainActor

@@ -3,7 +3,7 @@ import AppKit
 /// The Settings-open entrypoints shared by the app menu, ⌘,, the command
 /// palette, help commands, and the menu-bar extra. Split out of
 /// `AppDelegate.swift` (file-length budget) alongside the AppKit-owned
-/// Settings window lifecycle (https://github.com/manaflow-ai/cmux/issues/7777).
+/// Settings window lifecycle (https://github.com/ecyx00/bree/issues/7777).
 extension AppDelegate {
     @MainActor
     static func presentPreferencesWindow(
@@ -20,7 +20,7 @@ extension AppDelegate {
         }
     ) {
 #if DEBUG
-        cmuxDebugLog("settings.open.present path=appkitWindow")
+        breeDebugLog("settings.open.present path=appkitWindow")
 #endif
         let present = presentSettingsWindow
             ?? { SettingsWindowPresenter.show(navigationTarget: $0) }
@@ -32,14 +32,14 @@ extension AppDelegate {
         }
         activateApplication()
 #if DEBUG
-        cmuxDebugLog("settings.open.present activate=1")
+        breeDebugLog("settings.open.present activate=1")
 #endif
     }
 
     @MainActor
     func openPreferencesWindow(debugSource: String, navigationTarget: SettingsNavigationTarget? = nil) {
 #if DEBUG
-        cmuxDebugLog("settings.open.request source=\(debugSource)")
+        breeDebugLog("settings.open.request source=\(debugSource)")
 #endif
         Self.presentPreferencesWindow(navigationTarget: navigationTarget)
     }

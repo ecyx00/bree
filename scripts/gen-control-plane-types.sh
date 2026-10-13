@@ -18,7 +18,7 @@ if ! command -v bunx >/dev/null 2>&1; then
 fi
 
 SCHEMAS=(schemas/control-plane/*.schema.json)
-SWIFT_OUT="${1:-Packages/Shared/CmuxIrxTransport/Sources/CmuxIrxTransport/ControlPlane/CtlWireModels.swift}"
+SWIFT_OUT="${1:-Packages/Shared/BreeIrxTransport/Sources/BreeIrxTransport/ControlPlane/CtlWireModels.swift}"
 TS_OUT="${2:-workers/presence/src/generated/controlPlane.ts}"
 
 mkdir -p "$(dirname "$SWIFT_OUT")" "$(dirname "$TS_OUT")"
@@ -31,7 +31,7 @@ mkdir -p "$(dirname "$SWIFT_OUT")" "$(dirname "$TS_OUT")"
   --no-initializers \
   --out "$SWIFT_OUT"
 
-# CmuxIrxTransport builds with Swift 6 access-level imports: public API using
+# BreeIrxTransport builds with Swift 6 access-level imports: public API using
 # Foundation types requires `public import Foundation`.
 perl -pi -e 's/^import Foundation$/public import Foundation/' "$SWIFT_OUT"
 

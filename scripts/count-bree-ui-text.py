@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""Count UI text that still says "bree" (xcstrings en/tr values and Swift defaultValue literals).
+
+Allowed leftovers are real paths/identifiers (bree.json, ~/.config/bree, .bree/, .bree,
+BREE_* env vars, bree_port, bree-tui, github.com/ecyx00/bree URLs, camel-case setting keys). Everything
+else counts as "app name" text. cli.* keys belong to the CLI coder and are counted separately.
+Usage: scripts/count-bree-ui-text.py [--list]
+"""
+import json, os, re, sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ALLOWED = re.compile(
+    r'https?://[A-Za-z0-9._~:/?&=%#@+-]*bree[A-Za-z0-9._~:/?&=%#@+-]*|~?/?\.config/bree/dock\.json'
+    r'|~?/?\.bree/dock\.json|bree\.sock|BREE_\w+|\$BREE\w*'
+    r'|bree_port\w*|bree-tui|breed-remote|\w*Bree\w*|\.bree\b|bree\.com|co\.manaflow\.[\w.]+')
+# Swift files owned by the CLI/binary coder; not counted here.
+OTHER_CODER = {'BreeCLIPathInstaller.swift', 'breeApp.swift', 'SocketCleanup.swift', 'CLIForwardingLaunchRouter.swift',
+               'RemoteInteractiveShellBootstrapBuilder.swift', 'BreeRemoteSession', 'AutomationSection.swift', 'BREEAgentLaunch'}
+SKIP_DIRS = {'node_modules', '.build', 'build', 'ghostty', 'web', '.git', 'Tests'}
+
+def leftover(s):
+    return bool(re.search('bree', ALLOWED.sub('', s), re.I))
+
+def unit_values(x):
+    if isinstance(x, dict):
+        if 'value' in x and isinstance(x['value'], str):
+            yield x['value']
+        for v in x.values():
+            yield from unit_values(v)
+
+def walk(*roots):
+    for r in roots:
+        for dp, dn, fn in os.walk(os.path.join(ROOT, r)):
+            dn[:] = [d for d in dn if d not in SKIP_DIRS and not d.endswith('Tests')]
+            for f in fn:
+                yield os.path.join(dp, f)
+
+def main():
+    show = '--list' in sys.argv
+    cat = {'en': 0, 'tr': 0}; cli = 0; allowed = 0; rows = []
+    for p in walk('Resources', 'Packages', 'Examples', 'TunnelExtension'):
+        if not p.endswith('.xcstrings'): continue
+        d = json.load(open(p))
+        for k, v in d['strings'].items():
+            for loc, x in v.get('localizations', {}).items():
+                if loc not in cat: continue
+                for s in unit_values(x):
+                    if not re.search('bree', s, re.I): continue
+                    if k.startswith('cli.'): cli += loc == 'en'; continue
+                    if leftover(s): cat[loc] += 1; rows.append((os.path.relpath(p, ROOT), loc, k, s[:100]))
+                    else: allowed += loc == 'en'
+    lit = []; lit_allowed = 0
+    rx = re.compile(r'defaultValue:\s*"((?:[^"\\]|\\.)*)"')
+    for p in walk('Sources', 'Packages'):
+        if not p.endswith('.swift') or any(o in p.split(os.sep) or os.path.basename(p) == o for o in OTHER_CODER): continue
+        for i, line in enumerate(open(p, errors='ignore'), 1):
+            for m in rx.finditer(line):
+                if re.search('bree', m.group(1), re.I):
+                    if leftover(m.group(1)): lit.append((os.path.relpath(p, ROOT), i, m.group(1)[:100]))
+                    else: lit_allowed += 1
+    print(f"catalogs: en={cat['en']} tr={cat['tr']} leftover (non-cli); allowed path/identifier strings (en)={allowed}; cli.* en containing bree (other coder)={cli}")
+    print(f"defaultValue literals leftover={len(lit)} (allowed path/identifier literals={lit_allowed})")
+    if show:
+        for r in rows: print('CAT', *r)
+        for r in lit: print('SWIFT', *r)
+
+main()

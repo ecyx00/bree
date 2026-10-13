@@ -1,6 +1,6 @@
 import AppKit
-import CmuxAppKitSupportUI
-import CmuxWorkspaces
+import BreeAppKitSupportUI
+import BreeWorkspaces
 import SwiftUI
 
 typealias SidebarMaterialOption = WindowChromeSidebarMaterialOption

@@ -1,4 +1,5 @@
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import Foundation
 import SwiftUI
 
@@ -61,7 +62,7 @@ enum VaultSessionLiveStatus: Equatable, Sendable {
     }
 
     var dotColor: Color {
-        isActiveForIndicator ? .green : Color.secondary.opacity(0.55)
+        isActiveForIndicator ? BreeChromePalette.currentSnapshot.activeIndicator : Color.secondary.opacity(0.55)
     }
 }
 

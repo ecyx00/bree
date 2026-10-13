@@ -64,7 +64,7 @@
     return `internal:role=${role}${props.map(([n, v]) => `[${n}=${v}]`).join("")}`;
   }
 
-  const ns = (root.CmuxBrowserRepl = root.CmuxBrowserRepl || {});
+  const ns = (root.BreeBrowserRepl = root.BreeBrowserRepl || {});
   ns.locatorUtils = {
     escapeForTextSelector,
     escapeForAttributeSelector,

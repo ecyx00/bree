@@ -1,5 +1,5 @@
-import CmuxBrowser
-import CmuxFoundation
+import BreeBrowser
+import BreeFoundation
 import Foundation
 import WebKit
 
@@ -141,7 +141,7 @@ extension TerminalController {
     ) -> String {
 #if DEBUG
         let readinessState = v2MainSync { browserPanel.browserAutomationReadinessPayload() }
-        cmuxDebugLog(
+        breeDebugLog(
             "browser.automation.readinessTimeout surface=\(surfaceId.uuidString.prefix(5)) " +
             "channel=\(channel.debugName) state=\(readinessState)"
         )
@@ -160,7 +160,7 @@ extension TerminalController {
                     channel: channel
                 )
 #if DEBUG
-                cmuxDebugLog(
+                breeDebugLog(
                     "browser.automation.liveness surface=\(surfaceId.uuidString.prefix(5)) " +
                     "channel=\(channel.debugName) outcome=\(String(describing: result))"
                 )

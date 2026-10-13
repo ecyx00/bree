@@ -51,7 +51,7 @@ struct PublicTabDragTransferRegistryTests {
 
     @Test("Pasteboard payload keeps the 0.64.22 host drop-target contract")
     func pasteboardPayloadRemainsLegacyJSONDecodable() throws {
-        // Regression (manaflow-ai/cmux#10033): host apps resolve pane/browser
+        // Regression (ecyx00/bree#10033): host apps resolve pane/browser
         // drop targets by JSON-parsing the tab-transfer pasteboard payload for
         // tab.id, tab.kind, sourcePaneId, and sourceProcessId (the 0.64.22
         // contract). Replacing the payload with a bare token blinded every

@@ -15,5 +15,5 @@
     ],
     "after-wait-accept": "confirm true"
   },
-  "cmux": {}
+  "bree": {}
 }

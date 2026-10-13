@@ -9,7 +9,7 @@ NEW_PANE_ID = "66666666-6666-4666-8666-666666666666"
 NEW_SURFACE_ID = "77777777-7777-4777-8777-777777777777"
 
 
-class FakeCmuxState:
+class FakeBreeState:
     """Workspace topology for executable tmux command integration tests."""
 
     def __init__(self) -> None:
@@ -47,7 +47,7 @@ class FakeCmuxState:
                         "id": WORKSPACE_ID,
                         "ref": "workspace:1",
                         "index": 0,
-                        "title": "cmux",
+                        "title": "bree",
                     }
                 ],
             }
@@ -177,4 +177,4 @@ class FakeCmuxState:
                     }
                 ]
             }
-        raise RuntimeError(f"Unsupported fake cmux method: {method}")
+        raise RuntimeError(f"Unsupported fake bree method: {method}")

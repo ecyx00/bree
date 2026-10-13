@@ -3,7 +3,7 @@
 // session only drives, a dialog, file chooser or download without a handler
 // stays with the user; a handler the agent registered on that page takes
 // just that event. A dialog or file chooser the agent's own click opens goes
-// to the agent, though: cmux's UI must not come up in front of the user for
+// to the agent, though: bree's UI must not come up in front of the user for
 // it, nor leave the agent waiting for the user's answer. Runs on Playwright WebKit through the dev driver, which
 // stands in for the user's own UI by dismissing dialogs, leaving the file
 // chooser unanswered and keeping the download from the session.

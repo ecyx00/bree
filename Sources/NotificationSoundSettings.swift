@@ -1,6 +1,6 @@
 import AppKit
-import CmuxFoundation
-import CmuxSettings
+import BreeFoundation
+import BreeSettings
 import Foundation
 import os
 import UserNotifications
@@ -11,7 +11,7 @@ import UserNotifications
 // facade remains a small, stable seam for the rest of the app and tests.
 
 nonisolated private let notificationSoundLogger = Logger(
-    subsystem: "com.cmuxterm.app",
+    subsystem: "com.bree.app",
     category: "notification-sound"
 )
 
@@ -31,7 +31,7 @@ enum NotificationSoundSettings {
     private static var activeCustomCommandCount = 0
     private static let activePlaybackSoundDelegate = ActivePlaybackSoundDelegate()
     private static let customCommandQueue = DispatchQueue(
-        label: "com.cmuxterm.notification-custom-command",
+        label: "com.bree.notification-custom-command",
         qos: .utility,
         attributes: .concurrent
     )
@@ -165,7 +165,7 @@ enum NotificationSoundSettings {
     /// Live Do Not Disturb assertion store written by the Focus daemon.
     static let defaultAssertionsFileURL: URL = {
 #if DEBUG
-        if let override = ProcessInfo.processInfo.environment["CMUX_DEBUG_DND_ASSERTIONS_PATH"],
+        if let override = ProcessInfo.processInfo.environment["BREE_DEBUG_DND_ASSERTIONS_PATH"],
            !override.isEmpty {
             return URL(fileURLWithPath: override, isDirectory: false)
         }
@@ -281,7 +281,7 @@ enum NotificationSoundSettings {
         )
 #if DEBUG
         let storeReadable = (try? Data(contentsOf: assertionsFileURL)) != nil
-        cmuxDebugLog(
+        breeDebugLog(
             "notification.sound.focusGate suppressed=\(suppressed ? 1 : 0) storeReadable=\(storeReadable ? 1 : 0)"
         )
 #endif
@@ -406,12 +406,12 @@ enum NotificationSoundSettings {
                 capturesErrorOutput: false
             )
             var commandEnvironment = ProcessInfo.processInfo.environment
-            commandEnvironment["CMUX_NOTIFICATION_TITLE"] = title
-            commandEnvironment["CMUX_NOTIFICATION_SUBTITLE"] = subtitle
-            commandEnvironment["CMUX_NOTIFICATION_BODY"] = body
+            commandEnvironment["BREE_NOTIFICATION_TITLE"] = title
+            commandEnvironment["BREE_NOTIFICATION_SUBTITLE"] = subtitle
+            commandEnvironment["BREE_NOTIFICATION_BODY"] = body
             // Remote-origin text (ssh relay, cloud machine) is untrusted data; the
             // command can gate on this instead of trusting every notification alike.
-            commandEnvironment["CMUX_NOTIFICATION_ORIGIN"] = origin.wireValue
+            commandEnvironment["BREE_NOTIFICATION_ORIGIN"] = origin.wireValue
             let environment = commandEnvironment
             Task.detached(priority: .utility) {
                 defer { releaseCustomCommandAdmission() }

@@ -1,4 +1,4 @@
-import CmuxAgentJournal
+import BreeAgentJournal
 import Foundation
 
 /// What `agent.message.settings` acts on, resolved on the main actor.
@@ -121,7 +121,7 @@ extension TerminalController {
         let surfaceId: UUID?
         let workspace: Workspace?
         if let target {
-            // The same resolution `cmux agent message` uses, so turning off
+            // The same resolution `bree agent message` uses, so turning off
             // `<target>` silences exactly the agent a send to it would reach.
             guard let recipient = agentMessageResolveRecipient(target) else { return nil }
             surfaceId = recipient.surfaceId

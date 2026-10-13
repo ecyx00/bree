@@ -1,7 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
-import CmuxFoundation
-import CmuxTerminalCore
+import BreeFoundation
+import BreeTerminalCore
 import SwiftUI
 
 /// Builds the editor font from the Ghostty config family and size.
@@ -75,7 +75,7 @@ final class ShellEditorTextView: NSTextView {
     override init(frame: NSRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
         setup()
-        cmuxDebugLog("shellEditor.init textContainer=\(self.textContainer != nil) layoutManager=\(layoutManager != nil) storage=\(textStorage != nil) editable=\(isEditable)")
+        breeDebugLog("shellEditor.init textContainer=\(self.textContainer != nil) layoutManager=\(layoutManager != nil) storage=\(textStorage != nil) editable=\(isEditable)")
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
@@ -228,9 +228,9 @@ final class ShellEditorTextView: NSTextView {
             let extending = found.compactMap { TerminalCompletionInline.ghostSuffix(rawWord: context.rawWord, candidate: $0) }
             if extending.count == 1, let suffix = extending.first {
                 self.ghost = suffix
-                cmuxDebugLog("shellEditor.ghost path word=\(word.count) candidates=\(found.count) suffixLen=\(suffix.count)")
+                breeDebugLog("shellEditor.ghost path word=\(word.count) candidates=\(found.count) suffixLen=\(suffix.count)")
             } else {
-                cmuxDebugLog("shellEditor.ghost path none word=\(word.count) candidates=\(found.count) extending=\(extending.count)")
+                breeDebugLog("shellEditor.ghost path none word=\(word.count) candidates=\(found.count) extending=\(extending.count)")
             }
         }
     }
@@ -262,7 +262,7 @@ final class ShellEditorTextView: NSTextView {
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let handled = super.performKeyEquivalent(with: event)
-        cmuxDebugLog("shellEditor.performKeyEquivalent code=\(event.keyCode) handled=\(handled)")
+        breeDebugLog("shellEditor.performKeyEquivalent code=\(event.keyCode) handled=\(handled)")
         return handled
     }
 
@@ -276,14 +276,14 @@ final class ShellEditorTextView: NSTextView {
     }
 
     override func resignFirstResponder() -> Bool {
-        if isBoxOpen { cmuxDebugLog("shellEditor.box closed reason=resignFirstResponder") }
+        if isBoxOpen { breeDebugLog("shellEditor.box closed reason=resignFirstResponder") }
         closeBox()
         let ok = super.resignFirstResponder()
         if ok { onFocusChange?(false) }
 #if DEBUG
         if ok {
             DispatchQueue.main.async { [weak self] in
-                cmuxDebugLog("shellEditor.focus resigned firstResponderNow=\(String(describing: self?.window?.firstResponder))")
+                breeDebugLog("shellEditor.focus resigned firstResponderNow=\(String(describing: self?.window?.firstResponder))")
             }
         }
 #endif
@@ -291,7 +291,7 @@ final class ShellEditorTextView: NSTextView {
     }
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
-        if isBoxOpen { cmuxDebugLog("shellEditor.box closed reason=moveToWindow") }
+        if isBoxOpen { breeDebugLog("shellEditor.box closed reason=moveToWindow") }
         closeBox()
         if let resignObserver { NotificationCenter.default.removeObserver(resignObserver) }
         resignObserver = nil
@@ -303,7 +303,7 @@ final class ShellEditorTextView: NSTextView {
         guard let window else { return }
         resignObserver = NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: window, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
-                if self?.isBoxOpen == true { cmuxDebugLog("shellEditor.box closed reason=windowResignKey") }
+                if self?.isBoxOpen == true { breeDebugLog("shellEditor.box closed reason=windowResignKey") }
                 self?.closeBox()
             }
         }
@@ -347,7 +347,7 @@ final class ShellEditorTextView: NSTextView {
         // IME composition (Turkish, Japanese, ...) passes through untouched.
         let mods = event.modifierFlags.intersection([.shift, .control, .option, .command])
         let code = Int(event.keyCode)
-        cmuxDebugLog("shellEditor.keyDown code=\(code) mods=\(mods.rawValue) marked=\(hasMarkedText()) box=\(isBoxOpen) editable=\(isEditable) hasStorage=\(textStorage != nil) len=\((string as NSString).length)")
+        breeDebugLog("shellEditor.keyDown code=\(code) mods=\(mods.rawValue) marked=\(hasMarkedText()) box=\(isBoxOpen) editable=\(isEditable) hasStorage=\(textStorage != nil) len=\((string as NSString).length)")
         if hasMarkedText() { super.keyDown(with: event); return }
         if isProgramInput, handleProgramKey(event, code: code, mods: mods) { return }
 
@@ -380,7 +380,7 @@ final class ShellEditorTextView: NSTextView {
 
         if mods == .control, let key = event.charactersIgnoringModifiers?.lowercased(), handleControl(key) { return }
         super.keyDown(with: event)
-        cmuxDebugLog("shellEditor.keyDown afterSuper len=\((string as NSString).length)")
+        breeDebugLog("shellEditor.keyDown afterSuper len=\((string as NSString).length)")
     }
 
     // MARK: Program input
@@ -541,7 +541,7 @@ final class ShellEditorTextView: NSTextView {
     private func acceptGhost(segmentOnly: Bool = false) -> Bool {
         guard let ghost, selectedRange().length == 0, selectedRange().location == (string as NSString).length else { return false }
         let text = segmentOnly ? TerminalCompletionInline.firstSegment(of: ghost) : ghost
-        cmuxDebugLog("shellEditor.ghost accept segmentOnly=\(segmentOnly) len=\(text.count) dir=\(text.hasSuffix("/"))")
+        breeDebugLog("shellEditor.ghost accept segmentOnly=\(segmentOnly) len=\(text.count) dir=\(text.hasSuffix("/"))")
         self.ghost = nil
         insertText(text, replacementRange: NSRange(location: (string as NSString).length, length: 0))
         return true
@@ -613,11 +613,11 @@ final class ShellEditorTextView: NSTextView {
         model.candidates = found
         model.query = query
         model.selection = 0
-        cmuxDebugLog("shellEditor.tab candidates=\(found.count) fromTab=\(autoAcceptSingle)")
+        breeDebugLog("shellEditor.tab candidates=\(found.count) fromTab=\(autoAcceptSingle)")
         if autoAcceptSingle, found.count == 1 { acceptSelection(); return }
         if autoAcceptSingle, let context, boxMode == .completion,
            let exact = TerminalCompletionInline.exactCommandIndex(word: context.word, isCommandPosition: context.isCommandPosition, candidates: found) {
-            cmuxDebugLog("shellEditor.tab exactCommand index=\(exact)")
+            breeDebugLog("shellEditor.tab exactCommand index=\(exact)")
             model.selection = exact
             acceptSelection()
             return
@@ -626,7 +626,7 @@ final class ShellEditorTextView: NSTextView {
            let extra = TerminalCompletionInline.commonPrefixSuffix(rawWord: context.rawWord, candidates: found) {
             // fish: Tab first completes what every candidate shares; the
             // edit re-queries (box stays open) and the list shows if still ambiguous.
-            cmuxDebugLog("shellEditor.tab commonPrefix extra=\(extra.count)")
+            breeDebugLog("shellEditor.tab commonPrefix extra=\(extra.count)")
             insertText(extra, replacementRange: NSRange(location: selectedRange().location, length: 0))
             return
         }
@@ -639,9 +639,9 @@ final class ShellEditorTextView: NSTextView {
         // is what "visible and focused" means here.
         let keyWindow = NSApp.keyWindow
         let focused = NSApp.isActive && window?.firstResponder === self
-        cmuxDebugLog("shellEditor.present window=\(window?.windowNumber ?? -1) key=\(window?.isKeyWindow ?? false) appKey=\(keyWindow?.windowNumber ?? -1) parent=\(window?.parent?.windowNumber ?? -1) active=\(NSApp.isActive) firstResponder=\(focused)")
+        breeDebugLog("shellEditor.present window=\(window?.windowNumber ?? -1) key=\(window?.isKeyWindow ?? false) appKey=\(keyWindow?.windowNumber ?? -1) parent=\(window?.parent?.windowNumber ?? -1) active=\(NSApp.isActive) firstResponder=\(focused)")
         guard let window, window.isKeyWindow || focused || (window.parent != nil && window.parent === keyWindow) else {
-            cmuxDebugLog("shellEditor.present skipped")
+            breeDebugLog("shellEditor.present skipped")
             closeBox(); return
         }
         let rows = min(model.candidates.count, 8)
@@ -662,7 +662,7 @@ final class ShellEditorTextView: NSTextView {
         panel.setFrameOrigin(NSPoint(x: x, y: max(caret.maxY, editorTop) + 4))
         if panel.parent !== window { window.addChildWindow(panel, ordered: .above) }
         if !panel.isVisible { panel.orderFront(nil) }
-        cmuxDebugLog("shellEditor.present rows=\(model.candidates.count) parent=\(panel.parent != nil) visible=\(panel.isVisible) frame=\(NSStringFromRect(panel.frame)) keyWindow=\(window.isKeyWindow)")
+        breeDebugLog("shellEditor.present rows=\(model.candidates.count) parent=\(panel.parent != nil) visible=\(panel.isVisible) frame=\(NSStringFromRect(panel.frame)) keyWindow=\(window.isKeyWindow)")
         if observers.isEmpty {
             let names: [NSNotification.Name] = [NSWindow.didResignKeyNotification, NSWindow.didMoveNotification, NSWindow.didResizeNotification]
             observers = names.map { name in
@@ -708,7 +708,7 @@ final class ShellEditorTextView: NSTextView {
         model.query = ""
         model.selection = 0
         model.session &+= 1
-        cmuxDebugLog("shellEditor.closeBox wasOpen=\(wasOpen) caller=\(caller)")
+        breeDebugLog("shellEditor.closeBox wasOpen=\(wasOpen) caller=\(caller)")
         if wasOpen { updateGhost() }
     }
 
@@ -770,7 +770,7 @@ final class ShellEditorTextView: NSTextView {
             deleteCount = context.rawWord.count
             text = candidate.replacementText
         }
-        cmuxDebugLog("shellEditor.accept kind=\(candidate.kind) dir=\(candidate.isDirectory) space=\(candidate.appendsSpace) textLen=\(text.count)")
+        breeDebugLog("shellEditor.accept kind=\(candidate.kind) dir=\(candidate.isDirectory) space=\(candidate.appendsSpace) textLen=\(text.count)")
         // Convert the character count before the caret into a UTF-16 range.
         let ns = string as NSString
         let caret = min(selectedRange().location, ns.length)
@@ -840,11 +840,11 @@ struct ShellEditorDockView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(RoundedRectangle(cornerRadius: BreeMetrics.radiusCard, style: .continuous).fill(palette.surfaceSunken))
-            // `borderStrong` keeps a 3:1 boundary; focus swaps it for a 2 pt focus ring.
+            // `borderStrong` keeps a 3:1 boundary; focus swaps it for a 2 pt ivory ring (activeIndicator; focusRing is too close to borderStrong).
             .overlay(
                 RoundedRectangle(cornerRadius: BreeMetrics.radiusCard, style: .continuous)
                     .strokeBorder(
-                        isEditorFocused ? palette.focusRing : palette.borderStrong,
+                        isEditorFocused ? palette.activeIndicator : palette.borderStrong,
                         lineWidth: isEditorFocused ? 2 : 1
                     )
             )

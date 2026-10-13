@@ -1,4 +1,4 @@
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 /// Resolved branch and directory presentation settings shared by both sidebar renderers.

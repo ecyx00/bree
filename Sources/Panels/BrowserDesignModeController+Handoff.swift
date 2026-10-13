@@ -1,4 +1,4 @@
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 
 extension BrowserDesignModeController {

@@ -1,6 +1,6 @@
-import CmuxCloud
+import BreeCloud
 import AppKit
-import CmuxSettings
+import BreeSettings
 import Foundation
 
 /// Applies MDM managed-policy transitions to a running app.
@@ -102,7 +102,7 @@ final class ManagedPolicyEnforcementObserver {
             enforceCloudPolicy()
         }
         if remoteConnectionsPolicyActive {
-            // Same for remote connections: nothing cmux created may stay dialed.
+            // Same for remote connections: nothing bree created may stay dialed.
             enforceRemoteConnectionsPolicy()
         }
         observe(UserDefaults.didChangeNotification)
@@ -172,7 +172,7 @@ final class ManagedPolicyEnforcementObserver {
         if remoteConnectionsNow != remoteConnectionsPolicyActive {
             remoteConnectionsPolicyActive = remoteConnectionsNow
             anyTransition = true
-            // Activation ends every live cmux-created remote connection; a
+            // Activation ends every live bree-created remote connection; a
             // lift needs no enforcement because the per-call gates read the
             // resolver on the next connect.
             if remoteConnectionsNow { enforceRemoteConnectionsPolicy() }
@@ -189,7 +189,7 @@ final class ManagedPolicyEnforcementObserver {
             socketControlPolicyState = socketControlPolicyNow
             anyTransition = true
             // Reconcile through the same app-owned path used by Settings,
-            // cmux.json reloads, and startup. SocketControlServer rotates its
+            // bree.json reloads, and startup. SocketControlServer rotates its
             // authorization generation before accepting the new mode, which
             // revokes every old command and event-stream client.
             enforceSocketControlPolicy()

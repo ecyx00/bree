@@ -510,7 +510,7 @@ final class SplitViewController {
     // MARK: - Auto Layout
 
     /// Adds a pane holding `tab` and arranges every pane in Zellij's default
-    /// tiled swap layout, the layout cmux-tui's Alt-n reproduces. Panes keep
+    /// tiled swap layout, the layout bree-tui's Alt-n reproduces. Panes keep
     /// their identity and tabs; only the split structure is rebuilt, so
     /// manual divider positions are replaced by equal sizes.
     @discardableResult

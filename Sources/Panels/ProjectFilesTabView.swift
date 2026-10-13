@@ -1,6 +1,6 @@
-import CmuxFoundation
+import BreeFoundation
 import AppKit
-import CMUXProjectModel
+import BREEProjectModel
 import SwiftUI
 
 /// Files tab inside ``ProjectPanelView``.
@@ -46,7 +46,7 @@ struct ProjectFilesTabView: View {
                 .foregroundStyle(.secondary)
             TextField("Filter files (e.g. AppDelegate)", text: $panel.filesSearchText)
                 .textFieldStyle(.plain)
-                .cmuxFont(size: 12)
+                .scaledFont(size: 12)
             if !panel.filesSearchText.isEmpty {
                 Button {
                     panel.filesSearchText = ""
@@ -58,7 +58,7 @@ struct ProjectFilesTabView: View {
             }
             Spacer()
             Text("\(rowCount)")
-                .cmuxFont(size: 11)
+                .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 14)
@@ -254,7 +254,7 @@ private struct ProjectFilesGroupRow: View {
     let depth: Int
     let isExpanded: Bool
     let onToggle: () -> Void
-    @Environment(\.cmuxGlobalFontMagnificationPercent) private var globalFontPercent
+    @Environment(\.breeGlobalFontMagnificationPercent) private var globalFontPercent
 
     var body: some View {
         let scale = GlobalFontMagnification.scale(for: globalFontPercent)
@@ -263,16 +263,16 @@ private struct ProjectFilesGroupRow: View {
         Button(action: onToggle) {
             HStack(spacing: 4) {
                 Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                    .cmuxFont(size: 9, weight: .semibold)
+                    .scaledFont(size: 9, weight: .semibold)
                     .frame(width: chevronWidth)
                     .foregroundStyle(.secondary)
                 Image(systemName: glyph(for: group.style))
-                    .cmuxFont(size: 12)
+                    .scaledFont(size: 12)
                     .imageScale(.small)
                     .frame(width: symbolFrame, height: symbolFrame)
                     .foregroundStyle(.secondary)
                 Text(group.displayName)
-                    .cmuxFont(size: 12)
+                    .scaledFont(size: 12)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Spacer(minLength: 0)
@@ -297,13 +297,13 @@ private struct ProjectFilesGroupRow: View {
 }
 
 private struct ProjectFilesFileRow: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     let file: ProjectFileNode
     let depth: Int
     let module: ProjectModule
     let isSelected: Bool
     let onSelect: () -> Void
-    @Environment(\.cmuxGlobalFontMagnificationPercent) private var globalFontPercent
+    @Environment(\.breeGlobalFontMagnificationPercent) private var globalFontPercent
 
     var body: some View {
         let scale = GlobalFontMagnification.scale(for: globalFontPercent)
@@ -313,12 +313,12 @@ private struct ProjectFilesFileRow: View {
             HStack(spacing: 4) {
                 Spacer().frame(width: spacerWidth)
                 Image(systemName: glyph(for: file.fileType))
-                    .cmuxFont(size: 12)
+                    .scaledFont(size: 12)
                     .imageScale(.small)
                     .frame(width: symbolFrame, height: symbolFrame)
-                    .foregroundStyle(file.existsOnDisk ? Color.secondary : Color.orange)
+                    .foregroundStyle(file.existsOnDisk ? Color.secondary : BreeChromePalette.currentSnapshot.signalError)
                 Text(file.displayName)
-                    .cmuxFont(size: 12)
+                    .scaledFont(size: 12)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .strikethrough(!file.existsOnDisk)
@@ -327,15 +327,15 @@ private struct ProjectFilesFileRow: View {
                     HStack(spacing: 2) {
                         ForEach(memberships, id: \.targetID) { membership in
                             Text(targetLabel(for: membership.targetID))
-                                .cmuxFont(size: 9, weight: .medium)
+                                .scaledFont(size: 9, weight: .medium)
                                 .lineLimit(1)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
                                 .background(
                                     RoundedRectangle(cornerRadius: 3)
-                                        .fill(cmuxAccent.color.opacity(0.15))
+                                        .fill(breeAccent.color.opacity(0.15))
                                 )
-                                .foregroundStyle(cmuxAccent.color)
+                                .foregroundStyle(breeAccent.color)
                         }
                     }
                 }
@@ -344,7 +344,7 @@ private struct ProjectFilesFileRow: View {
             .padding(.vertical, 2)
             .padding(.trailing, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isSelected ? Color.accentColor.opacity(0.18) : .clear)
+            .background(isSelected ? BreeChromePalette.currentSnapshot.accentFill.opacity(0.18) : .clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -374,7 +374,7 @@ private struct ProjectFilesFileRow: View {
 }
 
 private struct ProjectFilesDetailStrip: View {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     let file: ProjectFileNode
     let module: ProjectModule
 
@@ -383,7 +383,7 @@ private struct ProjectFilesDetailStrip: View {
             HStack {
                 Image(systemName: "doc.text")
                 Text(file.displayName)
-                    .cmuxFont(size: 13, weight: .semibold)
+                    .scaledFont(size: 13, weight: .semibold)
                 Spacer()
             }
             if let path = file.resolvedPath?.path {
@@ -396,7 +396,7 @@ private struct ProjectFilesDetailStrip: View {
             if !file.memberships.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Targets")
-                        .cmuxFont(size: 11, weight: .semibold)
+                        .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
                     ForEach(file.memberships, id: \.targetID) { membership in
                         membershipRow(for: membership)
@@ -413,11 +413,11 @@ private struct ProjectFilesDetailStrip: View {
     private func row(label: String, value: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(label)
-                .cmuxFont(size: 11, weight: .semibold)
+                .scaledFont(size: 11, weight: .semibold)
                 .foregroundStyle(.secondary)
                 .frame(width: 70, alignment: .leading)
             Text(value)
-                .cmuxFont(size: 11, design: .monospaced)
+                .scaledFont(size: 11, design: .monospaced)
                 .textSelection(.enabled)
         }
     }
@@ -427,15 +427,15 @@ private struct ProjectFilesDetailStrip: View {
         let target = module.target(for: membership.targetID)
         HStack(spacing: 6) {
             Image(systemName: "checkmark.square")
-                .foregroundStyle(cmuxAccent.color)
+                .foregroundStyle(breeAccent.color)
             Text(target?.displayName ?? String(membership.targetID.rawValue.prefix(8)))
-                .cmuxFont(size: 12)
+                .scaledFont(size: 12)
             Text("· \(membership.role.rawValue)")
-                .cmuxFont(size: 11)
+                .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
             if !membership.compilerFlags.isEmpty {
                 Text("flags: \(membership.compilerFlags.joined(separator: " "))")
-                    .cmuxFont(size: 10, design: .monospaced)
+                    .scaledFont(size: 10, design: .monospaced)
                     .foregroundStyle(.secondary)
             }
             Spacer()

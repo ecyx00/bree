@@ -1,6 +1,6 @@
 import AppKit
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import SwiftUI
 
 // MARK: - Shared status lane list
@@ -235,7 +235,7 @@ struct SidebarWorkspaceStatusPopover: View {
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if lane.isSelected {
-                    CmuxSystemSymbolImage(systemName: "checkmark", pointSize: 10, weight: .regular, tint: palette.textSecondary)
+                    BreeSystemSymbolImage(systemName: "checkmark", pointSize: 10, weight: .regular, tint: palette.textSecondary)
                 }
             }
             .padding(.horizontal, 6)

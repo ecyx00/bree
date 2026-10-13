@@ -1,10 +1,10 @@
-// panel-subagents: right-sidebar demo. Every coding-agent session cmux is
+// panel-subagents: right-sidebar demo. Every coding-agent session bree is
 // tracking (Claude Code, Codex, ...), grouped by workspace: status dot,
 // first-prompt title, live elapsed time, kind + directory metadata, and a
 // working/needs-input/idle summary. Click a row to jump to the workspace and
 // focus the terminal the agent runs in.
-//   cp Examples/CustomSidebars/panel-subagents.js ~/.config/cmux/sidebars/
-//   cmux right-sidebar set custom panel-subagents
+//   cp Examples/CustomSidebars/panel-subagents.js ~/.config/bree/sidebars/
+//   bree right-sidebar set custom panel-subagents
 
 const [query, setQuery] = signal("");
 const [scopeAll, setScopeAll] = signal(true);
@@ -131,8 +131,8 @@ const counts = computed(() => {
 });
 
 function jump(row) {
-  cmux("workspace.select", { workspace_id: row.wsId });
-  if (row.agent.surfaceId) cmux("surface.focus", { surface_id: row.agent.surfaceId });
+  bree("workspace.select", { workspace_id: row.wsId });
+  if (row.agent.surfaceId) bree("surface.focus", { surface_id: row.agent.surfaceId });
 }
 
 function toggleButton(labelFn, activeFn, onTapFn) {
@@ -161,7 +161,7 @@ function headerRow(entry) {
   ])
     .paddingHorizontal(10).paddingVertical(4)
     .frame({ maxWidth: "infinity" })
-    .onTap(() => cmux("workspace.select", { workspace_id: entry().wsId }));
+    .onTap(() => bree("workspace.select", { workspace_id: entry().wsId }));
 }
 
 // Agent row, t3code-style: dot + identity + time column on the first line,
@@ -271,7 +271,7 @@ sidebar(() =>
     Text(() => (entries().length === 0
       ? (query().trim()
         ? "No matches."
-        : "No agents yet. Sessions started in cmux terminals show up here with live status.")
+        : "No agents yet. Sessions started in bree terminals show up here with live status.")
       : ""))
       .font(11).color("tertiary").paddingHorizontal(10),
     Spacer(),

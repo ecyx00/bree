@@ -15,11 +15,11 @@ type GitFileSemantics = {
 };
 
 test("production stream parser matches Git for real repository diff semantics", async () => {
-  const repo = await mkdtemp(join(tmpdir(), "cmux-diff-oracle-"));
+  const repo = await mkdtemp(join(tmpdir(), "bree-diff-oracle-"));
   try {
     git(repo, ["init", "-q", "-b", "main"]);
-    git(repo, ["config", "user.name", "cmux diff oracle"]);
-    git(repo, ["config", "user.email", "cmux-diff@example.invalid"]);
+    git(repo, ["config", "user.name", "bree diff oracle"]);
+    git(repo, ["config", "user.email", "bree-diff@example.invalid"]);
     git(repo, ["config", "core.fileMode", "true"]);
     await writeFile(join(repo, "modified.txt"), numberedLines(12));
     await writeFile(join(repo, "delete.txt"), "gone\n");
@@ -61,12 +61,12 @@ test("production stream parser matches Git for real repository diff semantics", 
     expect(staged.treeSources.at(-1)?.paths).toEqual(stagedOracle.map((entry) => entry.path));
     expect(staged.items.find((item) => item.fileDiff.name === "modified.txt")?.fileDiff.hunks).toHaveLength(2);
     expect(staged.items.find((item) => item.fileDiff.name === "binary.bin")?.fileDiff).toMatchObject({
-      cmuxDiffMetadataKind: "binary",
+      breeDiffMetadataKind: "binary",
       hunks: [],
       mode: "100644",
     });
     expect(staged.items.find((item) => item.fileDiff.name === "mode.txt")?.fileDiff).toMatchObject({
-      cmuxDiffMetadataKind: "mode",
+      breeDiffMetadataKind: "mode",
       mode: "100755",
       prevMode: "100644",
     });
@@ -99,11 +99,11 @@ test("production stream parser matches Git for real repository diff semantics", 
 }, 30_000);
 
 test("production stream parser handles mbox repeats, malformed input, and truncated final files", async () => {
-  const repo = await mkdtemp(join(tmpdir(), "cmux-diff-mbox-"));
+  const repo = await mkdtemp(join(tmpdir(), "bree-diff-mbox-"));
   try {
     git(repo, ["init", "-q", "-b", "main"]);
-    git(repo, ["config", "user.name", "cmux diff oracle"]);
-    git(repo, ["config", "user.email", "cmux-diff@example.invalid"]);
+    git(repo, ["config", "user.name", "bree diff oracle"]);
+    git(repo, ["config", "user.email", "bree-diff@example.invalid"]);
     await writeFile(join(repo, "repeat.txt"), "base\n");
     git(repo, ["add", "."]);
     git(repo, ["commit", "-qm", "base"]);
@@ -143,7 +143,7 @@ test("production stream parser handles mbox repeats, malformed input, and trunca
 }, 30_000);
 
 function diffArgs(...tail: string[]): string[] {
-  // Keep this byte-for-byte aligned with CLI/cmux_open.swift gitDiffPatchArguments.
+  // Keep this byte-for-byte aligned with CLI/bree_open.swift gitDiffPatchArguments.
   return ["diff", "--no-ext-diff", "--no-color", "--binary", ...tail];
 }
 

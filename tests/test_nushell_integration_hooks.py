@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
 """
-Behavior coverage for the cmux nushell shell integration
-(``Resources/shell-integration/nushell/cmux-nushell-integration.nu``).
+Behavior coverage for the bree nushell shell integration
+(``Resources/shell-integration/nushell/bree-nushell-integration.nu``).
 
 The integration brings nushell to fish parity (see
 ``Resources/shell-integration/fish/config.fish``): socket reporting of tty,
 shell activity state (running/prompt), pwd changes, and port-scan kicks,
 driven from nushell ``pre_execution`` / ``pre_prompt`` hooks. This test
 sources the *actual* bundled integration file in real ``nu``, simulates the
-hook entry points, and asserts the exact payloads cmux's app side consumes
+hook entry points, and asserts the exact payloads bree's app side consumes
 (``report_tty`` / ``report_shell_state`` / ``report_pwd`` / ``ports_kick``,
 same wire format as the fish integration) arrive on a fake unix socket.
 
 Covered:
 
-1. Hook registration: sourcing appends cmux entries to
+1. Hook registration: sourcing appends bree entries to
    ``$env.config.hooks.pre_prompt`` and ``pre_execution``.
-2. ``report_tty`` is sent once (deduped), honoring a preset ``_CMUX_TTY_NAME``
+2. ``report_tty`` is sent once (deduped), honoring a preset ``_BREE_TTY_NAME``
    (subprocesses have no tty; the preset mirrors the zsh/fish globals).
 3. ``report_shell_state running`` then ``prompt``, deduped across repeated
    prompts.
 4. ``report_pwd`` fires on first prompt and again only after ``cd``.
 5. ``ports_kick --reason=command`` fires from pre-execution.
 6. The keyboard-protocol reset escape is emitted under
-   ``CMUX_TEST_FORCE_KEYBOARD_RESET`` (same test knob as fish/zsh).
+   ``BREE_TEST_FORCE_KEYBOARD_RESET`` (same test knob as fish/zsh).
 7. The integration stays silent on stderr and exits 0.
 
-``CMUX_TEST_SYNC_SEND=1`` makes sends synchronous (the interactive path uses
+``BREE_TEST_SYNC_SEND=1`` makes sends synchronous (the interactive path uses
 ``job spawn`` background sends, which nushell kills at shell exit — real
 prompts outlive them, a ``-c`` script does not).
 
@@ -49,7 +49,7 @@ from typing import List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INTEGRATION = (
-    REPO_ROOT / "Resources/shell-integration/nushell/cmux-nushell-integration.nu"
+    REPO_ROOT / "Resources/shell-integration/nushell/bree-nushell-integration.nu"
 )
 
 TAB_ID = "tab-nu-hooks"
@@ -58,8 +58,8 @@ TTY_NAME = "ttys042"
 
 
 def _find_nu() -> Optional[str]:
-    """Locate a nu binary: CMUX_TEST_NU_BIN override, PATH, then Homebrew paths."""
-    override = os.environ.get("CMUX_TEST_NU_BIN")
+    """Locate a nu binary: BREE_TEST_NU_BIN override, PATH, then Homebrew paths."""
+    override = os.environ.get("BREE_TEST_NU_BIN")
     candidates = [
         override,
         shutil.which("nu"),
@@ -144,7 +144,7 @@ class _SocketCollector:
 
 def _short_tmpdir() -> str:
     """Create a short-prefix temp dir under /tmp (AF_UNIX socket paths are length-limited)."""
-    return tempfile.mkdtemp(prefix="cmux-nu-", dir="/tmp")
+    return tempfile.mkdtemp(prefix="bree-nu-", dir="/tmp")
 
 
 def _debug(proc: subprocess.CompletedProcess, lines: List[str]) -> str:
@@ -168,7 +168,7 @@ def test_nushell_integration_hook_reports() -> None:
         # Resolve /tmp's /private/tmp symlink so payload assertions match
         # nushell's resolved $env.PWD.
         tmp = Path(td).resolve()
-        sock_path = tmp / "cmux.sock"
+        sock_path = tmp / "bree.sock"
         collector = _SocketCollector(sock_path)
 
         home = tmp / "home"
@@ -179,7 +179,7 @@ def test_nushell_integration_hook_reports() -> None:
         env = {
             key: value
             for key, value in os.environ.items()
-            if not key.startswith("CMUX")
+            if not key.startswith("BREE")
         }
         env.update(
             {
@@ -189,25 +189,25 @@ def test_nushell_integration_hook_reports() -> None:
                 "HOME": str(home),
                 "XDG_CONFIG_HOME": str(home / ".config"),
                 "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
-                "CMUX_SOCKET_PATH": str(sock_path),
-                "CMUX_TAB_ID": TAB_ID,
-                "CMUX_PANEL_ID": PANEL_ID,
-                "CMUX_SURFACE_ID": "surface-nu-hooks",
-                "CMUX_TEST_SYNC_SEND": "1",
+                "BREE_SOCKET_PATH": str(sock_path),
+                "BREE_TAB_ID": TAB_ID,
+                "BREE_PANEL_ID": PANEL_ID,
+                "BREE_SURFACE_ID": "surface-nu-hooks",
+                "BREE_TEST_SYNC_SEND": "1",
                 # Subprocesses have no tty; preset the name like the zsh/fish
                 # integrations' globals allow.
-                "_CMUX_TTY_NAME": TTY_NAME,
+                "_BREE_TTY_NAME": TTY_NAME,
             }
         )
 
         script = "; ".join(
             [
                 f'source "{INTEGRATION}"',
-                "_cmux_pre_execution",
-                "_cmux_pre_prompt",
-                "_cmux_pre_prompt",
+                "_bree_pre_execution",
+                "_bree_pre_prompt",
+                "_bree_pre_prompt",
                 f'cd "{other_dir}"',
-                "_cmux_pre_prompt",
+                "_bree_pre_prompt",
                 "print ($env.config.hooks.pre_prompt | length)",
                 "print ($env.config.hooks.pre_execution | length)",
             ]
@@ -262,8 +262,8 @@ def test_nushell_integration_hook_reports() -> None:
 
 
 def test_nushell_integration_background_sends_deliver() -> None:
-    """Without CMUX_TEST_SYNC_SEND, reports go through `job spawn` — the
-    spawned job must still resolve the sourced `_cmux_send` def and deliver.
+    """Without BREE_TEST_SYNC_SEND, reports go through `job spawn` — the
+    spawned job must still resolve the sourced `_bree_send` def and deliver.
     (The interactive path always uses background sends, so this cannot be
     covered only by the sync-mode test above.)"""
     nu = _require_nu()
@@ -274,7 +274,7 @@ def test_nushell_integration_background_sends_deliver() -> None:
     td = _short_tmpdir()
     try:
         tmp = Path(td).resolve()
-        sock_path = tmp / "cmux.sock"
+        sock_path = tmp / "bree.sock"
         collector = _SocketCollector(sock_path)
         home = tmp / "home"
         home.mkdir()
@@ -282,7 +282,7 @@ def test_nushell_integration_background_sends_deliver() -> None:
         env = {
             key: value
             for key, value in os.environ.items()
-            if not key.startswith("CMUX")
+            if not key.startswith("BREE")
         }
         env.update(
             {
@@ -292,12 +292,12 @@ def test_nushell_integration_background_sends_deliver() -> None:
                 "HOME": str(home),
                 "XDG_CONFIG_HOME": str(home / ".config"),
                 "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
-                "CMUX_SOCKET_PATH": str(sock_path),
-                "CMUX_TAB_ID": TAB_ID,
-                "CMUX_PANEL_ID": PANEL_ID,
-                "CMUX_SURFACE_ID": "surface-nu-bg",
-                "_CMUX_TTY_NAME": TTY_NAME,
-                # No CMUX_TEST_SYNC_SEND: exercise the job spawn path.
+                "BREE_SOCKET_PATH": str(sock_path),
+                "BREE_TAB_ID": TAB_ID,
+                "BREE_PANEL_ID": PANEL_ID,
+                "BREE_SURFACE_ID": "surface-nu-bg",
+                "_BREE_TTY_NAME": TTY_NAME,
+                # No BREE_TEST_SYNC_SEND: exercise the job spawn path.
             }
         )
         suffix = f"--tab={TAB_ID} --panel={PANEL_ID}"
@@ -308,7 +308,7 @@ def test_nushell_integration_background_sends_deliver() -> None:
         script = "; ".join(
             [
                 f'source "{INTEGRATION}"',
-                "_cmux_pre_execution",
+                "_bree_pre_execution",
                 # Hold the shell open until the socket listener observes both
                 # spawned sends. Nushell terminates jobs at shell exit.
                 "^/bin/cat | ignore",
@@ -379,7 +379,7 @@ def test_nushell_integration_keyboard_reset_test_knob() -> None:
         env = {
             key: value
             for key, value in os.environ.items()
-            if not key.startswith("CMUX")
+            if not key.startswith("BREE")
         }
         env.update(
             {
@@ -390,12 +390,12 @@ def test_nushell_integration_keyboard_reset_test_knob() -> None:
                 "XDG_CONFIG_HOME": str(home / ".config"),
                 "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
                 # No socket: reporting no-ops, only the terminal reset runs.
-                "CMUX_SOCKET_PATH": "",
-                "CMUX_TEST_FORCE_KEYBOARD_RESET": "1",
+                "BREE_SOCKET_PATH": "",
+                "BREE_TEST_FORCE_KEYBOARD_RESET": "1",
             }
         )
         proc = subprocess.run(
-            [nu, "-n", "-c", f'source "{INTEGRATION}"; _cmux_pre_prompt'],
+            [nu, "-n", "-c", f'source "{INTEGRATION}"; _bree_pre_prompt'],
             env=env,
             cwd=str(home),
             capture_output=True,
@@ -408,7 +408,7 @@ def test_nushell_integration_keyboard_reset_test_knob() -> None:
         )
         assert "\x1b[>m\x1b[<8u" in proc.stdout, (
             "keyboard-protocol reset escape missing under "
-            f"CMUX_TEST_FORCE_KEYBOARD_RESET\n{proc.stdout!r}\n{proc.stderr}"
+            f"BREE_TEST_FORCE_KEYBOARD_RESET\n{proc.stdout!r}\n{proc.stderr}"
         )
     finally:
         shutil.rmtree(td, ignore_errors=True)
@@ -421,4 +421,4 @@ if __name__ == "__main__":
     if _find_nu() is None:
         print("SKIP: nushell (nu) not found; nothing was verified")
     else:
-        print("PASS: cmux nushell integration reports tty/state/pwd/ports like fish")
+        print("PASS: bree nushell integration reports tty/state/pwd/ports like fish")

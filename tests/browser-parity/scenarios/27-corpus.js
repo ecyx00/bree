@@ -2,13 +2,13 @@
 // the snapshot must hold every interactive element of Chrome's Playwright AI
 // snapshot with the same role and name (recall), print no text Chrome does
 // not render (leaks), and stay within 10% of the size of reference A's snapshot of
-// the same page (reference A drops some visible text cmux keeps, such as card
-// descriptions). Recall is judged in the engine that renders cmux: each
+// the same page (reference A drops some visible text bree keeps, such as card
+// descriptions). Recall is judged in the engine that renders bree: each
 // recorded element is found by its path and fixtures/corpus/gt.js, which is
 // independent of the page agent, decides whether a user can see it here; an
 // element Playwright gave no ref (no visible box in Chrome) is not required.
 // Exact byte counts are printed, not compared.
-// oracle: skip (compares cmux snapshots against Chrome records made by lib/corpus.mjs)
+// oracle: skip (compares bree snapshots against Chrome records made by lib/corpus.mjs)
 // ---- cell session=corpus
 const squash = (s) => String(s).replace(/[\s\u200b-\u200d\u2060\ufeff]+/g, "").toLowerCase();
 const referenceA = await (await fetch(`${PRIMARY}/corpus/reference-a-sizes.json`)).json();
@@ -72,27 +72,27 @@ globalThis.corpusCheck = async (name) => {
   const shown = squash(texts.join("\n"));
   const leaks = oracle.hidden.filter((t) => shown.includes(squash(t)));
   const bytes = Buffer.byteLength(tree);
-  console.log(`${name}: ${notShownHere} recorded elements not shown in this engine; cmux ${bytes} bytes, reference A ${referenceA[name]} bytes, Chrome AI snapshot ${oracle.chromeAiSnapshotBytes} bytes; ${oracle.interactive.length} interactive`);
+  console.log(`${name}: ${notShownHere} recorded elements not shown in this engine; bree ${bytes} bytes, reference A ${referenceA[name]} bytes, Chrome AI snapshot ${oracle.chromeAiSnapshotBytes} bytes; ${oracle.interactive.length} interactive`);
   return { missing, leaks, withinReferenceA: bytes <= 1.1 * referenceA[name] };
 };
 // ---- cell session=corpus
 for (const name of ["wikipedia", "hackernews", "github"]) {
   const r = await corpusCheck(name);
-  emitCmux(`${name}:missing`, r.missing);
-  emitCmux(`${name}:leaks`, r.leaks);
-  emitCmux(`${name}:within-reference-a-10pct`, r.withinReferenceA);
+  emitBree(`${name}:missing`, r.missing);
+  emitBree(`${name}:leaks`, r.leaks);
+  emitBree(`${name}:within-reference-a-10pct`, r.withinReferenceA);
 }
 // ---- cell session=corpus
 for (const name of ["mdn", "mdn-iframe", "npr"]) {
   const r = await corpusCheck(name);
-  emitCmux(`${name}:missing`, r.missing);
-  emitCmux(`${name}:leaks`, r.leaks);
-  emitCmux(`${name}:within-reference-a-10pct`, r.withinReferenceA);
+  emitBree(`${name}:missing`, r.missing);
+  emitBree(`${name}:leaks`, r.leaks);
+  emitBree(`${name}:within-reference-a-10pct`, r.withinReferenceA);
 }
 // ---- cell session=corpus
 for (const name of ["bbc", "books", "vercel"]) {
   const r = await corpusCheck(name);
-  emitCmux(`${name}:missing`, r.missing);
-  emitCmux(`${name}:leaks`, r.leaks);
-  emitCmux(`${name}:within-reference-a-10pct`, r.withinReferenceA);
+  emitBree(`${name}:missing`, r.missing);
+  emitBree(`${name}:leaks`, r.leaks);
+  emitBree(`${name}:within-reference-a-10pct`, r.withinReferenceA);
 }

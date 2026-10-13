@@ -1,8 +1,8 @@
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 struct NotificationPopoverRow: View, Equatable {
-    @Environment(\.cmuxAccentColor) private var cmuxAccent
+    @Environment(\.breeAccentColor) private var breeAccent
     /// Read from the observable store so an NSPopover host needs no environment injection.
     private var palette: BreeChromePalette { BreeChromePaletteStore.shared.palette }
     // Closures excluded from ==; equality is the rendered snapshot only (#2586).
@@ -157,7 +157,7 @@ struct NotificationPopoverRow: View, Equatable {
             ZStack {
                 Circle()
                     .fill(palette.hoverFill)
-                CmuxSystemSymbolImage(systemName: "xmark", pointSize: 10, weight: .regular, tint: palette.textSecondary)
+                BreeSystemSymbolImage(systemName: "xmark", pointSize: 10, weight: .regular, tint: palette.textSecondary)
             }
             // BreeMetrics.compactIconButtonSize
             .frame(width: 20, height: 20)

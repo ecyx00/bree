@@ -1,7 +1,7 @@
 import Foundation
-import CmuxFoundation
-import CmuxTerminal
-import CmuxTerminalCore
+import BreeFoundation
+import BreeTerminal
+import BreeTerminalCore
 
 enum WorkspaceTerminalFontSizeChange: Equatable {
     case relative(TerminalFontSizeDeltaTransform)
@@ -80,7 +80,7 @@ enum WorkspaceTerminalFontSizeChange: Equatable {
         switch self {
         case .relative(let relativeTransform):
             startingRuntimePoints = sourceLineage.map {
-                CmuxSurfaceConfigTemplate.runtimeFontSize(
+                BreeSurfaceConfigTemplate.runtimeFontSize(
                     fromBasePoints: $0.basePoints,
                     percent: magnificationPercent
                 )
@@ -108,7 +108,7 @@ enum WorkspaceTerminalFontSizeChange: Equatable {
             isExplicitOverride = !resetTransform.isIdentity
         }
         return TerminalFontSizeLineage(
-            basePoints: CmuxSurfaceConfigTemplate.baseFontSize(
+            basePoints: BreeSurfaceConfigTemplate.baseFontSize(
                 fromRuntimePoints: finalRuntimePoints,
                 percent: magnificationPercent
             ),
@@ -119,7 +119,7 @@ enum WorkspaceTerminalFontSizeChange: Equatable {
 
 @MainActor
 @discardableResult
-func cmuxApplyTerminalFontSizeChange(
+func breeApplyTerminalFontSizeChange(
     _ change: WorkspaceTerminalFontSizeChange,
     to terminalPanel: TerminalPanel,
     configuredRuntimePoints: Float32,
@@ -317,7 +317,7 @@ extension Workspace {
         magnificationPercent: Int =
             GlobalFontMagnification.storedPercent
     ) -> Bool {
-        cmuxApplyTerminalFontSizeChange(
+        breeApplyTerminalFontSizeChange(
             change,
             to: terminalPanel,
             configuredRuntimePoints: configuredRuntimePoints,
@@ -375,7 +375,7 @@ extension Workspace {
             to: configuredRuntimePoints
         )
         return TerminalFontSizeLineage(
-            basePoints: CmuxSurfaceConfigTemplate.baseFontSize(
+            basePoints: BreeSurfaceConfigTemplate.baseFontSize(
                 fromRuntimePoints: finalRuntimePoints,
                 percent: magnificationPercent
             ),

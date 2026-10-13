@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mirror of BreeChromePalette (CmuxFoundation/Color/BreeChromePalette.swift).
+"""Mirror of BreeChromePalette (BreeFoundation/Color/BreeChromePalette.swift).
 
 Prints every role's worst-surface contrast against its floor for real
 Ghostty themes, in normal and Increase Contrast mode. Keep the math in step

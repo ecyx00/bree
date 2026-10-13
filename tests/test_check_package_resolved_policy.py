@@ -6,7 +6,7 @@ calls change. It must key that requirement off the *remote* dependency calls
 reachable from the manifest, not off "this manifest's graph has some remote
 dependency somewhere", otherwise adding a dependency-free local-path package
 demands a lockfile diff that `swift package resolve` cannot produce
-(https://github.com/manaflow-ai/cmux/issues/8871).
+(https://github.com/ecyx00/bree/issues/8871).
 
 Cases:
   (a) Adding a leaf `.package(path:)` with no remote closure to a manifest that
@@ -79,9 +79,9 @@ XCODE_PROJECT = """// !$*UTF8*$!
 }
 """
 
-XCODE_PROJECT_PATH = "cmux.xcodeproj/project.pbxproj"
+XCODE_PROJECT_PATH = "bree.xcodeproj/project.pbxproj"
 XCODE_LOCKFILE_PATH = (
-    "cmux.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+    "bree.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 )
 
 
@@ -123,17 +123,17 @@ def workspace_data(locations):
 
 
 def make_base_repo(repo):
-    """A minimal cmux-shaped repo: a package with remote pins."""
+    """A minimal bree-shaped repo: a package with remote pins."""
     git(repo, "init", "-q", "-b", "main")
     git(repo, "config", "user.email", "test@example.com")
     git(repo, "config", "user.name", "test")
 
     write_text(
-        os.path.join(repo, "Packages/Shared/CmuxMobileShellUI/Package.swift"),
-        manifest("CmuxMobileShellUI", [REMOTE_DEPENDENCY]),
+        os.path.join(repo, "Packages/Shared/BreeMobileShellUI/Package.swift"),
+        manifest("BreeMobileShellUI", [REMOTE_DEPENDENCY]),
     )
     write_text(
-        os.path.join(repo, "Packages/Shared/CmuxMobileShellUI/Package.resolved"),
+        os.path.join(repo, "Packages/Shared/BreeMobileShellUI/Package.resolved"),
         RESOLVED_JSON,
     )
     write_text(os.path.join(repo, XCODE_PROJECT_PATH), XCODE_PROJECT)
@@ -167,40 +167,40 @@ def scenario(mutate):
 
 
 def shell_ui_manifest(repo):
-    return os.path.join(repo, "Packages/Shared/CmuxMobileShellUI/Package.swift")
+    return os.path.join(repo, "Packages/Shared/BreeMobileShellUI/Package.swift")
 
 
 def add_leaf_path_package(repo):
     write_text(
-        os.path.join(repo, "Packages/Shared/CmuxMobileChanges/Package.swift"),
-        manifest("CmuxMobileChanges", []),
+        os.path.join(repo, "Packages/Shared/BreeMobileChanges/Package.swift"),
+        manifest("BreeMobileChanges", []),
     )
     write_text(
         shell_ui_manifest(repo),
         manifest(
-            "CmuxMobileShellUI",
-            [REMOTE_DEPENDENCY, '.package(path: "../CmuxMobileChanges")'],
+            "BreeMobileShellUI",
+            [REMOTE_DEPENDENCY, '.package(path: "../BreeMobileChanges")'],
         ),
     )
 
 
 def add_remote_bearing_path_package(repo):
     write_text(
-        os.path.join(repo, "Packages/Shared/CmuxMobileChanges/Package.swift"),
+        os.path.join(repo, "Packages/Shared/BreeMobileChanges/Package.swift"),
         manifest(
-            "CmuxMobileChanges",
+            "BreeMobileChanges",
             ['.package(url: "https://github.com/apple/swift-log.git", from: "1.0.0")'],
         ),
     )
     write_text(
-        os.path.join(repo, "Packages/Shared/CmuxMobileChanges/Package.resolved"),
+        os.path.join(repo, "Packages/Shared/BreeMobileChanges/Package.resolved"),
         RESOLVED_JSON,
     )
     write_text(
         shell_ui_manifest(repo),
         manifest(
-            "CmuxMobileShellUI",
-            [REMOTE_DEPENDENCY, '.package(path: "../CmuxMobileChanges")'],
+            "BreeMobileShellUI",
+            [REMOTE_DEPENDENCY, '.package(path: "../BreeMobileChanges")'],
         ),
     )
 
@@ -209,7 +209,7 @@ def add_remote_package(repo):
     write_text(
         shell_ui_manifest(repo),
         manifest(
-            "CmuxMobileShellUI",
+            "BreeMobileShellUI",
             [
                 REMOTE_DEPENDENCY,
                 '.package(url: "https://github.com/apple/swift-log.git", from: "1.0.0")',
@@ -219,14 +219,14 @@ def add_remote_package(repo):
 
 
 def remove_remote_package(repo):
-    write_text(shell_ui_manifest(repo), manifest("CmuxMobileShellUI", []))
+    write_text(shell_ui_manifest(repo), manifest("BreeMobileShellUI", []))
 
 
 def bump_remote_requirement(repo):
     write_text(
         shell_ui_manifest(repo),
         manifest(
-            "CmuxMobileShellUI",
+            "BreeMobileShellUI",
             [
                 '.package(url: "https://github.com/apple/swift-collections.git", '
                 'from: "2.0.0")'
@@ -263,7 +263,7 @@ def change_xcode_remote_requirement(repo):
 def touch_all_lockfiles(repo):
     bumped = RESOLVED_JSON.replace("1.1.0", "1.2.0")
     for lockfile in (
-        "Packages/Shared/CmuxMobileShellUI/Package.resolved",
+        "Packages/Shared/BreeMobileShellUI/Package.resolved",
     ):
         write_text(os.path.join(repo, lockfile), bumped)
 

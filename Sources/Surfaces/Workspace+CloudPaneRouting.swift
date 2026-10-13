@@ -1,6 +1,6 @@
 import AppKit
 import Bonsplit
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 /// Identifies one remote workspace placement for a local projection.
@@ -113,7 +113,7 @@ final class CloudWorkspaceRenameService {
             remoteWorkspaceID: target.remoteWorkspaceID
         )
     }
-    /// The one remote cmux-tui workspace a local workspace stands for. The persisted
+    /// The one remote bree-tui workspace a local workspace stands for. The persisted
     /// binding wins; otherwise the projected cloud resources decide, but only when
     /// every view agrees on a single remote workspace — a local workspace composing
     /// panes from several remote workspaces (or pool terminals) has no one name to
@@ -279,7 +279,7 @@ final class CloudWorkspaceRenameService {
         let tabID = remoteTabID(for: projection, resource: resource)
         guard let tabID, !tabID.isEmpty else {
             #if DEBUG
-            cmuxDebugLog("cloud.rename.terminal.ambiguous panel=\(panelID) resource=\(resource.id.rawValue)")
+            breeDebugLog("cloud.rename.terminal.ambiguous panel=\(panelID) resource=\(resource.id.rawValue)")
             #endif
             return
         }

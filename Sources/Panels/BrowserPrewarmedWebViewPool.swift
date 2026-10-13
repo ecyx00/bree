@@ -1,6 +1,6 @@
 import AppKit
-import CmuxBrowser
-import CmuxSettings
+import BreeBrowser
+import BreeSettings
 import Foundation
 import WebKit
 
@@ -30,7 +30,7 @@ final class BrowserPrewarmedWebViewPool: NSObject {
     }
 
     private struct Entry {
-        let webView: CmuxWebView
+        let webView: BreeWebView
         let url: URL
         let profileID: UUID
         let hostWindow: NSWindow
@@ -40,16 +40,16 @@ final class BrowserPrewarmedWebViewPool: NSObject {
     private var entry: Entry?
     private var expiryTask: Task<Void, Never>?
     private let timeToLive: Duration
-    private let makeWebView: @MainActor (UUID) -> CmuxWebView
-    private let startLoad: @MainActor (CmuxWebView, URLRequest) -> Void
+    private let makeWebView: @MainActor (UUID) -> BreeWebView
+    private let startLoad: @MainActor (BreeWebView, URLRequest) -> Void
     private let expirySleep: @Sendable (Duration) async throws -> Void
 
     init(
         timeToLive: Duration = .seconds(180),
-        makeWebView: @escaping @MainActor (UUID) -> CmuxWebView = { profileID in
+        makeWebView: @escaping @MainActor (UUID) -> BreeWebView = { profileID in
             BrowserPanel.makeWebView(profileID: profileID)
         },
-        startLoad: @escaping @MainActor (CmuxWebView, URLRequest) -> Void = { webView, request in
+        startLoad: @escaping @MainActor (BreeWebView, URLRequest) -> Void = { webView, request in
             webView.applyBrowserUserAgentPolicy(for: request.url)
             webView.load(request)
         },
@@ -103,7 +103,7 @@ final class BrowserPrewarmedWebViewPool: NSObject {
         startLoad(webView, URLRequest(url: url))
         scheduleExpiry()
 #if DEBUG
-        cmuxDebugLog("browser.prewarmPool.start url=\(url.absoluteString) profile=\(profileID.uuidString.prefix(5))")
+        breeDebugLog("browser.prewarmPool.start url=\(url.absoluteString) profile=\(profileID.uuidString.prefix(5))")
 #endif
     }
 
@@ -111,7 +111,7 @@ final class BrowserPrewarmedWebViewPool: NSObject {
     /// navigation, or returns nil for a normal cold load. The entry is
     /// consumed either way: once a matching panel is being created, a
     /// still-loading or failed entry is useless and would otherwise linger.
-    func claim(url: URL, profileID: UUID, websiteDataStore: WKWebsiteDataStore) -> CmuxWebView? {
+    func claim(url: URL, profileID: UUID, websiteDataStore: WKWebsiteDataStore) -> BreeWebView? {
         guard BrowserURLAllowlistPolicy(defaults: .standard).allows(url) else {
             discard(reason: "url-allowlist")
             return nil
@@ -135,7 +135,7 @@ final class BrowserPrewarmedWebViewPool: NSObject {
         expiryTask?.cancel()
         expiryTask = nil
 #if DEBUG
-        cmuxDebugLog("browser.prewarmPool.claim url=\(url.absoluteString)")
+        breeDebugLog("browser.prewarmPool.claim url=\(url.absoluteString)")
 #endif
         return webView
     }
@@ -150,7 +150,7 @@ final class BrowserPrewarmedWebViewPool: NSObject {
         entry.hostWindow.close()
         self.entry = nil
 #if DEBUG
-        cmuxDebugLog("browser.prewarmPool.discard reason=\(reason)")
+        breeDebugLog("browser.prewarmPool.discard reason=\(reason)")
 #endif
     }
 
@@ -187,7 +187,7 @@ final class BrowserPrewarmedWebViewPool: NSObject {
             defer: false
         )
         window.isReleasedWhenClosed = false
-        window.identifier = NSUserInterfaceItemIdentifier("cmux.browserPrewarmPool")
+        window.identifier = NSUserInterfaceItemIdentifier("bree.browserPrewarmPool")
         window.hasShadow = false
         window.alphaValue = 0
         window.ignoresMouseEvents = true

@@ -1,4 +1,4 @@
-# irx transport: a from-scratch iroh transport for cmux mobile
+# irx transport: a from-scratch iroh transport for bree mobile
 
 Status: implementation design, branch `feat-irx-transport`, tag `irx`.
 Goal: kill the field-measured flakiness of the mobile iroh path (failed initial
@@ -30,19 +30,19 @@ The current stack's failure modes are structural, not incidental:
 
 ## What is rebuilt vs consumed
 
-Rebuilt from scratch (package `Packages/Shared/CmuxIrxTransport`, prefix
-`Irx`, wire ALPN `cmux/irx/1`):
+Rebuilt from scratch (package `Packages/Shared/BreeIrxTransport`, prefix
+`Irx`, wire ALPN `bree/irx/1`):
 - identity, endpoint lifecycle, relay credential management, broker client,
   registration, grant verification, dial/admission, session + lane protocol,
   reconnect ownership, keepalive, supersession, event journaling.
 
 Consumed unchanged (stable, not flaky, and battle-tested):
-- iroh-ffi fork binary `1.2.0-cmux.1.ios17` (iroh fork branch
-  `cmux/v1.2.0-cmux.1`, rev 9816d25: upstream iroh 1.2.0 plus the cmux patches,
+- iroh-ffi fork binary `1.2.0-bree.1.ios17` (iroh fork branch
+  `bree/v1.2.0-bree.1`, rev 9816d25: upstream iroh 1.2.0 plus the bree patches,
   including make-before-break relay credential handoff; noq fork rev 05055f8 on
-  upstream noq 1.3.0). Note: the `cmux.8` tag is unusable as a pin because its
+  upstream noq 1.3.0). Note: the `bree.8` tag is unusable as a pin because its
   release asset was re-uploaded after the manifest checksum was baked; the
-  upstream-binary consumption trap it fixed applied only to the cmux-lite
+  upstream-binary consumption trap it fixed applied only to the bree-lite
   branch manifest, never to this main line.
 - Web backend: `/api/devices/iroh/{challenge,register}`, `GET /api/devices/iroh`
   (discover), `/api/devices/iroh/pair-grants`, `/api/relay/token`. No server
@@ -54,8 +54,8 @@ Consumed unchanged (stable, not flaky, and battle-tested):
 
 ## Activation model
 
-Defaults key `cmux.irx.enabled` (DEBUG builds; Debug menu + env
-`CMUX_IRX_ENABLED=1` for launches). When ON:
+Defaults key `bree.irx.enabled` (DEBUG builds; Debug menu + env
+`BREE_IRX_ENABLED=1` for launches). When ON:
 - the legacy iroh runtimes (Mac `MobileHostIrohRuntime` activation, iOS
   `MobileIrohRuntimeComposition` start) are NOT activated; the irx runtime owns
   the app's iroh identity slot (registration under the build's tag), route
@@ -68,9 +68,9 @@ This avoids binding-slot reincarnation wars: the broker keys binding slots by
 would revoke each other in a loop. One runtime owns the slot per build.
 
 Grant note: pair grants are minted by the existing broker with claim
-`alpn: cmux/mobile/1`. irx treats that claim as the pairing-scope identifier
+`alpn: bree/mobile/1`. irx treats that claim as the pairing-scope identifier
 (the authority the server signed), not the wire protocol; the wire ALPN is
-`cmux/irx/1` so legacy peers can never half-connect to an irx endpoint.
+`bree/irx/1` so legacy peers can never half-connect to an irx endpoint.
 
 ## Layered design (contract-informed)
 
@@ -97,7 +97,7 @@ store in DEBUG (mirrors legacy repo layout). Public key = iroh EndpointId.
   for a URL being rotated - remove severs relay-carried sessions instantly).
   Foreground resume triggers an immediate staleness check, but a fresh cached
   credential means ZERO broker calls on the connect path.
-- Relay-only forcing (`cmux.irx.force-relay` / `CMUX_IRX_FORCE_RELAY=1`):
+- Relay-only forcing (`bree.irx.force-relay` / `BREE_IRX_FORCE_RELAY=1`):
   dial addresses carry relayUrl only (no direct candidates) and NAT traversal
   is never authorized (endpoint binds with deferred NAT traversal), so every
   byte stays on the relay. Used by the soak; also a user-visible reliability
@@ -148,8 +148,8 @@ control 20, terminal 0, artifact -10.
 timing), admission, denial, credential mint/rotation (with expiry timestamps),
 keepalive ping/pong, lane open/close, and close reason is written as one JSONL
 event (monotonic + wall timestamps) to an app-container journal file (DEBUG)
-AND mirrored to os.Logger notice level (subsystem `dev.cmux` category
-`irx-host`, subsystem `dev.cmux.ios` category `irx-client`) so `log show`
+AND mirrored to os.Logger notice level (subsystem `dev.bree` category
+`irx-host`, subsystem `dev.bree.ios` category `irx-client`) so `log show`
 persists it. The soak analyzer consumes both sides' journals; "connection lost
 with no attributed cause" is a contract bug, not a logging gap.
 
@@ -170,7 +170,7 @@ irx endpoint. Diagnostics: v1 socket verb `irx_diag` (journal tail + counters,
 nonisolated ring like `iroh_diag`).
 
 ## iOS integration
-`MobileIrxRuntimeComposition`: when enabled, cmuxApp registers ONLY the irx
+`MobileIrxRuntimeComposition`: when enabled, breeApp registers ONLY the irx
 transport factory for `.iroh` routes (no debug-loopback/tailscale fallbacks in
 irx mode, so a simulator exercises the real iroh path), and wires
 `independentEventByteStreamProvider`, `terminalLaneProvider`,

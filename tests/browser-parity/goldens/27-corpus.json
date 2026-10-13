@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "wikipedia:missing": [],
     "wikipedia:leaks": [],
     "wikipedia:within-reference-a-10pct": true,

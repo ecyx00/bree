@@ -1,7 +1,7 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import Combine
-import CmuxAppKitSupportUI
+import BreeAppKitSupportUI
 import SwiftUI
 
 @MainActor

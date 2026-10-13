@@ -1,9 +1,9 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension TerminalController {
-    /// Compatibility CLI verbs read the authoritative cmux-tui graph, never a second PTY registry.
+    /// Compatibility CLI verbs read the authoritative bree-tui graph, never a second PTY registry.
     @MainActor
     func tuiSSHSessions(params: [String: Any]) async -> V2CallResult? {
         let selection = v2RequestedRemotePTYWorkspaceID(params: params)
@@ -47,7 +47,7 @@ extension TerminalController {
                         return resource.remoteWorkspaces.contains { $0.id == remote }
                     }) ?? workspace : workspace
                     sessions.append([
-                        "session_id": resource.id.key, "resource": resource.id.rawValue, "backend": "cmux-tui",
+                        "session_id": resource.id.key, "resource": resource.id.rawValue, "backend": "bree-tui",
                         "workspace_id": owner.id.uuidString, "workspace_title": owner.title,
                         "workspace_ref": v2Ref(kind: .workspace, uuid: owner.id),
                         "running": resource.lifecycle == .running || resource.lifecycle == .launching,
@@ -58,7 +58,7 @@ extension TerminalController {
                 errors.append(["workspace_id": workspace.id.uuidString, "error": CloudMachineLink.errorText(error)])
             }
         }
-        return .ok(["backend": "cmux-tui", "all_workspaces": all, "workspace_count": workspaces.count,
+        return .ok(["backend": "bree-tui", "all_workspaces": all, "workspace_count": workspaces.count,
                     "sessions": sessions, "errors": errors])
     }
 
@@ -111,7 +111,7 @@ extension TerminalController {
               let provider = SurfaceCatalog.shared.provider(for: resource.machine) else { return resolved }
         do {
             try await provider.closeTerminal(resource)
-            return .ok(["session_id": sessionID, "closed": true, "backend": "cmux-tui"])
+            return .ok(["session_id": sessionID, "closed": true, "backend": "bree-tui"])
         } catch {
             return .err(code: "remote_pty_error", message: CloudMachineLink.errorText(error), data: nil)
         }

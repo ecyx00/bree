@@ -16,7 +16,7 @@ extension TerminalController {
             let remainingEntries: [AcceptanceRollbackEntry]
         }
 
-        private static let legacyPersistenceKey = "cmux.workspaceCreate.completedOperationIDs.v1"
+        private static let legacyPersistenceKey = "bree.workspaceCreate.completedOperationIDs.v1"
 
         private let capacity: Int
         private let persistence: any WorkspaceCreateIdempotencyPersisting

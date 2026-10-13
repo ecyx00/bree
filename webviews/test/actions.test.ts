@@ -36,7 +36,7 @@ test("copyGitApplyCommand falls back to a React-owned textarea when clipboard AP
 
   expect(message).toBe(label("copiedGitApplyCommand"));
   expect(copied).toBe(true);
-  expect(textarea?.value).toMatch(/^git apply <<'CMUX_DIFF_PATCH_[0-9a-f]{24}'\n/);
+  expect(textarea?.value).toMatch(/^git apply <<'BREE_DIFF_PATCH_[0-9a-f]{24}'\n/);
 });
 
 test("copyGitApplyCommand falls back when clipboard writeText rejects", async () => {
@@ -79,12 +79,12 @@ test("copyGitApplyCommand fails when the textarea fallback cannot copy", async (
 
 test("resolveDiffNavigationURL strips query and fragment for custom scheme rewrites", () => {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-    url: "cmux-diff-viewer://local/current",
+    url: "bree-diff-viewer://local/current",
   });
   (globalThis as any).window = dom.window;
 
   expect(resolveDiffNavigationURL("https://example.com/diff/target?source=worktree#file")).toBe(
-    "cmux-diff-viewer://local/target",
+    "bree-diff-viewer://local/target",
   );
 });
 
@@ -94,11 +94,11 @@ test("resolveDiffNavigationURL passes a root-relative URL through unchanged unde
   // token host, so it must not enter the http->scheme segment-drop rewrite (which
   // would drop the query carrying token/repo/group).
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-    url: "cmux-diff-viewer://tok/diff-g-branch.html",
+    url: "bree-diff-viewer://tok/diff-g-branch.html",
   });
   (globalThis as any).window = dom.window;
 
-  const relative = "/__cmux_diff_viewer_branch?group=g&repo=%2Ftmp%2Fr&token=abc&base=develop";
+  const relative = "/__bree_diff_viewer_branch?group=g&repo=%2Ftmp%2Fr&token=abc&base=develop";
   expect(resolveDiffNavigationURL(relative)).toBe(relative);
 });
 
@@ -108,7 +108,7 @@ test("resolveDiffNavigationURL passes a root-relative URL through unchanged unde
   });
   (globalThis as any).window = dom.window;
 
-  const relative = "/__cmux_diff_viewer_branch?group=g&repo=%2Ftmp%2Fr&token=abc&base=develop";
+  const relative = "/__bree_diff_viewer_branch?group=g&repo=%2Ftmp%2Fr&token=abc&base=develop";
   expect(resolveDiffNavigationURL(relative)).toBe(relative);
 });
 
@@ -149,7 +149,7 @@ async function copyThroughTextarea(patchText: string): Promise<{ message: string
 test("copyGitApplyCommand keeps a bare-CR delimiter line inside the heredoc", async () => {
   const payload = [
     "diff --git a/a b/a",
-    "+x\rCMUX_DIFF_PATCH\rtouch /tmp/cmux-should-not-run\rCMUX_DIFF_PATCH_1\rgit apply <<'CMUX_DIFF_PATCH'",
+    "+x\rBREE_DIFF_PATCH\rtouch /tmp/bree-should-not-run\rBREE_DIFF_PATCH_1\rgit apply <<'BREE_DIFF_PATCH'",
     "",
   ].join("\n");
 
@@ -163,16 +163,16 @@ test("copyGitApplyCommand keeps a bare-CR delimiter line inside the heredoc", as
 
 test("buildGitApplyCommand skips a random delimiter that the patch already contains on a CR-split line", () => {
   const tokens = ["aaaa", "bbbb"];
-  const patch = "diff --git a/a b/a\n+x\rCMUX_DIFF_PATCH_aaaa\recho injected\n";
+  const patch = "diff --git a/a b/a\n+x\rBREE_DIFF_PATCH_aaaa\recho injected\n";
 
   const command = buildGitApplyCommand(patch, () => tokens.shift()!);
 
-  expect(heredocDelimiter(command)).toBe("CMUX_DIFF_PATCH_bbbb");
+  expect(heredocDelimiter(command)).toBe("BREE_DIFF_PATCH_bbbb");
   expectDelimiterOnlyClosesAtEnd(command);
 });
 
 test("buildGitApplyCommand fails closed when no unique delimiter can be chosen", () => {
-  const patch = "diff --git a/a b/a\n+CMUX_DIFF_PATCH_aaaa\n";
+  const patch = "diff --git a/a b/a\n+BREE_DIFF_PATCH_aaaa\n";
 
   expect(() => buildGitApplyCommand(patch, () => "aaaa")).toThrow();
 });

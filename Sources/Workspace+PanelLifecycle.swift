@@ -1,14 +1,14 @@
-import CmuxFoundation
+import BreeFoundation
 import Bonsplit
-import CmuxSettings
-import CmuxCore
+import BreeSettings
+import BreeCore
 import Darwin
 import Foundation
-import CmuxSidebar
+import BreeSidebar
 
 extension Workspace {
     private static let structuredAgentHookStatusKeys = AgentHibernationLifecycleStatusKeys.allowedStatusKeys
-    private static let managedSubagentEnvironmentKey = "CMUX_AGENT_MANAGED_SUBAGENT"
+    private static let managedSubagentEnvironmentKey = "BREE_AGENT_MANAGED_SUBAGENT"
     private static let truthyStartupEnvironmentValues: Set<String> = ["1", "true", "yes", "on", "enabled"]
     var agentPIDs: [String: pid_t] {
         get { sidebarAgentRuntimeObservation.agentPIDs }
@@ -474,7 +474,7 @@ extension Workspace {
         cancelReservedCloudTerminalPane(panelID: panelId)
         appLinkHandoffCoordinator.cancel(sourcePanelID: panelId)
         if publishSurfaceClosedEvent {
-            publishCmuxSurfaceClosed(panelId, paneId: paneId, panel: panel, origin: origin)
+            publishBreeSurfaceClosed(panelId, paneId: paneId, panel: panel, origin: origin)
         }
 
         let closedAgentRuntimeState = agentRuntimeState(forPanelId: panelId)

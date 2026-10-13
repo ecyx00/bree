@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 struct AcknowledgmentsView: View {
@@ -8,7 +8,7 @@ struct AcknowledgmentsView: View {
     var body: some View {
         ScrollView {
             Text(content)
-                .cmuxFont(.body, design: .monospaced)
+                .scaledFont(.body, design: .monospaced)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()

@@ -4,47 +4,47 @@
 # reproduce and diagnose it: the seed and iteration, the fuzz log, the app's
 # debug log tail, and — for hangs — a process sample taken while stuck.
 #
-# Usage: CMUX_TAG=main scripts/remote-tmux-fuzz-marathon.sh <ssh-host> [seeds] [iters-per-seed]
-# Set CMUX_FUZZ_RELAUNCH_HOST only when the app must be opened through a
+# Usage: BREE_TAG=main scripts/remote-tmux-fuzz-marathon.sh <ssh-host> [seeds] [iters-per-seed]
+# Set BREE_FUZZ_RELAUNCH_HOST only when the app must be opened through a
 # separate login host; by default the marathon relaunches it locally.
-# Output: a private /tmp/cmux-fuzz-marathon.XXXXXXXX/ directory printed at start.
+# Output: a private /tmp/bree-fuzz-marathon.XXXXXXXX/ directory printed at start.
 set -u
 umask 077
 
-HOST="${1:?usage: CMUX_TAG=<tag> $0 <ssh-host> [seeds] [iters]}"
+HOST="${1:?usage: BREE_TAG=<tag> $0 <ssh-host> [seeds] [iters]}"
 SEEDS="${2:-40}"
 ITERS="${3:-25}"
-: "${CMUX_TAG:?CMUX_TAG is required}"
-RELAUNCH_HOST="${CMUX_FUZZ_RELAUNCH_HOST:-}"
+: "${BREE_TAG:?BREE_TAG is required}"
+RELAUNCH_HOST="${BREE_FUZZ_RELAUNCH_HOST:-}"
 LOCAL_TMP_ROOT="${TMPDIR:-/tmp}"
 LOCAL_TMP_ROOT="${LOCAL_TMP_ROOT%/}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 . "$HERE/lib/mobile-attach.sh"
-cmux_attach_validate_dev_tag "$CMUX_TAG" || exit 2
-TAG_SLUG="$(cmux_attach__slug "$CMUX_TAG")"
-APP="${CMUX_FUZZ_APP:-$(cmux_attach_mac_app_path "$CMUX_TAG")}"
-APP_EXECUTABLE="$APP/Contents/MacOS/cmux DEV"
-DEBUG_LOG="${CMUX_FUZZ_DEBUG_LOG:-/tmp/cmux-debug-${TAG_SLUG}.log}"
-export CMUX_FUZZ_DEBUG_LOG="$DEBUG_LOG"
+bree_attach_validate_dev_tag "$BREE_TAG" || exit 2
+TAG_SLUG="$(bree_attach__slug "$BREE_TAG")"
+APP="${BREE_FUZZ_APP:-$(bree_attach_mac_app_path "$BREE_TAG")}"
+APP_EXECUTABLE="$APP/Contents/MacOS/Bree Dev"
+DEBUG_LOG="${BREE_FUZZ_DEBUG_LOG:-/tmp/bree-debug-${TAG_SLUG}.log}"
+export BREE_FUZZ_DEBUG_LOG="$DEBUG_LOG"
 . "$HERE/remote-tmux-fuzz-lock.sh"
 # Exactly one driver. Concurrent marathons share one app and one tmux lab,
 # and each seed's setup kills the lab server — yanking layouts out from
 # under the other run's iterations and manufacturing failures no code
 # produced. The shared helper owns the one atomic acquire/validate/release
 # path; its pid/token files live privately inside the lock directory.
-CMUX_FUZZ_LOCK_OWNED=0
+BREE_FUZZ_LOCK_OWNED=0
 # Hold the lock for the whole run: the trap releases it on ANY exit
 # (including SIGTERM), so nobody ever needs to delete it by hand — and
 # deleting it by hand is exactly how two drivers once ran concurrently.
 cleanup() {
   local status=$?
   trap - EXIT
-  cmux_fuzz_lock_release
+  bree_fuzz_lock_release
   exit "$status"
 }
 trap cleanup EXIT
-cmux_fuzz_lock_acquire "$LOCAL_TMP_ROOT" || exit $?
-DIR=$(mktemp -d "$LOCAL_TMP_ROOT/cmux-fuzz-marathon.XXXXXXXX") || {
+bree_fuzz_lock_acquire "$LOCAL_TMP_ROOT" || exit $?
+DIR=$(mktemp -d "$LOCAL_TMP_ROOT/bree-fuzz-marathon.XXXXXXXX") || {
   echo "could not create private marathon evidence directory" >&2
   exit 2
 }
@@ -52,7 +52,7 @@ DIR=$(mktemp -d "$LOCAL_TMP_ROOT/cmux-fuzz-marathon.XXXXXXXX") || {
 # failure is noted (per-fail files in this directory). The end-of-seed
 # capture below stays, but it cannot cover mid-seed failures — later
 # iterations churn the log past the failure window before the seed ends.
-export CMUX_FUZZ_EVIDENCE_DIR="$DIR"
+export BREE_FUZZ_EVIDENCE_DIR="$DIR"
 echo "marathon: $SEEDS seeds x $ITERS iters -> $DIR"
 
 app_pid() {
@@ -112,7 +112,7 @@ relaunch_app() {
   fi
   # Launch through a login shell so the app runs outside any sandbox. Most
   # runs are local; lab machines that need a GUI-session hop opt in with
-  # CMUX_FUZZ_RELAUNCH_HOST instead of relying on one maintainer's ssh alias.
+  # BREE_FUZZ_RELAUNCH_HOST instead of relying on one maintainer's ssh alias.
   printf -v launch_command 'open %q' "$APP"
   if [ -n "$RELAUNCH_HOST" ]; then
     printf -v remote_command 'zsh -lc %q' "$launch_command"
@@ -159,7 +159,7 @@ capture_evidence() {
 wait_app_ready() {
   local tries=0
   while [ "$tries" -lt 30 ]; do
-    if [ -n "$(CMUX_QUIET=1 "$HERE/cmux-debug-cli.sh" list-workspaces 2>/dev/null | head -1)" ]; then
+    if [ -n "$(BREE_QUIET=1 "$HERE/bree-debug-cli.sh" list-workspaces 2>/dev/null | head -1)" ]; then
       return 0
     fi
     tries=$((tries + 1))
@@ -186,7 +186,7 @@ if ! restart_app_ready initial; then
 fi
 for seed in $(seq 1 "$SEEDS"); do
   log="$DIR/seed-$seed.log"
-  CMUX_FUZZ_SETTLE_SECS="${CMUX_FUZZ_SETTLE_SECS:-5}" \
+  BREE_FUZZ_SETTLE_SECS="${BREE_FUZZ_SETTLE_SECS:-5}" \
     "$HERE/remote-tmux-live-fuzz.sh" "$HOST" "$seed" "$ITERS" > "$log" 2>&1
   rc=$?
   if [ "$rc" -eq 98 ]; then
@@ -200,7 +200,7 @@ for seed in $(seq 1 "$SEEDS"); do
       fails=$((fails + 1))
       break
     fi
-    CMUX_FUZZ_SETTLE_SECS="${CMUX_FUZZ_SETTLE_SECS:-5}" \
+    BREE_FUZZ_SETTLE_SECS="${BREE_FUZZ_SETTLE_SECS:-5}" \
       "$HERE/remote-tmux-live-fuzz.sh" "$HOST" "$seed" "$ITERS" > "$log" 2>&1
     rc=$?
   fi

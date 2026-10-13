@@ -55,7 +55,7 @@ export async function createSitesEnv({ signedIn = true, authResponder } = {}) {
       await seed.close();
     },
   });
-  const workDir = makeTestDir("cmux-sites-");
+  const workDir = makeTestDir("bree-sites-");
   const sessions = new Map();
 
   // The REPL's native fetch: mock hosts only, redirects followed, the

@@ -46,7 +46,7 @@ final class MainThreadHangCaptureStore: @unchecked Sendable {
             .string(from: capturedAt)
             .replacingOccurrences(of: ":", with: "")
         let identifier = UUID().uuidString.lowercased()
-        let baseName = "cmux-hang-\(stamp)-\(processIdentifier)-\(identifier)"
+        let baseName = "bree-hang-\(stamp)-\(processIdentifier)-\(identifier)"
         let sampleURL = directory.appendingPathComponent("\(baseName).sample.txt")
         let metadataURL = directory.appendingPathComponent("\(baseName).metadata.txt")
         let lines = [

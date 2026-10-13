@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import Network
 import UniformTypeIdentifiers
 import WebKit
@@ -10,7 +10,7 @@ private struct BrowserReplRawJSON {
 }
 
 /// The `webkit` REPL driver: implements `docs/browser-repl/driver-protocol.md`
-/// on cmux browser surfaces.
+/// on bree browser surfaces.
 ///
 /// A session is bound to one workspace; its tabs are that workspace's
 /// browser surfaces, and target ids are surface ids. Every method runs on the
@@ -276,7 +276,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
             let value: Any?
             if Self.isActionOnPage(method), let panel = tabToPrepare {
                 // What the page opens while it handles this session's input
-                // goes to this session, never to cmux's UI in front of the user.
+                // goes to this session, never to bree's UI in front of the user.
                 value = try await attachment(panel).withInput(sessionID: sessionID) {
                     try await handle(method: method, params: params)
                 }
@@ -557,7 +557,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
         )
     }
 
-    /// The tab's title for the agent: the page's, else the one cmux kept
+    /// The tab's title for the agent: the page's, else the one bree kept
     /// while the page is unloaded.
     @MainActor
     private static func title(_ panel: BrowserPanel) -> String {
@@ -912,7 +912,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
 
     /// `tab.handleEvents`: the events this session has a handler for in the
     /// tab. In a user's tab only those reach the session; the rest keep
-    /// cmux's own UI (``BrowserReplTabOwnership``).
+    /// bree's own UI (``BrowserReplTabOwnership``).
     @MainActor
     private func handleEvents(_ params: [String: Any]) throws -> Any? {
         let panel = try panel(params)
@@ -1212,7 +1212,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
         return result
     }
 
-    /// cmux browser history, most recent first, from the history stores of
+    /// bree browser history, most recent first, from the history stores of
     /// the profiles this workspace's tabs use (the default profile when it
     /// has none).
     @MainActor
@@ -1333,7 +1333,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
         return frame
     }
 
-    private static let needsAgentSentinel = "__cmuxNeedsAgent__"
+    private static let needsAgentSentinel = "__breeNeedsAgent__"
 
     @MainActor
     private func evaluate(_ params: [String: Any]) async throws -> Any? {
@@ -1369,7 +1369,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
           const __json = JSON.stringify(__result);
           return __json === undefined ? "null" : __json;
         } catch (e) {
-          return { __cmuxError__: { code: (e && e.code) || "evaluation", message: String(e && e.message !== undefined ? e.message : e), name: (e && e.name) || "Error" } };
+          return { __breeError__: { code: (e && e.code) || "evaluation", message: String(e && e.message !== undefined ? e.message : e), name: (e && e.name) || "Error" } };
         }
         """
     }
@@ -1406,7 +1406,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
             let body = Self.evaluationBody(source: source, requiresAgent: false, elementsExpression: "[]")
             return try await runEvaluation(panel, frame, body: body, world: .page, args: args, handles: [])
         }
-        let key = "__cmuxHandleBridge_\(UUID().uuidString.replacingOccurrences(of: "-", with: ""))"
+        let key = "__breeHandleBridge_\(UUID().uuidString.replacingOccurrences(of: "-", with: ""))"
         let listen = """
         const got = [];
         const listener = (event) => { got.push(event.composedPath()[0]); event.stopImmediatePropagation(); };
@@ -1448,7 +1448,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
         const __bridge = window[__key];
         delete window[__key];
         if (__bridge) window.removeEventListener(__key, __bridge.listener, true);
-        if (!__bridge || __bridge.got.length !== __count) return { __cmuxError__: { code: "stale", message: "Element handle is no longer attached to the document", name: "Error" } };
+        if (!__bridge || __bridge.got.length !== __count) return { __breeError__: { code: "stale", message: "Element handle is no longer attached to the document", name: "Error" } };
         """
         let body = collect + "\n" + Self.evaluationBody(source: source, requiresAgent: false, elementsExpression: "__bridge.got")
         return try await runEvaluation(
@@ -1494,7 +1494,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
                 }
                 return BrowserReplRawJSON(text: text)
             }
-            if let envelope = (value as? [String: Any])?["__cmuxError__"] as? [String: Any] {
+            if let envelope = (value as? [String: Any])?["__breeError__"] as? [String: Any] {
                 throw BrowserReplDriverError(
                     code: envelope["code"] as? String ?? "evaluation",
                     message: envelope["message"] as? String ?? "Evaluation failed",
@@ -1661,8 +1661,8 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
     /// Runs `body` with the panel's web view in a window. A hidden pane's web
     /// view has none, so it borrows the offscreen render host for the call.
     @MainActor
-    private func withWindow<T>(_ panel: BrowserPanel, _ body: @escaping @MainActor (CmuxWebView, NSWindow) async throws -> T) async throws -> T {
-        guard let webView = panel.webView as? CmuxWebView else {
+    private func withWindow<T>(_ panel: BrowserPanel, _ body: @escaping @MainActor (BreeWebView, NSWindow) async throws -> T) async throws -> T {
+        guard let webView = panel.webView as? BreeWebView else {
             throw Self.error("unsupported", "This tab does not accept native input")
         }
         if let window = webView.window {
@@ -1738,7 +1738,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
         at css: CGPoint,
         clickCount: Int,
         flags: NSEvent.ModifierFlags,
-        webView: CmuxWebView,
+        webView: BreeWebView,
         window: NSWindow,
         attachment: BrowserReplTabAttachment
     ) async throws {
@@ -1823,7 +1823,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
     /// it has, enter the web view as the drop destination.
     @MainActor
     private func startDropIfDragBegan(
-        webView: CmuxWebView,
+        webView: BreeWebView,
         window: NSWindow,
         location: NSPoint,
         attachment: BrowserReplTabAttachment
@@ -1913,7 +1913,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
     private func performClipboardCommandWithoutWebKit(
         _ command: String,
         attachment: BrowserReplTabAttachment,
-        webView: CmuxWebView
+        webView: BreeWebView
     ) async throws {
         switch command {
         case "copy:", "cut:":
@@ -1951,7 +1951,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
     /// Meta+C, Meta+X and Meta+V run only in tabs a session created. WebKit
     /// runs them against the general pasteboard's name, and a page that
     /// keeps one running past its timeout is contained by ending the tab's
-    /// web content process, which cmux never does to a user's tab; so the
+    /// web content process, which bree never does to a user's tab; so the
     /// shortcut is refused there before any key reaches the page.
     @MainActor
     private func refuseClipboardCommandInUserTab(_ command: String, panel: BrowserPanel) throws {
@@ -1981,15 +1981,15 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
     /// "ended".
     @MainActor
     private func webContentEndsOnlySessionTabs(_ webView: WKWebView, creator: String, sessionTabs: Set<UUID>) -> Bool {
-        guard let pid = CmuxWebContentProcessIdentifier.pid(for: webView) else { return true }
+        guard let pid = BreeWebContentProcessIdentifier.pid(for: webView) else { return true }
         for (other, _) in allBrowserPanels() {
-            if other.webView !== webView, CmuxWebContentProcessIdentifier.pid(for: other.webView) == pid,
+            if other.webView !== webView, BreeWebContentProcessIdentifier.pid(for: other.webView) == pid,
                !sessionTabs.contains(other.id),
                BrowserReplTabAttachments.shared.attachment(for: other.id)?.creatorSessionID != creator {
                 return false
             }
             for popup in other.floatingPopupWebViews where popup !== webView {
-                if CmuxWebContentProcessIdentifier.pid(for: popup) == pid { return false }
+                if BreeWebContentProcessIdentifier.pid(for: popup) == pid { return false }
             }
         }
         return true
@@ -2005,7 +2005,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
     /// (`BrowserReplPasteboardRedirect`), so nothing it does later reaches
     /// the system clipboard. Only tabs a session created run these.
     @MainActor
-    private func performEditingCommand(_ command: String, panel: BrowserPanel, webView: CmuxWebView) async throws {
+    private func performEditingCommand(_ command: String, panel: BrowserPanel, webView: BreeWebView) async throws {
         let attachment = attachment(panel)
         switch command {
         case "copy:", "cut:", "paste:":
@@ -2254,7 +2254,7 @@ final class WebKitBrowserReplDriver: BrowserReplDriver, @unchecked Sendable {
         var urls: [URL]?
         if params["cancel"] as? Bool != true {
             let directory = FileManager.default.temporaryDirectory
-                .appendingPathComponent("cmux-repl-upload-\(UUID().uuidString)", isDirectory: true)
+                .appendingPathComponent("bree-repl-upload-\(UUID().uuidString)", isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             fileChooserDirectories.append(directory)
             urls = try (params["files"] as? [[String: Any]] ?? []).map { file in

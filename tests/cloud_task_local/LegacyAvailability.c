@@ -20,7 +20,7 @@ bool task_local_test_availability(uintptr_t major, uintptr_t minor, uintptr_t pa
                                  uintptr_t variant_patch) {
     (void)minor; (void)patch;
     (void)variant_major; (void)variant_minor; (void)variant_patch;
-    if (getenv("CMUX_TEST_LEGACY_TASK_LOCAL") && major == 15) {
+    if (getenv("BREE_TEST_LEGACY_TASK_LOCAL") && major == 15) {
         if (atomic_fetch_add(&legacy_checks, 1) == 0) {
             fputs("TaskLocal: selected macOS 14 fallback\n", stderr);
         }

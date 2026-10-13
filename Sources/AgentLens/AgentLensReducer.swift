@@ -1,4 +1,4 @@
-import CMUXAgentLaunch
+import BREEAgentLaunch
 import Foundation
 
 /// One live Claude Code session as the Agent Lens card shows it. Pure value;
@@ -44,7 +44,7 @@ struct AgentLensCard: Equatable, Identifiable, Sendable {
     /// Last API request time from the cache-warm mod's store; filled by the store.
     var cacheRequestAt: Date?
     /// Claude's own session_id (UUID), from the event id or the transcript file name. `id` can be a
-    /// cmux-side fallback (`cmux-<surface>`), which never matches Claude's on-disk session folders.
+    /// bree-side fallback (`bree-<surface>`), which never matches Claude's on-disk session folders.
     var claudeSessionID: String?
     /// While `state == .needsInput`: true for a permission request (approval), false for a question,
     /// plan review or an agent waiting at its prompt.

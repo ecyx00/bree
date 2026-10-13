@@ -2,7 +2,7 @@ import AppKit
 import Bonsplit
 import Foundation
 import SwiftUI
-import CmuxTerminal
+import BreeTerminal
 
 final class PaneDropTargetView: NSView {
     weak var hostedView: GhosttySurfaceScrollView?
@@ -187,14 +187,14 @@ final class PaneDropTargetView: NSView {
 
         guard let dropContext else {
 #if DEBUG
-            cmuxDebugLog("terminal.paneDrop.perform allowed=0 reason=missingContext")
+            breeDebugLog("terminal.paneDrop.perform allowed=0 reason=missingContext")
 #endif
             return false
         }
 
         guard let container = transferDropRouter.container(for: dropContext) else {
 #if DEBUG
-            cmuxDebugLog("terminal.paneDrop.perform allowed=0 reason=missingContainer")
+            breeDebugLog("terminal.paneDrop.perform allowed=0 reason=missingContainer")
 #endif
             return false
         }
@@ -218,7 +218,7 @@ final class PaneDropTargetView: NSView {
                 pasteboard: sender.draggingPasteboard
             )
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "terminal.paneDrop.performAsText panel=\(dropContext.panelId.uuidString.prefix(5)) " +
                 "fileURLs=\(urls.count) pane=\(dropContext.paneId.id.uuidString.prefix(5)) " +
                 "handled=\(handled ? 1 : 0)"
@@ -238,7 +238,7 @@ final class PaneDropTargetView: NSView {
                 pasteboard: sender.draggingPasteboard
             )
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "terminal.paneDrop.perform panel=\(dropContext.panelId.uuidString.prefix(5)) " +
                 "tab=\(plan.transfer.tabId.uuidString.prefix(5)) zone=\(plan.zone) " +
                 "pane=\(dropContext.paneId.id.uuidString.prefix(5)) handled=\(handled ? 1 : 0)"
@@ -254,7 +254,7 @@ final class PaneDropTargetView: NSView {
         let urls = DragOverlayRoutingPolicy.fileURLs(from: sender.draggingPasteboard)
         guard !urls.isEmpty else {
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "terminal.paneDrop.perform allowed=0 panel=\(dropContext.panelId.uuidString.prefix(5)) " +
                 "reason=missingTransferAndFiles"
             )
@@ -271,7 +271,7 @@ final class PaneDropTargetView: NSView {
             )
         ))
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "terminal.paneDrop.perform panel=\(dropContext.panelId.uuidString.prefix(5)) " +
             "fileURLs=\(urls.count) zone=\(zone) pane=\(dropContext.paneId.id.uuidString.prefix(5)) " +
             "handled=\(handled ? 1 : 0)"
@@ -312,7 +312,7 @@ final class PaneDropTargetView: NSView {
         ) {
             clearDragState(phase: "\(phase).text")
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "terminal.paneDrop.\(phase) panel=\(dropContext.panelId.uuidString.prefix(5)) fileDrop=1 textDestination=\(String(describing: textDestinationKind))"
             )
 #endif
@@ -328,7 +328,7 @@ final class PaneDropTargetView: NSView {
         case .accepted(let plan):
             setActiveDropZone(plan.zone)
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "terminal.paneDrop.\(phase) panel=\(dropContext.panelId.uuidString.prefix(5)) " +
                 "tab=\(plan.transfer.tabId.uuidString.prefix(5)) zone=\(plan.zone)"
             )
@@ -350,7 +350,7 @@ final class PaneDropTargetView: NSView {
         let zone = paneDropZone(for: sender)
         setActiveDropZone(zone)
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "terminal.paneDrop.\(phase) panel=\(dropContext.panelId.uuidString.prefix(5)) " +
             "fileURL=1 zone=\(zone)"
         )
@@ -430,7 +430,7 @@ final class PaneDropTargetView: NSView {
         setActiveDropZone(nil)
 #if DEBUG
         if let dropContext {
-            cmuxDebugLog(
+            breeDebugLog(
                 "terminal.paneDrop.\(phase) panel=\(dropContext.panelId.uuidString.prefix(5)) zone=none"
             )
         }
@@ -458,7 +458,7 @@ final class PaneDropTargetView: NSView {
         lastHitTestSignature = signature
 
         let types = pasteboardTypes?.map(\.rawValue).joined(separator: ",") ?? "-"
-        cmuxDebugLog(
+        breeDebugLog(
             "terminal.paneDrop.hitTest capture=\(capture ? 1 : 0) " +
             "hasTransfer=\(hasTransferType ? 1 : 0) hasFileDrop=\(hasFileDropPayload ? 1 : 0) " +
             "context=\(dropContext != nil ? 1 : 0) " +

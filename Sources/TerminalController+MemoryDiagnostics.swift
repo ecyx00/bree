@@ -1,4 +1,4 @@
-import CmuxControlSocket
+import BreeControlSocket
 import Foundation
 
 extension TerminalController {
@@ -64,7 +64,7 @@ extension TerminalController {
             return .err(code: "invalid_params", message: "\(invalidLimitKey) must be an integer from 1 to 100", data: nil)
         }
         let topGroupLimit = topGroupLimitValue ?? groupLimitValue ?? 12
-        let processSnapshot = await CmuxTopProcessSnapshot.captureCached(
+        let processSnapshot = await BreeTopProcessSnapshot.captureCached(
             includeProcessDetails: true,
             maximumAge: 2
         )

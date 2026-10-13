@@ -6,14 +6,14 @@ const DIALOGS = "/dialogs.html";
 // Reference B: click without awaiting (the click blocks while the dialog is
 // open), then poll getJsDialog.
 const CG_OPEN = `const open = async (s) => { const click = $P.locator(s).click().catch(() => {}); let d; for (let i = 0; i < 100 && !d; i++) { d = await t.getJsDialog(); if (!d) await pause(20); } return { d, click }; };`;
-const CMUX_OPEN = `const open = async (s) => { const click = page.locator(s).click().catch(() => {}); let d; for (let i = 0; i < 100 && !d; i++) { d = page.dialog(); if (!d) await sleep(20); } return { d, click }; };`;
+const BREE_OPEN = `const open = async (s) => { const click = page.locator(s).click().catch(() => {}); let d; for (let i = 0; i < 100 && !d; i++) { d = page.dialog(); if (!d) await sleep(20); } return { d, click }; };`;
 
 export default [
   {
     id: "dialogs.held",
     members: ["reference-b:Tab.getJsDialog", "reference-b:AlertDialog.type", "reference-b:AlertDialog.dismiss", "reference-b:ConfirmDialog.type", "reference-b:ConfirmDialog.accept", "reference-b:ConfirmDialog.dismiss", "reference-b:PromptDialog.type", "reference-b:PromptDialog.accept", "reference-b:PromptDialog.dismiss"],
     path: DIALOGS,
-    code: `${CMUX_OPEN}
+    code: `${BREE_OPEN}
 const out = { none: page.dialog() };
 let o = await open("#alert"); out.alert = [o.d.type, o.d.message]; await o.d.dismiss(); await o.click; out.afterAlert = await page.locator("#r").innerText();
 o = await open("#confirm"); out.confirm = o.d.type; await o.d.accept(); await o.click; out.accepted = await page.locator("#r").innerText();
@@ -50,7 +50,7 @@ return out;`,
     id: "dialogs.errors",
     members: ["reference-b:PromptDialog.accept", "reference-b:ConfirmDialog.accept"],
     path: DIALOGS,
-    code: `${CMUX_OPEN}
+    code: `${BREE_OPEN}
 const o = await open("#prompt");
 const acceptError = await E(() => o.d.accept(123));
 if (page.dialog()) await page.dialog().dismiss();
@@ -80,7 +80,7 @@ return { acceptError, twice, result: await $P.locator("#r").innerText() };`,
     id: "dialogs.snapshot-blocked",
     members: ["reference-b:Tab.getJsDialog", "reference-a:snapshot"],
     path: DIALOGS,
-    code: `${CMUX_OPEN}
+    code: `${BREE_OPEN}
 const o = await open("#confirm");
 const s = String((await snapshot()).tree);
 const title = await page.title();

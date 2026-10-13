@@ -738,7 +738,7 @@ test "renderPreparedHover matches exact user path with default matchers" {
     const alloc = testing.allocator;
     const url = @import("../config/url.zig");
     const prefix = "The built app is ";
-    const first = "/Users/example/Applications/cmux-browser-resize-modes-";
+    const first = "/Users/cmux-lawrence/Applications/cmux-browser-resize-modes-";
     const second = "20260716-warm.app";
 
     var t: terminal.Terminal = try .init(std.testing.io, alloc, .{

@@ -106,11 +106,11 @@ fi
 
 TAG_ID="$(sanitize_bundle "$TAG")"
 TAG_SLUG="$(sanitize_path "$TAG")"
-APP="$HOME/Library/Developer/Xcode/DerivedData/cmux-${TAG_SLUG}/Build/Products/Debug/cmux DEV ${TAG}.app"
-BID="com.cmuxterm.app.debug.${TAG_ID}"
-SOCK="/tmp/cmux-debug-${TAG_SLUG}.sock"
-DSOCK="$HOME/Library/Application Support/cmux/cmuxd-dev-${TAG_SLUG}.sock"
-LOG="/tmp/cmux-debug-${TAG_SLUG}.log"
+APP="$HOME/Library/Developer/Xcode/DerivedData/bree-${TAG_SLUG}/Build/Products/Debug/Bree Dev ${TAG}.app"
+BID="com.bree.app.debug.${TAG_ID}"
+SOCK="/tmp/bree-debug-${TAG_SLUG}.sock"
+DSOCK="$HOME/Library/Application Support/bree/breed-dev-${TAG_SLUG}.sock"
+LOG="/tmp/bree-debug-${TAG_SLUG}.log"
 
 if [[ ! -d "$APP" ]]; then
   echo "error: tagged app not found at $APP" >&2
@@ -119,29 +119,29 @@ fi
 
 /usr/bin/osascript -e "tell application id \"${BID}\" to quit" >/dev/null 2>&1 || true
 sleep 0.5
-pkill -f "cmux DEV ${TAG}.app/Contents/MacOS/cmux DEV" || true
+pkill -f "Bree Dev ${TAG}.app/Contents/MacOS/Bree Dev" || true
 rm -f "$SOCK" "$DSOCK"
 sleep 0.5
 
 OPEN_ENV=(
   env
-  -u CMUX_SOCKET_PATH
-  -u CMUX_SOCKET_MODE
-  -u CMUX_TAB_ID
-  -u CMUX_PANEL_ID
-  -u CMUX_SURFACE_ID
-  -u CMUX_WORKSPACE_ID
-  -u CMUXD_UNIX_PATH
-  -u CMUX_TAG
-  -u CMUX_PORT
-  -u CMUX_PORT_END
-  -u CMUX_PORT_RANGE
-  -u CMUX_DEBUG_LOG
-  -u CMUX_BUNDLE_ID
-  -u CMUX_DISABLE_SESSION_RESTORE
-  -u CMUX_SHELL_INTEGRATION
-  -u CMUX_SHELL_INTEGRATION_DIR
-  -u CMUX_LOAD_GHOSTTY_ZSH_INTEGRATION
+  -u BREE_SOCKET_PATH
+  -u BREE_SOCKET_MODE
+  -u BREE_TAB_ID
+  -u BREE_PANEL_ID
+  -u BREE_SURFACE_ID
+  -u BREE_WORKSPACE_ID
+  -u BREED_UNIX_PATH
+  -u BREE_TAG
+  -u BREE_PORT
+  -u BREE_PORT_END
+  -u BREE_PORT_RANGE
+  -u BREE_DEBUG_LOG
+  -u BREE_BUNDLE_ID
+  -u BREE_DISABLE_SESSION_RESTORE
+  -u BREE_SHELL_INTEGRATION
+  -u BREE_SHELL_INTEGRATION_DIR
+  -u BREE_LOAD_GHOSTTY_ZSH_INTEGRATION
   -u GHOSTTY_BIN_DIR
   -u GHOSTTY_RESOURCES_DIR
   -u GHOSTTY_SHELL_FEATURES
@@ -149,11 +149,11 @@ OPEN_ENV=(
   -u GH_PAGER
   -u TERMINFO
   -u XDG_DATA_DIRS
-  "CMUX_SOCKET_MODE=${MODE}"
-  "CMUX_SOCKET_PATH=${SOCK}"
-  "CMUXD_UNIX_PATH=${DSOCK}"
-  "CMUX_DEBUG_LOG=${LOG}"
-  "CMUX_DISABLE_SESSION_RESTORE=1"
+  "BREE_SOCKET_MODE=${MODE}"
+  "BREE_SOCKET_PATH=${SOCK}"
+  "BREED_UNIX_PATH=${DSOCK}"
+  "BREE_DEBUG_LOG=${LOG}"
+  "BREE_DISABLE_SESSION_RESTORE=1"
 )
 
 if (( EXTRA_ENV_COUNT > 0 )); then
@@ -180,7 +180,7 @@ fi
 echo "app: $APP"
 echo "bundle_id: $BID"
 echo "socket: $SOCK"
-echo "cmuxd_socket: $DSOCK"
+echo "breed_socket: $DSOCK"
 echo "log: $LOG"
 echo "mode: $MODE"
 echo "socket_ready: $(if [[ -S "$SOCK" ]]; then echo yes; else echo no; fi)"

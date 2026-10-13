@@ -1,39 +1,39 @@
 import AppKit
-import CmuxWorkspaces
-import CmuxFoundation
+import BreeWorkspaces
+import BreeFoundation
 import Foundation
 
 /// Opens workspace-group configuration surfaces.
 enum SidebarWorkspaceGroupConfigOpener {
-    /// Opens the cmux config file (`~/.config/cmux/cmux.json`) in the user's
+    /// Opens the bree config file (`~/.config/bree/bree.json`) in the user's
     /// configured editor, materializing an empty config first if none exists.
     @MainActor
-    static func openCmuxConfigInEditor() {
+    static func openBreeConfigInEditor() {
         let opener = PreferredEditorService(defaults: .standard)
-        openCmuxConfigInEditor(
+        openBreeConfigInEditor(
             home: FileManager.default.homeDirectoryForCurrentUser,
             open: { opener.open($0) }
         )
     }
 
-    /// Testable seam: resolves the cmux config path under `home`, materializes
+    /// Testable seam: resolves the bree config path under `home`, materializes
     /// an empty config if absent, then hands the file to `open`.
     ///
-    /// The public ``openCmuxConfigInEditor()`` entry point passes
+    /// The public ``openBreeConfigInEditor()`` entry point passes
     /// `PreferredEditorService.open` so the config file honors
     /// `preferredEditorCommand` (with an OS-default fallback). Tests inject a
     /// capturing closure to assert the config file is routed through `open`.
-    static func openCmuxConfigInEditor(home: URL, open: (URL) -> Void) {
-        open(materializedCmuxConfigURL(home: home))
+    static func openBreeConfigInEditor(home: URL, open: (URL) -> Void) {
+        open(materializedBreeConfigURL(home: home))
     }
 
-    /// Resolves `~/.config/cmux/cmux.json` under `home`, materializing an empty
+    /// Resolves `~/.config/bree/bree.json` under `home`, materializing an empty
     /// config first if none exists. Shared by the external-editor path above and
     /// in-app openers (e.g. the plus-button menu's "Customize Workspace Layouts…").
-    static func materializedCmuxConfigURL(
+    static func materializedBreeConfigURL(
         home: URL = FileManager.default.homeDirectoryForCurrentUser
     ) -> URL {
-        let configURL = CmuxIdentity.currentGlobalConfigFile(homeDirectory: home)
+        let configURL = BreeIdentity.currentGlobalConfigFile(homeDirectory: home)
         if !FileManager.default.fileExists(atPath: configURL.path) {
             try? FileManager.default.createDirectory(
                 at: configURL.deletingLastPathComponent(),

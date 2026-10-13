@@ -1,6 +1,6 @@
 import AppKit
-import CmuxSettings
-import CmuxTerminal
+import BreeSettings
+import BreeTerminal
 import WebKit
 
 struct ShortcutEventFocusContext {
@@ -84,8 +84,8 @@ struct ShortcutEventAlternateScreenCache {
 }
 
 extension Notification.Name {
-    static let debugBrowserReloadShortcutInvoked = Notification.Name("cmux.debugBrowserReloadShortcutInvoked")
-    static let debugBrowserHardReloadShortcutInvoked = Notification.Name("cmux.debugBrowserHardReloadShortcutInvoked")
+    static let debugBrowserReloadShortcutInvoked = Notification.Name("bree.debugBrowserReloadShortcutInvoked")
+    static let debugBrowserHardReloadShortcutInvoked = Notification.Name("bree.debugBrowserHardReloadShortcutInvoked")
 }
 
 extension AppDelegate {
@@ -257,7 +257,7 @@ extension AppDelegate {
     private func shortcutFileExplorerFocusView(for responder: NSResponder) -> NSView? {
         if let textView = responder as? NSTextView,
            textView.isFieldEditor,
-           let ownerView = cmuxFieldEditorOwnerView(textView) {
+           let ownerView = breeFieldEditorOwnerView(textView) {
             return fileExplorerShortcutFocusRoot(containing: ownerView)
         }
 
@@ -384,7 +384,7 @@ extension AppDelegate {
         let window = shortcutResolvedEventWindow(event) ?? NSApp.keyWindow ?? NSApp.mainWindow
         // Hosted inputs (TextBox, find field) count as the terminal they sit on,
         // so a focused TextBox over vim still reads as the alternate screen.
-        let terminalView = window?.firstResponder.cmuxTerminalFocusOwningGhosttyView()
+        let terminalView = window?.firstResponder.breeTerminalFocusOwningGhosttyView()
         let isActive = terminalView?.terminalSurface?.isAlternateScreenActive() ?? false
         shortcutEventAlternateScreenCache = ShortcutEventAlternateScreenCache(event: event, isActive: isActive)
         return isActive
@@ -396,7 +396,7 @@ extension AppDelegate {
         }
 
         let responder = shortcutWindow.firstResponder
-        if responder.cmuxStrictOwningGhosttyView() != nil {
+        if responder.breeStrictOwningGhosttyView() != nil {
             return nil
         }
 
@@ -433,7 +433,7 @@ extension AppDelegate {
             return nil
         }
         let responder = window.firstResponder
-        if responder.cmuxStrictOwningGhosttyView() != nil {
+        if responder.breeStrictOwningGhosttyView() != nil {
             return nil
         }
         if let addressBarPanelId = focusedBrowserAddressBarPanelId(),
@@ -456,7 +456,7 @@ extension AppDelegate {
            let panel = shortcutBrowserPanel(webView: webView) {
             return panel
         }
-        if cmuxIsLikelyWebInspectorResponder(responder) {
+        if breeIsLikelyWebInspectorResponder(responder) {
             return shortcutWebInspectorFocusedBrowserPanel(in: window)
         }
         return shortcutFocusedBrowserPanel(in: window)
@@ -496,7 +496,7 @@ extension AppDelegate {
 
     private func shortcutWebInspectorFocusedBrowserPanel(in window: NSWindow?) -> BrowserPanel? {
         let responder = window?.firstResponder ?? NSApp.keyWindow?.firstResponder ?? NSApp.mainWindow?.firstResponder
-        guard cmuxIsLikelyWebInspectorResponder(responder) else { return nil }
+        guard breeIsLikelyWebInspectorResponder(responder) else { return nil }
 
         if let window,
            let context = mainWindowContexts[ObjectIdentifier(window)] ??
@@ -535,7 +535,7 @@ extension AppDelegate {
 
         if let textView = responder as? NSTextView,
            textView.isFieldEditor,
-           let ownerView = cmuxFieldEditorOwnerView(textView),
+           let ownerView = breeFieldEditorOwnerView(textView),
            let webView = shortcutOwningWebView(for: ownerView) {
             return webView
         }

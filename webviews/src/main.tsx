@@ -1,6 +1,6 @@
 const rootElement = document.getElementById("root");
 if (!rootElement) {
-  throw new Error("Missing cmux webview root");
+  throw new Error("Missing bree webview root");
 }
 
 // The diff viewer is the only surface; load it as its own chunk so the

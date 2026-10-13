@@ -3,12 +3,12 @@ import Foundation
 
 extension Notification.Name {
     /// Posted by SystemAppearanceObserver when NSApp.effectiveAppearance changes (#6385).
-    static let systemAppearanceDidChange = Notification.Name("cmux.systemAppearanceDidChange")
+    static let systemAppearanceDidChange = Notification.Name("bree.systemAppearanceDidChange")
 }
 
 extension NSAppearance {
     /// True when this appearance resolves to a dark variant.
-    var cmuxPrefersDark: Bool { bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
+    var breePrefersDark: Bool { bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
 }
 
 /// Keeps the app chrome in sync with live macOS appearance changes while the
@@ -78,7 +78,7 @@ final class SystemAppearanceObserver {
         guard prefersDark != lastResolvedPrefersDark else { return }
         lastResolvedPrefersDark = prefersDark
 #if DEBUG
-        cmuxDebugLog("systemAppearance.observer.change prefersDark=\(prefersDark)")
+        breeDebugLog("systemAppearance.observer.change prefersDark=\(prefersDark)")
 #endif
         environment.synchronizeTerminalTheme()
         environment.postSystemAppearanceDidChange()

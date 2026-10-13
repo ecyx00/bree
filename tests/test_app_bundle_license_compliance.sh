@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 VERIFIER="$ROOT_DIR/scripts/verify-app-bundle-licenses.sh"
 TMP_DIR="$(mktemp -d)"
-APP_PATH="$TMP_DIR/cmux.app"
+APP_PATH="$TMP_DIR/bree.app"
 RESOURCES_PATH="$APP_PATH/Contents/Resources"
 
 cleanup() {
@@ -20,7 +20,7 @@ cp "$ROOT_DIR/THIRD_PARTY_LICENSES.md" "$RESOURCES_PATH/THIRD_PARTY_LICENSES.md"
 
 rm "$RESOURCES_PATH/LICENSE"
 if "$VERIFIER" "$APP_PATH" >/dev/null 2>&1; then
-  echo "FAIL: verifier accepted an app without the cmux project license" >&2
+  echo "FAIL: verifier accepted an app without the bree project license" >&2
   exit 1
 fi
 

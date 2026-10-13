@@ -159,7 +159,7 @@ class PlanTests(unittest.TestCase):
             uploads = MODULE.plan([clip], None, gif=False)
             self.assertEqual([(u.name, u.kind) for u in uploads], [("clip.mp4", "video")])
 
-    def test_a_gif_from_cmux_record_is_uploaded_as_it_is(self):
+    def test_a_gif_from_bree_record_is_uploaded_as_it_is(self):
         with tempfile.TemporaryDirectory() as scratch:
             uploads = MODULE.plan([written(scratch, "already.gif")], None, gif=True)
             self.assertEqual([(u.name, u.kind, u.source_name) for u in uploads],
@@ -212,23 +212,23 @@ class MarkdownTests(unittest.TestCase):
             clip = written(scratch, "sidebar-drag.mp4")
             body = MODULE.markdown(MODULE.plan([clip], None, gif=True), 15277)
             self.assertIn(
-                "![sidebar drag](https://raw.githubusercontent.com/manaflow-ai/cmux/pr-media/15277/sidebar-drag.gif)",
+                "![sidebar drag](https://raw.githubusercontent.com/ecyx00/bree/pr-media/15277/sidebar-drag.gif)",
                 body,
             )
             self.assertIn(
                 "Full quality: [sidebar-drag.mp4]"
-                "(https://raw.githubusercontent.com/manaflow-ai/cmux/pr-media/15277/sidebar-drag.mp4)",
+                "(https://raw.githubusercontent.com/ecyx00/bree/pr-media/15277/sidebar-drag.mp4)",
                 body,
             )
             # GitHub does not render an mp4 from a raw URL, so it is never embedded.
-            self.assertNotIn("![sidebar drag](https://raw.githubusercontent.com/manaflow-ai/cmux"
+            self.assertNotIn("![sidebar drag](https://raw.githubusercontent.com/ecyx00/bree"
                              "/pr-media/15277/sidebar-drag.mp4)", body)
 
     def test_an_mp4_kept_without_a_gif_is_still_linked(self):
         with tempfile.TemporaryDirectory() as scratch:
             clip = written(scratch, "clip.mov")
             body = MODULE.markdown(MODULE.plan([clip], None, gif=False), 9)
-            self.assertIn("[clip (clip.mov)](https://raw.githubusercontent.com/manaflow-ai/cmux/pr-media/9/clip.mov)",
+            self.assertIn("[clip (clip.mov)](https://raw.githubusercontent.com/ecyx00/bree/pr-media/9/clip.mov)",
                           body)
 
     def test_a_label_names_a_single_file(self):

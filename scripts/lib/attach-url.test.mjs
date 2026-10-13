@@ -13,7 +13,7 @@ import {
   schemeForIOSBundleIdentifier,
 } from "./attach-url.mjs";
 
-const DEV_EXACT_SCHEME = schemeForIOSBundleIdentifier("dev.cmux.ios.feature-a");
+const DEV_EXACT_SCHEME = schemeForIOSBundleIdentifier("dev.bree.ios.feature-a");
 
 function samplePayload() {
   return {
@@ -33,7 +33,7 @@ function samplePayload() {
 function samplePayloadWithCanonicalURL() {
   return {
     ...samplePayload(),
-    attach_url: "cmux-ios://attach?v=2&r=100.1.2.3:8080",
+    attach_url: "bree-ios://attach?v=2&r=100.1.2.3:8080",
   };
 }
 
@@ -49,7 +49,7 @@ test("builds an exact-bundle attach URL with the version and ticket", () => {
   });
   assert.match(
     attachURL,
-    /^cmux-ios-dev\.cmux\.ios\.feature-a:\/\/attach\?v=1&payload=/,
+    /^bree-ios-dev\.bree\.ios\.feature-a:\/\/attach\?v=1&payload=/,
   );
   const decoded = decodePayload(attachURL);
   assert.equal(decoded.version, 1);
@@ -66,8 +66,8 @@ test("refuses historical shared schemes for newly encoded URLs", () => {
     () => buildAttachURL(samplePayload(), { scheme: DEV_URL_SCHEME }),
     /exact-bundle/,
   );
-  assert.equal(DEV_URL_SCHEME, "cmux-ios-dev");
-  assert.equal(RELEASE_URL_SCHEME, "cmux-ios");
+  assert.equal(DEV_URL_SCHEME, "bree-ios-dev");
+  assert.equal(RELEASE_URL_SCHEME, "bree-ios");
 });
 
 test("round-trips the encoded ticket back to the original object", () => {
@@ -122,7 +122,7 @@ test("defaults version to 1 when the ticket omits it", () => {
 
 test("prefers the canonical attach_url returned by the Mac RPC", () => {
   const { attachURL, routes, payload } = buildAttachURL(samplePayloadWithCanonicalURL());
-  assert.equal(attachURL, "cmux-ios://attach?v=2&r=100.1.2.3:8080");
+  assert.equal(attachURL, "bree-ios://attach?v=2&r=100.1.2.3:8080");
   assert.equal(payload.attach_url, attachURL);
   assert.equal(routes.length, 2);
 });
@@ -130,17 +130,17 @@ test("prefers the canonical attach_url returned by the Mac RPC", () => {
 test("recognizes exact-bundle canonical attach URLs", () => {
   assert.equal(
     isCanonicalAttachURL(
-      "cmux-ios-dev.cmux.app.internal://attach?v=2&r=100.1.2.3:8080",
+      "bree-ios-dev.bree.app.internal://attach?v=2&r=100.1.2.3:8080",
     ),
     true,
   );
   assert.equal(
     isCanonicalAttachURL(
-      "cmux-ios-dev.cmux.ios.feature-a://attach?v=2&r=100.1.2.3:8080",
+      "bree-ios-dev.bree.ios.feature-a://attach?v=2&r=100.1.2.3:8080",
     ),
     true,
   );
-  assert.equal(isCanonicalAttachURL("cmux-ios-*://attach?v=2"), false);
+  assert.equal(isCanonicalAttachURL("bree-ios-*://attach?v=2"), false);
 });
 
 test("does not reuse canonical attach_url after local route filtering", () => {
@@ -150,7 +150,7 @@ test("does not reuse canonical attach_url after local route filtering", () => {
   });
   assert.match(
     attachURL,
-    /^cmux-ios-dev\.cmux\.ios\.feature-a:\/\/attach\?v=1&payload=/,
+    /^bree-ios-dev\.bree\.ios\.feature-a:\/\/attach\?v=1&payload=/,
   );
   assert.equal(routes.length, 1);
   const decoded = decodePayload(attachURL);

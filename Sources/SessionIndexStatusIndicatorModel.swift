@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// Immutable presentation state for the status circle shown beside a Vault
@@ -55,7 +55,7 @@ struct SessionIndexStatusIndicatorModel: Equatable, Sendable {
     var isFilled: Bool { isActive }
 
     /// The Vault circle represents a session that is active and focusable in
-    /// this cmux window. The parent supplies this flag only for panes whose
+    /// this bree window. The parent supplies this flag only for panes whose
     /// shell reports a foreground command, so a pane that has returned to its
     /// shell cannot remain green. A process running in another terminal (or
     /// one that cannot be mapped to a pane) remains gray here.

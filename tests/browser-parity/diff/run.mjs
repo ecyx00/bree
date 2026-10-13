@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Differential harness: one task, three dialects (cmux, reference A, reference
+// Differential harness: one task, three dialects (bree, reference A, reference
 // B), observable outcomes compared into a verdict per reference.
 // See tests/browser-parity/README.md, "Differential cases".
 //
-//   node tests/browser-parity/diff/run.mjs run --backend cmux-dev|cmux|reference-a|reference-b [--only TEXT]
-//   node tests/browser-parity/diff/run.mjs check --backend cmux-dev|cmux [--only TEXT]
+//   node tests/browser-parity/diff/run.mjs run --backend bree-dev|bree|reference-a|reference-b [--only TEXT]
+//   node tests/browser-parity/diff/run.mjs check --backend bree-dev|bree [--only TEXT]
 //   node tests/browser-parity/diff/run.mjs verdicts [--only TEXT] [-v]
 //   node tests/browser-parity/diff/run.mjs report
 //
@@ -80,15 +80,15 @@ console.log(${JSON.stringify(MARK)} + JSON.stringify(__r));`;
 // ---------------------------------------------------------------------------
 // Backends
 
-function cmuxCli() {
-  return process.env.PARITY_CMUX_CLI ?? "cmux";
+function breeCli() {
+  return process.env.PARITY_BREE_CLI ?? "bree";
 }
 
-async function cmuxRepl(code, { session } = {}) {
+async function breeRepl(code, { session } = {}) {
   const argv = ["browser", "repl"];
   if (session) argv.push("--session", session);
   argv.push("--eval", "-");
-  const r = await exec(cmuxCli(), argv, { input: code });
+  const r = await exec(breeCli(), argv, { input: code });
   return parseMarked(r.out) ?? { uncaught: `no result (exit ${r.code}): ${(r.err || r.out).trim().split("\n").slice(-3).join(" ").slice(0, 400)}` };
 }
 
@@ -144,22 +144,22 @@ async function devBackend() {
 
 async function runReplBackend(backend, cases, origins, server, onResult) {
   const out = {};
-  const dev = backend === "cmux-dev" ? await devBackend() : null;
+  const dev = backend === "bree-dev" ? await devBackend() : null;
   const suffix = Math.random().toString(36).slice(2, 7);
   const sessions = new Set();
   const repl = async (code, opts = {}) => {
     if (opts.session) sessions.add(opts.session);
-    return dev ? dev.repl(code, opts) : cmuxRepl(code, opts);
+    return dev ? dev.repl(code, opts) : breeRepl(code, opts);
   };
   const ctx = {
     origins,
     server,
     backend,
-    dialect: "cmux",
-    wrap: (c) => wrap(c, "cmux", origins),
+    dialect: "bree",
+    wrap: (c) => wrap(c, "bree", origins),
     repl,
     session: (name) => `diff-${name}-${suffix}`,
-    cli: (argv, input) => exec(cmuxCli(), argv, { input }),
+    cli: (argv, input) => exec(breeCli(), argv, { input }),
     dev,
   };
   try {
@@ -168,7 +168,7 @@ async function runReplBackend(backend, cases, origins, server, onResult) {
       let r;
       try {
         if (c.custom) {
-          const fn = c.custom[backend] ?? c.custom.cmux;
+          const fn = c.custom[backend] ?? c.custom.bree;
           let timer;
           r = fn
             ? await Promise.race([
@@ -197,7 +197,7 @@ async function runReplBackend(backend, cases, origins, server, onResult) {
   } finally {
     for (const name of sessions) {
       if (dev) await dev.reset(name);
-      else await exec(cmuxCli(), ["browser", "repl", "reset", name]);
+      else await exec(breeCli(), ["browser", "repl", "reset", name]);
     }
     if (dev) await dev.close();
   }
@@ -247,9 +247,9 @@ function log(backend, c, r) {
 function meta(backend) {
   const m = { backend, recordedAt: new Date().toISOString() };
   if (backend === "reference-a") m.version = "reference A CLI (its --version at record time)";
-  if (backend === "cmux") {
-    m.tag = (cmuxCli().match(/cmux DEV ([\w.-]+)\.app/) || [])[1] ?? null;
-    m.sha = process.env.PARITY_CMUX_SHA ?? null;
+  if (backend === "bree") {
+    m.tag = (breeCli().match(/Bree Dev ([\w.-]+)\.app/) || [])[1] ?? null;
+    m.sha = process.env.PARITY_BREE_SHA ?? null;
   }
   return m;
 }
@@ -257,12 +257,12 @@ function meta(backend) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const cases = (await loadCases()).filter((c) => (!args.only || c.id.includes(args.only) || c.file.includes(args.only)) && (!args.ids || args.ids.has(c.id)));
-  // check: run cmux (dev driver or app) now and judge it against the
+  // check: run bree (dev driver or app) now and judge it against the
   // recorded reference evidence, without writing results.
   if (args.mode === "check") {
     const server = await startDiffServer();
     // A case that needs a person acting during the run runs only when asked for.
-    const selected = cases.filter((c) => !(c.appOnly && args.backend === "cmux-dev") && !(c.requiresPerson && !process.env.PARITY_USER_CLICK_MARKER));
+    const selected = cases.filter((c) => !(c.appOnly && args.backend === "bree-dev") && !(c.requiresPerson && !process.env.PARITY_USER_CLICK_MARKER));
     let out;
     try {
       out = await runReplBackend(args.backend, selected, server.origins, server);
@@ -270,29 +270,29 @@ async function main() {
       await server.close();
     }
     const fresh = { meta: {}, cases: Object.fromEntries(Object.entries(out).map(([id, r]) => [id, normalizeStrings(r, server.origins)])) };
-    const results = { cmux: args.backend === "cmux" ? fresh : { cases: {} }, "cmux-dev": args.backend === "cmux-dev" ? fresh : { cases: {} }, "reference-a": readResults("reference-a"), "reference-b": readResults("reference-b") };
+    const results = { bree: args.backend === "bree" ? fresh : { cases: {} }, "bree-dev": args.backend === "bree-dev" ? fresh : { cases: {} }, "reference-a": readResults("reference-a"), "reference-b": readResults("reference-b") };
     let bad = 0;
     for (const row of allVerdicts(selected, results)) {
-      if (row.cmuxProblems.length) {
+      if (row.breeProblems.length) {
         bad++;
-        console.log(`FAIL ${row.id}: ${row.cmuxProblems.join("; ")}`);
+        console.log(`FAIL ${row.id}: ${row.breeProblems.join("; ")}`);
       }
       for (const ref of REFERENCES) {
         const v = row.refs[ref];
-        if (v.verdict === "cmux-worse") {
+        if (v.verdict === "bree-worse") {
           bad++;
           console.log(`WORSE ${ref} ${row.id}: ${v.reason}`);
         }
       }
     }
-    console.log(`${selected.length} cases, ${bad} failures or cmux-worse verdicts`);
+    console.log(`${selected.length} cases, ${bad} failures or bree-worse verdicts`);
     process.exitCode = bad ? 1 : 0;
     return;
   }
   if (args.mode === "run") {
     const server = await startDiffServer();
     // A case that needs a person acting during the run runs only when asked for.
-    const selected = cases.filter((c) => !(c.appOnly && args.backend === "cmux-dev") && !(c.requiresPerson && !process.env.PARITY_USER_CLICK_MARKER));
+    const selected = cases.filter((c) => !(c.appOnly && args.backend === "bree-dev") && !(c.requiresPerson && !process.env.PARITY_USER_CLICK_MARKER));
     let out;
     try {
       if (args.backend === "reference-a") out = await runReferenceA(selected, server.origins, server);
@@ -319,22 +319,22 @@ async function main() {
     return;
   }
   if (args.mode === "verdicts") {
-    const results = Object.fromEntries(["cmux", "cmux-dev", ...REFERENCES].map((b) => [b, readResults(b)]));
+    const results = Object.fromEntries(["bree", "bree-dev", ...REFERENCES].map((b) => [b, readResults(b)]));
     const rows = allVerdicts(cases, results);
     const totals = {};
     for (const row of rows) {
-      if (row.cmuxProblems.length) {
-        totals["cmux:fails-expect"] = (totals["cmux:fails-expect"] ?? 0) + 1;
-        console.log(`FAIL ${row.id} [${row.cmuxBackend}]: ${row.cmuxProblems.join("; ")}`);
+      if (row.breeProblems.length) {
+        totals["bree:fails-expect"] = (totals["bree:fails-expect"] ?? 0) + 1;
+        console.log(`FAIL ${row.id} [${row.breeBackend}]: ${row.breeProblems.join("; ")}`);
       }
       for (const ref of REFERENCES) {
         const v = row.refs[ref];
         totals[`${ref}:${v.verdict}`] = (totals[`${ref}:${v.verdict}`] ?? 0) + 1;
-        if (v.verdict === "cmux-worse" || (args.verbose && v.verdict === "not-run")) console.log(`${v.verdict.toUpperCase()} ${ref} ${row.id} [${row.cmuxBackend}]: ${v.reason}`);
+        if (v.verdict === "bree-worse" || (args.verbose && v.verdict === "not-run")) console.log(`${v.verdict.toUpperCase()} ${ref} ${row.id} [${row.breeBackend}]: ${v.reason}`);
       }
     }
     console.log(JSON.stringify(totals, null, 1));
-    process.exitCode = Object.keys(totals).some((k) => k.endsWith(":cmux-worse") || k === "cmux:fails-expect") ? 1 : 0;
+    process.exitCode = Object.keys(totals).some((k) => k.endsWith(":bree-worse") || k === "bree:fails-expect") ? 1 : 0;
     return;
   }
   // Writes each capability's `cases` (every case that lists the member),
@@ -367,7 +367,7 @@ async function main() {
     writeReport(cases);
     return;
   }
-  throw new Error("usage: run.mjs run --backend cmux-dev|cmux|reference-a|reference-b | verdicts | report");
+  throw new Error("usage: run.mjs run --backend bree-dev|bree|reference-a|reference-b | verdicts | report");
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

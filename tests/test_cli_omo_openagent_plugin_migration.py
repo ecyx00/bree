@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: cmux omo must not re-add the legacy oh-my-opencode plugin
+Regression test: bree omo must not re-add the legacy oh-my-opencode plugin
 when the user's OpenCode config already contains the renamed oh-my-openagent
 package, including mixed current/legacy configs left by prior migrations.
 """
@@ -12,7 +12,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from claude_teams_test_utils import cli_dot_directory_name, resolve_cmux_cli
+from claude_teams_test_utils import cli_dot_directory_name, resolve_bree_cli
 from isolated_home import home_env, isolated_home
 
 
@@ -38,12 +38,12 @@ def plugin_package_name(entry: object) -> str:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    with isolated_home("cmux-omo-openagent-") as iso:
+    with isolated_home("bree-omo-openagent-") as iso:
         root = iso.root
         fake_bin = root / "bin"
         fake_bin.mkdir()
@@ -63,7 +63,7 @@ def main() -> int:
             }),
             encoding="utf-8",
         )
-        # No tmux settings, so cmux omo rewrites this config into the shadow dir.
+        # No tmux settings, so bree omo rewrites this config into the shadow dir.
         (user_config_dir / "oh-my-openagent.json").write_text(
             json.dumps({"prompt_append": "{file:./AGENTS.md}"}),
             encoding="utf-8",
@@ -88,8 +88,8 @@ mkdir -p "node_modules/$package"
 
         env = home_env(root, os.environ.copy())
         env["PATH"] = f"{fake_bin}:{env.get('PATH', '')}"
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_SOCKET_PATH"] = str(root / "missing.sock")
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_SOCKET_PATH"] = str(root / "missing.sock")
 
         # Plugin migration runs for every OMO invocation. Use a documented
         # non-session command so this no-socket regression needs no live surface.
@@ -134,7 +134,7 @@ mkdir -p "node_modules/$package"
 
         package_names = [plugin_package_name(entry) for entry in plugins]
         if "oh-my-opencode" in package_names:
-            print(f"FAIL: cmux omo re-added legacy plugin name: {plugins!r}")
+            print(f"FAIL: bree omo re-added legacy plugin name: {plugins!r}")
             return 1
         specs = [plugin_spec(entry) for entry in plugins]
         openagent_specs = [
@@ -143,7 +143,7 @@ mkdir -p "node_modules/$package"
         ]
         if openagent_specs != ["oh-my-openagent@3.17.5"]:
             print(
-                "FAIL: cmux omo did not prefer the existing renamed plugin entry; "
+                "FAIL: bree omo did not prefer the existing renamed plugin entry; "
                 f"got {plugins!r}"
             )
             return 1
@@ -185,14 +185,14 @@ mkdir -p "node_modules/$package"
             return 1
 
         if run.returncode != 0:
-            print("FAIL: cmux omo reached fake opencode but returned non-zero")
+            print("FAIL: bree omo reached fake opencode but returned non-zero")
             print(f"exit={run.returncode}")
             print(f"opencode_log={opencode_log_content.strip()!r}")
             print(f"stdout={run.stdout.strip()}")
             print(f"stderr={run.stderr.strip()}")
             return 1
 
-    print("PASS: cmux omo preserves oh-my-openagent without legacy plugin loop")
+    print("PASS: bree omo preserves oh-my-openagent without legacy plugin loop")
     return 0
 
 

@@ -1,4 +1,4 @@
-import CmuxCommandPalette
+import BreeCommandPalette
 import Foundation
 
 struct TextBoxMentionCandidateIndex: Sendable {

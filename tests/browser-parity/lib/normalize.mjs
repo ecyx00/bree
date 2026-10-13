@@ -35,8 +35,8 @@ function normalizeString(s, origins) {
   out = out.replace(/\b[0-9A-Fa-f]{32}\b/g, "<TARGET>");
   for (const t of TMP) out = out.split(t + "/").join("<TMP>/");
   // Per-run directory names under the temporary directory.
-  out = out.replace(/<TMP>\/(cmux-repl-|parity-oracle-|parity-)[A-Za-z0-9]+/g, "<TMP>/$1XXXX");
-  out = out.replace(/<TMP>\/cmux-browser-repl\/[^/\s\]]+/g, "<TMP>/cmux-browser-repl/<SESSION>");
+  out = out.replace(/<TMP>\/(bree-repl-|parity-oracle-|parity-)[A-Za-z0-9]+/g, "<TMP>/$1XXXX");
+  out = out.replace(/<TMP>\/bree-browser-repl\/[^/\s\]]+/g, "<TMP>/bree-browser-repl/<SESSION>");
   return out;
 }
 

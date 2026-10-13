@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 from unittest.mock import patch
 
-from claude_teams_test_utils import cli_dot_directory_name, resolve_cmux_cli
+from claude_teams_test_utils import cli_dot_directory_name, resolve_bree_cli
 from isolated_home import isolated_home
 
 
@@ -47,13 +47,13 @@ CODEX_HOOK_EVENTS_WITH_MATCHERS = {
     "SubagentStop",
 }
 
-CMUX_CODEX_HOOK_SUBCOMMANDS = (
+BREE_CODEX_HOOK_SUBCOMMANDS = (
     "session-start",
     "prompt-submit",
     "stop",
 )
 
-CMUX_CODEX_FEED_EVENTS = (
+BREE_CODEX_FEED_EVENTS = (
     "PreToolUse",
     "PermissionRequest",
     "PostToolUse",
@@ -75,7 +75,7 @@ def _toml_line_count(content: str, line: str) -> int:
     return sum(1 for raw in content.splitlines() if raw.strip() == line)
 
 
-class FakeCmuxSocket:
+class FakeBreeSocket:
     def __init__(
         self,
         path: Path,
@@ -117,7 +117,7 @@ class FakeCmuxSocket:
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
 
-    def __enter__(self) -> "FakeCmuxSocket":
+    def __enter__(self) -> "FakeBreeSocket":
         self.path.unlink(missing_ok=True)
         self._thread.start()
         if not self._ready.wait(timeout=3):
@@ -239,7 +239,7 @@ class FakeCmuxSocket:
                     ):
                         # The app answers a pid probe with the surface that owns
                         # the process, and refuses (not_found) otherwise; the
-                        # CLI then rejects the ambient CMUX_SURFACE_ID claim. The
+                        # CLI then rejects the ambient BREE_SURFACE_ID claim. The
                         # fake hook process lives in the fake surface.
                         workspace_id, surface_id = self.surface_delivery_target or (
                             FAKE_WORKSPACE_ID,
@@ -327,7 +327,7 @@ def assert_monitor_remains_present(session_id: str, *, duration: float) -> None:
 
 
 def test_codex_stop_reaps_transcript_monitor(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-monitor.sock"
+    socket_path = root / "bree-monitor.sock"
     state_dir = root / "hook-state"
     transcript_path = root / "codex-session.jsonl"
     state_dir.mkdir()
@@ -336,12 +336,12 @@ def test_codex_stop_reaps_transcript_monitor(cli_path: str, root: Path) -> None:
     session_id = f"codex-monitor-reap-session-{os.getpid()}"
     turn_id = f"codex-monitor-reap-turn-{os.getpid()}"
     env = os.environ.copy()
-    env["CMUX_SOCKET_PATH"] = str(socket_path)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
-    env["CMUX_AGENT_HOOK_STATE_DIR"] = str(state_dir)
+    env["BREE_SOCKET_PATH"] = str(socket_path)
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_AGENT_HOOK_STATE_DIR"] = str(state_dir)
 
-    with FakeCmuxSocket(socket_path, None):
+    with FakeBreeSocket(socket_path, None):
         prompt = {
             "session_id": session_id,
             "turn_id": turn_id,
@@ -392,7 +392,7 @@ def test_codex_stop_reaps_transcript_monitor(cli_path: str, root: Path) -> None:
 
 
 def test_codex_stop_without_turn_keeps_session_wide_monitor(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-monitor-session-wide.sock"
+    socket_path = root / "bree-monitor-session-wide.sock"
     state_dir = root / "hook-state-session-wide"
     transcript_path = root / "codex-session-wide.jsonl"
     state_dir.mkdir()
@@ -400,12 +400,12 @@ def test_codex_stop_without_turn_keeps_session_wide_monitor(cli_path: str, root:
 
     session_id = f"codex-monitor-session-wide-session-{os.getpid()}"
     env = os.environ.copy()
-    env["CMUX_SOCKET_PATH"] = str(socket_path)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
-    env["CMUX_AGENT_HOOK_STATE_DIR"] = str(state_dir)
+    env["BREE_SOCKET_PATH"] = str(socket_path)
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_AGENT_HOOK_STATE_DIR"] = str(state_dir)
 
-    with FakeCmuxSocket(socket_path, None):
+    with FakeBreeSocket(socket_path, None):
         try:
             prompt = {
                 "session_id": session_id,
@@ -470,7 +470,7 @@ def test_codex_stop_without_turn_keeps_session_wide_monitor(cli_path: str, root:
 
 
 def test_codex_prompt_submit_starts_monitor_when_lease_write_fails(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-monitor-lease-failure.sock"
+    socket_path = root / "bree-monitor-lease-failure.sock"
     transcript_path = root / "codex-session-lease-failure.jsonl"
     state_dir = root / "hook-state-lease-failure"
     state_dir.mkdir()
@@ -480,12 +480,12 @@ def test_codex_prompt_submit_starts_monitor_when_lease_write_fails(cli_path: str
     session_id = f"codex-monitor-lease-failure-session-{os.getpid()}"
     turn_id = f"codex-monitor-lease-failure-turn-{os.getpid()}"
     env = os.environ.copy()
-    env["CMUX_SOCKET_PATH"] = str(socket_path)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
-    env["CMUX_AGENT_HOOK_STATE_DIR"] = str(state_dir)
+    env["BREE_SOCKET_PATH"] = str(socket_path)
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_AGENT_HOOK_STATE_DIR"] = str(state_dir)
 
-    with FakeCmuxSocket(socket_path, None):
+    with FakeBreeSocket(socket_path, None):
         try:
             prompt = {
                 "session_id": session_id,
@@ -514,7 +514,7 @@ def test_codex_prompt_submit_starts_monitor_when_lease_write_fails(cli_path: str
 
 
 def test_codex_monitor_exits_when_workspace_has_no_surfaces(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-monitor-empty-surfaces.sock"
+    socket_path = root / "bree-monitor-empty-surfaces.sock"
     state_dir = root / "hook-state-empty-surfaces"
     transcript_path = root / "codex-session-empty-surfaces.jsonl"
     state_dir.mkdir()
@@ -522,11 +522,11 @@ def test_codex_monitor_exits_when_workspace_has_no_surfaces(cli_path: str, root:
 
     session_id = f"codex-monitor-empty-surfaces-session-{os.getpid()}"
     env = os.environ.copy()
-    env["CMUX_SOCKET_PATH"] = str(socket_path)
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
-    env["CMUX_AGENT_HOOK_STATE_DIR"] = str(state_dir)
+    env["BREE_SOCKET_PATH"] = str(socket_path)
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_AGENT_HOOK_STATE_DIR"] = str(state_dir)
 
-    with FakeCmuxSocket(socket_path, None, surfaces=[]) as fake:
+    with FakeBreeSocket(socket_path, None, surfaces=[]) as fake:
         try:
             result = subprocess.run(
                 [
@@ -561,7 +561,7 @@ def test_codex_monitor_exits_when_workspace_has_no_surfaces(cli_path: str, root:
 
 
 def test_codex_monitor_survives_transient_owner_rpc_timeout(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-monitor-timeout.sock"
+    socket_path = root / "bree-monitor-timeout.sock"
     transcript_path = root / "codex-session-timeout.jsonl"
     turn_id = f"codex-monitor-timeout-turn-{os.getpid()}"
     transcript_lines = [
@@ -583,10 +583,10 @@ def test_codex_monitor_survives_transient_owner_rpc_timeout(cli_path: str, root:
 
     session_id = f"codex-monitor-timeout-session-{os.getpid()}"
     env = os.environ.copy()
-    env["CMUX_SOCKET_PATH"] = str(socket_path)
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SOCKET_PATH"] = str(socket_path)
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
 
-    with FakeCmuxSocket(socket_path, None, drop_first_surface_list=True) as fake:
+    with FakeBreeSocket(socket_path, None, drop_first_surface_list=True) as fake:
         def complete_after_dropped_owner_rpc() -> None:
             deadline = time.monotonic() + 4
             while not fake._dropped_surface_list and time.monotonic() < deadline:
@@ -631,7 +631,7 @@ def test_codex_monitor_survives_transient_owner_rpc_timeout(cli_path: str, root:
 
 
 def test_codex_monitor_survives_transient_owner_absence_while_pending(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-monitor-owner-grace.sock"
+    socket_path = root / "bree-monitor-owner-grace.sock"
     transcript_path = root / "codex-session-owner-grace.jsonl"
     turn_id = f"codex-monitor-owner-grace-turn-{os.getpid()}"
     transcript_path.write_text(
@@ -641,15 +641,15 @@ def test_codex_monitor_survives_transient_owner_absence_while_pending(cli_path: 
     session_id = f"codex-monitor-owner-grace-session-{os.getpid()}"
     moved_workspace_id = "44444444-4444-4444-4444-444444444444"
     env = os.environ.copy()
-    env["CMUX_SOCKET_PATH"] = str(socket_path)
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SOCKET_PATH"] = str(socket_path)
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
 
     def complete_transcript() -> None:
         time.sleep(0.3)
         with transcript_path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps({"type": "event_msg", "payload": {"type": "turn_complete", "turn_id": turn_id, "last_agent_message": "Done"}}) + "\n")
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         empty_surface_list_count=1,
@@ -676,7 +676,7 @@ def test_codex_monitor_survives_transient_owner_absence_while_pending(cli_path: 
 
 
 def test_codex_monitor_rechecks_owner_during_grace(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-monitor-owner-grace-recheck.sock"
+    socket_path = root / "bree-monitor-owner-grace-recheck.sock"
     transcript_path = root / "codex-session-owner-grace-recheck.jsonl"
     turn_id = f"codex-monitor-owner-grace-recheck-turn-{os.getpid()}"
     transcript_path.write_text(
@@ -685,8 +685,8 @@ def test_codex_monitor_rechecks_owner_during_grace(cli_path: str, root: Path) ->
     )
     session_id = f"codex-monitor-owner-grace-recheck-session-{os.getpid()}"
     env = os.environ.copy()
-    env["CMUX_SOCKET_PATH"] = str(socket_path)
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SOCKET_PATH"] = str(socket_path)
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
 
     def complete_transcript() -> None:
         # Complete after the two-second disappearance grace. A monitor that
@@ -695,7 +695,7 @@ def test_codex_monitor_rechecks_owner_during_grace(cli_path: str, root: Path) ->
         with transcript_path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps({"type": "event_msg", "payload": {"type": "turn_complete", "turn_id": turn_id, "last_agent_message": "Done"}}) + "\n")
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         empty_surface_list_count=1,
@@ -719,7 +719,7 @@ def test_codex_monitor_rechecks_owner_during_grace(cli_path: str, root: Path) ->
 
 def test_codex_monitor_rehomes_replayed_stop_after_surface_move(cli_path: str, root: Path) -> None:
     """A terminal transcript must settle the pane that owns the session now."""
-    socket_path = root / "cmux-monitor-moved-replay.sock"
+    socket_path = root / "bree-monitor-moved-replay.sock"
     state_dir = root / "hook-state-moved-replay"
     state_dir.mkdir()
     transcript_path = root / "codex-session-moved-replay.jsonl"
@@ -737,14 +737,14 @@ def test_codex_monitor_rehomes_replayed_stop_after_surface_move(cli_path: str, r
     )
     moved_workspace_id = "44444444-4444-4444-4444-444444444444"
     session_id = f"codex-monitor-moved-replay-session-{os.getpid()}"
-    env = {key: value for key, value in os.environ.items() if not key.startswith("CMUX_")}
-    env["CMUX_SOCKET_PATH"] = str(socket_path)
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_AGENT_HOOK_STATE_DIR"] = str(state_dir)
-    env["CMUX_CODEX_TURN_LEDGER_PATH"] = str(state_dir / "turn-ledger.json")
+    env = {key: value for key, value in os.environ.items() if not key.startswith("BREE_")}
+    env["BREE_SOCKET_PATH"] = str(socket_path)
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_AGENT_HOOK_STATE_DIR"] = str(state_dir)
+    env["BREE_CODEX_TURN_LEDGER_PATH"] = str(state_dir / "turn-ledger.json")
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surfaces_by_workspace={
@@ -805,10 +805,10 @@ def run_feed_hook_optional_frame(
     source: str = "codex",
 ) -> tuple[dict, dict | None]:
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     # Pi and Codex child (subagent) lifecycle events are committed only against a
     # live surface that agent.resolve_delivery_target validates; without one the
     # product intentionally drops the frame and records a diagnostic.
@@ -817,7 +817,7 @@ def run_feed_hook_optional_frame(
         if source == "pi" or payload.get("hook_event_name") in ("SubagentStart", "SubagentStop")
         else None
     )
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         decision,
         surface_delivery_target=surface_delivery_target,
@@ -949,7 +949,7 @@ def codex_hook_script_path(command: str) -> Path | None:
 
 
 def codex_hook_script_tag(path: Path) -> str | None:
-    match = re.fullmatch(r"cmux-codex-hook-([0-9a-f]{16})-persistent-(.+)\.sh", path.name)
+    match = re.fullmatch(r"bree-codex-hook-([0-9a-f]{16})-persistent-(.+)\.sh", path.name)
     return match.group(2) if match else None
 
 
@@ -960,7 +960,7 @@ def codex_hook_script_body(command: str) -> str | None:
         return None
     contents = path.read_text(encoding="utf-8")
     digest = hashlib.sha256(contents.encode()).hexdigest()[:16]
-    if f"cmux-codex-hook-{digest}-" not in path.name:
+    if f"bree-codex-hook-{digest}-" not in path.name:
         return None
     if not contents.startswith("#!/bin/sh\n"):
         return None
@@ -977,7 +977,7 @@ def _persistent_command_tag(command: str) -> str | None:
     marker = CODEX_PERSISTENT_BODY_MARKERS.get(tag or "")
     if marker is None or marker not in body:
         return None
-    if '"$cmux_cli"' not in body or "command -v bree" not in body:
+    if '"$bree_cli"' not in body or "command -v bree" not in body:
         return None
     return tag
 
@@ -1006,7 +1006,7 @@ def _reference_commands() -> dict[str, str]:
     return _REFERENCE_COMMANDS
 
 
-def cmux_codex_hook_command(subcommand: str) -> str:
+def bree_codex_hook_command(subcommand: str) -> str:
     """The persistent script command for a lifecycle hook; its body is checked, not assumed."""
     command = _reference_commands().get(subcommand)
     if command is None:
@@ -1014,7 +1014,7 @@ def cmux_codex_hook_command(subcommand: str) -> str:
     return command
 
 
-def cmux_codex_feed_command(agent_event: str) -> str:
+def bree_codex_feed_command(agent_event: str) -> str:
     """The persistent script command for a feed event; its body is checked, not assumed."""
     command = _reference_commands().get(f"feed-{agent_event}")
     if command is None:
@@ -1022,9 +1022,9 @@ def cmux_codex_feed_command(agent_event: str) -> str:
     return command
 
 
-def is_cmux_codex_hook_command(command: str) -> bool:
+def is_bree_codex_hook_command(command: str) -> bool:
     tag = _persistent_command_tag(command)
-    wanted = set(CMUX_CODEX_HOOK_SUBCOMMANDS) | {f"feed-{event}" for event in CMUX_CODEX_FEED_EVENTS}
+    wanted = set(BREE_CODEX_HOOK_SUBCOMMANDS) | {f"feed-{event}" for event in BREE_CODEX_FEED_EVENTS}
     return tag in wanted
 
 
@@ -1096,7 +1096,7 @@ def codex_hook_trust_state(config_toml: str) -> dict[str, dict[str, str]]:
     return state
 
 
-def expected_cmux_codex_hook_trust(hooks: dict, hooks_path: Path) -> dict[str, str]:
+def expected_bree_codex_hook_trust(hooks: dict, hooks_path: Path) -> dict[str, str]:
     expected: dict[str, str] = {}
     hooks_path = hooks_path.resolve()
     for event_name, groups in hooks.get("hooks", {}).items():
@@ -1107,7 +1107,7 @@ def expected_cmux_codex_hook_trust(hooks: dict, hooks_path: Path) -> dict[str, s
             matcher = group.get("matcher") if event_name in CODEX_HOOK_EVENTS_WITH_MATCHERS else None
             for handler_index, hook in enumerate(group.get("hooks", [])):
                 command = hook.get("command", "")
-                if not is_cmux_codex_hook_command(command):
+                if not is_bree_codex_hook_command(command):
                     continue
                 key = f"{hooks_path}:{event_label}:{group_index}:{handler_index}"
                 expected[key] = codex_command_hook_hash(
@@ -1148,13 +1148,13 @@ def test_install_writes_hook_scripts_under_identity_dot_directory_only(cli_path:
         raise AssertionError(f"install failed exit={result.returncode}\n{result.stdout}\n{result.stderr}")
 
     dot_directory = cli_dot_directory_name(cli_path, env)
-    if dot_directory == ".cmuxterm":
-        raise AssertionError(f"CLI resolved the upstream cmux identity: {cli_path}")
-    scripts = sorted((home / dot_directory / "hooks").glob("cmux-codex-hook-*-persistent-*.sh"))
-    if len(scripts) < len(CMUX_CODEX_HOOK_SUBCOMMANDS) + len(CMUX_CODEX_FEED_EVENTS):
+    if dot_directory == ".bree":
+        raise AssertionError(f"CLI resolved the upstream bree identity: {cli_path}")
+    scripts = sorted((home / dot_directory / "hooks").glob("bree-codex-hook-*-persistent-*.sh"))
+    if len(scripts) < len(BREE_CODEX_HOOK_SUBCOMMANDS) + len(BREE_CODEX_FEED_EVENTS):
         raise AssertionError(f"scripts missing under {home / dot_directory / 'hooks'}: {scripts!r}")
-    if (home / ".cmux").exists():
-        raise AssertionError(f"install wrote into ~/.cmux, which belongs to cmux.app: {list((home / '.cmux').rglob('*'))!r}")
+    if (home / ".bree").exists():
+        raise AssertionError(f"install wrote into ~/.bree, which belongs to bree.app: {list((home / '.bree').rglob('*'))!r}")
     hooks = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
     own_dir = str(home / dot_directory / "hooks")
     for command in codex_hook_commands(hooks):
@@ -1162,15 +1162,15 @@ def test_install_writes_hook_scripts_under_identity_dot_directory_only(cli_path:
             raise AssertionError(f"hook entry does not point at this app's script dir: {command!r}")
 
 
-def test_codex_install_and_uninstall_keep_cmux_app_entries(cli_path: str, root: Path) -> None:
-    """Entries that cmux.app wrote into the shared hooks.json survive Bree install and uninstall."""
+def test_codex_install_and_uninstall_keep_bree_app_entries(cli_path: str, root: Path) -> None:
+    """Entries that bree.app wrote into the shared hooks.json survive Bree install and uninstall."""
     home = root / "home-coexist"
     codex_home = root / "codex-home-coexist"
     home.mkdir()
     codex_home.mkdir()
-    cmux_app_command = str(home / ".cmux" / "hooks" / "cmux-codex-hook-0123456789abcdef-persistent-stop.sh")
-    cmux_app_entry = {"hooks": [{"type": "command", "command": cmux_app_command, "timeout": 5}]}
-    (codex_home / "hooks.json").write_text(json.dumps({"hooks": {"Stop": [cmux_app_entry]}}), encoding="utf-8")
+    bree_app_command = str(home / ".bree" / "hooks" / "bree-codex-hook-0123456789abcdef-persistent-stop.sh")
+    bree_app_entry = {"hooks": [{"type": "command", "command": bree_app_command, "timeout": 5}]}
+    (codex_home / "hooks.json").write_text(json.dumps({"hooks": {"Stop": [bree_app_entry]}}), encoding="utf-8")
     env = os.environ.copy()
     env["HOME"] = str(home)
     env["CODEX_HOME"] = str(codex_home)
@@ -1181,9 +1181,9 @@ def test_codex_install_and_uninstall_keep_cmux_app_entries(cli_path: str, root: 
         if result.returncode != 0:
             raise AssertionError(f"{action} failed exit={result.returncode}\n{result.stdout}\n{result.stderr}")
         hooks = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
-        if cmux_app_command not in codex_hook_commands(hooks):
-            raise AssertionError(f"{action} removed cmux.app's hook entry: {hooks!r}")
-    remaining = [c for c in codex_hook_commands(hooks) if c != cmux_app_command]
+        if bree_app_command not in codex_hook_commands(hooks):
+            raise AssertionError(f"{action} removed bree.app's hook entry: {hooks!r}")
+    remaining = [c for c in codex_hook_commands(hooks) if c != bree_app_command]
     if remaining:
         raise AssertionError(f"uninstall left Bree entries behind: {remaining!r}")
 
@@ -1215,12 +1215,12 @@ def test_install_adds_codex_permission_request_hook(cli_path: str, root: Path) -
             raise AssertionError(f"missing {event_name} hook group: {hooks!r}")
         if groups[-1]["hooks"][0].get("timeout") != 5:
             raise AssertionError(f"wrong {event_name} timeout: {groups[-1]!r}")
-    for event_name in CMUX_CODEX_FEED_EVENTS:
+    for event_name in BREE_CODEX_FEED_EVENTS:
         groups = hook_groups.get(event_name)
         if not groups:
             raise AssertionError(f"missing {event_name} hook group: {hooks!r}")
         command = groups[-1]["hooks"][0]["command"]
-        if command != cmux_codex_feed_command(event_name):
+        if command != bree_codex_feed_command(event_name):
             raise AssertionError(f"wrong {event_name} feed command: {command!r}")
         # PermissionRequest blocks on the user's decision, so it keeps the long feed
         # timeout (CodexHookInjectionSchema: 120000 ms); every other feed hook is 5 s.
@@ -1234,9 +1234,9 @@ def test_install_adds_codex_permission_request_hook(cli_path: str, root: Path) -
     if "codex_hooks" in config_toml:
         raise AssertionError(f"deprecated codex_hooks feature was written: {config_toml!r}")
     state = codex_hook_trust_state(config_toml)
-    expected_trust = expected_cmux_codex_hook_trust(hooks, codex_home / "hooks.json")
+    expected_trust = expected_bree_codex_hook_trust(hooks, codex_home / "hooks.json")
     if not expected_trust:
-        raise AssertionError(f"expected cmux Codex trust entries, got {expected_trust!r}")
+        raise AssertionError(f"expected bree Codex trust entries, got {expected_trust!r}")
     for key, trusted_hash in expected_trust.items():
         if state.get(key, {}).get("trusted_hash") != trusted_hash:
             raise AssertionError(
@@ -1266,9 +1266,9 @@ def test_install_escapes_codex_hook_trust_state_keys(cli_path: str, root: Path) 
     hooks = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
     config_toml = (codex_home / "config.toml").read_text(encoding="utf-8")
     state = codex_hook_trust_state(config_toml)
-    expected_trust = expected_cmux_codex_hook_trust(hooks, codex_home / "hooks.json")
+    expected_trust = expected_bree_codex_hook_trust(hooks, codex_home / "hooks.json")
     if not expected_trust:
-        raise AssertionError(f"expected cmux Codex trust entries, got {expected_trust!r}")
+        raise AssertionError(f"expected bree Codex trust entries, got {expected_trust!r}")
     for key, trusted_hash in expected_trust.items():
         if state.get(key, {}).get("trusted_hash") != trusted_hash:
             raise AssertionError(
@@ -1279,7 +1279,7 @@ def test_install_escapes_codex_hook_trust_state_keys(cli_path: str, root: Path) 
 def test_install_preserves_codex_hook_position_with_third_party_hooks(cli_path: str, root: Path) -> None:
     codex_home = root / "codex-home-third-party"
     codex_home.mkdir()
-    cmux_pre_tool = cmux_codex_feed_command("PreToolUse")
+    bree_pre_tool = bree_codex_feed_command("PreToolUse")
     orca_hook = (
         "if [ -x '/Users/dev/Library/Application Support/orca/agent-hooks/codex-hook.sh' ]; "
         "then /bin/sh '/Users/dev/Library/Application Support/orca/agent-hooks/codex-hook.sh'; fi"
@@ -1289,7 +1289,7 @@ def test_install_preserves_codex_hook_position_with_third_party_hooks(cli_path: 
             {
                 "hooks": {
                     "PreToolUse": [
-                        {"hooks": [{"type": "command", "command": cmux_pre_tool, "timeout": 120000}]},
+                        {"hooks": [{"type": "command", "command": bree_pre_tool, "timeout": 120000}]},
                         {"hooks": [{"type": "command", "command": orca_hook}]},
                     ]
                 }
@@ -1318,10 +1318,10 @@ def test_install_preserves_codex_hook_position_with_third_party_hooks(cli_path: 
     groups = hooks["hooks"]["PreToolUse"]
     first_command = groups[0]["hooks"][0]["command"]
     second_command = groups[1]["hooks"][0]["command"]
-    if first_command != cmux_pre_tool:
-        raise AssertionError(f"cmux hook did not keep its existing position: {groups!r}")
+    if first_command != bree_pre_tool:
+        raise AssertionError(f"bree hook did not keep its existing position: {groups!r}")
     if second_command != orca_hook:
-        raise AssertionError(f"third-party hook was not preserved after cmux hook: {groups!r}")
+        raise AssertionError(f"third-party hook was not preserved after bree hook: {groups!r}")
 
 
 def test_install_deduplicates_interleaved_codex_hook_positions(
@@ -1329,7 +1329,7 @@ def test_install_deduplicates_interleaved_codex_hook_positions(
 ) -> None:
     codex_home = root / "codex-home-interleaved"
     codex_home.mkdir()
-    cmux_pre_tool = cmux_codex_feed_command("PreToolUse")
+    bree_pre_tool = bree_codex_feed_command("PreToolUse")
     user_hook_before = "printf before"
     user_hook_middle = "printf middle"
     user_hook_after = "printf after"
@@ -1339,9 +1339,9 @@ def test_install_deduplicates_interleaved_codex_hook_positions(
                 "hooks": {
                     "PreToolUse": [
                         {"hooks": [{"type": "command", "command": user_hook_before}]},
-                        {"hooks": [{"type": "command", "command": cmux_pre_tool, "timeout": 120000}]},
+                        {"hooks": [{"type": "command", "command": bree_pre_tool, "timeout": 120000}]},
                         {"hooks": [{"type": "command", "command": user_hook_middle}]},
-                        {"hooks": [{"type": "command", "command": cmux_pre_tool, "timeout": 120000}]},
+                        {"hooks": [{"type": "command", "command": bree_pre_tool, "timeout": 120000}]},
                         {"hooks": [{"type": "command", "command": user_hook_after}]},
                     ]
                 }
@@ -1370,18 +1370,18 @@ def test_install_deduplicates_interleaved_codex_hook_positions(
     commands = [group["hooks"][0]["command"] for group in hooks["hooks"]["PreToolUse"]]
     expected = [
         user_hook_before,
-        cmux_pre_tool,
+        bree_pre_tool,
         user_hook_middle,
         user_hook_after,
     ]
     if commands != expected:
-        raise AssertionError(f"interleaved cmux hook dedupe changed: {commands!r}")
+        raise AssertionError(f"interleaved bree hook dedupe changed: {commands!r}")
 
 
 def test_install_collapses_consecutive_codex_hook_positions(cli_path: str, root: Path) -> None:
     codex_home = root / "codex-home-consecutive"
     codex_home.mkdir()
-    cmux_pre_tool = cmux_codex_feed_command("PreToolUse")
+    bree_pre_tool = bree_codex_feed_command("PreToolUse")
     user_hook_before = "printf before"
     user_hook_after = "printf after"
     (codex_home / "hooks.json").write_text(
@@ -1390,8 +1390,8 @@ def test_install_collapses_consecutive_codex_hook_positions(cli_path: str, root:
                 "hooks": {
                     "PreToolUse": [
                         {"hooks": [{"type": "command", "command": user_hook_before}]},
-                        {"hooks": [{"type": "command", "command": cmux_pre_tool, "timeout": 120000}]},
-                        {"hooks": [{"type": "command", "command": cmux_pre_tool, "timeout": 120000}]},
+                        {"hooks": [{"type": "command", "command": bree_pre_tool, "timeout": 120000}]},
+                        {"hooks": [{"type": "command", "command": bree_pre_tool, "timeout": 120000}]},
                         {"hooks": [{"type": "command", "command": user_hook_after}]},
                     ]
                 }
@@ -1420,11 +1420,11 @@ def test_install_collapses_consecutive_codex_hook_positions(cli_path: str, root:
     commands = [group["hooks"][0]["command"] for group in hooks["hooks"]["PreToolUse"]]
     expected = [
         user_hook_before,
-        cmux_pre_tool,
+        bree_pre_tool,
         user_hook_after,
     ]
     if commands != expected:
-        raise AssertionError(f"consecutive cmux hooks were not collapsed: {commands!r}")
+        raise AssertionError(f"consecutive bree hooks were not collapsed: {commands!r}")
 
 
 def test_install_replaces_legacy_codex_hook_commands(cli_path: str, root: Path) -> None:
@@ -1435,14 +1435,14 @@ def test_install_replaces_legacy_codex_hook_commands(cli_path: str, root: Path) 
             {
                 "hooks": {
                     "Stop": [
-                        {"hooks": [{"type": "command", "command": "cmux codex-hook stop"}]},
+                        {"hooks": [{"type": "command", "command": "bree codex-hook stop"}]},
                     ],
                     "PreToolUse": [
                         {
                             "hooks": [
                                 {
                                     "type": "command",
-                                    "command": "cmux feed-hook --source codex --event PreToolUse",
+                                    "command": "bree feed-hook --source codex --event PreToolUse",
                                 }
                             ]
                         },
@@ -1471,11 +1471,11 @@ def test_install_replaces_legacy_codex_hook_commands(cli_path: str, root: Path) 
 
     hooks = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
     commands = codex_hook_commands(hooks)
-    if any("cmux codex-hook" in command or "cmux feed-hook --source" in command for command in commands):
-        raise AssertionError(f"legacy cmux hook commands were not removed: {commands!r}")
-    if cmux_codex_hook_command("stop") not in commands:
+    if any("bree codex-hook" in command or "bree feed-hook --source" in command for command in commands):
+        raise AssertionError(f"legacy bree hook commands were not removed: {commands!r}")
+    if bree_codex_hook_command("stop") not in commands:
         raise AssertionError(f"current Stop hook was not installed: {commands!r}")
-    if cmux_codex_feed_command("PreToolUse") not in commands:
+    if bree_codex_feed_command("PreToolUse") not in commands:
         raise AssertionError(f"current PreToolUse feed hook was not installed: {commands!r}")
 
 
@@ -1620,8 +1620,8 @@ def test_install_codex_hooks_only_edits_real_features_table(cli_path: str, root:
 
     lines = config_toml.splitlines()
     features_index = lines.index("[features]")
-    if lines[features_index + 1] != "# cmux-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df begin":
-        raise AssertionError(f"cmux marker should be inserted into [features]: {config_toml!r}")
+    if lines[features_index + 1] != "# bree-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df begin":
+        raise AssertionError(f"bree marker should be inserted into [features]: {config_toml!r}")
     if lines[features_index + 2] != "hooks = true":
         raise AssertionError(f"hooks should be inserted into [features]: {config_toml!r}")
 
@@ -1699,7 +1699,7 @@ def test_uninstall_restores_disabled_codex_hooks_feature(cli_path: str, root: Pa
     if not _toml_has_line(config_toml, "hooks = false"):
         raise AssertionError(f"pre-existing disabled hooks feature was not restored: {config_toml!r}")
     if _toml_has_line(config_toml, "hooks = true"):
-        raise AssertionError(f"cmux-owned hooks feature was not removed: {config_toml!r}")
+        raise AssertionError(f"bree-owned hooks feature was not removed: {config_toml!r}")
     if "apps = true" not in config_toml:
         raise AssertionError(f"existing feature setting was not preserved: {config_toml!r}")
 
@@ -1732,7 +1732,7 @@ def test_uninstall_restores_disabled_dotted_codex_hooks_feature(cli_path: str, r
     if not _toml_has_line(config_toml, "features.hooks = false"):
         raise AssertionError(f"pre-existing disabled dotted hooks feature was not restored: {config_toml!r}")
     if _toml_has_line(config_toml, "features.hooks = true"):
-        raise AssertionError(f"cmux-owned dotted hooks feature was not removed: {config_toml!r}")
+        raise AssertionError(f"bree-owned dotted hooks feature was not removed: {config_toml!r}")
     if "features.apps = true" not in config_toml:
         raise AssertionError(f"existing dotted feature setting was not preserved: {config_toml!r}")
 
@@ -1771,7 +1771,7 @@ def test_install_scans_features_past_bracketed_array(cli_path: str, root: Path) 
         raise AssertionError(f"bracketed array content was not preserved: {config_toml!r}")
 
 
-def test_uninstall_removes_cmux_owned_codex_hooks_feature(cli_path: str, root: Path) -> None:
+def test_uninstall_removes_bree_owned_codex_hooks_feature(cli_path: str, root: Path) -> None:
     codex_home = root / "codex-home-uninstall-owned"
     codex_home.mkdir()
     env = os.environ.copy()
@@ -1793,14 +1793,14 @@ def test_uninstall_removes_cmux_owned_codex_hooks_feature(cli_path: str, root: P
 
     config_toml = (codex_home / "config.toml").read_text(encoding="utf-8")
     if "hooks = true" in config_toml or "codex_hooks" in config_toml:
-        raise AssertionError(f"cmux-owned hooks feature was not removed: {config_toml!r}")
+        raise AssertionError(f"bree-owned hooks feature was not removed: {config_toml!r}")
     if "hooks.state" in config_toml or "trusted_hash" in config_toml:
-        raise AssertionError(f"cmux-owned hook trust was not removed: {config_toml!r}")
+        raise AssertionError(f"bree-owned hook trust was not removed: {config_toml!r}")
     if "[features]" in config_toml:
         raise AssertionError(f"empty features table was preserved: {config_toml!r}")
 
 
-def test_uninstall_preserves_unowned_hook_trust_when_cmux_marker_is_unclosed(
+def test_uninstall_preserves_unowned_hook_trust_when_bree_marker_is_unclosed(
     cli_path: str, root: Path
 ) -> None:
     codex_home = root / "codex-home-unclosed-trust"
@@ -1809,9 +1809,9 @@ def test_uninstall_preserves_unowned_hook_trust_when_cmux_marker_is_unclosed(
     (codex_home / "config.toml").write_text(
         "[features]\n"
         "hooks = true\n"
-        "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin\n"
-        "[hooks.state.\"/tmp/cmux/hooks.json:pre_tool_use:0:0\"]\n"
-        'trusted_hash = "sha256:cmux"\n'
+        "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin\n"
+        "[hooks.state.\"/tmp/bree/hooks.json:pre_tool_use:0:0\"]\n"
+        'trusted_hash = "sha256:bree"\n'
         "[hooks.state.\"/tmp/third-party/hooks.json:pre_tool_use:0:0\"]\n"
         'trusted_hash = "sha256:third-party"\n',
         encoding="utf-8",
@@ -1833,13 +1833,13 @@ def test_uninstall_preserves_unowned_hook_trust_when_cmux_marker_is_unclosed(
         )
 
     config_toml = (codex_home / "config.toml").read_text(encoding="utf-8")
-    if "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin" in config_toml:
-        raise AssertionError(f"orphaned cmux hook trust marker was preserved: {config_toml!r}")
+    if "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin" in config_toml:
+        raise AssertionError(f"orphaned bree hook trust marker was preserved: {config_toml!r}")
     if 'trusted_hash = "sha256:third-party"' not in config_toml:
         raise AssertionError(f"unowned hook trust was removed: {config_toml!r}")
 
 
-def test_install_recovers_hook_trust_when_cmux_marker_is_unclosed(
+def test_install_recovers_hook_trust_when_bree_marker_is_unclosed(
     cli_path: str, root: Path
 ) -> None:
     codex_home = root / "codex-home-unclosed-trust-install"
@@ -1848,7 +1848,7 @@ def test_install_recovers_hook_trust_when_cmux_marker_is_unclosed(
     (codex_home / "config.toml").write_text(
         "[features]\n"
         "hooks = true\n"
-        "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin\n"
+        "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin\n"
         f'[hooks.state."{stale_key}"]\n'
         'trusted_hash = "sha256:stale"\n',
         encoding="utf-8",
@@ -1872,15 +1872,15 @@ def test_install_recovers_hook_trust_when_cmux_marker_is_unclosed(
     config_toml = (codex_home / "config.toml").read_text(encoding="utf-8")
     if "approved Bree hooks" not in result.stdout:
         raise AssertionError(f"install did not report recovered hook trust approval: {result.stdout!r}")
-    if config_toml.count("# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin") != 1:
-        raise AssertionError(f"install did not write one fresh cmux hook trust marker: {config_toml!r}")
-    if config_toml.count("# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end") != 1:
+    if config_toml.count("# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin") != 1:
+        raise AssertionError(f"install did not write one fresh bree hook trust marker: {config_toml!r}")
+    if config_toml.count("# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end") != 1:
         raise AssertionError(f"install did not close the recovered hook trust block: {config_toml!r}")
     if 'trusted_hash = "sha256:stale"' in config_toml:
-        raise AssertionError(f"install preserved stale cmux hook trust: {config_toml!r}")
+        raise AssertionError(f"install preserved stale bree hook trust: {config_toml!r}")
     hooks = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
     state = codex_hook_trust_state(config_toml)
-    expected_trust = expected_cmux_codex_hook_trust(hooks, codex_home / "hooks.json")
+    expected_trust = expected_bree_codex_hook_trust(hooks, codex_home / "hooks.json")
     for key, trusted_hash in expected_trust.items():
         if state.get(key, {}).get("trusted_hash") != trusted_hash:
             raise AssertionError(
@@ -1888,18 +1888,18 @@ def test_install_recovers_hook_trust_when_cmux_marker_is_unclosed(
             )
 
 
-def test_install_preserves_plugin_tables_inside_stale_cmux_hook_trust_marker(
+def test_install_preserves_plugin_tables_inside_stale_bree_hook_trust_marker(
     cli_path: str, root: Path
 ) -> None:
     codex_home = root / "codex-home-stale-trust-with-plugins"
     codex_home.mkdir()
     hooks_path = codex_home / "hooks.json"
     stale_key = f"{hooks_path.resolve()}:pre_tool_use:0:0"
-    stale_old_cmux_key = f"{hooks_path.resolve()}:pre_tool_use:9:0"
-    stale_old_cmux_hash = codex_command_hook_hash(
+    stale_old_bree_key = f"{hooks_path.resolve()}:pre_tool_use:9:0"
+    stale_old_bree_hash = codex_command_hook_hash(
         event_label="pre_tool_use",
         matcher=None,
-        command=cmux_codex_feed_command("PreToolUse"),
+        command=bree_codex_feed_command("PreToolUse"),
         timeout=120_000,
         status_message=None,
     )
@@ -1907,7 +1907,7 @@ def test_install_preserves_plugin_tables_inside_stale_cmux_hook_trust_marker(
     stale_legacy_hash = codex_command_hook_hash(
         event_label="pre_tool_use",
         matcher=None,
-        command="cmux feed-hook --source codex --event PreToolUse",
+        command="bree feed-hook --source codex --event PreToolUse",
         timeout=120_000,
         status_message=None,
     )
@@ -1918,16 +1918,16 @@ def test_install_preserves_plugin_tables_inside_stale_cmux_hook_trust_marker(
     config_path.write_text(
         "[features]\n"
         "hooks = true\n"
-        "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin\n"
+        "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin\n"
         "preserve_loose_config = true\n"
-        f'[ hooks . state . "{stale_key}" ] # stale cmux trust\n'
+        f'[ hooks . state . "{stale_key}" ] # stale bree trust\n'
         'trusted_hash = "sha256:stale"\n'
         "\n"
         f'[hooks.state."{escaped_user_key}"]\n'
         'trusted_hash = "sha256:escaped-user"\n'
         "\n"
-        f'[hooks.state."{stale_old_cmux_key}"]\n'
-        f'trusted_hash = "{stale_old_cmux_hash}"\n'
+        f'[hooks.state."{stale_old_bree_key}"]\n'
+        f'trusted_hash = "{stale_old_bree_hash}"\n'
         "\n"
         f'[hooks.state."{stale_legacy_key}"]\n'
         f'trusted_hash = "{stale_legacy_hash}"\n'
@@ -1943,7 +1943,7 @@ def test_install_preserves_plugin_tables_inside_stale_cmux_hook_trust_marker(
         "\n"
         '[plugins."browser@openai-bundled"]\n'
         "enabled = true\n"
-        "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end\n",
+        "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end\n",
         encoding="utf-8",
     )
     env = os.environ.copy()
@@ -1976,17 +1976,17 @@ def test_install_preserves_plugin_tables_inside_stale_cmux_hook_trust_marker(
     if 'trusted_hash = "sha256:escaped-user"' not in config_toml:
         raise AssertionError(f"escaped-key user hook trust was removed: {config_toml!r}")
     if 'trusted_hash = "sha256:stale"' in config_toml:
-        raise AssertionError(f"stale cmux hook trust was preserved: {config_toml!r}")
-    if stale_old_cmux_key in config_toml:
-        raise AssertionError(f"old cmux hook trust was preserved: {config_toml!r}")
+        raise AssertionError(f"stale bree hook trust was preserved: {config_toml!r}")
+    if stale_old_bree_key in config_toml:
+        raise AssertionError(f"old bree hook trust was preserved: {config_toml!r}")
     if stale_legacy_key in config_toml or stale_legacy_hash in config_toml:
-        raise AssertionError(f"legacy cmux hook trust was preserved: {config_toml!r}")
-    trust_begin = "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin"
-    trust_end = "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end"
+        raise AssertionError(f"legacy bree hook trust was preserved: {config_toml!r}")
+    trust_begin = "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin"
+    trust_end = "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end"
     if config_toml.count(trust_begin) != 1:
-        raise AssertionError(f"install did not write one fresh cmux hook trust marker: {config_toml!r}")
+        raise AssertionError(f"install did not write one fresh bree hook trust marker: {config_toml!r}")
     if config_toml.count(trust_end) != 1:
-        raise AssertionError(f"install did not close the fresh cmux trust block: {config_toml!r}")
+        raise AssertionError(f"install did not close the fresh bree trust block: {config_toml!r}")
     trust_begin_index = config_toml.index(trust_begin)
     trust_end_index = config_toml.index(trust_end)
     for plugin_header in (
@@ -1995,11 +1995,11 @@ def test_install_preserves_plugin_tables_inside_stale_cmux_hook_trust_marker(
     ):
         plugin_index = config_toml.index(plugin_header)
         if trust_begin_index < plugin_index < trust_end_index:
-            raise AssertionError(f"plugin table remained inside fresh cmux trust block: {config_toml!r}")
+            raise AssertionError(f"plugin table remained inside fresh bree trust block: {config_toml!r}")
 
     hooks = json.loads(hooks_path.read_text(encoding="utf-8"))
     state = codex_hook_trust_state(config_toml)
-    expected_trust = expected_cmux_codex_hook_trust(hooks, hooks_path)
+    expected_trust = expected_bree_codex_hook_trust(hooks, hooks_path)
     for key, trusted_hash in expected_trust.items():
         if state.get(key, {}).get("trusted_hash") != trusted_hash:
             raise AssertionError(
@@ -2016,11 +2016,11 @@ def test_install_enables_hooks_when_stale_trust_marker_captures_dotted_feature(
     stale_key = f"{hooks_path.resolve()}:pre_tool_use:0:0"
     config_path = codex_home / "config.toml"
     config_path.write_text(
-        "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin\n"
+        "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 begin\n"
         f'[hooks.state."{stale_key}"]\n'
         'trusted_hash = "sha256:stale"\n'
         "features.experimental = true\n"
-        "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end\n",
+        "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end\n",
         encoding="utf-8",
     )
     env = os.environ.copy()
@@ -2043,10 +2043,10 @@ def test_install_enables_hooks_when_stale_trust_marker_captures_dotted_feature(
     if not _toml_has_line(config_toml, "hooks = true") and not _toml_has_line(config_toml, "features.hooks = true"):
         raise AssertionError(f"install did not enable Codex hooks: {config_toml!r}")
     if 'trusted_hash = "sha256:stale"' in config_toml:
-        raise AssertionError(f"stale cmux hook trust was preserved: {config_toml!r}")
+        raise AssertionError(f"stale bree hook trust was preserved: {config_toml!r}")
 
 
-def test_uninstall_preserves_third_party_hook_trust_inside_cmux_marker(
+def test_uninstall_preserves_third_party_hook_trust_inside_bree_marker(
     cli_path: str, root: Path
 ) -> None:
     codex_home = root / "codex-home-uninstall-stale-third-party-trust"
@@ -2068,7 +2068,7 @@ def test_uninstall_preserves_third_party_hook_trust_inside_cmux_marker(
         )
 
     config_path = codex_home / "config.toml"
-    trust_end = "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end"
+    trust_end = "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end"
     same_file_user_key = f"{(codex_home / 'hooks.json').resolve()}:pre_tool_use:8:0"
     third_party_key = "/tmp/third-party/hooks.json:pre_tool_use:0:0"
     config_toml = config_path.read_text(encoding="utf-8")
@@ -2098,19 +2098,19 @@ def test_uninstall_preserves_third_party_hook_trust_inside_cmux_marker(
         )
 
     config_toml = config_path.read_text(encoding="utf-8")
-    if "cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738" in config_toml:
-        raise AssertionError(f"cmux hook trust marker was preserved: {config_toml!r}")
+    if "bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738" in config_toml:
+        raise AssertionError(f"bree hook trust marker was preserved: {config_toml!r}")
     state = codex_hook_trust_state(config_toml)
     for key in state:
         if key.startswith(f"{(codex_home / 'hooks.json').resolve()}:") and key != same_file_user_key:
-            raise AssertionError(f"cmux hook trust was preserved: {config_toml!r}")
+            raise AssertionError(f"bree hook trust was preserved: {config_toml!r}")
     if 'trusted_hash = "sha256:same-file-user"' not in config_toml:
         raise AssertionError(f"same-file user hook trust was removed: {config_toml!r}")
     if 'trusted_hash = "sha256:third-party"' not in config_toml:
         raise AssertionError(f"third-party hook trust was removed: {config_toml!r}")
 
 
-def test_uninstall_retry_removes_stale_cmux_hook_trust_after_hooks_are_cleaned(
+def test_uninstall_retry_removes_stale_bree_hook_trust_after_hooks_are_cleaned(
     cli_path: str, root: Path
 ) -> None:
     codex_home = root / "codex-home-uninstall-retry-stale-trust"
@@ -2133,18 +2133,18 @@ def test_uninstall_retry_removes_stale_cmux_hook_trust_after_hooks_are_cleaned(
 
     hooks_path = codex_home / "hooks.json"
     hooks = json.loads(hooks_path.read_text(encoding="utf-8"))
-    expected_trust = expected_cmux_codex_hook_trust(hooks, hooks_path)
+    expected_trust = expected_bree_codex_hook_trust(hooks, hooks_path)
     if not expected_trust:
-        raise AssertionError(f"expected cmux Codex trust entries, got {expected_trust!r}")
+        raise AssertionError(f"expected bree Codex trust entries, got {expected_trust!r}")
 
     config_path = codex_home / "config.toml"
-    trust_end = "# cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end"
+    trust_end = "# bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738 end"
     same_file_user_key = f"{hooks_path.resolve()}:pre_tool_use:8:0"
     legacy_key = f"{hooks_path.resolve()}:pre_tool_use:9:0"
     legacy_hash = codex_command_hook_hash(
         event_label="pre_tool_use",
         matcher=None,
-        command="cmux feed-hook --source codex --event PreToolUse",
+        command="bree feed-hook --source codex --event PreToolUse",
         timeout=120_000,
         status_message=None,
     )
@@ -2180,20 +2180,20 @@ def test_uninstall_retry_removes_stale_cmux_hook_trust_after_hooks_are_cleaned(
         )
 
     config_toml = config_path.read_text(encoding="utf-8")
-    if "cmux-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738" in config_toml:
-        raise AssertionError(f"cmux hook trust marker was preserved: {config_toml!r}")
+    if "bree-codex-hook-trust-f5cc24da-7a09-4b20-a756-89e7786f6738" in config_toml:
+        raise AssertionError(f"bree hook trust marker was preserved: {config_toml!r}")
     for key, trusted_hash in expected_trust.items():
         if key in config_toml or trusted_hash in config_toml:
-            raise AssertionError(f"stale cmux hook trust was preserved: {config_toml!r}")
+            raise AssertionError(f"stale bree hook trust was preserved: {config_toml!r}")
     if legacy_key in config_toml or legacy_hash in config_toml:
-        raise AssertionError(f"legacy cmux hook trust was preserved: {config_toml!r}")
+        raise AssertionError(f"legacy bree hook trust was preserved: {config_toml!r}")
     if 'trusted_hash = "sha256:same-file-user"' not in config_toml:
         raise AssertionError(f"same-file user hook trust was removed: {config_toml!r}")
     if 'trusted_hash = "sha256:third-party"' not in config_toml:
         raise AssertionError(f"third-party hook trust was removed: {config_toml!r}")
 
 
-def test_uninstall_retry_preserves_user_hook_trust_at_default_cmux_key(
+def test_uninstall_retry_preserves_user_hook_trust_at_default_bree_key(
     cli_path: str, root: Path
 ) -> None:
     codex_home = root / "codex-home-uninstall-retry-user-default-key"
@@ -2235,9 +2235,9 @@ def test_uninstall_retry_preserves_user_hook_trust_at_default_cmux_key(
         )
 
     installed_hooks = json.loads(hooks_path.read_text(encoding="utf-8"))
-    expected_trust = expected_cmux_codex_hook_trust(installed_hooks, hooks_path)
+    expected_trust = expected_bree_codex_hook_trust(installed_hooks, hooks_path)
     if not expected_trust:
-        raise AssertionError(f"expected cmux Codex trust entries, got {expected_trust!r}")
+        raise AssertionError(f"expected bree Codex trust entries, got {expected_trust!r}")
     hooks_path.write_text(json.dumps(user_hooks, indent=2) + "\n", encoding="utf-8")
 
     result = subprocess.run(
@@ -2256,12 +2256,12 @@ def test_uninstall_retry_preserves_user_hook_trust_at_default_cmux_key(
 
     config_toml = config_path.read_text(encoding="utf-8")
     if 'trusted_hash = "sha256:user-default-index"' not in config_toml:
-        raise AssertionError(f"user hook trust at default cmux key was removed: {config_toml!r}")
+        raise AssertionError(f"user hook trust at default bree key was removed: {config_toml!r}")
     for key, trusted_hash in expected_trust.items():
         if trusted_hash in config_toml:
-            raise AssertionError(f"stale cmux hook trust was preserved: {config_toml!r}")
+            raise AssertionError(f"stale bree hook trust was preserved: {config_toml!r}")
         if key != user_key and key in config_toml:
-            raise AssertionError(f"stale cmux hook trust was preserved: {config_toml!r}")
+            raise AssertionError(f"stale bree hook trust was preserved: {config_toml!r}")
 
 
 def test_uninstall_removes_legacy_codex_hook_trust(cli_path: str, root: Path) -> None:
@@ -2269,7 +2269,7 @@ def test_uninstall_removes_legacy_codex_hook_trust(cli_path: str, root: Path) ->
     codex_home.mkdir()
     hooks_path = codex_home / "hooks.json"
     config_path = codex_home / "config.toml"
-    legacy_command = "cmux feed-hook --source codex --event PreToolUse"
+    legacy_command = "bree feed-hook --source codex --event PreToolUse"
     legacy_key = f"{hooks_path.resolve()}:pre_tool_use:0:0"
     legacy_hash = codex_command_hook_hash(
         event_label="pre_tool_use",
@@ -2323,10 +2323,10 @@ def test_uninstall_removes_legacy_codex_hook_trust(cli_path: str, root: Path) ->
 
     hooks = json.loads(hooks_path.read_text(encoding="utf-8"))
     if legacy_command in json.dumps(hooks):
-        raise AssertionError(f"legacy cmux hook command was preserved: {hooks!r}")
+        raise AssertionError(f"legacy bree hook command was preserved: {hooks!r}")
     config_toml = config_path.read_text(encoding="utf-8")
     if legacy_key in config_toml or legacy_hash in config_toml:
-        raise AssertionError(f"legacy cmux hook trust was preserved: {config_toml!r}")
+        raise AssertionError(f"legacy bree hook trust was preserved: {config_toml!r}")
 
 
 def test_uninstall_codex_hooks_removes_legacy_managed_block(cli_path: str, root: Path) -> None:
@@ -2339,14 +2339,14 @@ def test_uninstall_codex_hooks_removes_legacy_managed_block(cli_path: str, root:
             [
                 "[features]",
                 "apps = true",
-                "# cmux-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df begin",
-                "# cmux-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df previous line: hooks = false",
+                "# bree-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df begin",
+                "# bree-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df previous line: hooks = false",
                 "hooks = true",
-                "# cmux-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df end",
-                "# cmux hooks codex feature begin",
-                "# cmux hooks codex feature previous line: features.hooks = false",
+                "# bree-codex-hooks-feature-78f1e4ba-66df-4d35-93c1-67fdf1cbb7df end",
+                "# bree hooks codex feature begin",
+                "# bree hooks codex feature previous line: features.hooks = false",
                 "features.hooks = true",
-                "# cmux hooks codex feature end",
+                "# bree hooks codex feature end",
                 "",
             ]
         ),
@@ -2369,12 +2369,12 @@ def test_uninstall_codex_hooks_removes_legacy_managed_block(cli_path: str, root:
         )
 
     config_toml = config_path.read_text(encoding="utf-8")
-    if "cmux-codex-hooks-feature" in config_toml:
+    if "bree-codex-hooks-feature" in config_toml:
         raise AssertionError(f"legacy managed markers were not removed: {config_toml!r}")
-    if "cmux hooks codex feature" in config_toml:
+    if "bree hooks codex feature" in config_toml:
         raise AssertionError(f"old legacy managed markers were not removed: {config_toml!r}")
     if "hooks = true" in config_toml:
-        raise AssertionError(f"cmux-owned legacy hooks setting was not removed: {config_toml!r}")
+        raise AssertionError(f"bree-owned legacy hooks setting was not removed: {config_toml!r}")
     if "hooks = false" not in config_toml:
         raise AssertionError(f"previous hooks setting was not restored: {config_toml!r}")
     if "features.hooks = false" not in config_toml:
@@ -2473,7 +2473,7 @@ def test_install_codex_hooks_preserves_config_when_toml_read_fails(cli_path: str
 
 
 def test_codex_permission_request_is_nonblocking_telemetry(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux.sock"
+    socket_path = root / "bree.sock"
     payload = {
         "session_id": "codex-session",
         "turn_id": "turn-1",
@@ -2512,7 +2512,7 @@ def test_codex_permission_decisions_do_not_block_approval_reviewer(cli_path: str
     for mode in ["once", "always", "all", "bypass", "deny"]:
         stdout, _ = run_feed_hook(
             cli_path,
-            root / f"cmux-{mode}.sock",
+            root / f"bree-{mode}.sock",
             payload,
             {"kind": "permission", "mode": mode},
         )
@@ -2523,7 +2523,7 @@ def test_codex_permission_decisions_do_not_block_approval_reviewer(cli_path: str
 def test_codex_pre_tool_use_is_telemetry_not_actionable(cli_path: str, root: Path) -> None:
     stdout, frame = run_feed_hook(
         cli_path,
-        root / "cmux-pretool.sock",
+        root / "bree-pretool.sock",
         {
             "session_id": "codex-session",
             "turn_id": "turn-2",
@@ -2563,13 +2563,13 @@ def test_computer_use_pretool_preserves_surface_scope(cli_path: str, root: Path)
             "PATH": os.defpath,
             "HOME": str(root),
             "CODEX_HOME": str(root / "codex"),
-            "CMUX_AGENT_HOOK_STATE_DIR": str(root / "hooks"),
+            "BREE_AGENT_HOOK_STATE_DIR": str(root / "hooks"),
         }, clear=True):
             stdout, frame = run_feed_hook(
                 cli_path, root / f"cua-{source}.sock",
                 {"session_id": "synthetic-cua-session",
                  "hook_event_name": "PreToolUse",
-                 "tool_name": "mcp__cmux_cua__get_app_state",
+                 "tool_name": "mcp__bree_cua__get_app_state",
                  "tool_input": {"app": "com.example.synthetic"}},
                 None, source=source,
             )
@@ -2627,7 +2627,7 @@ def test_codex_lifecycle_feed_events_stay_telemetry_and_distinct(cli_path: str, 
     for event_name, payload in event_payloads.items():
         stdout, frame = run_feed_hook(
             cli_path,
-            root / f"cmux-codex-{event_name}.sock",
+            root / f"bree-codex-{event_name}.sock",
             payload,
             None,
         )
@@ -2669,7 +2669,7 @@ def test_codex_post_tool_use_redacts_tool_output(cli_path: str, root: Path) -> N
 
     stdout, frame = run_feed_hook(
         cli_path,
-        root / "cmux-codex-large-posttool.sock",
+        root / "bree-codex-large-posttool.sock",
         payload,
         None,
     )
@@ -2682,7 +2682,7 @@ def test_codex_post_tool_use_redacts_tool_output(cli_path: str, root: Path) -> N
     tool_input = event.get("tool_input")
     if not isinstance(tool_input, dict):
         raise AssertionError(f"Codex PostToolUse should forward summarized tool_input: {event!r}")
-    if tool_input.get("_cmux_sanitized") is not True:
+    if tool_input.get("_bree_sanitized") is not True:
         raise AssertionError(f"PostToolUse response was not marked sanitized: {tool_input!r}")
     if tool_input.get("exit_code") != 42 or tool_input.get("status") != "failed":
         raise AssertionError(f"large PostToolUse response did not preserve metadata: {tool_input!r}")
@@ -2710,7 +2710,7 @@ def test_codex_post_tool_use_accepts_native_event_label(cli_path: str, root: Pat
 
     stdout, frame = run_feed_hook(
         cli_path,
-        root / "cmux-codex-native-posttool.sock",
+        root / "bree-codex-native-posttool.sock",
         payload,
         None,
     )
@@ -2742,7 +2742,7 @@ def test_codex_post_tool_use_oversize_payload_is_dropped_before_decode(cli_path:
 
     stdout, frame = run_feed_hook_optional_frame(
         cli_path,
-        root / "cmux-codex-oversize-posttool.sock",
+        root / "bree-codex-oversize-posttool.sock",
         payload,
         None,
     )
@@ -2763,7 +2763,7 @@ def test_codex_lifecycle_oversize_payload_is_dropped_before_decode(cli_path: str
 
     stdout, frame = run_feed_hook_optional_frame(
         cli_path,
-        root / "cmux-codex-oversize-precompact.sock",
+        root / "bree-codex-oversize-precompact.sock",
         payload,
         None,
     )
@@ -2791,7 +2791,7 @@ def test_codex_post_tool_use_keeps_cwd_from_tool_input(cli_path: str, root: Path
 
     stdout, frame = run_feed_hook(
         cli_path,
-        root / "cmux-codex-posttool-cwd.sock",
+        root / "bree-codex-posttool-cwd.sock",
         payload,
         None,
     )
@@ -2821,7 +2821,7 @@ def test_codex_post_tool_use_without_response_keeps_request_input(cli_path: str,
 
     stdout, frame = run_feed_hook(
         cli_path,
-        root / "cmux-codex-posttool-request-only.sock",
+        root / "bree-codex-posttool-request-only.sock",
         payload,
         None,
     )
@@ -2831,7 +2831,7 @@ def test_codex_post_tool_use_without_response_keeps_request_input(cli_path: str,
     tool_input = event.get("tool_input")
     if tool_input != payload["tool_input"]:
         raise AssertionError(f"Codex PostToolUse without response should preserve request input: {event!r}")
-    if isinstance(tool_input, dict) and tool_input.get("_cmux_sanitized") is True:
+    if isinstance(tool_input, dict) and tool_input.get("_bree_sanitized") is True:
         raise AssertionError(f"request input fallback should not be sanitized: {event!r}")
 
 
@@ -2853,7 +2853,7 @@ def test_non_codex_post_tool_use_keeps_request_input(cli_path: str, root: Path) 
 
     stdout, frame = run_feed_hook(
         cli_path,
-        root / "cmux-antigravity-posttool.sock",
+        root / "bree-antigravity-posttool.sock",
         payload,
         None,
         source="antigravity",
@@ -2864,7 +2864,7 @@ def test_non_codex_post_tool_use_keeps_request_input(cli_path: str, root: Path) 
     tool_input = event.get("tool_input")
     if tool_input != payload["tool_input"]:
         raise AssertionError(f"non-Codex PostToolUse should preserve request input: {event!r}")
-    if isinstance(tool_input, dict) and tool_input.get("_cmux_sanitized") is True:
+    if isinstance(tool_input, dict) and tool_input.get("_bree_sanitized") is True:
         raise AssertionError(f"non-Codex request input should not be sanitized: {event!r}")
 
 
@@ -2888,7 +2888,7 @@ def test_pi_post_tool_use_uses_projected_result(cli_path: str, root: Path) -> No
 
     stdout, frame = run_feed_hook(
         cli_path,
-        root / "cmux-pi-projected-result.sock",
+        root / "bree-pi-projected-result.sock",
         payload,
         None,
         source="pi",
@@ -2904,7 +2904,7 @@ def test_pi_post_tool_use_uses_projected_result(cli_path: str, root: Path) -> No
     if not isinstance(tool_input, dict):
         raise AssertionError(f"Pi PostToolUse dropped its projected tool result: {event!r}")
     if (
-        tool_input.get("_cmux_sanitized") is not True
+        tool_input.get("_bree_sanitized") is not True
         or tool_input.get("kind") != "object"
         or tool_input.get("key_count") != 3
         or tool_input.get("truncated") is not True
@@ -2930,7 +2930,7 @@ def test_legacy_pi_post_tool_use_redacts_raw_result(cli_path: str, root: Path) -
 
     stdout, frame = run_feed_hook(
         cli_path,
-        root / "cmux-pi-legacy-raw-result.sock",
+        root / "bree-pi-legacy-raw-result.sock",
         payload,
         None,
         source="pi",
@@ -2943,7 +2943,7 @@ def test_legacy_pi_post_tool_use_redacts_raw_result(cli_path: str, root: Path) -
         raise AssertionError(f"legacy Pi PostToolUse telemetry reported the wrong acknowledged target: {stdout!r}")
     event = frame["params"]["event"]
     tool_input = event.get("tool_input")
-    if not isinstance(tool_input, dict) or tool_input.get("_cmux_sanitized") is not True:
+    if not isinstance(tool_input, dict) or tool_input.get("_bree_sanitized") is not True:
         raise AssertionError(f"legacy Pi result was not sanitized at the CLI boundary: {event!r}")
     if tool_input.get("kind") != "object" or tool_input.get("key_count") != 3:
         raise AssertionError(f"legacy Pi result lost bounded structural metadata: {event!r}")
@@ -2952,7 +2952,7 @@ def test_legacy_pi_post_tool_use_redacts_raw_result(cli_path: str, root: Path) -
 
 
 def test_pi_compacted_post_tool_use_sends_one_ordered_batch(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-compacted-posttool.sock"
+    socket_path = root / "bree-pi-compacted-posttool.sock"
     payload = {
         "session_id": "pi-session",
         "turn_id": "turn-compact",
@@ -2961,9 +2961,9 @@ def test_pi_compacted_post_tool_use_sends_one_ordered_batch(cli_path: str, root:
         "tool_call_id": "overflow-tool-8",
         "tool_name": "bash",
         "tool_result": {"status": "ok", "value": 8},
-        "cmux_compacted_terminal_count": 2,
-        "cmux_compacted_terminal_omitted_count": 0,
-        "cmux_compacted_terminal_events": [
+        "bree_compacted_terminal_count": 2,
+        "bree_compacted_terminal_omitted_count": 0,
+        "bree_compacted_terminal_events": [
             {
                 "session_id": "pi-session-a",
                 "turn_id": "turn-compact",
@@ -2987,12 +2987,12 @@ def test_pi_compacted_post_tool_use_sends_one_ordered_batch(cli_path: str, root:
         ],
     }
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
 
-    with FakeCmuxSocket(socket_path, None) as fake:
+    with FakeBreeSocket(socket_path, None) as fake:
         result = subprocess.run(
             [
                 cli_path,
@@ -3048,13 +3048,13 @@ def test_pi_compacted_post_tool_use_sends_one_ordered_batch(cli_path: str, root:
 
 
 def test_pi_compacted_feed_sends_bounded_acknowledged_batch(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-compacted-pipeline.sock"
+    socket_path = root / "bree-pi-compacted-pipeline.sock"
     event_count = 64
     payload = {
         "session_id": "pi-pipeline-session",
         "hook_event_name": "PostToolUse",
-        "cmux_compacted_terminal_omitted_count": 1,
-        "cmux_compacted_terminal_events": [
+        "bree_compacted_terminal_omitted_count": 1,
+        "bree_compacted_terminal_events": [
             {
                 "session_id": "pi-pipeline-session",
                 "workspace_id": f"untrusted-workspace-{index}",
@@ -3065,12 +3065,12 @@ def test_pi_compacted_feed_sends_bounded_acknowledged_batch(cli_path: str, root:
         ],
     }
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surface_delivery_target=(FAKE_WORKSPACE_ID, FAKE_SURFACE_ID),
@@ -3117,18 +3117,18 @@ def test_pi_compacted_feed_sends_bounded_acknowledged_batch(cli_path: str, root:
     if not any(event.get("tool_call_id") == f"pipeline-tool-{event_count - 1}" for event in events):
         raise AssertionError(f"compacted Pi feed overflow displaced its newest retained event: {events!r}")
     final_event = events[-1]
-    if final_event.get("tool_name") != "cmux_compacted_terminal_overflow":
+    if final_event.get("tool_name") != "bree_compacted_terminal_overflow":
         raise AssertionError(f"compacted Pi feed omitted its overflow marker: {final_event!r}")
     if final_event.get("tool_input", {}).get("omitted_terminal_count") != 2:
         raise AssertionError(f"compacted Pi feed overflow count did not include the displaced summary: {final_event!r}")
 
 
 def test_pi_compacted_feed_rejects_failed_server_ack(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-compacted-rejected-ack.sock"
+    socket_path = root / "bree-pi-compacted-rejected-ack.sock"
     payload = {
         "session_id": "pi-compacted-rejected-session",
         "hook_event_name": "PostToolUse",
-        "cmux_compacted_terminal_events": [
+        "bree_compacted_terminal_events": [
             {
                 "session_id": "pi-compacted-rejected-session",
                 "tool_call_id": "pi-compacted-rejected-tool",
@@ -3137,12 +3137,12 @@ def test_pi_compacted_feed_rejects_failed_server_ack(cli_path: str, root: Path) 
         ],
     }
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
 
-    with FakeCmuxSocket(socket_path, None, include_feed_item_id=False):
+    with FakeBreeSocket(socket_path, None, include_feed_item_id=False):
         result = subprocess.run(
             [
                 cli_path,
@@ -3171,20 +3171,20 @@ def test_pi_compacted_feed_rejects_failed_server_ack(cli_path: str, root: Path) 
 
 
 def test_pi_compacted_feed_sanitizes_not_found_server_error(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-compacted-private-not-found.sock"
+    socket_path = root / "bree-pi-compacted-private-not-found.sock"
     private_marker = "private resolver detail must not leak"
     payload = {
         "session_id": "pi-compacted-private-not-found",
         "hook_event_name": "PostToolUse",
-        "cmux_compacted_terminal_events": [{"tool_call_id": "private-tool", "tool_name": "bash"}],
+        "bree_compacted_terminal_events": [{"tool_call_id": "private-tool", "tool_name": "bash"}],
     }
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         method_errors={"feed.push": ("not_found", private_marker)},
@@ -3222,11 +3222,11 @@ def test_pi_compacted_feed_sanitizes_not_found_server_error(cli_path: str, root:
 
 
 def test_pi_compacted_feed_allows_brief_auth_delay(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-compacted-auth-delay.sock"
+    socket_path = root / "bree-pi-compacted-auth-delay.sock"
     payload = {
         "session_id": "pi-compacted-auth-delay-session",
         "hook_event_name": "PostToolUse",
-        "cmux_compacted_terminal_events": [
+        "bree_compacted_terminal_events": [
             {
                 "session_id": "pi-compacted-auth-delay-session",
                 "tool_call_id": "pi-compacted-auth-delay-tool",
@@ -3235,12 +3235,12 @@ def test_pi_compacted_feed_allows_brief_auth_delay(cli_path: str, root: Path) ->
         ],
     }
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         raw_response_delay=0.15,
@@ -3283,13 +3283,13 @@ def test_pi_compacted_feed_allows_brief_auth_delay(cli_path: str, root: Path) ->
 
 
 def test_pi_feed_waits_for_server_ack(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-feed-ack.sock"
+    socket_path = root / "bree-pi-feed-ack.sock"
     response_gate = threading.Event()
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-ack-session",
         "cwd": "/tmp/pi-ack-project",
@@ -3298,7 +3298,7 @@ def test_pi_feed_waits_for_server_ack(cli_path: str, root: Path) -> None:
         "tool_name": "bash",
     }
 
-    with FakeCmuxSocket(socket_path, None, feed_response_gate=response_gate) as fake:
+    with FakeBreeSocket(socket_path, None, feed_response_gate=response_gate) as fake:
         process = subprocess.Popen(
             [
                 cli_path,
@@ -3339,12 +3339,12 @@ def test_pi_feed_waits_for_server_ack(cli_path: str, root: Path) -> None:
 
 
 def test_pi_feed_rejects_failed_server_ack(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-feed-rejected-ack.sock"
+    socket_path = root / "bree-pi-feed-rejected-ack.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-rejected-session",
         "cwd": "/tmp/pi-rejected-project",
@@ -3353,7 +3353,7 @@ def test_pi_feed_rejects_failed_server_ack(cli_path: str, root: Path) -> None:
         "tool_name": "bash",
     }
 
-    with FakeCmuxSocket(socket_path, None, feed_response_ok=False):
+    with FakeBreeSocket(socket_path, None, feed_response_ok=False):
         result = subprocess.run(
             [
                 cli_path,
@@ -3382,12 +3382,12 @@ def test_pi_feed_rejects_failed_server_ack(cli_path: str, root: Path) -> None:
 
 
 def test_pi_feed_rejects_unconfirmed_server_ack(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-feed-unconfirmed-ack.sock"
+    socket_path = root / "bree-pi-feed-unconfirmed-ack.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-unconfirmed-session",
         "cwd": "/tmp/pi-unconfirmed-project",
@@ -3396,7 +3396,7 @@ def test_pi_feed_rejects_unconfirmed_server_ack(cli_path: str, root: Path) -> No
         "tool_name": "bash",
     }
 
-    with FakeCmuxSocket(socket_path, None, include_feed_item_id=False):
+    with FakeBreeSocket(socket_path, None, include_feed_item_id=False):
         result = subprocess.run(
             [
                 cli_path,
@@ -3432,17 +3432,17 @@ def test_pi_feed_rejects_unconfirmed_server_ack(cli_path: str, root: Path) -> No
 
 
 def test_pi_compacted_feed_accepts_single_item_ack(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-single-compacted-ack.sock"
+    socket_path = root / "bree-pi-single-compacted-ack.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-single-compacted-session",
         "cwd": "/tmp/pi-single-compacted-project",
-        "cmux_compacted_terminal_omitted_count": 0,
-        "cmux_compacted_terminal_events": [
+        "bree_compacted_terminal_omitted_count": 0,
+        "bree_compacted_terminal_events": [
             {
                 "session_id": "pi-single-compacted-session",
                 "tool_call_id": "pi-single-compacted-tool",
@@ -3451,7 +3451,7 @@ def test_pi_compacted_feed_accepts_single_item_ack(cli_path: str, root: Path) ->
         ],
     }
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surface_delivery_target=(FAKE_WORKSPACE_ID, FAKE_SURFACE_ID),
@@ -3494,10 +3494,10 @@ def test_pi_compacted_feed_accepts_single_item_ack(cli_path: str, root: Path) ->
 def test_pi_feed_rejects_connection_failure(cli_path: str, root: Path) -> None:
     socket_path = root / "missing-pi-feed.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-connection-failure-session",
         "cwd": "/tmp/pi-connection-failure-project",
@@ -3534,13 +3534,13 @@ def test_pi_feed_rejects_connection_failure(cli_path: str, root: Path) -> None:
 
 
 def test_legacy_pi_feed_rejects_invalid_ambient_surface(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-legacy-invalid-ambient-surface.sock"
+    socket_path = root / "bree-pi-legacy-invalid-ambient-surface.sock"
     invalid_surface_id = "33333333-3333-3333-3333-333333333333"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = invalid_surface_id
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = invalid_surface_id
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-legacy-invalid-surface-session",
         "cwd": "/tmp/pi-legacy-invalid-surface-project",
@@ -3549,7 +3549,7 @@ def test_legacy_pi_feed_rejects_invalid_ambient_surface(cli_path: str, root: Pat
         "tool_name": "bash",
     }
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         method_errors={"feed.push": ("not_found", "No live delivery target")},
@@ -3590,13 +3590,13 @@ def test_legacy_pi_feed_rejects_invalid_ambient_surface(cli_path: str, root: Pat
 
 
 def test_pi_hook_rejects_invalid_explicit_surface(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-invalid-explicit-surface.sock"
+    socket_path = root / "bree-pi-invalid-explicit-surface.sock"
     invalid_surface_id = "33333333-3333-3333-3333-333333333333"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = invalid_surface_id
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = invalid_surface_id
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-invalid-surface-session",
         "cwd": "/tmp/pi-invalid-surface-project",
@@ -3604,7 +3604,7 @@ def test_pi_hook_rejects_invalid_explicit_surface(cli_path: str, root: Path) -> 
         "prompt": "strict target",
     }
 
-    with FakeCmuxSocket(socket_path, None) as fake:
+    with FakeBreeSocket(socket_path, None) as fake:
         result = subprocess.run(
             [
                 cli_path,
@@ -3636,14 +3636,14 @@ def test_pi_hook_rejects_invalid_explicit_surface(cli_path: str, root: Path) -> 
 
 
 def test_pi_hook_rehomes_restored_surface_alias(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-moved-explicit-surface.sock"
+    socket_path = root / "bree-pi-moved-explicit-surface.sock"
     moved_workspace_id = "44444444-4444-4444-4444-444444444444"
     restored_surface_id = "66666666-6666-6666-6666-666666666666"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-moved-surface-session",
         "cwd": "/tmp/pi-moved-surface-project",
@@ -3651,7 +3651,7 @@ def test_pi_hook_rehomes_restored_surface_alias(cli_path: str, root: Path) -> No
         "prompt": "moved target",
     }
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surfaces_by_workspace={
@@ -3715,14 +3715,14 @@ def test_pi_hook_rehomes_restored_surface_alias(cli_path: str, root: Path) -> No
 
 
 def test_pi_hook_explicit_workspace_ignores_ambient_surface(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-explicit-workspace-no-surface.sock"
+    socket_path = root / "bree-pi-explicit-workspace-no-surface.sock"
     explicit_workspace_id = "55555555-5555-5555-5555-555555555555"
     explicit_workspace_surface_id = "66666666-6666-6666-6666-666666666666"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-explicit-workspace-no-surface-session",
         "cwd": "/tmp/pi-explicit-workspace-no-surface-project",
@@ -3730,7 +3730,7 @@ def test_pi_hook_explicit_workspace_ignores_ambient_surface(cli_path: str, root:
         "prompt": "workspace-scoped target",
     }
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surfaces_by_workspace={
@@ -3788,14 +3788,14 @@ def test_pi_hook_explicit_workspace_ignores_ambient_surface(cli_path: str, root:
 
 
 def test_pi_feed_explicit_workspace_ignores_ambient_surface(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-explicit-feed-workspace-no-surface.sock"
+    socket_path = root / "bree-pi-explicit-feed-workspace-no-surface.sock"
     explicit_workspace_id = "55555555-5555-5555-5555-555555555555"
     explicit_workspace_surface_id = "66666666-6666-6666-6666-666666666666"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-explicit-feed-workspace-no-surface-session",
         "cwd": "/tmp/pi-explicit-feed-workspace-no-surface-project",
@@ -3804,7 +3804,7 @@ def test_pi_feed_explicit_workspace_ignores_ambient_surface(cli_path: str, root:
         "tool_name": "bash",
     }
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surfaces_by_workspace={
@@ -3863,13 +3863,13 @@ def test_pi_feed_explicit_workspace_ignores_ambient_surface(cli_path: str, root:
 
 
 def test_pi_feed_uses_resolved_explicit_workspace(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-explicit-feed-workspace.sock"
+    socket_path = root / "bree-pi-explicit-feed-workspace.sock"
     explicit_workspace_id = "55555555-5555-5555-5555-555555555555"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-explicit-workspace-session",
         "cwd": "/tmp/pi-explicit-workspace-project",
@@ -3878,7 +3878,7 @@ def test_pi_feed_uses_resolved_explicit_workspace(cli_path: str, root: Path) -> 
         "tool_name": "bash",
     }
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surfaces_by_workspace={
@@ -3944,14 +3944,14 @@ def test_pi_feed_uses_resolved_explicit_workspace(cli_path: str, root: Path) -> 
 
 
 def test_pi_feed_rejects_missing_explicit_workspace(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-missing-explicit-workspace.sock"
+    socket_path = root / "bree-pi-missing-explicit-workspace.sock"
     missing_workspace = "workspace:404"
     other_workspace_id = "66666666-6666-6666-6666-666666666666"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-missing-workspace-session",
         "cwd": "/tmp/pi-missing-workspace-project",
@@ -3960,7 +3960,7 @@ def test_pi_feed_rejects_missing_explicit_workspace(cli_path: str, root: Path) -
         "tool_name": "bash",
     }
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surface_delivery_target=(other_workspace_id, FAKE_SURFACE_ID),
@@ -4005,12 +4005,12 @@ def test_pi_feed_rejects_missing_explicit_workspace(cli_path: str, root: Path) -
 
 
 def test_pi_feed_treats_blank_ambient_workspace_as_absent(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-blank-ambient-workspace.sock"
+    socket_path = root / "bree-pi-blank-ambient-workspace.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = ""
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = ""
     payload = {
         "session_id": "pi-blank-workspace-session",
         "cwd": "/tmp/pi-blank-workspace-project",
@@ -4019,7 +4019,7 @@ def test_pi_feed_treats_blank_ambient_workspace_as_absent(cli_path: str, root: P
         "tool_name": "bash",
     }
 
-    with FakeCmuxSocket(
+    with FakeBreeSocket(
         socket_path,
         None,
         surface_delivery_target=(FAKE_WORKSPACE_ID, FAKE_SURFACE_ID),
@@ -4058,16 +4058,16 @@ def test_pi_feed_treats_blank_ambient_workspace_as_absent(cli_path: str, root: P
 
 
 def test_pi_compacted_feed_rejects_blank_explicit_workspace(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-blank-explicit-workspace.sock"
+    socket_path = root / "bree-pi-blank-explicit-workspace.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-blank-explicit-workspace-session",
         "hook_event_name": "PostToolUse",
-        "cmux_compacted_terminal_events": [
+        "bree_compacted_terminal_events": [
             {
                 "session_id": "pi-blank-explicit-workspace-session",
                 "tool_call_id": "pi-blank-explicit-workspace-tool",
@@ -4076,7 +4076,7 @@ def test_pi_compacted_feed_rejects_blank_explicit_workspace(cli_path: str, root:
         ],
     }
 
-    with FakeCmuxSocket(socket_path, None) as fake:
+    with FakeBreeSocket(socket_path, None) as fake:
         result = subprocess.run(
             [
                 cli_path,
@@ -4113,16 +4113,16 @@ def test_pi_compacted_feed_rejects_blank_explicit_workspace(cli_path: str, root:
 
 
 def test_pi_compacted_feed_rejects_blank_explicit_surface(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-blank-explicit-surface.sock"
+    socket_path = root / "bree-pi-blank-explicit-surface.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-blank-explicit-surface-session",
         "hook_event_name": "PostToolUse",
-        "cmux_compacted_terminal_events": [
+        "bree_compacted_terminal_events": [
             {
                 "session_id": "pi-blank-explicit-surface-session",
                 "tool_call_id": "pi-blank-explicit-surface-tool",
@@ -4131,7 +4131,7 @@ def test_pi_compacted_feed_rejects_blank_explicit_surface(cli_path: str, root: P
         ],
     }
 
-    with FakeCmuxSocket(socket_path, None) as fake:
+    with FakeBreeSocket(socket_path, None) as fake:
         result = subprocess.run(
             [
                 cli_path,
@@ -4167,23 +4167,23 @@ def test_pi_compacted_feed_rejects_blank_explicit_surface(cli_path: str, root: P
 
 
 def test_pi_feed_rejects_malformed_compacted_marker(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-malformed-compacted-marker.sock"
+    socket_path = root / "bree-pi-malformed-compacted-marker.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-malformed-compacted-marker-session",
         "hook_event_name": "PostToolUse",
         "tool_call_id": "pi-malformed-compacted-marker-tool",
         "tool_name": "bash",
-        "cmux_compacted_terminal_events": {
+        "bree_compacted_terminal_events": {
             "unexpected": "object",
         },
     }
 
-    with FakeCmuxSocket(socket_path, None) as fake:
+    with FakeBreeSocket(socket_path, None) as fake:
         result = subprocess.run(
             [
                 cli_path,
@@ -4219,12 +4219,12 @@ def test_pi_feed_rejects_malformed_compacted_marker(cli_path: str, root: Path) -
 
 
 def test_pi_hook_rejects_malformed_explicit_surface(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-malformed-explicit-surface.sock"
+    socket_path = root / "bree-pi-malformed-explicit-surface.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = "not-a-surface-handle"
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = "not-a-surface-handle"
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-malformed-surface-session",
         "cwd": "/tmp/pi-malformed-surface-project",
@@ -4232,7 +4232,7 @@ def test_pi_hook_rejects_malformed_explicit_surface(cli_path: str, root: Path) -
         "prompt": "strict malformed target",
     }
 
-    with FakeCmuxSocket(socket_path, None) as fake:
+    with FakeBreeSocket(socket_path, None) as fake:
         result = subprocess.run(
             [
                 cli_path,
@@ -4263,10 +4263,10 @@ def test_pi_hook_rejects_malformed_explicit_surface(cli_path: str, root: Path) -
 
 def test_pi_compacted_feed_bounds_untrusted_batch(cli_path: str, root: Path) -> None:
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     oversized_events = [
         {
             "session_id": "pi-untrusted-compaction-session",
@@ -4282,16 +4282,16 @@ def test_pi_compacted_feed_bounds_untrusted_batch(cli_path: str, root: Path) -> 
     ]
 
     for name, compacted_events in invalid_batches:
-        socket_path = root / f"cmux-pi-untrusted-compaction-{name}.sock"
+        socket_path = root / f"bree-pi-untrusted-compaction-{name}.sock"
         payload = {
             "session_id": "",
             "hook_event_name": "PostToolUse",
-            "cmux_compacted_terminal_events": compacted_events,
+            "bree_compacted_terminal_events": compacted_events,
         }
         if name == "oversized":
             payload["session_id"] = "pi-untrusted-compaction-session"
 
-        with FakeCmuxSocket(socket_path, None) as fake:
+        with FakeBreeSocket(socket_path, None) as fake:
             result = subprocess.run(
                 [
                     cli_path,
@@ -4320,19 +4320,19 @@ def test_pi_compacted_feed_bounds_untrusted_batch(cli_path: str, root: Path) -> 
 
 
 def test_pi_feed_rejects_oversized_input(cli_path: str, root: Path) -> None:
-    socket_path = root / "cmux-pi-oversized-feed.sock"
+    socket_path = root / "bree-pi-oversized-feed.sock"
     env = os.environ.copy()
-    for key in ("CMUX_SOCKET", "CMUX_SOCKET_CAPABILITY", "CMUX_SOCKET_PATH", "CMUX_SOCKET_PASSWORD"):
+    for key in ("BREE_SOCKET", "BREE_SOCKET_CAPABILITY", "BREE_SOCKET_PATH", "BREE_SOCKET_PASSWORD"):
         env.pop(key, None)
-    env["CMUX_SURFACE_ID"] = FAKE_SURFACE_ID
-    env["CMUX_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
+    env["BREE_SURFACE_ID"] = FAKE_SURFACE_ID
+    env["BREE_WORKSPACE_ID"] = FAKE_WORKSPACE_ID
     payload = {
         "session_id": "pi-oversized-feed-session",
         "hook_event_name": "PostToolUse",
         "padding": "x" * (128 * 1024),
     }
 
-    with FakeCmuxSocket(socket_path, None) as fake:
+    with FakeBreeSocket(socket_path, None) as fake:
         result = subprocess.run(
             [
                 cli_path,
@@ -4362,7 +4362,7 @@ def test_pi_feed_rejects_oversized_input(cli_path: str, root: Path) -> None:
 def test_claude_subagent_stop_stays_distinct_feed_telemetry(cli_path: str, root: Path) -> None:
     stdout, frame = run_feed_hook(
         cli_path,
-        root / "cmux-claude-subagent-stop.sock",
+        root / "bree-claude-subagent-stop.sock",
         {
             "session_id": "claude-session",
             "cwd": "/tmp/project",
@@ -4383,15 +4383,15 @@ def test_claude_subagent_stop_stays_distinct_feed_telemetry(cli_path: str, root:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
     # The CLI writes generated hook scripts under $HOME/<identity dot dir>; never the real HOME.
-    # isolated_home also fails the run if the real ~/.cmux, ~/.bree, ~/.codex/hooks.json or
+    # isolated_home also fails the run if the real ~/.bree, ~/.bree, ~/.codex/hooks.json or
     # ~/.claude/settings.json changed (stat-only check).
-    with isolated_home("cmux-codex-feed-hooks-", subdir="home", base_dir="/tmp", set_process_env=True) as iso:
+    with isolated_home("bree-codex-feed-hooks-", subdir="home", base_dir="/tmp", set_process_env=True) as iso:
         root = iso.root
         global HOOKS_DIR, REFERENCE_CLI, REFERENCE_ROOT
         test_home = iso.home
@@ -4409,7 +4409,7 @@ def main() -> int:
             test_codex_monitor_rechecks_owner_during_grace(cli_path, root)
             test_codex_monitor_rehomes_replayed_stop_after_surface_move(cli_path, root)
             test_install_writes_hook_scripts_under_identity_dot_directory_only(cli_path, root)
-            test_codex_install_and_uninstall_keep_cmux_app_entries(cli_path, root)
+            test_codex_install_and_uninstall_keep_bree_app_entries(cli_path, root)
             test_install_adds_codex_permission_request_hook(cli_path, root)
             test_install_escapes_codex_hook_trust_state_keys(cli_path, root)
             test_install_preserves_codex_hook_position_with_third_party_hooks(cli_path, root)
@@ -4424,14 +4424,14 @@ def main() -> int:
             test_uninstall_restores_disabled_codex_hooks_feature(cli_path, root)
             test_uninstall_restores_disabled_dotted_codex_hooks_feature(cli_path, root)
             test_install_scans_features_past_bracketed_array(cli_path, root)
-            test_uninstall_removes_cmux_owned_codex_hooks_feature(cli_path, root)
-            test_uninstall_preserves_unowned_hook_trust_when_cmux_marker_is_unclosed(cli_path, root)
-            test_install_recovers_hook_trust_when_cmux_marker_is_unclosed(cli_path, root)
-            test_install_preserves_plugin_tables_inside_stale_cmux_hook_trust_marker(cli_path, root)
+            test_uninstall_removes_bree_owned_codex_hooks_feature(cli_path, root)
+            test_uninstall_preserves_unowned_hook_trust_when_bree_marker_is_unclosed(cli_path, root)
+            test_install_recovers_hook_trust_when_bree_marker_is_unclosed(cli_path, root)
+            test_install_preserves_plugin_tables_inside_stale_bree_hook_trust_marker(cli_path, root)
             test_install_enables_hooks_when_stale_trust_marker_captures_dotted_feature(cli_path, root)
-            test_uninstall_preserves_third_party_hook_trust_inside_cmux_marker(cli_path, root)
-            test_uninstall_retry_removes_stale_cmux_hook_trust_after_hooks_are_cleaned(cli_path, root)
-            test_uninstall_retry_preserves_user_hook_trust_at_default_cmux_key(cli_path, root)
+            test_uninstall_preserves_third_party_hook_trust_inside_bree_marker(cli_path, root)
+            test_uninstall_retry_removes_stale_bree_hook_trust_after_hooks_are_cleaned(cli_path, root)
+            test_uninstall_retry_preserves_user_hook_trust_at_default_bree_key(cli_path, root)
             test_uninstall_removes_legacy_codex_hook_trust(cli_path, root)
             test_uninstall_codex_hooks_removes_legacy_managed_block(cli_path, root)
             test_install_surfaces_invalid_codex_config_encoding(cli_path, root)

@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 import WebKit
 
@@ -375,7 +375,7 @@ private struct ArtifactJSONLView: View {
                                 if !record.isValid {
                                     Text(String(localized: "artifact.jsonl.invalid", defaultValue: "Invalid JSON"))
                                         .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(.red)
+                                        .foregroundStyle(BreeChromePalette.currentSnapshot.signalError)
                                 }
                                 Text(record.text)
                                     .font(.system(size: 12, design: .monospaced))
@@ -385,7 +385,7 @@ private struct ArtifactJSONLView: View {
                         }
                         .padding(.vertical, 6)
                         .padding(.horizontal, 8)
-                        .background(record.isValid ? Color.clear : Color.red.opacity(0.1))
+                        .background(record.isValid ? Color.clear : BreeChromePalette.currentSnapshot.signalError.opacity(0.1))
                         Divider()
                     }
                 }

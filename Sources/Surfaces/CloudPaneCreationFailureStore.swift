@@ -1,5 +1,5 @@
-import CmuxCloud
-import CmuxSurfaceCatalogModel
+import BreeCloud
+import BreeSurfaceCatalogModel
 import Foundation
 import Observation
 
@@ -68,7 +68,7 @@ final class CloudPaneCreationFailureStore {
             onFailure: { [weak self] error in
                 onFinish()
                 #if DEBUG
-                cmuxDebugLog("cloud.pane.createFailed request=\(requestID) machine=\(machine.rawValue) error=\(String(reflecting: error))")
+                breeDebugLog("cloud.pane.createFailed request=\(requestID) machine=\(machine.rawValue) error=\(String(reflecting: error))")
                 #endif
                 if let inlineFailure {
                     inlineFailure(error)

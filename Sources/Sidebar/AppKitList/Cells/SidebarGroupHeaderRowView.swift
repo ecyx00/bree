@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import SwiftUI
 
 /// Pure-AppKit group header cell for the sidebar workspace table.
@@ -227,11 +227,11 @@ final class SidebarGroupHeaderTableCellView: NSTableCellView {
             unreadBadgeFont = roleFont(.count, weight: .medium, countRow: .caption)
             unreadBadgeView.configure(
                 count: model.anchorUnreadCount,
-                fillColor: cmuxNotificationBadgeNSColor(
+                fillColor: breeNotificationBadgeNSColor(
                     hex: model.notificationBadgeColorHex,
-                    fallback: chrome.signalAttention
+                    fallback: chrome.accentFill
                 ),
-                // Surface colour on the attention fill: 4.5:1 for every theme.
+                // Surface colour on the ivory accent fill: 4.5:1 for every theme.
                 textColor: model.notificationBadgeColorHex == nil ? chrome.surfaceBase : .white,
                 font: unreadBadgeFont
             )
@@ -285,7 +285,7 @@ final class SidebarGroupHeaderTableCellView: NSTableCellView {
     func paintControllerDropIndicator(top: Bool, bottom: Bool) {
         let colorScheme: ColorScheme = model.map { $0.colorSchemeIsDark ? .dark : .light }
             ?? SidebarAppearanceColorResolver().currentColorScheme()
-        let accent = (model?.accentColor ?? CmuxAccentColor()).nsColor(for: colorScheme)
+        let accent = (model?.accentColor ?? BreeAccentColor()).nsColor(for: colorScheme)
         topDropIndicator.layer?.backgroundColor = accent.cgColor
         bottomDropIndicator.layer?.backgroundColor = accent.cgColor
         topDropIndicator.isHidden = !top

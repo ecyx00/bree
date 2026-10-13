@@ -12,7 +12,7 @@ That marker leaks to every descendant of the launched Claude, so it is not
 proof on its own. The wrapper is the one process that still sees Subrouter's
 private `--settings` argument (its settings merge drops user `--settings`
 before the argv is captured for restore), so it binds the marker to THIS launch
-as `CMUX_AGENT_LAUNCH_SUBROUTER_CLAUDE_RESUME_COMMAND` only when:
+as `BREE_AGENT_LAUNCH_SUBROUTER_CLAUDE_RESUME_COMMAND` only when:
 
 - the marker is one of the exact launcher commands, and
 - the argv carries an existing `--settings` file inside a
@@ -36,10 +36,10 @@ from node_runtime import ensure_node_on_path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "cmux-claude-wrapper"
+SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "bree-claude-wrapper"
 MARKER_KEY = "SUBROUTER_CLAUDE_RESUME_COMMAND"
-BOUND_KEY = "CMUX_AGENT_LAUNCH_SUBROUTER_CLAUDE_RESUME_COMMAND"
-ACCOUNT_KEY = "CMUX_AGENT_LAUNCH_ROUTED_CLAUDE_ACCOUNT"
+BOUND_KEY = "BREE_AGENT_LAUNCH_SUBROUTER_CLAUDE_RESUME_COMMAND"
+ACCOUNT_KEY = "BREE_AGENT_LAUNCH_ROUTED_CLAUDE_ACCOUNT"
 SR_MARKER = "sr claude proxy --resume"
 SUBROUTER_MARKER = "subrouter claude proxy --resume"
 SESSION_ID = "0198f073-0a5b-7000-8000-000000000059"
@@ -83,9 +83,9 @@ def run_wrapper(
     a file it creates under the harness TMPDIR (or at one it deliberately does
     not create). Returns (exit code, claude env, claude argv, stderr).
     """
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-sr-marker-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-sr-marker-") as td:
         tmp = Path(td)
-        wrapper_dir = tmp / "cmux.app" / "Contents" / "Resources" / "bin"
+        wrapper_dir = tmp / "bree.app" / "Contents" / "Resources" / "bin"
         real_dir = tmp / "real-bin"
         bundled_dir = tmp / "bundled cli"
         home = tmp / "home"
@@ -93,13 +93,13 @@ def run_wrapper(
         for directory in (wrapper_dir, real_dir, bundled_dir, home, tmpdir):
             directory.mkdir(parents=True, exist_ok=True)
 
-        wrapper = wrapper_dir / "cmux-claude-wrapper"
+        wrapper = wrapper_dir / "bree-claude-wrapper"
         shutil.copy2(SOURCE_WRAPPER, wrapper)
         wrapper.chmod(0o755)
 
         env_log = tmp / "claude-env.log"
         args_log = tmp / "claude-args.log"
-        socket_path = str(tmp / "cmux.sock")
+        socket_path = str(tmp / "bree.sock")
 
         make_executable(
             real_dir / "claude",
@@ -143,9 +143,9 @@ exit 0
             "PATH": f"{wrapper_dir}:{real_dir}:{Path(node).parent}:/usr/bin:/bin",
             "HOME": str(home),
             "TMPDIR": str(tmpdir),
-            "CMUX_SURFACE_ID": "surface:test",
-            "CMUX_SOCKET_PATH": socket_path,
-            "CMUX_BUNDLED_CLI_PATH": str(bundled_cli),
+            "BREE_SURFACE_ID": "surface:test",
+            "BREE_SOCKET_PATH": socket_path,
+            "BREE_BUNDLED_CLI_PATH": str(bundled_cli),
             "FAKE_CLAUDE_ENV_LOG": str(env_log),
             "FAKE_CLAUDE_ARGS_LOG": str(args_log),
             "FAKE_GENERATED_CLAUDE_HOOK_SETTINGS": GENERATED_CLAUDE_HOOK_SETTINGS,

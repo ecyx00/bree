@@ -1,11 +1,11 @@
 # Start here
 
-You want to change something in cmux and you have not done it before. This page
+You want to change something in bree and you have not done it before. This page
 is the shortest path from that to a merged pull request. It assumes nothing
 except that you can use git.
 
-cmux is a macOS terminal that treats agents as first-class panes. The app and
-the `cmux` CLI are Swift. `cmux-tui`, the SDKs and the repository tooling are
+bree is a macOS terminal that treats agents as first-class panes. The app and
+the `bree` CLI are Swift. `bree-tui`, the SDKs and the repository tooling are
 Rust, Python and TypeScript.
 
 ## 1. Pick something small
@@ -14,14 +14,14 @@ Sorted roughly by how little setup they need:
 
 | If you want to | Look at |
 |---|---|
-| Fix something small with a clear starting point | [`good first issue`](https://github.com/manaflow-ai/cmux/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) |
-| Start with the smallest scoped work | [`difficulty:1`](https://github.com/manaflow-ai/cmux/issues?q=is%3Aissue+is%3Aopen+label%3A%22difficulty%3A1%22) |
-| Work on one package or feature boundary | [`difficulty:2`](https://github.com/manaflow-ai/cmux/issues?q=is%3Aissue+is%3Aopen+label%3A%22difficulty%3A2%22) |
-| Join a design or cross-component effort | [`difficulty:3`](https://github.com/manaflow-ai/cmux/issues?q=is%3Aissue+is%3Aopen+label%3A%22difficulty%3A3%22) |
-| Take something nobody is working on | [`help wanted`](https://github.com/manaflow-ai/cmux/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) |
-| Work on one part of the app | [`area:` labels](https://github.com/manaflow-ai/cmux/labels?q=area) |
-| Fix something badly broken | [`S1: critical`](https://github.com/manaflow-ai/cmux/issues?q=is%3Aissue+is%3Aopen+label%3A%22S1%3A+critical%22) and [`S2: major`](https://github.com/manaflow-ai/cmux/issues?q=is%3Aissue+is%3Aopen+label%3A%22S2%3A+major%22) |
-| Help without building anything | [`needs-triage`](https://github.com/manaflow-ai/cmux/issues?q=is%3Aissue+is%3Aopen+label%3Aneeds-triage) |
+| Fix something small with a clear starting point | [`good first issue`](https://github.com/ecyx00/bree/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) |
+| Start with the smallest scoped work | [`difficulty:1`](https://github.com/ecyx00/bree/issues?q=is%3Aissue+is%3Aopen+label%3A%22difficulty%3A1%22) |
+| Work on one package or feature boundary | [`difficulty:2`](https://github.com/ecyx00/bree/issues?q=is%3Aissue+is%3Aopen+label%3A%22difficulty%3A2%22) |
+| Join a design or cross-component effort | [`difficulty:3`](https://github.com/ecyx00/bree/issues?q=is%3Aissue+is%3Aopen+label%3A%22difficulty%3A3%22) |
+| Take something nobody is working on | [`help wanted`](https://github.com/ecyx00/bree/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) |
+| Work on one part of the app | [`area:` labels](https://github.com/ecyx00/bree/labels?q=area) |
+| Fix something badly broken | [`S1: critical`](https://github.com/ecyx00/bree/issues?q=is%3Aissue+is%3Aopen+label%3A%22S1%3A+critical%22) and [`S2: major`](https://github.com/ecyx00/bree/issues?q=is%3Aissue+is%3Aopen+label%3A%22S2%3A+major%22) |
+| Help without building anything | [`needs-triage`](https://github.com/ecyx00/bree/issues?q=is%3Aissue+is%3Aopen+label%3Aneeds-triage) |
 
 [`docs/triage.md`](triage.md) explains what those labels mean and who assigns
 them. Difficulty is a maintainer's estimate of scope and coordination;
@@ -31,7 +31,7 @@ one, working out where it belongs and saying so in a comment is useful and needs
 no Xcode.
 
 Skip anything labeled `needs a call`. That work is waiting on a maintainer
-decision about what cmux should do, not on code.
+decision about what bree should do, not on code.
 
 **Say on the issue that you are picking it up, then start.** One comment is
 enough, and you don't need to wait for a reply. It stops two people writing the
@@ -39,19 +39,19 @@ same patch. If someone already claimed it recently, pick something else or ask
 them. If you have to stop, say so on the issue so the next person can take it.
 
 If the issue is old, check whether it is still true on
-[NIGHTLY](https://github.com/manaflow-ai/cmux#nightly-builds) before you write
+[NIGHTLY](https://github.com/ecyx00/bree#nightly-builds) before you write
 anything. Plenty of open issues were fixed by other work and nobody noticed.
 
 ## 2. Things you can fix without a Mac build
 
-Most of cmux needs macOS and Xcode. These do not:
+Most of bree needs macOS and Xcode. These do not:
 
 - Documentation, including this page and the [README](../README.md).
 - Translations and localization catalogs.
 - The Python tooling under `scripts/` and its tests under `tests/`, which run
   on Linux.
 - The triage rules in [`scripts/ci/triage_rules.py`](../scripts/ci/triage_rules.py).
-- The `cmux-tui` Rust crates and the SDKs, which have their own test lanes.
+- The `bree-tui` Rust crates and the SDKs, which have their own test lanes.
 
 The web surfaces under `web/` also build and test on Linux, but note they are
 licensed differently from the app: [LICENSE](../LICENSE) puts `web/` and the
@@ -61,7 +61,7 @@ GPL part of the tree.
 
 If you do have a Mac: [CONTRIBUTING.md](../CONTRIBUTING.md) has the
 prerequisites and the two commands that get you a running debug build
-(`./scripts/setup.sh`, then `CMUX_DEV_BACKEND_MODE=local ./scripts/reload.sh
+(`./scripts/setup.sh`, then `BREE_DEV_BACKEND_MODE=local ./scripts/reload.sh
 --tag my-feature`). Ghostty is vendored in the repo, so a plain clone is enough.
 
 ## 3. Check your change before you push
@@ -128,8 +128,8 @@ the weakest part of contributing here. If your PR goes quiet and you want eyes
 on it, comment on it and say so. That works better than opening a second one.
 
 To land, a change needs green CI, a review that has been answered, and no
-pending decision about what cmux should do. That last one is the usual reason
-a finished patch waits: if the question is "should cmux behave this way", a
+pending decision about what bree should do. That last one is the usual reason
+a finished patch waits: if the question is "should bree behave this way", a
 maintainer answers it before the code goes in, and the pull request gets the
 `needs a call` label until then.
 
@@ -150,7 +150,7 @@ If several people are contributing at once, a few things make it work:
 - Have each person claim a different issue in a comment before starting. Thirty
   patches for one `good first issue` helps nobody.
 - `needs-triage` and localization scale well across many people and need no
-  Mac. A group that clears 200 `needs-triage` issues has done more for cmux
+  Mac. A group that clears 200 `needs-triage` issues has done more for bree
   than a group that opens 200 small PRs.
 - One PR per person per issue. Do not open a PR per commit.
 - Read [STYLE.md](../STYLE.md) once as a group; it is short, and it is what
@@ -159,7 +159,7 @@ If several people are contributing at once, a few things make it work:
 ## Where to ask
 
 - [Discord](https://discord.gg/xsgFEVrWCZ) for quick questions.
-- [Discussions](https://github.com/manaflow-ai/cmux/discussions) for anything
+- [Discussions](https://github.com/ecyx00/bree/discussions) for anything
   worth finding again later.
 - [CONTRIBUTING.md](../CONTRIBUTING.md) for build, test and release mechanics.
 - [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) for how we talk to each other:

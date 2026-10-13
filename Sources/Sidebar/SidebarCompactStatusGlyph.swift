@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 /// The single leading glyph a workspace row shows when
@@ -7,7 +7,7 @@ import Foundation
 /// list: glyph then title on one line, with the details in the glyph's
 /// tooltip.
 ///
-/// Compact mode folds in the lines cmux generates on your behalf: the
+/// Compact mode folds in the lines bree generates on your behalf: the
 /// agent-owned status entries (agent hooks report their lifecycle as keyed
 /// entries, `set_status claude_code Running --icon=bolt.fill`), the
 /// branch/directory line, the notification preview,
@@ -15,7 +15,7 @@ import Foundation
 /// one line, so title wrapping does not undo it.
 ///
 /// Lines you asked for yourself stay where they are: the workspace
-/// description, your own `cmux set-status` keys, logs, progress, ports, the
+/// description, your own `bree set-status` keys, logs, progress, ports, the
 /// checklist, and a remote workspace's connection row with its Reconnect
 /// button. Those carry text and controls a user chose to put there, so
 /// compact mode does not hide them; `set-status` under your own key stays the
@@ -65,7 +65,7 @@ struct SidebarCompactStatusGlyph: Equatable, Hashable {
     var iconOverrides: [String: String] = [:]
 
     /// The customizable states; raw values are the `sidebar.compactStatusIcons`
-    /// keys in cmux.json.
+    /// keys in bree.json.
     enum IconSlot: String, CaseIterable {
         case error
         case needsInput
@@ -158,7 +158,7 @@ struct SidebarCompactStatusGlyph: Equatable, Hashable {
         }
     }
 
-    /// Needs input and unread: the theme's attention signal (thread-safe snapshot).
+    /// Needs input: the theme's attention signal (thread-safe snapshot).
     static var needsInputColor: NSColor {
         BreeChromePalette.currentSnapshot.ns.signalAttention
     }
@@ -271,7 +271,8 @@ struct SidebarCompactStatusGlyph: Equatable, Hashable {
         if isActive { return selected }
         switch kind {
         case .error: return BreeChromePalette.currentSnapshot.ns.signalError
-        case .needsInput, .unseen: return Self.needsInputColor
+        case .needsInput: return Self.needsInputColor
+        case .unseen: return BreeChromePalette.currentSnapshot.ns.accentFill
         case .subagents, .running, .waiting, .pending, .idle, .branch, .terminal:
             return secondary
         }

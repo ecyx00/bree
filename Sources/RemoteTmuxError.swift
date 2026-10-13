@@ -2,7 +2,7 @@ import Foundation
 
 /// Errors raised while talking to a remote tmux server over SSH.
 enum RemoteTmuxError: Error, Sendable, Equatable {
-    /// The `ssh` (or remote) command exited non-zero for a reason cmux does
+    /// The `ssh` (or remote) command exited non-zero for a reason bree does
     /// not treat as benign. Carries the exit code and captured stderr.
     case commandFailed(exitCode: Int32, stderr: String)
 
@@ -12,7 +12,7 @@ enum RemoteTmuxError: Error, Sendable, Equatable {
     /// The remote host is not reachable / the SSH master could not be opened.
     case unreachable(String)
 
-    /// cmux could not create the local window requested for a dedicated mirror.
+    /// bree could not create the local window requested for a dedicated mirror.
     case windowCreationFailed
 
     /// The remote tmux is older than ``RemoteTmuxVersion/minimumSupported``, so the
@@ -21,7 +21,7 @@ enum RemoteTmuxError: Error, Sendable, Equatable {
     /// string for the message.
     case unsupportedTmux(detected: String)
 
-    /// The remote host has no tmux binary anywhere cmux's resolver probes.
+    /// The remote host has no tmux binary anywhere bree's resolver probes.
     case tmuxNotFound(destination: String)
 }
 

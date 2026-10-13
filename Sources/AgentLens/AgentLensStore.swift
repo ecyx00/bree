@@ -1,6 +1,6 @@
-import CMUXAgentLaunch
-import CmuxAgentChat
-import CmuxFoundation
+import BREEAgentLaunch
+import BreeAgentChat
+import BreeFoundation
 import Foundation
 
 /// Live Claude Code sessions for the Sessions tab "Live" section.
@@ -90,7 +90,7 @@ final class AgentLensStore: ObservableObject {
                 self.cacheLastRead = Date()
                 guard let result else { return }
 #if DEBUG
-                cmuxDebugLog("agentLens.cache read sids=\(result.requests.keys.map { String($0.prefix(8)) }) cards=\(self.byID.keys.map { String($0.prefix(8)) })")
+                breeDebugLog("agentLens.cache read sids=\(result.requests.keys.map { String($0.prefix(8)) }) cards=\(self.byID.keys.map { String($0.prefix(8)) })")
 #endif
                 self.cacheMTime = result.mtime
                 self.cacheRequests = result.requests

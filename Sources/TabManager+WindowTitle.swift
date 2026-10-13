@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 extension TabManager {
@@ -78,7 +78,7 @@ extension TabManager {
     }
 
     /// Refreshes title chrome after a workspace's host changed, for example
-    /// when `cmux ssh` attaches its remote configuration or a Cloud machine's
+    /// when `bree ssh` attaches its remote configuration or a Cloud machine's
     /// name arrives after the workspace was selected.
     func workspaceHostLabelDidChange(_ workspace: Workspace) {
         guard workspace.owningTabManager === self,
@@ -105,20 +105,20 @@ extension TabManager {
         } ?? ""
         let activeDirectory = activeWindowTitleDirectory(for: tab)
         // `{activeWorkspace}` stays host-free; `{defaultTitle}` carries the host.
-        let workspaceFallback = activeDirectory.isEmpty ? CmuxIdentity.current.appDisplayName : activeDirectory
+        let workspaceFallback = activeDirectory.isEmpty ? BreeIdentity.current.appDisplayName : activeDirectory
         let resolvedTitle = template.resolved(context: WindowTitleTemplateContext(
             defaultTitle: defaultTitle,
             activeWorkspace: workspaceTitle.isEmpty ? (tab == nil ? defaultTitle : workspaceFallback) : workspaceTitle,
             activeDirectory: activeDirectory,
             windowId: windowId,
-            appName: CmuxIdentity.current.appDisplayName
+            appName: BreeIdentity.current.appDisplayName
         ))
         let trimmedResolvedTitle = resolvedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmedResolvedTitle.isEmpty ? defaultTitle : trimmedResolvedTitle
     }
 
     private func defaultWindowTitle(for tab: Workspace?) -> String {
-        guard let tab else { return CmuxIdentity.current.appDisplayName }
+        guard let tab else { return BreeIdentity.current.appDisplayName }
         let trimmedDirectory = activeWindowTitleDirectory(for: tab)
         let name = windowTitleName(
             workspaceTitle: resolvedWorkspaceDisplayTitle(for: tab),
@@ -134,7 +134,7 @@ extension TabManager {
             return tab.hostLabel.windowTitle(appendingTo: title)
         }
         let hostLabel = tab.hostLabel
-        return hostLabel.isRemote && !hostLabel.label.isEmpty ? hostLabel.label : CmuxIdentity.current.appDisplayName
+        return hostLabel.isRemote && !hostLabel.label.isEmpty ? hostLabel.label : BreeIdentity.current.appDisplayName
     }
 
     /// The window name: the workspace title, or the last path component of the

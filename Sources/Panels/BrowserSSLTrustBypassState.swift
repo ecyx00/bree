@@ -1,5 +1,5 @@
-import CmuxBrowser
-import CmuxSettings
+import BreeBrowser
+import BreeSettings
 import Foundation
 import Security
 
@@ -96,7 +96,7 @@ final class BrowserSSLTrustBypassState {
         enforcePendingBypassLimit()
 
         var components = URLComponents()
-        components.scheme = "cmux-browser-action"
+        components.scheme = "bree-browser-action"
         components.host = "bypass-ssl"
         components.queryItems = [
             URLQueryItem(name: "token", value: token),
@@ -116,7 +116,7 @@ final class BrowserSSLTrustBypassState {
     }
 
     func consumePendingBypassAction(_ actionURL: URL) -> URLRequest? {
-        guard actionURL.scheme == "cmux-browser-action",
+        guard actionURL.scheme == "bree-browser-action",
               actionURL.host == "bypass-ssl",
               let components = URLComponents(url: actionURL, resolvingAgainstBaseURL: false),
               let token = components.queryItems?.first(where: { $0.name == "token" })?.value else {

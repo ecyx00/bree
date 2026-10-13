@@ -1,6 +1,6 @@
 {
   "oracle": {},
-  "cmux": {
+  "bree": {
     "s1": "title: Parity Fixture\nurl: PRIMARY/\n- button \"Alpha\" [ref=e1]\n- button \"Beta\" [ref=e2]\n- button \"Out\" [ref=e3]",
     "s2": "title: Parity Fixture\nurl: PRIMARY/\n- button \"Zero\" [ref=e4]\n- button \"Beta renamed\" [ref=e2]\n- button \"Out\" [ref=e3]",
     "s2-printed": "title: Parity Fixture\nurl: PRIMARY/\n- button \"Zero\" [ref=e4]\n- button \"Beta renamed\" [ref=e2]\n- button \"Out\" [ref=e3]",

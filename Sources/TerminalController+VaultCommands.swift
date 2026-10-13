@@ -1,9 +1,9 @@
 import Foundation
-import CmuxAgentSessionStore
+import BreeAgentSessionStore
 
 /// Socket v2 surface for the Vault session index, so terminal agents can
 /// browse and search sessions exactly like the UI
-/// (`skills/cmux-shared-behavior`: same engines, no duplicated logic).
+/// (`skills/bree-shared-behavior`: same engines, no duplicated logic).
 /// All commands run on the socket worker, and nothing here activates the app
 /// or steals macOS focus.
 extension TerminalController {

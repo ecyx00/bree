@@ -1,5 +1,5 @@
 import AppKit
-import CmuxFoundation
+import BreeFoundation
 import Combine
 import UniformTypeIdentifiers
 import WebKit
@@ -444,7 +444,7 @@ final class ArchitectureViewModel: NSObject, ObservableObject, WKNavigationDeleg
     @discardableResult
     func openCodeLink(_ href: String, quickView: Bool) -> Bool {
         let location = ArchitectureSourceLink.resolve(href, root: root)
-        cmuxDebugLog("architecture.link href=\(href) resolved=\(location?.path ?? "nil") root=\(root)")
+        breeDebugLog("architecture.link href=\(href) resolved=\(location?.path ?? "nil") root=\(root)")
         guard let location, let workspace else { return false }
         if quickView {
             QuickViewResource.file(path: location.path, line: location.line, column: location.column).open(from: workspace)

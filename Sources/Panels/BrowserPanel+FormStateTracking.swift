@@ -1,4 +1,4 @@
-import CmuxBrowser
+import BreeBrowser
 import Foundation
 import WebKit
 
@@ -38,7 +38,7 @@ extension BrowserPanel {
         webView.restoreBrowserFormState(formState) { error in
             self.pageRestoration.retryPendingFormRestore(formState)
 #if DEBUG
-            cmuxDebugLog("browser.discard.formRestore failed error=\(error.localizedDescription)")
+            breeDebugLog("browser.discard.formRestore failed error=\(error.localizedDescription)")
 #else
             _ = error
 #endif

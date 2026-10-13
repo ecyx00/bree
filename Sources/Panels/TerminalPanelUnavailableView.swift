@@ -1,5 +1,5 @@
 import SwiftUI
-import CmuxAppKitSupportUI
+import BreeAppKitSupportUI
 
 /// A Bonsplit terminal tab whose panel registry entry is stale must remain
 /// explainable instead of falling through to an empty view.
@@ -8,16 +8,16 @@ struct TerminalPanelUnavailableView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            CmuxSystemSymbolImage(
+            BreeSystemSymbolImage(
                 magnified: "exclamationmark.triangle",
                 pointSize: 28,
                 tint: Color(nsColor: .secondaryLabelColor)
             )
             Text(String(localized: "cloud.overlay.manual.unavailable.title", defaultValue: "Cloud terminal unavailable"))
-                .cmuxFont(size: 14, weight: .semibold)
+                .scaledFont(size: 14, weight: .semibold)
                 .foregroundStyle(.primary)
             Text(String(localized: "cloud.overlay.manual.reopen.detail", defaultValue: "Close this tab and reopen the terminal from the Cloud sidebar."))
-                .cmuxFont(size: 12)
+                .scaledFont(size: 12)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 360)

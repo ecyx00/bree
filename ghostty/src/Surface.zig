@@ -9157,7 +9157,7 @@ test "Surface: path link selection spans an indented hard newline" {
     const testing = std.testing;
     const alloc = testing.allocator;
     const prefix = "The built app is ";
-    const first = "/Users/example/Applications/cmux-browser-resize-modes-";
+    const first = "/Users/cmux-lawrence/Applications/cmux-browser-resize-modes-";
     const second = "20260716-warm.app";
     const selected_value = first ++ "\r\n    " ++ second;
 

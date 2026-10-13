@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 
 
 def make_executable(path: Path, content: str) -> None:
@@ -18,12 +18,12 @@ def make_executable(path: Path, content: str) -> None:
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except RuntimeError as error:
         print(f"SKIP: {error}")
         return 0
 
-    with tempfile.TemporaryDirectory(prefix="cmux-codex-teams-info-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-codex-teams-info-") as td:
         root = Path(td)
         fake_bin = root / "bin"
         fake_bin.mkdir()
@@ -39,8 +39,8 @@ printf '%s\n' "$*" > "$FAKE_CODEX_LOG"
         env = os.environ.copy()
         env["HOME"] = str(root)
         env["PATH"] = f"{fake_bin}:/usr/bin:/bin"
-        env["CMUX_CLI_SENTRY_DISABLED"] = "1"
-        env["CMUX_SOCKET_PATH"] = str(root / "missing.sock")
+        env["BREE_CLI_SENTRY_DISABLED"] = "1"
+        env["BREE_SOCKET_PATH"] = str(root / "missing.sock")
         env["FAKE_CODEX_LOG"] = str(codex_log)
 
         for invocation in (

@@ -18,7 +18,7 @@
     "frame-nested": "Frame 29.1",
     "virtual-row": "Row 5000"
   },
-  "cmux": {
+  "bree": {
     "list-printed-within-budget": true,
     "list-tree-complete": 5000,
     "list-condensed-note": true,

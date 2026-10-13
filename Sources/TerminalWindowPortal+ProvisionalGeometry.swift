@@ -10,7 +10,7 @@ extension WindowTerminalPortal {
     /// anchor a hosted view follows, lands later. In that gap the hosted view
     /// would otherwise keep its pre-split frame and, being a transparent glyph
     /// layer above SwiftUI, paint over the new pane's chrome
-    /// (https://github.com/manaflow-ai/cmux/issues/13387).
+    /// (https://github.com/ecyx00/bree/issues/13387).
     ///
     /// The projection holds only while the anchor still reports the frame it
     /// had when the projection was applied. An anchor that moves or a new
@@ -68,7 +68,7 @@ extension WindowTerminalPortal {
         )
         entriesByHostedId[hostedId] = entry
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "portal.provisional.apply hosted=\(portalDebugToken(hostedView)) " +
             "anchor=\(portalDebugToken(entry.anchorView)) old=\(portalDebugFrame(hostedView.frame)) " +
             "frame=\(portalDebugFrame(frameInHost)) transaction=\(transactionID.uuidString.prefix(5)) " +
@@ -129,7 +129,7 @@ extension WindowTerminalPortal {
         entry.provisionalGeometry = nil
         entriesByHostedId[hostedId]?.provisionalGeometry = nil
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "portal.provisional.release hosted=\(portalDebugToken(entry.hostedView)) reason=anchorMoved " +
             "anchorFrame=\(portalDebugFrame(anchorFrameInWindow)) target=\(portalDebugFrame(anchorFrameInHost))"
         )
@@ -161,7 +161,7 @@ extension WindowTerminalPortal {
                   isReleased(provisional.transactionID) else { continue }
             entriesByHostedId[hostedId]?.provisionalGeometry = nil
 #if DEBUG
-            cmuxDebugLog(
+            breeDebugLog(
                 "portal.provisional.release hosted=\(portalDebugToken(entry.hostedView)) reason=transactionEnded " +
                 "transaction=\(provisional.transactionID.uuidString.prefix(5))"
             )

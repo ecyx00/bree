@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "cmux-amp-wrapper"
+SOURCE_WRAPPER = ROOT / "Resources" / "bin" / "bree-amp-wrapper"
 
 
 @dataclass
@@ -23,8 +23,8 @@ class WrapperResult:
     returncode: int
     real_argv: list[str]
     real_environment: dict[str, str]
-    cmux_calls: list[list[str]]
-    cmux_environment: dict[str, str]
+    bree_calls: list[list[str]]
+    bree_environment: dict[str, str]
     stderr: str
     real_path: str
     working_directory: str
@@ -63,7 +63,7 @@ def read_calls(path: Path) -> list[list[str]]:
 def run_wrapper(
     argv: list[str],
     *,
-    in_cmux: bool = True,
+    in_bree: bool = True,
     hooks_disabled: bool = False,
     installer_exit_code: int = 0,
     installer_blocks: bool = False,
@@ -74,17 +74,17 @@ def run_wrapper(
     amp_available: bool = True,
     workspace_only: bool = False,
 ) -> WrapperResult:
-    with tempfile.TemporaryDirectory(prefix="cmux-amp-wrapper-test-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-amp-wrapper-test-") as td:
         tmp = Path(td)
         wrapper_dir = tmp / "wrapper-bin"
-        shim_dir = tmp / "cmux-cli-shims" / "surface-test"
+        shim_dir = tmp / "bree-cli-shims" / "surface-test"
         real_dir = tmp / "real-bin"
         custom_dir = tmp / "custom-bin"
         bundled_dir = tmp / "bundled cli"
         for directory in (wrapper_dir, shim_dir, real_dir, custom_dir, bundled_dir):
             directory.mkdir(parents=True)
 
-        wrapper = wrapper_dir / "cmux-amp-wrapper"
+        wrapper = wrapper_dir / "bree-amp-wrapper"
         shutil.copy2(SOURCE_WRAPPER, wrapper)
         wrapper.chmod(0o755)
         shim = shim_dir / "amp"
@@ -92,8 +92,8 @@ def run_wrapper(
 
         real_args_log = tmp / "real-args.log"
         real_env_log = tmp / "real-env.log"
-        cmux_calls_log = tmp / "cmux-calls.log"
-        cmux_env_log = tmp / "cmux-env.log"
+        bree_calls_log = tmp / "bree-calls.log"
+        bree_env_log = tmp / "bree-env.log"
         installer_started_log = tmp / "installer-started.log"
         installer_gate = tmp / "installer-gate"
         if installer_blocks:
@@ -108,16 +108,16 @@ set -euo pipefail
 : > "$FAKE_REAL_ARGS_LOG"
 printf '%s\\0' "$@" >> "$FAKE_REAL_ARGS_LOG"
 {
-  printf 'CMUX_SURFACE_ID=%s\\n' "${CMUX_SURFACE_ID-__UNSET__}"
-  printf 'CMUX_WORKSPACE_ID=%s\\n' "${CMUX_WORKSPACE_ID-__UNSET__}"
-  printf 'CMUX_SOCKET_PATH=%s\\n' "${CMUX_SOCKET_PATH-__UNSET__}"
-  printf 'CMUX_AMP_PID=%s\\n' "${CMUX_AMP_PID-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_KIND=%s\\n' "${CMUX_AGENT_LAUNCH_KIND-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_EXECUTABLE=%s\\n' "${CMUX_AGENT_LAUNCH_EXECUTABLE-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_CWD=%s\\n' "${CMUX_AGENT_LAUNCH_CWD-__UNSET__}"
-  printf 'CMUX_AGENT_LAUNCH_ARGV_B64=%s\\n' "${CMUX_AGENT_LAUNCH_ARGV_B64-__UNSET__}"
-  printf 'CMUX_AGENT_RESTORE_LAUNCH=%s\\n' "${CMUX_AGENT_RESTORE_LAUNCH-__UNSET__}"
-  printf 'CMUX_AGENT_RESUME_LAUNCH=%s\\n' "${CMUX_AGENT_RESUME_LAUNCH-__UNSET__}"
+  printf 'BREE_SURFACE_ID=%s\\n' "${BREE_SURFACE_ID-__UNSET__}"
+  printf 'BREE_WORKSPACE_ID=%s\\n' "${BREE_WORKSPACE_ID-__UNSET__}"
+  printf 'BREE_SOCKET_PATH=%s\\n' "${BREE_SOCKET_PATH-__UNSET__}"
+  printf 'BREE_AMP_PID=%s\\n' "${BREE_AMP_PID-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_KIND=%s\\n' "${BREE_AGENT_LAUNCH_KIND-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_EXECUTABLE=%s\\n' "${BREE_AGENT_LAUNCH_EXECUTABLE-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_CWD=%s\\n' "${BREE_AGENT_LAUNCH_CWD-__UNSET__}"
+  printf 'BREE_AGENT_LAUNCH_ARGV_B64=%s\\n' "${BREE_AGENT_LAUNCH_ARGV_B64-__UNSET__}"
+  printf 'BREE_AGENT_RESTORE_LAUNCH=%s\\n' "${BREE_AGENT_RESTORE_LAUNCH-__UNSET__}"
+  printf 'BREE_AGENT_RESUME_LAUNCH=%s\\n' "${BREE_AGENT_RESUME_LAUNCH-__UNSET__}"
   printf 'AMP_API_KEY=%s\\n' "${AMP_API_KEY-__UNSET__}"
   printf 'REAL_PID=%s\\n' "$$"
 } > "$FAKE_REAL_ENV_LOG"
@@ -131,20 +131,20 @@ printf '%s\\0' "$@" >> "$FAKE_REAL_ARGS_LOG"
             shutil.copy2(real_amp, decoy_amp)
             decoy_amp.chmod(0o755)
 
-        bundled_cli = bundled_dir / "cmux"
+        bundled_cli = bundled_dir / "bree"
         if cli_available:
             make_executable(
                 bundled_cli,
                 """#!/usr/bin/env bash
 set -euo pipefail
-printf '\\036' >> "$FAKE_CMUX_CALLS_LOG"
-printf '%s\\0' "$@" >> "$FAKE_CMUX_CALLS_LOG"
+printf '\\036' >> "$FAKE_BREE_CALLS_LOG"
+printf '%s\\0' "$@" >> "$FAKE_BREE_CALLS_LOG"
 {
-  printf 'CMUX_SURFACE_ID=%s\\n' "${CMUX_SURFACE_ID-__UNSET__}"
-  printf 'CMUX_WORKSPACE_ID=%s\\n' "${CMUX_WORKSPACE_ID-__UNSET__}"
-  printf 'CMUX_SOCKET_PATH=%s\\n' "${CMUX_SOCKET_PATH-__UNSET__}"
+  printf 'BREE_SURFACE_ID=%s\\n' "${BREE_SURFACE_ID-__UNSET__}"
+  printf 'BREE_WORKSPACE_ID=%s\\n' "${BREE_WORKSPACE_ID-__UNSET__}"
+  printf 'BREE_SOCKET_PATH=%s\\n' "${BREE_SOCKET_PATH-__UNSET__}"
   printf 'AMP_API_KEY=%s\\n' "${AMP_API_KEY-__UNSET__}"
-} > "$FAKE_CMUX_ENV_LOG"
+} > "$FAKE_BREE_ENV_LOG"
 if [[ -n "${FAKE_INSTALLER_GATE:-}" ]]; then
   : > "$FAKE_INSTALLER_STARTED_LOG"
   IFS= read -r _ < "$FAKE_INSTALLER_GATE"
@@ -153,7 +153,7 @@ exit "${FAKE_INSTALLER_EXIT_CODE:-0}"
 """,
             )
 
-        socket_path = str(tmp / "cmux.sock")
+        socket_path = str(tmp / "bree.sock")
         env = os.environ.copy()
         path_entries = [str(shim_dir)]
         if path_glob_decoy:
@@ -167,36 +167,36 @@ exit "${FAKE_INSTALLER_EXIT_CODE:-0}"
         # block the wrapper while the test is waiting for its child).
         path_entries.append("/usr/bin:/bin")
         env["PATH"] = os.pathsep.join(path_entries)
-        env["CMUX_BUNDLED_CLI_PATH"] = str(bundled_cli)
-        env["CMUX_AMP_WRAPPER_SHIM"] = str(shim)
-        env["CMUX_AMP_WRAPPER_SHIM_ROOT"] = str(shim_dir)
-        env.pop("CMUX_CUSTOM_AMP_PATH", None)
-        env["CMUX_AGENT_RESTORE_LAUNCH"] = "amp:T-old-thread"
-        env["CMUX_AGENT_RESUME_LAUNCH"] = "1"
+        env["BREE_BUNDLED_CLI_PATH"] = str(bundled_cli)
+        env["BREE_AMP_WRAPPER_SHIM"] = str(shim)
+        env["BREE_AMP_WRAPPER_SHIM_ROOT"] = str(shim_dir)
+        env.pop("BREE_CUSTOM_AMP_PATH", None)
+        env["BREE_AGENT_RESTORE_LAUNCH"] = "amp:T-old-thread"
+        env["BREE_AGENT_RESUME_LAUNCH"] = "1"
         env["AMP_API_KEY"] = "amp-secret-must-not-reach-installer"
         env["FAKE_REAL_ARGS_LOG"] = str(real_args_log)
         env["FAKE_REAL_ENV_LOG"] = str(real_env_log)
-        env["FAKE_CMUX_CALLS_LOG"] = str(cmux_calls_log)
-        env["FAKE_CMUX_ENV_LOG"] = str(cmux_env_log)
+        env["FAKE_BREE_CALLS_LOG"] = str(bree_calls_log)
+        env["FAKE_BREE_ENV_LOG"] = str(bree_env_log)
         env["FAKE_INSTALLER_EXIT_CODE"] = str(installer_exit_code)
         env["FAKE_INSTALLER_STARTED_LOG"] = str(installer_started_log)
-        env["CMUX_AMP_HOOK_INSTALL_TIMEOUT_SECONDS"] = str(installer_timeout_seconds)
+        env["BREE_AMP_HOOK_INSTALL_TIMEOUT_SECONDS"] = str(installer_timeout_seconds)
         if custom_executable:
-            env["CMUX_CUSTOM_AMP_PATH"] = str(real_amp)
+            env["BREE_CUSTOM_AMP_PATH"] = str(real_amp)
         if installer_blocks:
             env["FAKE_INSTALLER_GATE"] = str(installer_gate)
-        if in_cmux:
-            env["CMUX_WORKSPACE_ID"] = "22222222-2222-2222-2222-222222222222"
-            env["CMUX_SOCKET_PATH"] = socket_path
+        if in_bree:
+            env["BREE_WORKSPACE_ID"] = "22222222-2222-2222-2222-222222222222"
+            env["BREE_SOCKET_PATH"] = socket_path
             if not workspace_only:
-                env["CMUX_SURFACE_ID"] = "11111111-1111-1111-1111-111111111111"
+                env["BREE_SURFACE_ID"] = "11111111-1111-1111-1111-111111111111"
         else:
-            for key in ("CMUX_SURFACE_ID", "CMUX_WORKSPACE_ID", "CMUX_SOCKET_PATH"):
+            for key in ("BREE_SURFACE_ID", "BREE_WORKSPACE_ID", "BREE_SOCKET_PATH"):
                 env.pop(key, None)
         if hooks_disabled:
-            env["CMUX_AMP_HOOKS_DISABLED"] = "1"
+            env["BREE_AMP_HOOKS_DISABLED"] = "1"
         else:
-            env.pop("CMUX_AMP_HOOKS_DISABLED", None)
+            env.pop("BREE_AMP_HOOKS_DISABLED", None)
 
         proc = subprocess.Popen(
             [str(wrapper), *argv],
@@ -230,8 +230,8 @@ exit "${FAKE_INSTALLER_EXIT_CODE:-0}"
             returncode=proc.returncode,
             real_argv=read_nul_values(real_args_log),
             real_environment=read_environment(real_env_log),
-            cmux_calls=read_calls(cmux_calls_log),
-            cmux_environment=read_environment(cmux_env_log),
+            bree_calls=read_calls(bree_calls_log),
+            bree_environment=read_environment(bree_env_log),
             stderr=stderr.strip(),
             real_path=str(real_amp),
             working_directory=os.path.realpath(tmp),
@@ -247,7 +247,7 @@ def expect(condition: bool, message: str, failures: list[str]) -> None:
 
 
 def decoded_launch_argv(environment: dict[str, str]) -> list[str]:
-    encoded = environment.get("CMUX_AGENT_LAUNCH_ARGV_B64", "")
+    encoded = environment.get("BREE_AGENT_LAUNCH_ARGV_B64", "")
     if not encoded or encoded == "__UNSET__":
         return []
     return [part.decode("utf-8") for part in base64.b64decode(encoded).split(b"\0") if part]
@@ -259,40 +259,40 @@ def test_instrumented_launch(failures: list[str]) -> None:
     expected_call = ["--socket", result.socket_path, "hooks", "amp", "install", "--yes"]
     expect(result.returncode == 0, f"wrapper exited {result.returncode}: {result.stderr}", failures)
     expect(result.real_argv == argv, f"original argv changed: {result.real_argv}", failures)
-    expect(result.cmux_calls == [expected_call], f"unexpected installer calls: {result.cmux_calls}", failures)
-    expect(result.cmux_environment.get("CMUX_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
-           f"installer lost surface attribution: {result.cmux_environment}", failures)
-    expect(result.cmux_environment.get("CMUX_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
-           f"installer lost workspace attribution: {result.cmux_environment}", failures)
-    expect(result.cmux_environment.get("AMP_API_KEY") == "__UNSET__",
-           f"installer inherited AMP_API_KEY: {result.cmux_environment}", failures)
+    expect(result.bree_calls == [expected_call], f"unexpected installer calls: {result.bree_calls}", failures)
+    expect(result.bree_environment.get("BREE_SURFACE_ID") == "11111111-1111-1111-1111-111111111111",
+           f"installer lost surface attribution: {result.bree_environment}", failures)
+    expect(result.bree_environment.get("BREE_WORKSPACE_ID") == "22222222-2222-2222-2222-222222222222",
+           f"installer lost workspace attribution: {result.bree_environment}", failures)
+    expect(result.bree_environment.get("AMP_API_KEY") == "__UNSET__",
+           f"installer inherited AMP_API_KEY: {result.bree_environment}", failures)
     expect(result.real_environment.get("AMP_API_KEY") == "amp-secret-must-not-reach-installer",
            f"Amp lost its own credentials: {result.real_environment}", failures)
-    expect(result.real_environment.get("CMUX_AMP_PID") == result.real_environment.get("REAL_PID"),
+    expect(result.real_environment.get("BREE_AMP_PID") == result.real_environment.get("REAL_PID"),
            f"Amp PID identity does not match exec'd process: {result.real_environment}", failures)
-    expect(result.real_environment.get("CMUX_AGENT_LAUNCH_KIND") == "amp",
+    expect(result.real_environment.get("BREE_AGENT_LAUNCH_KIND") == "amp",
            f"launch kind missing: {result.real_environment}", failures)
-    expect(result.real_environment.get("CMUX_AGENT_LAUNCH_EXECUTABLE") == result.real_path,
+    expect(result.real_environment.get("BREE_AGENT_LAUNCH_EXECUTABLE") == result.real_path,
            f"custom executable was not captured: {result.real_environment}", failures)
-    expect(result.real_environment.get("CMUX_AGENT_LAUNCH_CWD") == result.working_directory,
+    expect(result.real_environment.get("BREE_AGENT_LAUNCH_CWD") == result.working_directory,
            f"launch cwd was not captured: {result.real_environment}", failures)
     expect(decoded_launch_argv(result.real_environment) == [result.real_path, *argv],
            f"launch argv was not captured: {decoded_launch_argv(result.real_environment)}", failures)
-    expect(result.real_environment.get("CMUX_AGENT_RESTORE_LAUNCH") == "__UNSET__",
+    expect(result.real_environment.get("BREE_AGENT_RESTORE_LAUNCH") == "__UNSET__",
            "one-shot restore authorization leaked to Amp descendants", failures)
-    expect(result.real_environment.get("CMUX_AGENT_RESUME_LAUNCH") == "__UNSET__",
+    expect(result.real_environment.get("BREE_AGENT_RESUME_LAUNCH") == "__UNSET__",
            "legacy resume marker leaked to Amp descendants", failures)
 
 
 def test_bypass_paths(failures: list[str]) -> None:
     for label, kwargs in (
         ("disabled", {"hooks_disabled": True}),
-        ("outside-cmux", {"in_cmux": False}),
+        ("outside-bree", {"in_bree": False}),
     ):
         result = run_wrapper(["--help"], **kwargs)
         expect(result.returncode == 0, f"{label}: wrapper exited {result.returncode}: {result.stderr}", failures)
         expect(result.real_argv == ["--help"], f"{label}: argv changed: {result.real_argv}", failures)
-        expect(result.cmux_calls == [], f"{label}: hooks were installed: {result.cmux_calls}", failures)
+        expect(result.bree_calls == [], f"{label}: hooks were installed: {result.bree_calls}", failures)
 
 
 def test_installer_failures_never_block_amp(failures: list[str]) -> None:
@@ -322,7 +322,7 @@ def test_path_globs_do_not_redirect_amp_resolution(failures: list[str]) -> None:
     result = run_wrapper(["--mode", "smart"], path_glob_decoy=True)
     expect(result.returncode == 0, f"glob PATH: wrapper exited {result.returncode}: {result.stderr}", failures)
     expect(
-        result.real_environment.get("CMUX_AGENT_LAUNCH_EXECUTABLE") == result.real_path,
+        result.real_environment.get("BREE_AGENT_LAUNCH_EXECUTABLE") == result.real_path,
         f"glob PATH entry redirected Amp resolution: {result.real_environment}",
         failures,
     )
@@ -342,9 +342,9 @@ def test_workspace_only_launch_installs_hooks(failures: list[str]) -> None:
     result = run_wrapper(["--mode", "smart"], workspace_only=True)
     expect(result.returncode == 0, f"workspace-only: wrapper exited {result.returncode}: {result.stderr}", failures)
     expect(
-        result.cmux_calls == [["hooks", "amp", "install", "--yes"]]
-        or result.cmux_calls == [["--socket", result.socket_path, "hooks", "amp", "install", "--yes"]],
-        f"workspace-only: hooks were not installed: {result.cmux_calls}",
+        result.bree_calls == [["hooks", "amp", "install", "--yes"]]
+        or result.bree_calls == [["--socket", result.socket_path, "hooks", "amp", "install", "--yes"]],
+        f"workspace-only: hooks were not installed: {result.bree_calls}",
         failures,
     )
 
@@ -363,7 +363,7 @@ def main() -> int:
         test_workspace_only_launch_installs_hooks(failures)
 
     if failures:
-        print("FAIL: Amp launches do not reliably activate the cmux session extension")
+        print("FAIL: Amp launches do not reliably activate the bree session extension")
         for failure in failures:
             print(f"- {failure}")
         return 1

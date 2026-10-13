@@ -90,7 +90,7 @@
     "reviewed_head": null,
     "status": "unsupported"
   },
-  "schema_version": "cmux-verification/v1",
+  "schema_version": "bree-verification/v1",
   "source": {
     "after": {
       "clean": false,
@@ -111,7 +111,7 @@
     "exact_snapshot": null,
     "head_sha": "2889b72b866edfef0ac260f922fd2cf9f88906a3",
     "merge_sha": null,
-    "repository": "cmux (caller-supplied checkout)",
+    "repository": "bree (caller-supplied checkout)",
     "semantics": "latest_checkout_at_execution",
     "tree": "56f33edfb6623d946d9329d0a29a9c7a37b1dba5"
   },

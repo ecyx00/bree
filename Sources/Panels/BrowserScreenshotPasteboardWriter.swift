@@ -1,5 +1,5 @@
 import AppKit
-import CmuxBrowser
+import BreeBrowser
 import ImageIO
 import UniformTypeIdentifiers
 

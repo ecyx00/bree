@@ -1,5 +1,5 @@
-import CmuxFoundation
-import CmuxWorkspaces
+import BreeFoundation
+import BreeWorkspaces
 import Foundation
 
 /// A restore owner (Workspace or Dock) that holds launches until the live-agent index can decide ownership.
@@ -23,7 +23,7 @@ protocol DeferredAgentResumeAdmissionOwner: AnyObject {
     /// Waits for the next evidence event; cancellation releases the wait.
     /// The process identities are the owners observed by the just-completed
     /// scan. Waiting on their kernel exit events closes the gap where a
-    /// SessionEnd hook cannot write because the old cmux socket is gone.
+    /// SessionEnd hook cannot write because the old bree socket is gone.
     var deferredAgentResumeEvidenceWait: @Sendable ([AgentPIDProcessIdentity]) async -> Void { get }
 }
 

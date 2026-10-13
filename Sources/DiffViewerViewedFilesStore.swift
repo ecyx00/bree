@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import CryptoKit
 import Foundation
 
@@ -7,7 +7,7 @@ import Foundation
 /// reliably keep web storage.
 ///
 /// One JSON file per scope (repository root + diff source identity) under
-/// `~/Library/Application Support/cmux/diff-viewer/viewed/`. Each entry keeps
+/// `~/Library/Application Support/bree/diff-viewer/viewed/`. Each entry keeps
 /// the fingerprint of the file's patch at the time it was marked viewed; the
 /// webview compares it against the current patch and shows "changed since
 /// viewed" on a mismatch (GitHub behavior). The store is bounded: at most
@@ -44,7 +44,7 @@ final class DiffViewerViewedFilesStore: @unchecked Sendable {
 
     init(
         directoryURL: URL? = DiffViewerViewedFilesStore.defaultDirectoryURL(),
-        persistenceQueue: DispatchQueue = DispatchQueue(label: "com.cmux.diff-viewer.viewed-files", qos: .utility)
+        persistenceQueue: DispatchQueue = DispatchQueue(label: "com.bree.diff-viewer.viewed-files", qos: .utility)
     ) {
         self.directoryURL = directoryURL
         self.persistenceQueue = persistenceQueue
@@ -60,7 +60,7 @@ final class DiffViewerViewedFilesStore: @unchecked Sendable {
     ) -> URL? {
         guard !isRunningUnderAutomatedTests, let appSupportDirectory else { return nil }
         return appSupportDirectory
-            .appendingPathComponent(CmuxIdentity.current.applicationSupportDirectoryName, isDirectory: true)
+            .appendingPathComponent(BreeIdentity.current.applicationSupportDirectoryName, isDirectory: true)
             .appendingPathComponent("diff-viewer", isDirectory: true)
             .appendingPathComponent("viewed", isDirectory: true)
     }
@@ -144,7 +144,7 @@ final class DiffViewerViewedFilesStore: @unchecked Sendable {
             pruneScopeFiles(in: directoryURL, keeping: fileURL)
         } catch {
 #if DEBUG
-            cmuxDebugLog("diffViewer.viewedFiles.saveFailed error=\(error.localizedDescription)")
+            breeDebugLog("diffViewer.viewedFiles.saveFailed error=\(error.localizedDescription)")
 #endif
         }
     }

@@ -1,4 +1,4 @@
-import CmuxWorkspaces
+import BreeWorkspaces
 
 /// Pure decision: should the docked shell editor own command input right now.
 struct ShellEditorModePolicy: Equatable {

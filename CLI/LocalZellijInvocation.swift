@@ -1,4 +1,4 @@
-import CmuxFoundation
+import BreeFoundation
 import Foundation
 
 struct LocalZellijInvocation {
@@ -19,7 +19,7 @@ struct LocalZellijInvocation {
     let detached: Bool
     let headless: Bool
 
-    var canRunWithoutCmux: Bool {
+    var canRunWithoutBree: Bool {
         switch action {
         case .list, .status, .close:
             return true
@@ -189,6 +189,6 @@ struct LocalZellijInvocation {
 
     static var usage: String {
         // A single-line literal keeps the catalog tooling able to read the English source.
-        String(localized: "cli.localZellij.usage", defaultValue: "Usage: bree local-zellij <start|attach|list|status|close> [session] [options]\n\nOpt-in local zellij sessions survive Bree quit, crash, and app updates. Ordinary Bree terminals are unchanged.\n\nstart <name> [--cwd <path>] [--command <shell>] [--detached]\nattach <name|--id <uuid>> [--workspace <id|ref|index>] [--focus <true|false>] [--headless] [--new-client]\nlist [--json]\nstatus <name|--id <uuid>> [--json]\nclose <name|--id <uuid>>\n\nThe registry and zellij socket directory live under \(CmuxIdentity.current.dotDirectoryTildePath)/local-zellij with user-only permissions. `attach --headless` hands the terminal directly to zellij for a client outside the Bree GUI.")
+        String(localized: "cli.localZellij.usage", defaultValue: "Usage: bree local-zellij <start|attach|list|status|close> [session] [options]\n\nOpt-in local zellij sessions survive Bree quit, crash, and app updates. Ordinary Bree terminals are unchanged.\n\nstart <name> [--cwd <path>] [--command <shell>] [--detached]\nattach <name|--id <uuid>> [--workspace <id|ref|index>] [--focus <true|false>] [--headless] [--new-client]\nlist [--json]\nstatus <name|--id <uuid>> [--json]\nclose <name|--id <uuid>>\n\nThe registry and zellij socket directory live under \(BreeIdentity.current.dotDirectoryTildePath)/local-zellij with user-only permissions. `attach --headless` hands the terminal directly to zellij for a client outside the Bree GUI.")
     }
 }

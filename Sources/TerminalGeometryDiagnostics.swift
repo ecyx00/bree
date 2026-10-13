@@ -1,6 +1,6 @@
 import AppKit
-import CMUXMobileCore
-import CmuxTerminal
+import BREEMobileCore
+import BreeTerminal
 
 /// App-owned diagnostics log. Readable off the main actor when a stalled UI
 /// needs diagnostics (replaces the removed mobile-host log).

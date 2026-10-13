@@ -1,5 +1,5 @@
-import CmuxCommandPalette
-import CmuxFoundation
+import BreeCommandPalette
+import BreeFoundation
 import Observation
 import SwiftUI
 

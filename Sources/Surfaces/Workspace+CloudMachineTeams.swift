@@ -1,4 +1,4 @@
-import CmuxSurfaceCatalogModel
+import BreeSurfaceCatalogModel
 import Foundation
 
 extension Workspace {
@@ -20,7 +20,7 @@ extension Workspace {
 
     /// Hands persisted owning teams to the Cloud registry before panes restore.
     func adoptRestoredCloudMachineTeams(_ snapshot: SessionWorkspaceSnapshot) {
-        let registry = CmuxTuiSurfaceProviderRegistry.shared
+        let registry = BreeTuiSurfaceProviderRegistry.shared
         for (machineID, teamID) in snapshot.cloudMachineTeams ?? [:] {
             registry.adoptOwnerTeam(teamID, forMachineID: machineID)
         }

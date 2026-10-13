@@ -6,7 +6,7 @@ extension Notification.Name {
     /// overlay observes this separately from geometry so a flash-only event
     /// cannot wait for an unrelated layout refresh.
     static let workspacePaneFlashDidChange = Notification.Name(
-        "cmux.workspacePaneFlashDidChange"
+        "bree.workspacePaneFlashDidChange"
     )
 }
 

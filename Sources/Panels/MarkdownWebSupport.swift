@@ -1,6 +1,6 @@
 import AppKit
-import CmuxBrowser
-import CmuxFoundation
+import BreeBrowser
+import BreeFoundation
 import WebKit
 
 @MainActor
@@ -175,7 +175,7 @@ final class MarkdownWebRenderingCoordinator {
 }
 
 @MainActor
-final class MarkdownWebView: CmuxUndoableWebView {
+final class MarkdownWebView: BreeUndoableWebView {
     var onPointerDown: (() -> Void)?
     /// Invoked after this view is attached to a window. Keep this separate
     /// from pointer focus so a panel can complete a focus request made before
@@ -233,7 +233,7 @@ final class MarkdownWebView: CmuxUndoableWebView {
     }
 
     override func isWebContentUndoRedoCommandEquivalent(_ event: NSEvent) -> Bool {
-        event.cmuxIsUndoRedoCommandEquivalent
+        event.breeIsUndoRedoCommandEquivalent
     }
 
     required init?(coder: NSCoder) {
@@ -311,7 +311,7 @@ final class MarkdownWebView: CmuxUndoableWebView {
     }
 
     func handleViewerNavigationKey(_ event: NSEvent) -> Bool {
-        guard cmuxOwnsKeyEvent(event),
+        guard breeOwnsKeyEvent(event),
               editableFocusStateConfirmed,
               !editableElementFocused else {
             viewerNavigationKeyRouter.reset()
@@ -325,7 +325,7 @@ final class MarkdownWebView: CmuxUndoableWebView {
     }
 
     private func performViewerNavigationAction(_ action: KeyboardShortcutSettings.Action) {
-        evaluateJavaScript("window.__cmuxPerformViewerNavigationAction?.('\(action.rawValue)')")
+        evaluateJavaScript("window.__breePerformViewerNavigationAction?.('\(action.rawValue)')")
     }
 
     override func viewDidMoveToWindow() {

@@ -1,7 +1,7 @@
 import Bonsplit
-import CmuxTerminal
-import CmuxTerminalCore
-import CmuxWorkspaces
+import BreeTerminal
+import BreeTerminalCore
+import BreeWorkspaces
 import Foundation
 
 extension DockSplitStore {
@@ -649,7 +649,7 @@ extension DockSplitStore {
         applyVisibility(to: browser)
         scheduleDockPortalReconcile(reason: "dock.browserMaterialize")
 #if DEBUG
-        cmuxDebugLog(
+        breeDebugLog(
             "session.restore.dockBrowser.materialize dock=\(workspaceId.uuidString.prefix(8)) " +
                 "panel=\(deferredPanel.id.uuidString.prefix(8))"
         )

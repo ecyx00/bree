@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Regression test: `cmux claude-teams` main-vertical layout stacks teammates
+Regression test: `bree claude-teams` main-vertical layout stacks teammates
 vertically in a right-side column instead of creating nested horizontal splits.
 
 Simulates Claude creating 3 teammates:
@@ -26,7 +26,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from claude_teams_test_utils import resolve_cmux_cli
+from claude_teams_test_utils import resolve_bree_cli
 from fake_socket_env import cli_environment, unwrap_capability
 
 INITIAL_WORKSPACE_ID = "11111111-1111-4111-8111-111111111111"
@@ -53,7 +53,7 @@ def make_executable(path: Path, content: str) -> None:
     path.chmod(0o755)
 
 
-class FakeCmuxState:
+class FakeBreeState:
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.requests: list[str] = []
@@ -223,7 +223,7 @@ class FakeCmuxState:
                 return {"ok": True}
             if method == "surface.send_text":
                 return {"ok": True}
-            raise RuntimeError(f"Unsupported fake cmux method: {method}")
+            raise RuntimeError(f"Unsupported fake bree method: {method}")
 
     def _pane_by_id(self, pane_id: str) -> dict:
         for p in self.panes:
@@ -248,15 +248,15 @@ class FakeCmuxState:
         return sids[0] if sids else ""
 
 
-class FakeCmuxUnixServer(socketserver.ThreadingUnixStreamServer):
+class FakeBreeUnixServer(socketserver.ThreadingUnixStreamServer):
     allow_reuse_address = True
 
-    def __init__(self, socket_path: str, state: FakeCmuxState) -> None:
+    def __init__(self, socket_path: str, state: FakeBreeState) -> None:
         self.state = state
-        super().__init__(socket_path, FakeCmuxHandler)
+        super().__init__(socket_path, FakeBreeHandler)
 
 
-class FakeCmuxHandler(socketserver.StreamRequestHandler):
+class FakeBreeHandler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         while True:
             line = self.rfile.readline()
@@ -277,19 +277,19 @@ class FakeCmuxHandler(socketserver.StreamRequestHandler):
 
 def main() -> int:
     try:
-        cli_path = resolve_cmux_cli()
+        cli_path = resolve_bree_cli()
     except Exception as exc:
         print(f"FAIL: {exc}")
         return 1
 
-    with tempfile.TemporaryDirectory(prefix="cmux-claude-teams-mv-") as td:
+    with tempfile.TemporaryDirectory(prefix="bree-claude-teams-mv-") as td:
         tmp = Path(td)
         home = tmp / "home"
         home.mkdir(parents=True, exist_ok=True)
 
-        socket_path = tmp / "fake-cmux.sock"
-        state = FakeCmuxState()
-        server = FakeCmuxUnixServer(str(socket_path), state)
+        socket_path = tmp / "fake-bree.sock"
+        state = FakeBreeState()
+        server = FakeBreeUnixServer(str(socket_path), state)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
 
@@ -330,9 +330,9 @@ printf '%s\\n%s\\n%s\\n' "$t1" "$t2" "$t3" > "$RESULT_LOG"
 
         env = cli_environment(home=home)
         env["PATH"] = f"{real_bin}:/usr/bin:/bin"
-        env["CMUX_SOCKET_PATH"] = str(socket_path)
-        env["CMUX_WORKSPACE_ID"] = INITIAL_WORKSPACE_ID
-        env["CMUX_SURFACE_ID"] = INITIAL_SURFACE_ID
+        env["BREE_SOCKET_PATH"] = str(socket_path)
+        env["BREE_WORKSPACE_ID"] = INITIAL_WORKSPACE_ID
+        env["BREE_SURFACE_ID"] = INITIAL_SURFACE_ID
         env["RESULT_LOG"] = str(result_log)
 
         try:

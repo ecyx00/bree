@@ -2,16 +2,16 @@
 # Clean up tagged dev-build artifacts created by scripts/reload.sh.
 #
 # Each `./scripts/reload.sh --tag <tag>` produces:
-#   ~/Library/Developer/Xcode/DerivedData/cmux-<tag>/      (multi-GB)
-#   /tmp/cmux-<tag>/                                       (build scratch)
-#   /tmp/cmux-debug-<tag>.sock                             (control socket)
-#   /tmp/cmux-debug-<tag>.log                              (debug log)
-#   /tmp/cmux-reload-<tag>.log                             (build log)
-#   ~/Library/Application Support/cmux/cmuxd-dev-<tag>.sock (cmuxd socket)
+#   ~/Library/Developer/Xcode/DerivedData/bree-<tag>/      (multi-GB)
+#   /tmp/bree-<tag>/                                       (build scratch)
+#   /tmp/bree-debug-<tag>.sock                             (control socket)
+#   /tmp/bree-debug-<tag>.log                              (debug log)
+#   /tmp/bree-reload-<tag>.log                             (build log)
+#   ~/Library/Application Support/bree/breed-dev-<tag>.sock (breed socket)
 #
 # This script removes those artifacts for tags that are safe to clean.
 # Safety rules (always on):
-#   - Skip any tag whose `cmux DEV <tag>` app is currently running.
+#   - Skip any tag whose `Bree Dev <tag>` app is currently running.
 #   - Skip the tag pointed at by /tmp/bree-last-cli-path (most recent reload).
 # A worktree merely existing on the same name is not treated as a
 # protection. Use --keep TAG when you want to preserve a build whose
@@ -34,7 +34,7 @@
 set -euo pipefail
 
 DERIVED_DATA_ROOT="$HOME/Library/Developer/Xcode/DerivedData"
-APP_SUPPORT_DIR="$HOME/Library/Application Support/cmux"
+APP_SUPPORT_DIR="$HOME/Library/Application Support/bree"
 LAST_CLI_PATH_FILE="/tmp/bree-last-cli-path"
 
 apply=0
@@ -64,30 +64,30 @@ done
 
 # ---- discovery --------------------------------------------------------------
 
-# Tags come from DerivedData dirs named cmux-<tag>. Authoritative because
+# Tags come from DerivedData dirs named bree-<tag>. Authoritative because
 # reload.sh always creates one there.
 discover_tags() {
     [[ -d "$DERIVED_DATA_ROOT" ]] || return 0
     local d name
-    for d in "$DERIVED_DATA_ROOT"/cmux-*/; do
+    for d in "$DERIVED_DATA_ROOT"/bree-*/; do
         # The glob leaves the literal pattern if no matches exist on macOS.
         [[ -d "$d" ]] || continue
         name="${d%/}"
         name="${name##*/}"
-        printf '%s\n' "${name#cmux-}"
+        printf '%s\n' "${name#bree-}"
     done
 }
 
 artifact_paths_for_tag() {
     local tag="$1"
     printf '%s\n' \
-        "$DERIVED_DATA_ROOT/cmux-${tag}" \
-        "/tmp/cmux-${tag}" \
-        "/tmp/cmux-${tag}.tar" \
-        "/tmp/cmux-debug-${tag}.sock" \
-        "/tmp/cmux-debug-${tag}.log" \
-        "/tmp/cmux-reload-${tag}.log" \
-        "$APP_SUPPORT_DIR/cmuxd-dev-${tag}.sock"
+        "$DERIVED_DATA_ROOT/bree-${tag}" \
+        "/tmp/bree-${tag}" \
+        "/tmp/bree-${tag}.tar" \
+        "/tmp/bree-debug-${tag}.sock" \
+        "/tmp/bree-debug-${tag}.log" \
+        "/tmp/bree-reload-${tag}.log" \
+        "$APP_SUPPORT_DIR/breed-dev-${tag}.sock"
 }
 
 bytes_in_path() {
@@ -122,24 +122,24 @@ derived_data_mtime_days() {
 # ---- safety probes ----------------------------------------------------------
 
 # Active tag (most recent reload) per the CLI symlink target. Match
-# `/cmux-<tag>/` anywhere in the path so we cover paths under DerivedData,
+# `/bree-<tag>/` anywhere in the path so we cover paths under DerivedData,
 # /tmp, or other locations reload.sh may emit.
 active_tag=""
 if [[ -r "$LAST_CLI_PATH_FILE" ]]; then
     last_path="$(cat "$LAST_CLI_PATH_FILE" 2>/dev/null || true)"
-    if [[ "$last_path" =~ /cmux-([A-Za-z0-9._-]+)/ ]]; then
+    if [[ "$last_path" =~ /bree-([A-Za-z0-9._-]+)/ ]]; then
         active_tag="${BASH_REMATCH[1]}"
     fi
 fi
 
-# Running cmux DEV processes by tag (the app name embeds the tag).
+# Running Bree Dev processes by tag (the app name embeds the tag).
 running_tags=()
 while IFS= read -r line; do
-    # Match "cmux DEV <tag>" (with or without .app suffix).
-    if [[ "$line" =~ cmux\ DEV\ ([A-Za-z0-9._-]+) ]]; then
+    # Match "Bree Dev <tag>" (with or without .app suffix).
+    if [[ "$line" =~ bree\ DEV\ ([A-Za-z0-9._-]+) ]]; then
         running_tags+=("${BASH_REMATCH[1]}")
     fi
-done < <(pgrep -fl "cmux DEV " 2>/dev/null || true)
+done < <(pgrep -fl "Bree Dev " 2>/dev/null || true)
 
 # ---- planning ---------------------------------------------------------------
 
@@ -169,7 +169,7 @@ while IFS= read -r tag; do
         reasons+=("--keep")
     fi
     if (( older_than_days > 0 )); then
-        age="$(derived_data_mtime_days "$DERIVED_DATA_ROOT/cmux-${tag}")"
+        age="$(derived_data_mtime_days "$DERIVED_DATA_ROOT/bree-${tag}")"
         # age == -1 means the DerivedData dir is gone (e.g., manually
         # deleted while orphan sockets/logs remain). Treat as "no age
         # signal, age filter does not apply" so the residue still gets
