@@ -101,7 +101,7 @@ extension GhosttyNSView {
 
     private func accessibilityTextValue() -> String {
         terminalAccessibilityText.value {
-            terminalSurface?.readText(region: .active)
+            terminalSurface?.readText(region: .active).map(GhosttySurfaceScrollView.strippingBlockMarkerRows)
         }
     }
 

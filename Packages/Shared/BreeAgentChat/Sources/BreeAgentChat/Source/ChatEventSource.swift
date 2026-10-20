@@ -1,7 +1,7 @@
 import Foundation
 
 /// The seam between session/artifact consumers and whatever produces the
-/// data. On iOS the implementation adapts the mobile RPC client; the artifact
+/// data. On iOS the implementation adapts the remote RPC client; the artifact
 /// loaders consume only the artifact members.
 public protocol ChatEventSource: Sendable {
     /// Whether this source supports Mac-hosted artifact preview RPCs.

@@ -19,8 +19,6 @@ Packages/macOS/BREEAgentLaunch/Sources/BREEAgentLaunch/Vault/Providers/HermesAge
 Packages/macOS/BREEAgentLaunch/Sources/BREEAgentLaunch/Vault/Providers/RovoDev/RovoDevIndex.swift:RovoDevIndex
 Packages/macOS/BREEAgentLaunch/Sources/BREEAgentLaunch/Vault/Providers/RovoDev/RovoDevIndex.swift:RovoDevMetadataFields
 Packages/macOS/BreeSidebar/Sources/BreeSidebar/ExtensionHost/Browser/BREESidebarExtensionBrowserPresenter.swift:BREESidebarExtensionBrowserPresenter
-Packages/Shared/BREEMobileCore/Sources/BREEMobileCore/MobileSyncProtocol.swift:CmxMobileDefaults
-Packages/Shared/BREEMobileCore/Sources/BREEMobileCore/MobileSyncProtocol.swift:MobileSyncFrameCodec
 Packages/macOS/BreeTerminal/Sources/BreeTerminal/Pasteboard/PasteboardTextFidelity.swift:PasteboardTextFidelity
 Packages/macOS/BREEProjectModel/Sources/BREEProjectModel/XcconfigParser.swift:XcconfigParser
 Packages/macOS/BreeExtensionKit/Sources/BreeExtensionKit/Sidebar/BREESidebarExtensionPoint.swift:BreeSidebarExtensionPoint

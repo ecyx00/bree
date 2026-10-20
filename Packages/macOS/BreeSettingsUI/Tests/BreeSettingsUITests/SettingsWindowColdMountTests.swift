@@ -52,7 +52,7 @@ import Testing
     }
 
     static func makeMountModel(initial: SettingsSectionID = .themes) -> SettingsSectionMountModel {
-        SettingsSectionMountModel(initial: initial, order: SettingsWindowRoot.mountOrder(cloudAvailable: false))
+        SettingsSectionMountModel(initial: initial, order: SettingsSectionMountModel.displayOrder)
     }
 
     /// AppKit-backed controls (`NSSwitch`, `NSPopUpButton`, `NSStepper`,

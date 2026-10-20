@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import BreeAppKitSupportUI
 import BreeFoundation
@@ -17,8 +16,6 @@ struct breeApp: App {
     /// App-owned settings graph, injected into each SwiftUI hosting root.
     private let settingsRuntime: SettingsRuntime
 
-    /// App-owned auth graph injected into the delegate and auth consumers.
-    private let authComposition: MacAuthComposition
     /// Composition-root owner for the config-backed automation bridge.
     private let automationEngine: AutomationEngine
     private let browserDataImportCoordinator: BrowserDataImportCoordinator
@@ -89,12 +86,10 @@ struct breeApp: App {
             saveSecret: { try socketPasswordStore.savePassword($0) },
             backupTimestamp: secretMigrationTimestamp
         )
-        let authComposition = MacAuthComposition()
         let browserDataImportCoordinator = BrowserDataImportCoordinator()
         let notificationStore = TerminalNotificationStore.shared
         let closedItemHistoryStore = ClosedItemHistoryStore.shared
         let sidebarState = SidebarState()
-        self.authComposition = authComposition
         self.browserDataImportCoordinator = browserDataImportCoordinator
 
         // If invoked with CLI-style arguments (e.g. `bree hooks setup`), exec the
@@ -148,7 +143,6 @@ struct breeApp: App {
             jsonStore: JSONConfigStore(fileURL: configFileURL),
             secretStore: secretStore,
             errorLog: SettingsErrorLog(),
-            accountFlow: authComposition.accountFlow,
             hostActions: hostSettingsActions,
             shortcutDefaultResolver: Self.makeShortcutDefaultResolver()
         )
@@ -251,7 +245,6 @@ struct breeApp: App {
             notificationStore: notificationStore,
             sidebarState: sidebarState,
             settingsRuntime: settingsRuntime,
-            auth: authComposition,
             automationEngine: automationEngine,
             browserDataImportCoordinator: browserDataImportCoordinator
         )
@@ -773,7 +766,7 @@ struct breeApp: App {
                 .disabled(!activeTabManager.canCloseOtherTabsInFocusedPane())
 
                 // The Close Workspace shortcut closes the current workspace with confirmation
-                // when needed. If this is the last workspace, it closes the window.
+                // when needed. The last workspace goes too and leaves the empty window.
                 splitCommandButton(title: String(localized: "menu.file.closeWorkspace", defaultValue: "Close Workspace"), shortcut: menuShortcut(for: .closeWorkspace)) {
                     closeTabOrWindow()
                 }
@@ -1617,6 +1610,8 @@ private struct MainWindowBootstrapView: View {
 }
 private let breeAuxiliaryWindowIdentifiers: Set<String> = [
     "bree.newMachine",
+    "bree.shellEditor.completionPanel",
+    "bree.terminal.completionPanel",
     "bree.settings",
     "bree.about",
     "bree.licenses",

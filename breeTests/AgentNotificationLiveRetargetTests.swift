@@ -454,7 +454,7 @@ extension AgentNotificationRegressionTests {
         defer { fixture.restore() }
 
         // SECURITY boundary: `notification.create_for_target` is reachable
-        // through the cloud relay, whose authorization only pins workspace_id
+        // through the remote relay, whose authorization only pins workspace_id
         // to the relay's owner workspace. The membership guard here is what
         // confines a relay caller to that workspace — it must NOT re-home a
         // surface owned by another workspace (a leaked pane UUID would allow

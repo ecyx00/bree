@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import Bonsplit
 import Foundation
@@ -95,7 +94,7 @@ extension TerminalController {
             }
 
             guard targetWorkspace.acceptsSurface(from: sourceWorkspace, panelID: surfaceId) else {
-                result = .err(code: "invalid_params", message: SurfaceTransferRejection.cloudMachineMismatch.message, data: nil)
+                result = .err(code: "invalid_params", message: SurfaceTransferRejection.remoteMachineMismatch.message, data: nil)
                 return
             }
 

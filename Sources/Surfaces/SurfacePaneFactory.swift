@@ -93,9 +93,7 @@ enum SurfacePaneFactory {
     /// provider replaced, the loser of an open race, the panes of a killed terminal). That
     /// end is never a layout edit on the machine, unlike a pane the person closes.
     static func close(panelID: UUID, in workspaceID: UUID) {
-        SurfaceCatalog.shared.withProjectionEndReason(for: [panelID], reason: .replaced) {
-            _ = TerminalController.shared.controlSurfaceClose(routing: routing(workspaceID: workspaceID), surfaceID: panelID, hasSurfaceIDParam: true)
-        }
+        _ = TerminalController.shared.controlSurfaceClose(routing: routing(workspaceID: workspaceID), surfaceID: panelID, hasSurfaceIDParam: true)
     }
 
     /// Closes a pane whose process has ended, the way a local terminal pane
@@ -103,27 +101,25 @@ enum SurfacePaneFactory {
     ///
     /// This is not ``close(panelID:in:)``: the socket close refuses a
     /// workspace's last surface, so an agent cannot empty a workspace by
-    /// accident. A shell that ended is not an accident, and a cloud workspace
+    /// accident. A shell that ended is not an accident, and a remote workspace
     /// opened by `bree vm workspace new` holds exactly one pane, so the socket
     /// rule would leave the dead pane on screen forever.
     static func closeExited(panelID: UUID, in workspaceID: UUID) {
         guard let appDelegate = AppDelegate.shared,
               let workspace = appDelegate.workspace(containingSurfaceID: panelID) else { return }
-        SurfaceCatalog.shared.withProjectionEndReason(for: [panelID], reason: .replaced) {
-            // A workspace whose only pane is the dead terminal goes with it, which
-            // is what a local workspace does when its last shell exits. Closing
-            // only the pane there leaves the workspace to open a fresh local shell
-            // in the cloud pane's place.
-            if workspace.panels.count <= 1 {
-                let manager = workspace.owningTabManager ?? TerminalController.shared.tabManager
-                if manager?.closeWorkspaceNonInteractively(workspace) == true { return }
-                // The workspace refused to close (pinned, or the window's last one
-                // during teardown). Close the pane anyway: a replacement local
-                // shell is still better than a frozen pane that swallows input.
-            }
-            workspace.markCloseHistoryEligible(panelId: panelID)
-            _ = workspace.closePanel(panelID, force: true)
+        // A workspace whose only pane is the dead terminal goes with it, which
+        // is what a local workspace does when its last shell exits. Closing
+        // only the pane there leaves the workspace to open a fresh local shell
+        // in the remote pane's place.
+        if workspace.panels.count <= 1 {
+            let manager = workspace.owningTabManager ?? TerminalController.shared.tabManager
+            if manager?.closeWorkspaceNonInteractively(workspace) == true { return }
+            // The workspace refused to close (pinned, or the window's last one
+            // during teardown). Close the pane anyway: a replacement local
+            // shell is still better than a frozen pane that swallows input.
         }
+        workspace.markCloseHistoryEligible(panelId: panelID)
+        _ = workspace.closePanel(panelID, force: true)
     }
 
     /// A fresh local workspace (⌘N) titled `title`, returned with the id of the starter
@@ -309,7 +305,7 @@ enum SurfaceBrowserPlaceholder {
     /// the desktop's own loading state rather than a blank tab.
     static func connecting(_ label: String) -> String {
         let title = String(
-            format: String(localized: "cloudTree.pane.connecting", defaultValue: "Connecting to %@…"),
+            format: String(localized: "remoteTree.pane.connecting", defaultValue: "Connecting to %@…"),
             label
         )
         return page(title: title, detail: nil, spinner: true)
@@ -320,17 +316,17 @@ enum SurfaceBrowserPlaceholder {
     /// truthful about a permanent capability gap instead of inviting a retry loop.
     static func failed(_ label: String, error: String, retryable: Bool = true) -> String {
         let title = String(
-            format: String(localized: "cloudTree.pane.failed", defaultValue: "Couldn’t open %@"),
+            format: String(localized: "remoteTree.pane.failed", defaultValue: "Couldn’t open %@"),
             label
         )
         let hint = retryable
             ? String(
-                localized: "cloudTree.pane.retryHint",
+                localized: "remoteTree.pane.retryHint",
                 defaultValue: "Close this pane and open it again from the sidebar."
             )
             : String(
-                localized: "cloudTree.pane.unsupportedHint",
-                defaultValue: "This provider cannot open port previews. Do not retry; use `bree vm exec` inside the machine or choose another machine."
+                localized: "remoteTree.pane.unsupportedHint",
+                defaultValue: "This provider cannot open port previews. Do not retry; choose another machine."
             )
         return page(title: title, detail: "\(error)\n\(hint)", spinner: false)
     }

@@ -14,7 +14,7 @@ extension GhosttySurfaceScrollView {
         to location: ghostty_clipboard_e,
         from callbackContext: GhosttySurfaceCallbackContext
     ) {
-        GhosttyApp.terminalPasteboard.writeRepresentations(representations, to: location)
+        GhosttyApp.terminalPasteboard.writeRepresentations(representations.map(Self.strippingBlockMarkers), to: location)
         // Copy-on-select is the only write made inside a pointer dispatch,
         // and AppKit delivers pointer events on the main thread.
         guard location == GHOSTTY_CLIPBOARD_STANDARD,
@@ -24,6 +24,28 @@ extension GhosttySurfaceScrollView {
             (callbackContext.terminalSurface?.paneHost as? GhosttySurfaceScrollView)?
                 .showCopyConfirmation()
         }
+    }
+
+    /// Plain-text pattern of one block marker row (one concealed run of box-drawing glyphs).
+    nonisolated private static let blockMarkerRowPattern = "(?m)^\u{2576}\u{2574}[\u{2500}\u{2574}][\u{2500}\u{2574}\u{2576}\u{254C}]+(\r?\n|$)"
+
+    /// Drops the shell integration's block marker rows from plain text, for the clipboard and the AX value.
+    nonisolated static func strippingBlockMarkerRows(_ text: String) -> String {
+        text.replacingOccurrences(of: blockMarkerRowPattern, with: "", options: .regularExpression)
+    }
+
+    /// Drops the shell integration's block marker rows from copied text so the ids never reach the clipboard.
+    nonisolated private static func strippingBlockMarkers(_ item: TerminalClipboardRepresentation) -> TerminalClipboardRepresentation {
+        let cleaned: String
+        switch item.mimeType.lowercased() {
+        case let type where type.hasPrefix("text/plain"): cleaned = strippingBlockMarkerRows(item.string)
+        case let type where type.hasPrefix("text/html"):
+            cleaned = item.string.replacingOccurrences(
+                of: "<div[^>]*>&#9590;&#9588;&#(9472|9588);(&#(9472|9588|9590|9548);)+</div>(\r?\n|$)",
+                with: "", options: .regularExpression)
+        default: return item
+        }
+        return cleaned == item.string ? item : .init(mimeType: item.mimeType, string: cleaned)
     }
 
     func showCopyConfirmation() {

@@ -1,4 +1,3 @@
-import BreeCloud
 import XCTest
 import Foundation
 
@@ -12,7 +11,7 @@ final class BreeSSHURLRequestTests: XCTestCase {
     deinit {}
 
     private var supportedScheme: String {
-        AuthEnvironment.callbackScheme
+        AppURLScheme.current
     }
 
     func testParsesSSHURLWithExplicitHostUserPortAndTitle() throws {
@@ -87,14 +86,14 @@ final class BreeSSHURLRequestTests: XCTestCase {
         }
     }
 
-    func testParsesSSHURLWithFreestyleUserDelimiters() throws {
+    func testParsesSSHURLWithTokenUserDelimiters() throws {
         let cases = [
             "workspace123,session-token_ABC.2yi9kzY-dysFsVBKh",
             "workspace123:session-token_ABC.2yi9kzY-dysFsVBKh"
         ]
 
         for user in cases {
-            let host = "workspace123.vm-ssh.freestyle.sh"
+            let host = "workspace123.example.com"
             let url = try XCTUnwrap(sshURL(queryItems: [
                 URLQueryItem(name: "host", value: host),
                 URLQueryItem(name: "user", value: user)
@@ -747,14 +746,14 @@ final class BreeSSHURLRequestTests: XCTestCase {
 
     func testParsesRulesURLWithName() throws {
         let url = try XCTUnwrap(textURL(host: "rules", queryItems: [
-            URLQueryItem(name: "name", value: "freestyle"),
+            URLQueryItem(name: "name", value: "styleguide"),
             URLQueryItem(name: "text", value: "Prefer small PRs.")
         ]))
 
         switch BreeTextURLRequest.parse(url) {
         case .success(.some(let request)):
             XCTAssertEqual(request.kind, .rules)
-            XCTAssertEqual(request.name, "freestyle")
+            XCTAssertEqual(request.name, "styleguide")
             XCTAssertEqual(request.text, "Prefer small PRs.")
             XCTAssertEqual(request.pasteText, "Prefer small PRs.")
         case .success(nil):

@@ -305,3 +305,256 @@ extension BREECLI {
         return nil
     }
 }
+
+// MARK: - agent wait / wait-output
+
+private struct WaitStreamFinished: Error {}
+
+/// Exit codes shared by `agent wait` and `wait-output` (documented in docs/cli-contract.md).
+private enum WaitExit {
+    static let timedOut: Int32 = 124
+    static let surfaceClosed: Int32 = 2
+}
+
+extension BREECLI {
+    static let agentWaitUsage = """
+    Usage: bree agent wait [<surface>|--surface <id|ref|index>] [--workspace <id|ref|index>] --until idle|needs-input [--timeout <seconds>]
+
+    Wait until the agent on a terminal surface becomes idle or needs input.
+    Returns at once when it already is. Without --timeout it waits forever.
+
+    Exit status: 0 reached, 1 error (including a surface with no agent),
+    2 surface closed while waiting, 124 timed out.
+    """
+
+    static let waitOutputUsage = """
+    Usage: bree wait-output --regex <pattern> [--workspace <id|ref|index>] [--surface <id|ref|index>] [--timeout <seconds>]
+
+    Wait until a line matching the regular expression newly appears on the visible
+    screen of a terminal surface, print that line and exit 0. Lines that already
+    matched when the command started do not count. Without --timeout it waits forever.
+
+    Exit status: 0 matched, 1 error, 2 surface closed while waiting, 124 timed out.
+    """
+
+    private func parseWaitTimeout(_ raw: String?) throws -> TimeInterval? {
+        guard let raw else { return nil }
+        guard let seconds = Double(raw), seconds > 0 else {
+            throw CLIError(message: "--timeout must be greater than 0")
+        }
+        return seconds
+    }
+
+    func runAgentWaitCommand(commandArgs: [String], client: SocketClient, socketPath: String, explicitPassword: String?) throws {
+        let (workspaceFlag, rem00) = parseOption(commandArgs, name: "--workspace")
+        let (surfaceFlag, rem0) = parseOption(rem00, name: "--surface")
+        let (untilRaw, rem1) = parseOption(rem0, name: "--until")
+        let (timeoutRaw, rem2) = parseOption(rem1, name: "--timeout")
+        let positional = rem2.filter { $0 != "--json" }
+        guard positional.count <= 1, !positional.contains(where: { $0.hasPrefix("-") }) else {
+            throw CLIError(message: Self.agentWaitUsage)
+        }
+        let target: String
+        switch untilRaw?.lowercased() {
+        case "idle": target = "idle"
+        case "needs-input", "needsinput", "needs_input": target = "needsInput"
+        default: throw CLIError(message: Self.agentWaitUsage)
+        }
+        let timeout = try parseWaitTimeout(timeoutRaw)
+        let rawSurface = surfaceFlag ?? positional.first
+            ?? (workspaceFlag == nil ? ProcessInfo.processInfo.environment["BREE_SURFACE_ID"] : nil)
+        var params: [String: Any] = [:]
+        let wsId = try normalizeWorkspaceHandle(workspaceFlag, client: client)
+        if let wsId { params["workspace_id"] = wsId }
+        if let surface = try normalizeSurfaceHandle(rawSurface, client: client, workspaceHandle: wsId) {
+            params["surface_id"] = surface
+        }
+
+        let state = try client.sendV2(method: "agent.state", params: params)
+        guard state["agent"] as? Bool == true else {
+            throw CLIError(message: "No agent reports state on this surface")
+        }
+        let surfaceId = (state["surface_id"] as? String) ?? ""
+        let workspaceId = (state["workspace_id"] as? String) ?? ""
+        let counterKey = target == "idle" ? "idle_seq" : "needs_input_seq"
+        let baseline = (state[counterKey] as? NSNumber)?.intValue ?? 0
+        let label = target == "idle" ? "idle" : "waiting for input"
+        if state["lifecycle"] as? String == target {
+            print("Agent is \(label)")
+            return
+        }
+
+        let budgetClock = ContinuousClock()
+        let deadline = timeout.map { budgetClock.now.advanced(by: .seconds($0)) }
+        func remaining() -> TimeInterval? {
+            guard let deadline else { return nil }
+            let d = budgetClock.now.duration(to: deadline)
+            return max(0, Double(d.components.seconds) + Double(d.components.attoseconds) / 1e18)
+        }
+        func socketDeadline() -> Date? { remaining().map { Date(timeIntervalSinceNow: $0) } }
+        func timedOut() -> CLIError {
+            CLIError(
+                message: "Timed out after \(timeoutRaw ?? "")s waiting for the agent to become \(label)",
+                exitCode: WaitExit.timedOut
+            )
+        }
+        func closed() -> CLIError {
+            CLIError(message: "Surface closed while waiting for the agent", exitCode: WaitExit.surfaceClosed)
+        }
+
+        // A second connection: the first one stays a plain request channel.
+        let stream = SocketClient(path: socketPath)
+        defer { stream.close() }
+        do {
+            if let d = socketDeadline() { try stream.connect(deadline: d) } else { try stream.connect() }
+            try authenticateClientIfNeeded(
+                stream,
+                explicitPassword: explicitPassword,
+                socketPath: socketPath,
+                responseTimeout: remaining(),
+                deadline: socketDeadline()
+            )
+            var streamParams: [String: Any] = [
+                "names": ["agent.lifecycle.changed", "surface.closed", "pane.closed", "workspace.closed"],
+                "include_heartbeats": false,
+            ]
+            if let seq = state["event_seq"] as? NSNumber { streamParams["after_seq"] = seq }
+            var outcome: CLIError?
+            do {
+                try stream.streamV2(method: "events.stream", params: streamParams, deadline: socketDeadline()) { line in
+                    guard !line.isEmpty else { return }
+                    let frame = try parseEventStreamFrame(line)
+                    guard frame["type"] as? String == "event" else { return }
+                    let payload = frame["payload"] as? [String: Any] ?? [:]
+                    switch frame["name"] as? String {
+                    case "surface.closed" where frame["surface_id"] as? String == surfaceId,
+                         "workspace.closed" where frame["workspace_id"] as? String == workspaceId:
+                        outcome = closed()
+                        throw WaitStreamFinished()
+                    case "pane.closed":
+                        if (payload["closed_surface_ids"] as? [String])?.contains(surfaceId) == true {
+                            outcome = closed()
+                            throw WaitStreamFinished()
+                        }
+                    case "agent.lifecycle.changed" where frame["surface_id"] as? String == surfaceId:
+                        if payload["agent"] as? Bool == false {
+                            outcome = CLIError(message: "The agent exited while waiting")
+                            throw WaitStreamFinished()
+                        }
+                        let seq = (payload[counterKey] as? NSNumber)?.intValue ?? 0
+                        if payload["lifecycle"] as? String == target || seq > baseline {
+                            throw WaitStreamFinished()
+                        }
+                    default: break
+                    }
+                }
+            } catch is WaitStreamFinished {
+                if let outcome { throw outcome }
+                print("Agent is \(label)")
+                return
+            }
+            // The stream ended without a verdict: the app closed it or the deadline passed.
+            if let r = remaining(), r <= 0 { throw timedOut() }
+            throw CLIError(message: "Event stream ended before the agent became \(label)")
+        } catch let error as CLIError where error.exitCode != 1 {
+            throw error
+        } catch {
+            if let r = remaining(), r <= 0 { throw timedOut() }
+            throw error
+        }
+    }
+
+    func runWaitOutputCommand(commandArgs: [String], client: SocketClient, windowOverride: String?) throws {
+        let (wsArg, rem0) = parseOption(commandArgs, name: "--workspace")
+        let (sfArg, rem1) = parseOption(rem0, name: "--surface")
+        let (windowOpt, rem2) = parseOption(rem1, name: "--window")
+        let (regexRaw, rem3) = parseOption(rem2, name: "--regex")
+        let (timeoutRaw, rem4) = parseOption(rem3, name: "--timeout")
+        let trailing = rem4.filter { $0 != "--json" }
+        guard let regexRaw, trailing.isEmpty else { throw CLIError(message: Self.waitOutputUsage) }
+        guard let regex = try? NSRegularExpression(pattern: regexRaw, options: [.anchorsMatchLines]) else {
+            throw CLIError(message: "Invalid regular expression: \(regexRaw)")
+        }
+        let timeout = try parseWaitTimeout(timeoutRaw)
+
+        let windowRaw = windowOpt ?? windowOverride
+        let workspaceArg = wsArg ?? Self.callerWorkspaceForSurfaceHandle(sfArg, windowRaw: windowRaw)
+        let surfaceArg = sfArg ?? (wsArg == nil && windowRaw == nil ? ProcessInfo.processInfo.environment["BREE_SURFACE_ID"] : nil)
+        var params: [String: Any] = [:]
+        let winId = try normalizeWindowHandle(windowRaw, client: client)
+        if let winId { params["window_id"] = winId }
+        let wsId = try normalizeWorkspaceHandle(workspaceArg, client: client, windowHandle: winId)
+        if let wsId { params["workspace_id"] = wsId }
+        if let sfId = try normalizeSurfaceHandle(surfaceArg, client: client, workspaceHandle: wsId, windowHandle: winId) {
+            params["surface_id"] = sfId
+        }
+
+        func matches(_ text: String) -> [String] {
+            text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init).filter {
+                regex.firstMatch(in: $0, range: NSRange($0.startIndex..., in: $0)) != nil
+            }
+        }
+        let clock = ContinuousClock()
+        let deadline = timeout.map { clock.now.advanced(by: .seconds($0)) }
+        // The visible screen is polled only while this command runs. Lines that
+        // matched at the start (such as the typed command itself) are the baseline;
+        // it follows the count down when the screen scrolls.
+        var baseline = matches(((try client.sendV2(method: "surface.read_text", params: params))["text"] as? String) ?? "").count
+        while true {
+            if let deadline, clock.now >= deadline {
+                throw CLIError(
+                    message: "Timed out after \(timeoutRaw ?? "")s waiting for output matching \(regexRaw)",
+                    exitCode: WaitExit.timedOut
+                )
+            }
+            Thread.sleep(forTimeInterval: 0.25)
+            let text: String
+            do {
+                text = ((try client.sendV2(method: "surface.read_text", params: params))["text"] as? String) ?? ""
+            } catch let error as CLIError where error.v2Code == "not_found" {
+                throw CLIError(message: "Surface closed while waiting for output", exitCode: WaitExit.surfaceClosed)
+            }
+            let found = matches(text)
+            if found.count > baseline, let line = found.last {
+                print(line)
+                return
+            }
+            baseline = min(baseline, found.count)
+        }
+    }
+}
+
+extension BREECLI {
+    static let snapshotsUsage = """
+    Usage: bree snapshots list
+           bree snapshots restore <id>
+
+    list     Show the rolling layout snapshots, newest first (at most 24, one per 5 minutes of change).
+    restore  Make a snapshot the saved layout. It applies on the next launch of Bree.
+             Until Bree quits, the running app stops saving its own layout so the
+             restored one is not overwritten; the layout it replaces is kept as a new snapshot.
+    """
+
+    func runSnapshotsCommand(commandArgs: [String], client: SocketClient, jsonOutput: Bool) throws {
+        let args = commandArgs.filter { $0 != "--json" }
+        switch (args.first?.lowercased(), args.count) {
+        case ("list", 1):
+            let payload = try client.sendV2(method: "snapshots.list")
+            if jsonOutput { print(jsonString(payload)); return }
+            let entries = payload["snapshots"] as? [[String: Any]] ?? []
+            if entries.isEmpty { print("No layout snapshots yet"); return }
+            for entry in entries {
+                print("\(entry["id"] as? String ?? "")  \(entry["date"] as? String ?? "")  \(entry["bytes"] as? Int ?? 0) bytes")
+            }
+        case ("restore", 2):
+            let payload = try client.sendV2(method: "snapshots.restore", params: ["id": args[1]])
+            if jsonOutput { print(jsonString(payload)); return }
+            print("""
+            Snapshot \(args[1]) is now the saved layout. It applies on the next launch: quit Bree and open it again.
+            Until you quit, this running app no longer saves its layout, so changes made now are not kept.
+            """)
+        default:
+            throw CLIError(message: Self.snapshotsUsage)
+        }
+    }
+}

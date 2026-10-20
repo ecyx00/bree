@@ -125,6 +125,26 @@
         }
       }
     },
+    "settings.terminal.localTmux.keepShells": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Shells Running After Quit"
+          }
+        }
+      }
+    },
+    "settings.terminal.localTmux.keepShells.subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New plain local terminals run inside a hidden tmux session that survives Bree quit and reattaches on relaunch. Needs tmux. Applies to terminals created after you turn it on."
+          }
+        }
+      }
+    },
     "settings.terminal.localTmux.subtitle": {
       "localizations": {
         "en": {

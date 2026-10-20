@@ -329,7 +329,7 @@ extension BREECLI {
         DocsReference(
             topic: "managed-policies",
             aliases: ["mdm", "managed", "policy", "policies", "enterprise", "managed-device-policies"],
-            summary: "MDM-enforceable managed policies: disable the embedded browser, iOS remote control, and Cloud on managed Macs.",
+            summary: "MDM-enforceable managed policies: disable the embedded browser, iOS remote control, and remote on managed Macs.",
             webURL: "https://github.com/ecyx00/bree/blob/main/docs/managed-device-policies.md",
             rawResources: [
                 DocsResource(label: "managed device policies", url: "https://raw.githubusercontent.com/ecyx00/bree/main/docs/managed-device-policies.md"),

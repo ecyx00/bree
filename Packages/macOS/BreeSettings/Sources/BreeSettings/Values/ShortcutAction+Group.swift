@@ -31,7 +31,7 @@ extension ShortcutAction {
              .newWorkspaceGroup, .groupSelectedWorkspaces,
              .toggleFocusedWorkspaceGroupCollapsed, .reopenClosedBrowserPanel,
              .newSurface, .toggleTerminalCopyMode, .focusTextBoxInput,
-             .cycleTextBoxSubmitAction, .attachTextBoxFile, .sendCtrlFToTerminal, .pasteLastScreenshot, .sizeTerminalToMyWindow,
+             .cycleTextBoxSubmitAction, .attachTextBoxFile, .sendCtrlFToTerminal, .pasteLastScreenshot,
              .clearScreenKeepScrollback, .toggleShellEditor:
             return .navigation
         case .focusLeft, .focusRight, .focusUp, .focusDown,

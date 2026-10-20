@@ -1,7 +1,7 @@
 import BREEAgentLaunch
 import BreeAgentChat
 import BreeFoundation
-import BreeMobileHost
+import BreeAgentTranscriptHost
 import Foundation
 
 /// A coding-agent session discovered by observing the process table, with no

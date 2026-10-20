@@ -120,7 +120,6 @@ public final class BrowserHiddenWebViewDiscardManager {
         if snapshot.isReactGrabActive { blockers.append("react_grab") }
         if snapshot.isDesignModeActive { blockers.append("design_mode") }
         if snapshot.isVisualAutomationCaptureActive { blockers.append("visual_automation") }
-        if snapshot.isMobileBrowserStreamActive { blockers.append("mobile_browser_stream") }
         if snapshot.hasPopups { blockers.append("popup") }
         return blockers
     }

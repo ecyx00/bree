@@ -365,7 +365,7 @@ public struct SidebarSection: View {
             SettingsCardRow(
                 configurationReview: .json("sidebar.showBranchDirectory"),
                 String(localized: "settings.app.showBranchDirectory", defaultValue: "Show Branch + Directory in Sidebar"),
-                subtitle: String(localized: "settings.app.showBranchDirectory.subtitle", defaultValue: "Display git branches, Cloud machine info, and working directories.")
+                subtitle: String(localized: "settings.app.showBranchDirectory.subtitle", defaultValue: "Display git branches, remote machine info, and working directories.")
             ) {
                 Toggle("", isOn: Binding(get: { showBranchDir.current }, set: { showBranchDir.set($0) }))
                     .labelsHidden()

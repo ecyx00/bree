@@ -100,7 +100,7 @@ enum TranscriptJSONValue: Sendable, Equatable, Codable {
     /// when a number cannot be one.
     ///
     /// Truncates toward zero, and answers `nil` rather than trapping for a
-    /// value no `Int` can hold. Transcripts are written by remote and cloud
+    /// value no `Int` can hold. Transcripts are written by remote and remote
     /// hosts, so `1e30` in a count field is untrusted input and must not
     /// take the process down.
     var int: Int? {

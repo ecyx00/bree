@@ -1,7 +1,7 @@
 import Foundation
 
 /// Sendable payload copied at the synchronous Ghostty callback boundary. Remote byte
-/// streams (the ssh-tmux mirror, cloud machine event streams) reuse it to enter the same
+/// streams (the ssh-tmux mirror, remote machine event streams) reuse it to enter the same
 /// bounded ingress; they pass `hookDirectory: nil` (no local project hooks for a remote
 /// emitter) and a non-local `origin`.
 struct GhosttyDesktopNotificationRequest: Equatable, Sendable {

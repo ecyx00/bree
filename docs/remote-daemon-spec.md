@@ -79,7 +79,7 @@ This is a **living implementation spec** (also called an **execution spec**): a 
 ### 3.3 Error Surfacing
 - `DONE` remote errors are surfaced in sidebar status + logs + notifications.
 - `DONE` reconnect retry count/time is included in surfaced error text (for example, `retry 1 in 4s`).
-- `DONE` a session that cannot become ready parks in bounded time and says so in the terminal (issue #12813). Parking is the session's single terminal transition: bootstrap and reachability park through their retry policies, and a session that bootstraps over SSH parks if no proxy endpoint is published within 60 s of its first daemon `hello` (the reverse-relay restart loop and the escalate-and-rebootstrap cycle have no bound of their own). Parking releases every `ssh-pty-attach --wait` waiting on the session with the same detail the sidebar shows; the attach prints it and exits instead of rejoining its wrapper's retry loop. Managed Cloud VM sessions are not deadlined. A launching attach does not repaint a parked workspace as connecting.
+- `DONE` a session that cannot become ready parks in bounded time and says so in the terminal (issue #12813). Parking is the session's single terminal transition: bootstrap and reachability park through their retry policies, and a session that bootstraps over SSH parks if no proxy endpoint is published within 60 s of its first daemon `hello` (the reverse-relay restart loop and the escalate-and-rebootstrap cycle have no bound of their own). Parking releases every `ssh-pty-attach --wait` waiting on the session with the same detail the sidebar shows; the attach prints it and exits instead of rejoining its wrapper's retry loop. A launching attach does not repaint a parked workspace as connecting.
 
 ### 3.4 Removed Temporary Behavior
 - `DONE` removed remote listening-port probe loop and per-port SSH `-L` mirroring.
@@ -243,7 +243,7 @@ Before declaring browser proxying complete:
 
 ### 10.3 Interactive Terminal Transport
 1. `workspace.remote.configure.terminal_transport` accepts `ssh` (default) or `mosh` and rejects other values with `invalid_params`.
-2. `mosh` is valid only when the workspace management transport is SSH and bree performs the normal daemon bootstrap; cloud/WebSocket and pre-baked-daemon paths remain SSH-terminal-only in this milestone.
+2. `mosh` is valid only when the workspace management transport is SSH and bree performs the normal daemon bootstrap; pre-baked-daemon paths remain SSH-terminal-only in this milestone.
 3. `workspace.remote.configure.terminal_profile` accepts `shell` (default) or `tmux`; `terminal_tmux_session` carries the validated named session and defaults to `main` for tmux profiles.
 4. `workspace.remote.status.remote` reports `terminal_transport`, `terminal_profile`, and `terminal_tmux_session`; the separate `transport` field continues to report the management/control transport.
 

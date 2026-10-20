@@ -1,6 +1,6 @@
 import Foundation
 
-/// The local bree socket a remote workspace's CLI relay and cloud CLI bridge
+/// The local bree socket a remote workspace's CLI relay and relay CLI bridge
 /// forward commands to.
 ///
 /// `workspace.remote.configure` takes a `local_socket_path` parameter, which

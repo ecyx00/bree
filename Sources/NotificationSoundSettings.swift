@@ -409,7 +409,7 @@ enum NotificationSoundSettings {
             commandEnvironment["BREE_NOTIFICATION_TITLE"] = title
             commandEnvironment["BREE_NOTIFICATION_SUBTITLE"] = subtitle
             commandEnvironment["BREE_NOTIFICATION_BODY"] = body
-            // Remote-origin text (ssh relay, cloud machine) is untrusted data; the
+            // Remote-origin text (ssh relay, remote machine) is untrusted data; the
             // command can gate on this instead of trusting every notification alike.
             commandEnvironment["BREE_NOTIFICATION_ORIGIN"] = origin.wireValue
             let environment = commandEnvironment

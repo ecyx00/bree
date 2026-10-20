@@ -46,6 +46,12 @@ extension TerminalController {
             browserPIDOccurrences: browserPIDOccurrences,
             includeProcesses: includeProcesses
         )
+        let leakedProcesses = v2AnnotateTopWorktrees(
+            &windows,
+            processSnapshot: processSnapshot,
+            totalPIDs: totalPIDs,
+            includeProcesses: includeProcesses
+        )
         let aggregates = processAggregates(
             from: processSnapshot,
             totalPIDs: totalPIDs
@@ -70,6 +76,9 @@ extension TerminalController {
         ) ?? .array([])
         payload["coding_agents"] = JSONValue(
             foundationObject: aggregates.codingAgents
+        ) ?? .array([])
+        payload["leaked_processes"] = JSONValue(
+            foundationObject: leakedProcesses
         ) ?? .array([])
         payload["windows"] = JSONValue(
             foundationObject: windows

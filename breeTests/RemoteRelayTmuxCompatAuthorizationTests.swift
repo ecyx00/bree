@@ -439,7 +439,6 @@ struct RemoteRelayTmuxCompatAuthorizationTests {
                 resolvedWorkspace = try #require(manager.selectedWorkspace)
                 resolvedPanelID = try #require(resolvedWorkspace.focusedPanelId)
                 let configuration = WorkspaceRemoteConfiguration(
-                    transport: .ssh,
                     terminalTransport: .ssh,
                     destination: "tiny@remote-only",
                     port: 22,
@@ -452,8 +451,7 @@ struct RemoteRelayTmuxCompatAuthorizationTests {
                     localSocketPath: nil,
                     terminalStartupCommand: "bree remote-shell",
                     preserveAfterTerminalExit: true,
-                    persistentDaemonSlot: "bree-11049-relay",
-                    skipDaemonBootstrap: false
+                    persistentDaemonSlot: "bree-11049-relay"
                 )
                 try #require(
                     resolvedWorkspace.configureRemoteConnection(configuration, autoConnect: false)

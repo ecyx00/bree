@@ -27,7 +27,7 @@ public struct ChatArtifactDirectoryListing: Sendable, Equatable, Codable {
         isTruncated = try container.decodeIfPresent(Bool.self, forKey: .isTruncated) ?? false
     }
 
-    /// Encodes the capped-list metadata for mobile clients.
+    /// Encodes the capped-list metadata for remote clients.
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(entries, forKey: .entries)

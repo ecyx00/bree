@@ -47,8 +47,7 @@ running inside zellij isn't launched a second time.
 A logout, restart, or shutdown ends the zellij server and its processes, and
 the session ends with it. As with local-tmux, this persists processes across
 bree's lifecycle, not across the machine's. To keep processes running while
-this Mac is offline, use `bree ssh-tmux`, `bree mosh-tmux`, or a persistent
-cloud VM.
+this Mac is offline, use `bree ssh-tmux`, or `bree mosh-tmux`.
 
 bree creates its sessions with zellij's session serialization off. Only the
 `bree local-zellij` CLI, which clears bree's socket credentials and terminal

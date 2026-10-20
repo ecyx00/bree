@@ -237,7 +237,7 @@ final class QuickViewWindowController: NSObject, NSWindowDelegate {
         panel = nil
     }
 
-    private func makeWindow() -> QuickViewWindow {
+    func makeWindow() -> QuickViewWindow {
         let window = QuickViewWindow(
             contentRect: NSRect(x: 0, y: 0, width: 760, height: 560),
             styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
@@ -245,6 +245,8 @@ final class QuickViewWindowController: NSObject, NSWindowDelegate {
             defer: false
         )
         window.isReleasedWhenClosed = false
+        // Show over a native-fullscreen main window instead of switching to the desktop Space.
+        window.collectionBehavior.formUnion([.fullScreenAuxiliary, .moveToActiveSpace])
         BreeSurfaceAppearance.follow(window)
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
@@ -276,7 +278,7 @@ final class QuickViewWindowController: NSObject, NSWindowDelegate {
 
 /// Handles Cmd+W (the configured Close Tab shortcut), Cmd+Return, Cmd+[/], Cmd+L, Cmd+U, Cmd+/- and Esc here,
 /// before the main menu's Close Tab can act on the main window's tab.
-private final class QuickViewWindow: NSWindow {
+final class QuickViewWindow: NSWindow {
     var onPin: (() -> Void)?
     /// Cmd+[ / Cmd+] / Cmd+L; returns whether the key was handled.
     var onShortcut: ((String) -> Bool)?

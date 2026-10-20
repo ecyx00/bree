@@ -335,6 +335,8 @@ struct TabItemView: View {
     /// When true, the tab drops its fixed maximum width and grows to fill the slack
     /// the enclosing tab strip distributes (see ``BonsplitConfiguration/Appearance/tabWidthMode``).
     let fillsWidth: Bool
+    /// Narrow pane: show only the icon, like a pinned browser tab.
+    var iconOnly = false
     let saturation: Double
     let trailingSeparatorBottomInset: CGFloat
     let controlShortcutDigit: Int?
@@ -382,7 +384,7 @@ struct TabItemView: View {
 
     var body: some View {
         tabContent
-        .padding(.horizontal, TabBarMetrics.tabHorizontalPadding)
+        .padding(.horizontal, tabHorizontalPadding)
         .frame(
             minWidth: frameMinWidth,
             // In fill mode the tab becomes flexible so the tab strip can distribute
@@ -473,8 +475,19 @@ struct TabItemView: View {
 
     /// Whether this tab renders in the compact icon-only style reserved for pinned
     /// browser surfaces (favicon only, no title or trailing affordances).
+    private var showsIconOnlyClose: Bool {
+        iconOnly && isHovered && allowsClose && !tab.isPinned && !showsShortcutHint
+    }
+
+    /// Narrow-pane icon-only tabs use tight padding (24 pt chip) so tab + new-tab cluster + action
+    /// lane fit a 165 pt pane; a wider chip pushed the row past the bar, which pinned the cluster over
+    /// the only tab and masked it away.
+    private var tabHorizontalPadding: CGFloat {
+        iconOnly ? 2 : TabBarMetrics.tabHorizontalPadding
+    }
+
     private var isIconOnlyPinned: Bool {
-        TabItemStyling.isIconOnlyPinned(isPinned: tab.isPinned, kind: tab.kind)
+        iconOnly || TabItemStyling.isIconOnlyPinned(isPinned: tab.isPinned, kind: tab.kind)
     }
 
     private func debugRecordTabFrame(_ frame: CGRect) {
@@ -747,9 +760,21 @@ struct TabItemView: View {
                     pinnedActivityBadge
                         .offset(x: 3, y: -2)
                 }
-                .opacity(showsShortcutHint ? 0 : 1)
+                .opacity(showsShortcutHint || showsIconOnlyClose ? 0 : 1)
                 // Suppress the audio badge's tap target while the hint pill is shown.
                 .allowsHitTesting(!showsShortcutHint)
+
+            // Narrow pane: the icon turns into the close button on hover.
+            if showsIconOnlyClose {
+                Button { onClose(.closeButton) } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: scaledCloseIconSize, weight: .medium))
+                        .foregroundStyle(TabBarColors.activeText(for: appearance))
+                        .frame(width: accessorySlotSize, height: accessorySlotSize)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHidden(true)
+            }
 
             if let shortcutHintLabel {
                 TabControlShortcutHintPill(text: shortcutHintLabel, usesDarkChrome: TabBarColors.usesDarkChrome(for: appearance), palette: appearance.palette, tabTitleFontSize: appearance.tabTitleFontSize)
@@ -902,7 +927,7 @@ struct TabItemView: View {
         }()
         return TabItemStyling.pinnedIconOnlyWidth(
             iconSlotSize: scaledIconSize,
-            horizontalPadding: TabBarMetrics.tabHorizontalPadding,
+            horizontalPadding: tabHorizontalPadding,
             reservedShortcutHintWidth: reservedHint
         )
     }
@@ -1786,15 +1811,7 @@ enum TabContextMenuBuilder {
              .markAsUnread,
              .toggleZoom,
              .toggleFullWidthTab,
-             .disconnectRemote,
-             .sizeToMyWindow,
-             .sizeModeLatest,
-             .sizeModeSmallest,
-             .sizeModeLargest,
-             .sizeModePriority,
-             .sizeModeFixed,
-             .toggleSizePanel,
-             .disconnectOtherClients:
+             .disconnectRemote:
             assertionFailure("Non-fork action cannot be the default fork destination: \(action)")
             return localized(
                 "tabContext.forkConversation.default.right",

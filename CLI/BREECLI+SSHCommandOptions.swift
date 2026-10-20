@@ -32,10 +32,6 @@ extension BREECLI {
         let localSocketPath: String
         let remoteRelayPort: Int
         let pinWorkspaceToTop: Bool
-        let daemonWebSocketEndpoint: VMDaemonWebSocketEndpoint?
-        /// True when the remote already runs breed-remote, so the bootstrap is skipped.
-        /// False for plain `bree ssh`.
-        let skipDaemonBootstrap: Bool
 
         /// Explicit TTY flags, or bree's forced-PTY default when no caller
         /// `RequestTTY` option controls the interactive session.
@@ -66,9 +62,7 @@ extension BREECLI {
             passwordCredential: String? = nil,
             localSocketPath: String,
             remoteRelayPort: Int,
-            pinWorkspaceToTop: Bool = false,
-            daemonWebSocketEndpoint: VMDaemonWebSocketEndpoint? = nil,
-            skipDaemonBootstrap: Bool = false
+            pinWorkspaceToTop: Bool = false
         ) {
             self.destination = destination
             self.displayDestination = displayDestination ?? destination
@@ -87,8 +81,6 @@ extension BREECLI {
             self.localSocketPath = localSocketPath
             self.remoteRelayPort = remoteRelayPort
             self.pinWorkspaceToTop = pinWorkspaceToTop
-            self.daemonWebSocketEndpoint = daemonWebSocketEndpoint
-            self.skipDaemonBootstrap = skipDaemonBootstrap
         }
     }
 }

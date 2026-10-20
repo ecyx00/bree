@@ -105,6 +105,7 @@ extension TerminalController {
     @MainActor
     private func v2NoteAcceptedFeedEvents(_ events: [WorkstreamEvent]) {
         for event in events {
+            FileOverlapNotice.shared.note(event)
             NotificationCenter.default.post(name: .workstreamEventReceived, object: event)
         }
         guard let agentChatTranscriptService else { return }

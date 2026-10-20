@@ -12,7 +12,7 @@ struct SessionIndexAgentIconImage: View, Equatable {
     }
 
     var body: some View {
-        if let assetName = agent.assetName {
+        if agent.systemImageName == nil, let assetName = agent.assetName {
             BreeResolvedIconImage(request: BreeResolvedIconRequest(
                 source: .asset(name: assetName, bundle: .main),
                 size: NSSize(width: size, height: size),

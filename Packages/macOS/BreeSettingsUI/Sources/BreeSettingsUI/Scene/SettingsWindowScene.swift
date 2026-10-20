@@ -51,11 +51,9 @@ public struct SettingsWindowRoot: View {
         let defaults = UserDefaults.standard
         let restoredSection = defaults.string(forKey: Self.selectedSectionDefaultsKey)
             .flatMap(SettingsSectionID.init(rawValue:)) ?? .app
-        let cloudAvailable = !ManagedDevicePolicy().isEnforced(.disableCloud)
-            && runtime.hostActions.isCloudMachinesAvailable
         _mountModel = State(initialValue: mountModel ?? SettingsSectionMountModel(
             initial: initialSection ?? restoredSection,
-            order: Self.mountOrder(cloudAvailable: cloudAvailable)
+            order: SettingsSectionMountModel.displayOrder
         ))
     }
     /// A targeted open's section, shown until the first navigation request
@@ -66,13 +64,8 @@ public struct SettingsWindowRoot: View {
     /// section that was mounted before is rebuilt when it becomes active
     /// again, so its rows only exist once this matches.
     @State var shownPaneSection: SettingsSectionID?
-    @State private var cloudDisabledByPolicy = ManagedDevicePolicy().isEnforced(.disableCloud)
-    @State private var cloudFeatureFlagRevision = 0
     @State private var searchText: String = ""
 
-    var cloudSectionIdentity: String {
-        "cloud-machines-section-\(cloudFeatureFlagRevision)"
-    }
     /// Loaded when the window opens so the App pane renders its agent
     /// sound matrix at full height on every visit.
     @State var soundAgentCache = NotificationSoundAgentCache()
@@ -121,13 +114,6 @@ public struct SettingsWindowRoot: View {
     var secretStore: SecretFileStore { runtime.secretStore }
     var catalog: SettingCatalog { runtime.catalog }
     var hostActions: SettingsHostActions { runtime.hostActions }
-    /// Whether the Cloud section (and its sidebar row) is offered at all. The
-    /// host owns the remote rollout and managed-policy decisions; first-use
-    /// activation belongs to the Cloud tab itself.
-    var isCloudSectionAvailable: Bool {
-        _ = cloudFeatureFlagRevision
-        return !cloudDisabledByPolicy && hostActions.isCloudMachinesAvailable
-    }
     /// Resolves the selected section pane from the persisted raw value,
     /// defaulting to ``SettingsSectionID/app`` when the stored value
     /// is unrecognized (e.g., after dropping a case).
@@ -174,17 +160,6 @@ public struct SettingsWindowRoot: View {
         .frame(minWidth: 820, minHeight: 540)
         .settingsErrorAlert(log: runtime.errorLog)
         .task {
-            let signals = ManagedDevicePolicy.changeSignals()
-            cloudDisabledByPolicy = ManagedDevicePolicy().isEnforced(.disableCloud)
-            // A profile installed before this window opened: the persisted
-            // selection may still point at the hidden Cloud section.
-            leaveCloudSectionIfDisabledByPolicy()
-            for await _ in signals {
-                cloudDisabledByPolicy = ManagedDevicePolicy().isEnforced(.disableCloud)
-                leaveCloudSectionIfDisabledByPolicy()
-            }
-        }
-        .task {
             await soundAgentCache.loadIfNeeded { await hostActions.notificationSoundAgentOptions() }
         }
         .onReceive(NotificationCenter.default.publisher(for: Self.sidebarToggleRequestName)) { _ in
@@ -192,10 +167,6 @@ public struct SettingsWindowRoot: View {
             // reach the split view; the host app routes its sidebar-toggle
             // menu command here when the Settings window is key.
             columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
-        }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("breeFeatureFlagsDidChange"))) { _ in
-            cloudFeatureFlagRevision &+= 1
-            leaveCloudSectionIfDisabledByPolicy()
         }
         .onChange(of: searchText) { _, newValue in
             // Legacy SettingsRootView resyncs the sidebar entry to the
@@ -232,35 +203,11 @@ public struct SettingsWindowRoot: View {
         navigate(to: target, preferSectionSelection: !shouldPreserveSearchSelection)
     }
 
-    /// Moves a selection that rests on an unavailable Cloud section to Account,
-    /// both at first render and on a transition.
-    private func leaveCloudSectionIfDisabledByPolicy() {
-        if !isCloudSectionAvailable {
-            // If the Cloud slot is the outstanding progressive mount, its
-            // intentionally empty content has no onAppear to advance the
-            // queue. Skip it explicitly so later sections still mount.
-            _ = mountModel.skip(.cloudMachines)
-        }
-        if !isCloudSectionAvailable && selectedSection == .cloudMachines {
-            navigate(to: .app)
-        }
-    }
-
-    private func isEntryVisible(_ entry: SettingsSearchIndex.Entry) -> Bool {
-        guard !isCloudSectionAvailable else { return true }
-        switch entry.kind {
-        case .section:
-            return entry.id != "section:\(SettingsSectionID.cloudMachines.rawValue)"
-        case .setting(let parent):
-            return parent != .cloudMachines
-        }
-    }
-
     /// Shows grouped browse categories until search is active, then preserves the flat ranked result list.
     @ViewBuilder
     private var sidebar: some View {
         List(selection: sidebarSelectionBinding) {
-            let matches = sidebarEntries(matching: searchText).filter { isEntryVisible($0) }
+            let matches = sidebarEntries(matching: searchText)
             if matches.isEmpty {
                 Text(String(localized: "settings.search.noResults", defaultValue: "No Results"))
                     .foregroundStyle(.settingsSecondaryText)
@@ -456,7 +403,8 @@ public struct SettingsWindowRoot: View {
                     // does not pin maxWidth. SettingsCard widths come from
                     // the ScrollView, not from a stretched parent.
                     .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    // 6 + the 14 pt stack spacing after the zero-size section anchor = 20 pt under the toolbar.
+                    .padding(.top, 6)
                     .padding(.bottom, 20)
                 }
             }

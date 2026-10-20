@@ -9,7 +9,7 @@ import Foundation
 #endif
 
 /// `bree agent hibernate|wake <surface>` must reach the local hibernation
-/// methods, not the cloud `vm agent` alias that owns the rest of `bree agent`.
+/// methods, not the remote `vm agent` alias that owns the rest of `bree agent`.
 extension CLINotifyProcessIntegrationRegressionTests {
     func testAgentHibernateSendsAgentHibernateForTheSurface() throws {
         let surfaceId = UUID().uuidString

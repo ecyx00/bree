@@ -34,7 +34,7 @@ extension BreeSurfaceTabBarBuiltInAction {
 /// The directory a copy action reads for one terminal panel.
 struct TerminalCopyDirectoryTarget: Equatable {
     /// The panel's working directory: a local path, or a path on the remote
-    /// or cloud host the panel runs on.
+    /// or remote host the panel runs on.
     let path: String
     /// Whether `path` is on this Mac, so a local git walk is meaningful.
     let isLocal: Bool
@@ -55,7 +55,7 @@ extension Workspace {
     /// unknown.
     ///
     /// Uses the same provenance rules as the sidebar
-    /// (``effectivePanelDirectory(panelId:localFallback:)``): a remote, cloud,
+    /// (``effectivePanelDirectory(panelId:localFallback:)``): a remote, remote,
     /// or remote-tmux pane only yields a directory its host reported, never
     /// this Mac's workspace directory. There is deliberately no fallback to
     /// another panel's or the workspace's directory.
@@ -106,7 +106,7 @@ enum TerminalCopyActionRunner {
                 NSSound.beep()
                 return false
             }
-            // A remote or cloud panel's directory lives on another host, so a
+            // A remote or remote panel's directory lives on another host, so a
             // local repository walk would be wrong. Copy the directory itself,
             // the same fallback used outside a repository.
             guard target.isLocal else {

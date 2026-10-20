@@ -51,27 +51,6 @@ struct RemotePortScanGatingTests {
         coordinator.stop()
     }
 
-    @Test("vm-baked Cloud VMs never run the ssh port scan, so connected is not held behind its timeout")
-    func vmBakedConfigurationSkipsSSHPortScan() {
-        let runner = SpyProcessRunner()
-        let coordinator = Self.makeCoordinator(
-            runner: runner,
-            terminalStartupCommand: "true",
-            skipDaemonBootstrap: true
-        )
-
-        coordinator.queue.sync {
-            coordinator.daemonReady = true
-            coordinator.updateRemotePortPollingStateLocked()
-        }
-
-        // No ssh-exec channel exists on these machines: a scan could only time out,
-        // and the first poll runs synchronously ahead of publishState(.connected).
-        #expect(coordinator.queue.sync { coordinator.remotePortPollTimer != nil } == false)
-        #expect(runner.runCount == 0)
-        coordinator.stop()
-    }
-
     @Test("Enabled keeps the host-wide poll timer running and scans (sanity)")
     func enabledStartsPollTimer() {
         let runner = SpyProcessRunner()
@@ -296,29 +275,6 @@ struct RemotePortScanGatingTests {
         coordinator.stop()
     }
 
-    @Test("Baked VM preflight ignores persistent PTY capabilities")
-    func bakedVMPreflightIgnoresPersistentPTYCapabilities() {
-        let runner = SpyProcessRunner()
-        let coordinator = Self.makeCoordinator(
-            runner: runner,
-            preserveAfterTerminalExit: true,
-            persistentDaemonSlot: "bree-default-freestyle-sshd-v1",
-            skipDaemonBootstrap: true
-        )
-
-        #expect(coordinator.requiredDaemonCapabilities == [
-            "proxy.stream.push",
-            "pty.session",
-            "pty.session.token",
-            "pty.write.notification",
-            "pty.resize.notification",
-            "pty.attach.cancel",
-            "pty.session.persistent_daemon",
-        ])
-        #expect(coordinator.bakedDaemonPreflightRequiredCapabilities == ["proxy.stream.push"])
-        coordinator.stop()
-    }
-
     // MARK: - Harness
 
     static func makeCoordinator(
@@ -327,8 +283,7 @@ struct RemotePortScanGatingTests {
         terminalStartupCommand: String? = nil,
         relayPort: Int? = nil,
         preserveAfterTerminalExit: Bool = false,
-        persistentDaemonSlot: String? = nil,
-        skipDaemonBootstrap: Bool = false
+        persistentDaemonSlot: String? = nil
     ) -> RemoteSessionCoordinator {
         let configuration = WorkspaceRemoteConfiguration(
             destination: "user@example.test",
@@ -342,8 +297,7 @@ struct RemotePortScanGatingTests {
             localSocketPath: nil,
             terminalStartupCommand: terminalStartupCommand,
             preserveAfterTerminalExit: preserveAfterTerminalExit,
-            persistentDaemonSlot: persistentDaemonSlot,
-            skipDaemonBootstrap: skipDaemonBootstrap
+            persistentDaemonSlot: persistentDaemonSlot
         )
         return RemoteSessionCoordinator(
             host: host,
@@ -359,13 +313,9 @@ struct RemotePortScanGatingTests {
             buildInfo: StubBuildInfo(),
             daemonStrings: RemoteDaemonStrings(
                 missingPersistentPTYCapability: "",
-                missingRequiredFunctionality: "",
-                cloudNotificationClearWorkspaceInvalid: "",
-                cloudNotificationClearWorkspaceDenied: "",
-                cloudNotificationClearSurfaceInvalid: ""
+                missingRequiredFunctionality: ""
             ),
             strings: RemoteSessionStrings(
-                connectedVMNoProxyFormat: "%@",
                 suspendedDetailFormat: "%@",
                 reverseRelayUnavailableRetrying: "",
                 reverseRelayPortUnavailableRetrying: "",

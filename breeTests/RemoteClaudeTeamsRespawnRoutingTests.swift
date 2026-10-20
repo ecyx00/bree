@@ -405,7 +405,6 @@ struct RemoteClaudeTeamsRespawnRoutingTests {
             remoteTerminalTransport: WorkspaceRemoteTerminalTransport
         ) -> WorkspaceRemoteConfiguration {
             WorkspaceRemoteConfiguration(
-                transport: .ssh,
                 terminalTransport: remoteTerminalTransport,
                 destination: "tiny@remote-only",
                 port: 22,
@@ -418,8 +417,7 @@ struct RemoteClaudeTeamsRespawnRoutingTests {
                 localSocketPath: nil,
                 terminalStartupCommand: "bree remote-shell",
                 preserveAfterTerminalExit: true,
-                persistentDaemonSlot: "bree-11049",
-                skipDaemonBootstrap: false
+                persistentDaemonSlot: "bree-11049"
             )
         }
 

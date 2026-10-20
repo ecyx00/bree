@@ -11,7 +11,7 @@ struct PrivateAddressRouteSelectorTests {
         #expect(selector.machine(forHost: "127.0.0.1", owner: "ssh:a", addresses: addresses) == "ssh:a")
     }
 
-    @Test(arguments: [nil, "cloud-x"] as [String?])
+    @Test(arguments: [nil, "Remote-x"] as [String?])
     func loopbackIsNotRoutedForABrowserTheMachineDoesNotOwn(owner: String?) {
         #expect(selector.machine(forHost: "127.0.0.1", owner: owner, addresses: ["ssh:a": "127.0.0.1"]) == nil)
     }

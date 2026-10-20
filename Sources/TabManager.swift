@@ -4,7 +4,6 @@ import BreeFoundation
 import BreeTerminalCore
 import SwiftUI
 import Foundation
-import BreeTerminalSharing
 import Bonsplit
 import BreeBrowser
 import BreeGit
@@ -825,8 +824,6 @@ class TabManager: ObservableObject {
     }
 
     func gitProbeDirectory(for workspace: Workspace, panelId: UUID) -> String? {
-        // Cloud cwd belongs to another machine and is never a local git/gh probe target.
-        if workspace.cloudDirectoryProvenanceRequired(panelId: panelId) { return nil }
         if let directory = workspace.reportedPanelDirectory(panelId: panelId) { return normalizedWorkingDirectory(directory) }
         guard workspace.allowsLocalDirectoryFallback(panelId: panelId) else { return nil }
         let rawDirectory = workspace.terminalPanel(for: panelId)?.requestedWorkingDirectory ?? (!workspace.usesRemoteDirectoryProvenance && workspace.focusedPanelId == panelId ? workspace.currentDirectory : nil)
@@ -1010,30 +1007,6 @@ class TabManager: ObservableObject {
     ///
     /// - Returns: `false` when no terminal panel is focused. A missing
     ///   screenshot is reported later by a beep, after the folder is read.
-    /// Makes the focused shared terminal follow this Mac's window (the shared
-    /// "Size to My Window" action; see ``TerminalSharingStore/sizeToMe(surfaceID:)``).
-    ///
-    /// - Returns: `false` when no terminal is focused or it is not attached.
-    @discardableResult
-    func sizeFocusedTerminalToMyWindow() -> Bool {
-        guard let panel = selectedTerminalPanel else { return false }
-        return TerminalController.shared.terminalSharing.sizeToMe(surfaceID: panel.id)
-    }
-
-    /// Opens the size panel for the focused terminal.
-    ///
-    /// - Parameter confirmDisconnectOthers: open with the "Disconnect other
-    ///   clients" confirmation already showing.
-    /// - Returns: `false` when no terminal is focused.
-    @discardableResult
-    func showFocusedTerminalSizePanel(confirmDisconnectOthers: Bool) -> Bool {
-        guard let panel = selectedTerminalPanel else { return false }
-        return TerminalController.shared.presentTerminalSizePanel(
-            surfaceID: panel.id,
-            confirmDisconnectOthers: confirmDisconnectOthers
-        )
-    }
-
     @discardableResult
     func pasteLastScreenshotIntoFocusedTerminal() -> Bool {
         guard let panel = selectedTerminalPanel else { return false }
@@ -1357,7 +1330,6 @@ class TabManager: ObservableObject {
 #if DEBUG
             maybeMutateSelectionDuringWorkspaceCreationForDev(snapshot: snapshot)
 #endif
-            let nextTabCount = snapshot.tabs.count + 1
             let explicitWorkingDirectory = normalizedWorkingDirectory(overrideWorkingDirectory)
             let workingDirectory = WorkspaceCreationWorkingDirectoryPolicy(
                 inheritanceEnabled: inheritanceEnabled
@@ -1379,7 +1351,10 @@ class TabManager: ObservableObject {
             let defaultTitle: String
             switch initialSurface {
             case .terminal:
-                defaultTitle = "Terminal \(nextTabCount)"
+                // Directory form ("~/Projects/bree") like the shell's own title, so the row
+                // does not flip from a generic name once the shell reports.
+                let directory = workingDirectory ?? FileManager.default.homeDirectoryForCurrentUser.path
+                defaultTitle = (directory as NSString).abbreviatingWithTildeInPath
             case .browser:
                 // Match the browser surface's blank new-tab title; the
                 // single-panel title sync keeps the workspace title following
@@ -2410,8 +2385,14 @@ class TabManager: ObservableObject {
         tab.updatePanelShellActivityState(panelId: surfaceId, state: state)
     }
 
-    func closeWorkspace(_ workspace: Workspace, recordHistory: Bool = true) {
-        guard tabs.count > 1 else { return }
+    /// Directory of the last workspace closed out of an empty window; roots the
+    /// right sidebar's Files panel while the window shows its empty state.
+    private(set) var closedWorkspaceDirectory: String?
+
+    /// `allowEmpty` lets the window's last workspace go (the window then shows
+    /// its empty state); other callers keep the "never empty" guard.
+    func closeWorkspace(_ workspace: Workspace, recordHistory: Bool = true, allowEmpty: Bool = false) {
+        guard allowEmpty || tabs.count > 1 else { return }
         // Teardown SIGHUPs child processes and publishes a closed event. Only this
         // manager may close its own live workspaces; stale or foreign objects must
         // never tear down terminals or publish a second close.
@@ -2444,10 +2425,16 @@ class TabManager: ObservableObject {
                 snapshot: snapshot
             )))
         }
+        let closedDirectory = workspace.currentDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
         finalizeWorkspaceForRemoval(workspace)
 
         if let index = tabs.firstIndex(where: { $0.id == workspace.id }) {
             tabs.remove(at: index)
+            if tabs.isEmpty {
+                closedWorkspaceDirectory = workspace.usesRemoteDirectoryProvenance || closedDirectory.isEmpty
+                    ? nil : closedDirectory
+                selectedTabId = nil
+            }
             let closedWorkspaceGroupId = workspace.groupId
             let closedWorkspaceWasGroupAnchor = closedWorkspaceGroupId.flatMap { groupId in
                 workspaces.workspaceGroups.first(where: { $0.id == groupId })?.liveAnchorWorkspaceId
@@ -2779,8 +2766,7 @@ class TabManager: ObservableObject {
         let plan = closeWorkspacesPlan(for: workspaces)
         // Members close below without their own prompts, so a batch holding a
         // pinned workspace keeps the pinned gate instead of the workspace one.
-        // Closing every workspace closes the window, so that "Close window?"
-        // variant follows the window setting. Pinned workspaces never offer
+        // Pinned workspaces never offer
         // "Don't ask again": no setting may silence the protection pinning
         // asked for.
         let containsPinned = plan.workspaces.contains(where: \.isPinned)
@@ -2814,8 +2800,7 @@ class TabManager: ObservableObject {
             ) else { return }
         }
 
-        // Closing every workspace keeps the window: the final close below swaps
-        // in a fresh terminal workspace (see closeWorkspaceKeepingWindowPopulated).
+        // The prompt above already covered the batch.
 
         // Drain non-anchor members before group anchors (see anchorLastCloseOrder):
         // closing a group's anchor is no longer destructive to the group (its next
@@ -2871,7 +2856,8 @@ class TabManager: ObservableObject {
         message: String,
         scrollableDetails: String? = nil,
         acceptCmdD: Bool,
-        dontAskAgain: CloseWarningKinds = []
+        dontAskAgain: CloseWarningKinds = [],
+        cancelIsDefault: Bool = false
     ) -> Bool {
         guard beginCloseConfirmationSession() else { return false }
         defer { endCloseConfirmationSession() }
@@ -2894,14 +2880,23 @@ class TabManager: ObservableObject {
         alert.addButton(withTitle: String(localized: "dialog.closeTab.close", defaultValue: "Close"))
         alert.addButton(withTitle: String(localized: "common.cancel", defaultValue: "Cancel"))
 
-        if let closeButton = alert.buttons.first {
-            closeButton.keyEquivalent = "\r"
-            closeButton.keyEquivalentModifierMask = []
-            alert.window.defaultButtonCell = closeButton.cell as? NSButtonCell
-            alert.window.initialFirstResponder = closeButton
-        }
-        if let cancelButton = alert.buttons.dropFirst().first {
-            cancelButton.keyEquivalent = "\u{1b}"
+        if cancelIsDefault, alert.buttons.count == 2 {
+            // Destructive Close is not the default: Return cancels.
+            alert.buttons[0].hasDestructiveAction = true
+            alert.buttons[0].keyEquivalent = ""
+            alert.buttons[1].keyEquivalent = "\r"
+            alert.window.defaultButtonCell = alert.buttons[1].cell as? NSButtonCell
+            alert.window.initialFirstResponder = alert.buttons[1]
+        } else {
+            if let closeButton = alert.buttons.first {
+                closeButton.keyEquivalent = "\r"
+                closeButton.keyEquivalentModifierMask = []
+                alert.window.defaultButtonCell = closeButton.cell as? NSButtonCell
+                alert.window.initialFirstResponder = closeButton
+            }
+            if let cancelButton = alert.buttons.dropFirst().first {
+                cancelButton.keyEquivalent = "\u{1b}"
+            }
         }
 
         #if DEBUG
@@ -3024,7 +3019,7 @@ class TabManager: ObservableObject {
     }
 
     private func closeWorkspacesPlan(for workspaces: [Workspace]) -> CloseWorkspacesPlan {
-        // The window never closes with its last workspace, so there is no window variant.
+        // Closing every workspace leaves an empty window, never a window close.
         let willCloseWindow = false
         let title = String(localized: "dialog.closeWorkspaces.title", defaultValue: "Close workspaces?")
         // Use the resolved display title so a group anchor is listed by the
@@ -3081,22 +3076,28 @@ class TabManager: ObservableObject {
         if showsCloseConfirmation,
            !confirmClose(
                title: String(localized: "dialog.closeWorkspace.title", defaultValue: "Close workspace?"),
-               message: String(localized: "dialog.closeWorkspace.message", defaultValue: "This will close the workspace and all of its panels."),
+               message: runningCommandSummary(in: workspace).map {
+                   String(format: String(localized: "dialog.closeWorkspace.messageRunning", defaultValue: "%@ is still running. Closing the workspace will stop it."), $0)
+               } ?? String(localized: "dialog.closeWorkspace.message", defaultValue: "This will close the workspace and all of its panels."),
                acceptCmdD: false,
-               dontAskAgain: dontAskAgain
+               dontAskAgain: dontAskAgain,
+               cancelIsDefault: true
            ) {
             return false
         }
-        closeWorkspaceKeepingWindowPopulated(workspace)
+        // The workspace prompt (or the caller's batch/pinned prompt) already asked.
+        closeWorkspaceOrWindow(workspace)
         return true
     }
 
-    /// Closes `workspace`; when it is the window's only workspace, opens a fresh
-    /// default terminal workspace first (same as New Workspace) so the window
-    /// never empties. Every close entry point routes through here.
-    func closeWorkspaceKeepingWindowPopulated(_ workspace: Workspace, recordHistory: Bool = true) {
-        if tabs.count <= 1, addWorkspaceIfActive() == nil { return }
-        closeWorkspace(workspace, recordHistory: recordHistory)
+    /// Closes `workspace`. The window's last workspace is removed for real too:
+    /// the window stays open with an empty sidebar and its empty state. Every
+    /// close entry point routes through here.
+    @discardableResult
+    func closeWorkspaceOrWindow(_ workspace: Workspace, recordHistory: Bool = true) -> Bool {
+        guard tabs.contains(where: { $0.id == workspace.id }) else { return false }
+        closeWorkspace(workspace, recordHistory: recordHistory, allowEmpty: true)
+        return true
     }
 
     private func shouldConfirmClose(requiresConfirmation: Bool, source: CloseConfirmationSource) -> Bool {
@@ -3361,9 +3362,7 @@ class TabManager: ObservableObject {
             tab.shouldKeepPersistentRemoteSurfaceOpenAfterChildExit(surfaceId)
         if !keepsPersistentRemoteSurfaceOpen,
            tab.shouldDemoteWorkspaceAfterChildExit(surfaceId: surfaceId) {
-            let relayPort: Int? = tab.remoteConfiguration?.transport == .ssh
-                ? tab.remoteConfiguration?.relayPort
-                : nil
+            let relayPort: Int? = tab.remoteConfiguration?.relayPort
             tab.markRemoteTerminalSessionEnded(
                 surfaceId: surfaceId,
                 relayPort: relayPort,
@@ -3398,34 +3397,10 @@ class TabManager: ObservableObject {
             return
         }
 
-        // Child-exit on the last panel should collapse the workspace, matching explicit close
-        // semantics (and close the window when it was the last workspace).
+        // Child-exit on the last panel removes the workspace (same rule as the row x);
+        // the window stays, even when it was the last workspace.
         if tab.panels.count <= 1 {
-            if tabs.count <= 1 {
-                if let app = AppDelegate.shared {
-                    // Notification cleanup belongs to the committed outcome:
-                    // unregisterMainWindow handles a closed window and
-                    // applicationWillTerminate clears the store on Quit.
-                    let exitedSurface = runtimeSurface ?? tab.terminalPanel(for: surfaceId)?.surface
-                    let onCancelled = exitedSurface.flatMap {
-                        lastTerminalChildExitRecoveryAction(
-                            tabId: tabId,
-                            surfaceId: surfaceId,
-                            runtimeSurface: $0
-                        )
-                    }
-                    app.closeMainWindowContainingTabId(
-                        tabId,
-                        recordHistory: false,
-                        onCancelled: onCancelled
-                    )
-                } else {
-                    // Headless/test fallback when no AppDelegate window context exists.
-                    closeRuntimeSurface(tabId: tabId, surfaceId: surfaceId)
-                }
-            } else {
-                closeWorkspace(tab, recordHistory: false)
-            }
+            closeWorkspace(tab, recordHistory: false, allowEmpty: true)
             return
         }
 
@@ -3463,6 +3438,22 @@ class TabManager: ObservableObject {
                 replayFileURL: nil
             )
         }
+    }
+
+    /// Foreground command line (basename of argv[0] plus args) of each terminal that needs close
+    /// confirmation, joined with ", "; nil when none can be read.
+    private func runningCommandSummary(in workspace: Workspace) -> String? {
+        let names: [String] = workspace.panels.compactMap { id, panel in
+            guard let terminal = panel as? TerminalPanel,
+                  workspace.panelNeedsConfirmClose(panelId: id),
+                  let pid = terminal.surface.foregroundProcessID(),
+                  var argv = BreeTopProcessSnapshot.processArgumentsAndEnvironment(for: pid)?.arguments,
+                  !argv.isEmpty else { return nil }
+            argv[0] = (argv[0] as NSString).lastPathComponent
+            let line = argv.joined(separator: " ")
+            return line.count > 60 ? String(line.prefix(59)) + "\u{2026}" : line
+        }
+        return names.isEmpty ? nil : names.joined(separator: ", ")
     }
 
     func workspaceNeedsConfirmClose(_ workspace: Workspace) -> Bool {
@@ -4346,6 +4337,11 @@ class TabManager: ObservableObject {
 
     /// Create a new terminal surface in the focused pane of the selected workspace
     func newSurface() {
+        // Empty window: there is no pane to add a tab to, so Cmd+T creates the first workspace.
+        if tabs.isEmpty {
+            _ = addWorkspace(workingDirectory: closedWorkspaceDirectory)
+            return
+        }
         // Cmd+T should always focus the newly created surface.
         selectedWorkspace?.clearSplitZoom()
         selectedWorkspace?.newTerminalSurfaceInFocusedPane(focus: true)
@@ -4890,10 +4886,6 @@ class TabManager: ObservableObject {
         excludingStableIdentities callerExcludedStableIdentities: Set<UUID> = [],
         excludingWorkspaceIds callerExcludedWorkspaceIds: Set<UUID> = []
     ) -> Bool {
-        guard !managedDevicePolicy.isEnforced(.disableCloud)
-                || !Self.isCloudVMWorkspaceSnapshotForManagedPolicy(entry.snapshot) else {
-            return false
-        }
         let promptBatch = SurfaceResumeRunPromptBatch.shared
         promptBatch.beginRestorePass()
         defer { promptBatch.endRestorePass() }
@@ -4911,6 +4903,8 @@ class TabManager: ObservableObject {
             reservedWorkspaceIds: &reservedWorkspaceIds,
             excludingStableIdentities: excludedStableIdentities
         )
+        PersistentLocalShell.suppressDepth += 1
+        defer { PersistentLocalShell.suppressDepth -= 1 }
         guard let workspace = addWorkspaceIfActive(
             id: restoredWorkspaceId,
             title: entry.snapshot.customTitle ?? entry.snapshot.processTitle,
@@ -6700,54 +6694,6 @@ extension TabManager {
         }
         workspace.retireFromOwningTabManager()
     }
-    /// - Parameter cloudDisabledByPolicy: The `DisableCloud` managed policy.
-    ///   While forced, no Cloud workspace is restored at all: a restored Cloud
-    ///   tab is a dead pane at best and an attach entrypoint at worst.
-    static func normalizedCloudVMSessionRestoreWorkspaces<S: Sequence>(
-        _ snapshots: S,
-        selectedWorkspaceIndex: Int?,
-        cloudDisabledByPolicy: Bool = ManagedDevicePolicy().isEnforced(.disableCloud)
-    ) -> ([SessionWorkspaceSnapshot], Int?) where S.Element == SessionWorkspaceSnapshot {
-        let snapshots = Array(snapshots)
-        if cloudDisabledByPolicy {
-            var indexMap: [Int: Int] = [:]
-            var filtered: [SessionWorkspaceSnapshot] = []
-            for (index, snapshot) in snapshots.enumerated()
-            where !isCloudVMWorkspaceSnapshotForManagedPolicy(snapshot) {
-                indexMap[index] = filtered.count
-                filtered.append(snapshot)
-            }
-            // Selection follows the same local workspace; a dropped Cloud
-            // selection falls back to the first survivor (the caller creates a
-            // fresh local workspace when nothing survives).
-            let remappedSelection = selectedWorkspaceIndex.flatMap { indexMap[$0] }
-                ?? (filtered.isEmpty ? nil : 0)
-            return (filtered, remappedSelection)
-        }
-        let cloudIndexes = snapshots.indices.filter { isCloudVMSessionRestoreWorkspace(snapshots[$0]) }
-        guard !cloudIndexes.isEmpty else {
-            return (snapshots, selectedWorkspaceIndex)
-        }
-
-        let managedCloudIndexes = cloudIndexes.filter { isManagedCloudVMSessionRestoreWorkspace(snapshots[$0]) }
-        let selectedManagedCloudIndex = selectedWorkspaceIndex.flatMap { selected in
-            managedCloudIndexes.contains(selected) ? selected : nil
-        }
-        let keptCloudIndex = selectedManagedCloudIndex ?? managedCloudIndexes.first
-        var indexMap: [Int: Int] = [:]
-        var filtered: [SessionWorkspaceSnapshot] = []
-        for (index, snapshot) in snapshots.enumerated() {
-            if cloudIndexes.contains(index), index != keptCloudIndex {
-                continue
-            }
-            indexMap[index] = filtered.count
-            filtered.append(snapshot)
-        }
-
-        let remappedSelection = selectedWorkspaceIndex.flatMap { indexMap[$0] }
-            ?? keptCloudIndex.flatMap { indexMap[$0] }
-        return (filtered, remappedSelection)
-    }
 
     /// Restores all workspaces, panels, groups, and Dock state from a session snapshot.
     ///
@@ -6791,12 +6737,8 @@ extension TabManager {
         // mountedWorkspaceIds empty and cause a frozen blank launch state (#399).
         var newTabs: [Workspace] = []
         var restoredPanelIdsByWorkspaceIndex: [[UUID: UUID]] = []
-        let (normalizedWorkspaceSnapshots, selectedWorkspaceIndex) = Self.normalizedCloudVMSessionRestoreWorkspaces(
-            snapshot.workspaces.prefix(SessionPersistencePolicy.maxWorkspacesPerWindow),
-            selectedWorkspaceIndex: snapshot.selectedWorkspaceIndex,
-            cloudDisabledByPolicy: managedDevicePolicy.isEnforced(.disableCloud)
-        )
-        let workspaceSnapshots = normalizedWorkspaceSnapshots
+        let selectedWorkspaceIndex = snapshot.selectedWorkspaceIndex
+        let workspaceSnapshots = snapshot.workspaces
             .prefix(SessionPersistencePolicy.maxWorkspacesPerWindow)
         prepareLegacyWorkspaceCustomizationMigration(
             afterRestoring: Array(workspaceSnapshots)
@@ -6816,6 +6758,9 @@ extension TabManager {
                 reservedWorkspaceIds: &reservedWorkspaceIds,
                 excludingStableIdentities: excludingStableIdentities
             )
+            // Restore replaces the initial terminal; do not give it an auto session.
+            PersistentLocalShell.suppressDepth += 1
+            defer { PersistentLocalShell.suppressDepth -= 1 }
             let workspace = Workspace(
                 id: restoredWorkspaceId,
                 title: workspaceSnapshot.processTitle,

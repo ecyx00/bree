@@ -9,6 +9,7 @@ struct SessionIndexStatusIndicatorModel: Equatable, Sendable {
         case activeInPane
         case active
         case inactive
+        case agent(AttentionState)
     }
 
     private let state: State
@@ -19,7 +20,7 @@ struct SessionIndexStatusIndicatorModel: Equatable, Sendable {
 
     var isActive: Bool {
         switch state {
-        case .activeInPane, .active:
+        case .activeInPane, .active, .agent:
             return true
         case .inactive:
             return false
@@ -43,11 +44,14 @@ struct SessionIndexStatusIndicatorModel: Equatable, Sendable {
                 localized: "sessionIndex.status.inactiveIndicator",
                 defaultValue: "Inactive"
             )
+        case .agent(let agent):
+            return AttentionStyle.word(for: agent) ?? ""
         }
     }
 
     func color(palette: BreeChromePalette) -> Color {
-        isActive ? palette.signalSuccess : palette.glyphTertiary
+        if case .agent(let agent) = state { return AttentionStyle.symbol(for: agent, palette: palette).tint }
+        return isActive ? palette.signalSuccess : palette.glyphTertiary
     }
 
     /// Active sessions are a filled circle, inactive history a ring, so the
@@ -61,9 +65,11 @@ struct SessionIndexStatusIndicatorModel: Equatable, Sendable {
     /// one that cannot be mapped to a pane) remains gray here.
     nonisolated static func make(
         isInPane: Bool,
-        liveStatus: VaultSessionLiveStatus?
+        liveStatus: VaultSessionLiveStatus?,
+        agentState: AttentionState? = nil
     ) -> SessionIndexStatusIndicatorModel {
         _ = liveStatus
+        if let agentState { return SessionIndexStatusIndicatorModel(state: .agent(agentState)) }
         return SessionIndexStatusIndicatorModel(
             state: isInPane ? .activeInPane : .inactive
         )

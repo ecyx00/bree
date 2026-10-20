@@ -1,11 +1,9 @@
 internal import Foundation
 
-// Timer-backed keepalive for non-websocket daemon transports. WebSocket uses
-// URLSession's ping path in RemoteDaemonRPCClient+Events.swift.
+// Timer-backed keepalive for the ssh stdio daemon transport.
 extension RemoteDaemonRPCClient {
     func startTransportKeepalive() {
         stateQueue.sync {
-            guard configuration.transport != .websocket else { return }
             startTransportKeepaliveLocked()
         }
     }
@@ -31,7 +29,7 @@ extension RemoteDaemonRPCClient {
     }
 
     func sendTransportKeepaliveLocked() {
-        guard !isClosed, webSocketTask == nil else {
+        guard !isClosed else {
             stopTransportKeepaliveLocked()
             return
         }
@@ -112,7 +110,6 @@ extension RemoteDaemonRPCClient {
         streamSubscriptions.removeAll(keepingCapacity: false)
         failPTYSubscriptionsLocked(detail)
         signalPendingFailureLocked(detail)
-        stopWebSocketKeepaliveLocked()
         stopTransportKeepaliveLocked()
 
         capturedStdout?.readabilityHandler = nil

@@ -143,7 +143,7 @@ struct TerminalNotificationPolicyEnvelope: Codable, Sendable, Equatable {
     /// Present only for agent-originated notifications; omitted from the hook
     /// stdin JSON otherwise. Additive to the version-1 envelope contract.
     var agent: TerminalNotificationPolicyAgentContext?
-    /// Present only for remote-origin notifications (a `bree ssh` host, a cloud
+    /// Present only for remote-origin notifications (a `bree ssh` host, a remote
     /// machine); omitted for local ones. Informational, never hook-patchable.
     var origin: TerminalNotificationPolicyOriginContext?
     var effects: TerminalNotificationPolicyEffects = TerminalNotificationPolicyEffects()
@@ -605,7 +605,7 @@ private final class NotificationHookProcessRun: @unchecked Sendable {
         env["BREE_NOTIFICATION_BODY"] = envelope.notification.body
         env["BREE_NOTIFICATION_WORKSPACE_ID"] = envelope.notification.workspaceId
         env["BREE_NOTIFICATION_SURFACE_ID"] = envelope.notification.surfaceId ?? ""
-        // `local`, `ssh-relay:<workspace>`, `cloud-vm:<machine>`, or `device-mac:<device>`: lets a hook treat
+        // `local`, `ssh-relay:<workspace>`, `managed-host:<machine>`, or `device-mac:<device>`: lets a hook treat
         // remote-origin title/body as untrusted text (never interpolate into code).
         env["BREE_NOTIFICATION_ORIGIN"] = envelope.origin?.value ?? TerminalNotificationOrigin.localWireValue
         env["BREE_NOTIFICATION_POLICY_JSON"] = String(data: inputData, encoding: .utf8) ?? ""

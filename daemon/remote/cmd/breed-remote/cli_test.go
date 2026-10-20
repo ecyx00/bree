@@ -1393,7 +1393,7 @@ func TestCLIWorkspaceGroupRemoveStillRequiresExplicitWorkspaceWithEnv(t *testing
 	}
 }
 
-func TestCLINotifyUsesExplicitCallerTargetForCloudBridge(t *testing.T) {
+func TestCLINotifyUsesExplicitCallerTargetFromEnv(t *testing.T) {
 	sockPath, requests := startMockV2SocketWithRequestCapture(t)
 	t.Setenv("BREE_WORKSPACE_ID", "env-ws")
 	t.Setenv("BREE_SURFACE_ID", "env-sf")

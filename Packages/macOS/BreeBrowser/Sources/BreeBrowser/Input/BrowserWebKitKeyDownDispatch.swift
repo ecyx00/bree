@@ -155,7 +155,7 @@ extension WKWebView {
     /// Edit menu commands `bree browser press` runs on the web view itself.
     static let menuEditingCommands: Set<String> = ["selectAll:", "copy:", "cut:", "paste:", "undo:", "redo:"]
 
-    /// Delivers an already-resolved AppKit key specification. The mobile
+    /// Delivers an already-resolved AppKit key specification. The remote
     /// browser stream and socket automation both use this seam so key-down
     /// re-entry handling and event construction cannot diverge.
     ///
@@ -166,7 +166,7 @@ extension WKWebView {
     ///   - marksBrowserAutomation: Marks the events as automation's
     ///     (``NSEvent/isBrowserAutomationKeyEvent``) so the app drops WebKit's
     ///     resend of one no page handled. The REPL and `bree browser press`
-    ///     mark their keys; the mobile browser stream, a person's keys from a
+    ///     mark their keys; the remote browser stream, a person's keys from a
     ///     phone, does not, so its unhandled Command shortcuts still reach the
     ///     Mac's menus.
     /// - Returns: The native delivery outcome.
@@ -341,7 +341,7 @@ extension WKWebView {
 }
 
 /// Keys browser automation (the REPL, `bree browser press`) delivers to a
-/// web view; the mobile browser stream's keys, a person's, are not marked. When no page handles such a key,
+/// web view; the remote browser stream's keys, a person's, are not marked. When no page handles such a key,
 /// WebKit sends it back through `NSApp.sendEvent` (WebViewImpl's
 /// doneWithKeyEvent), which hands it to the key window: the user's window,
 /// whose first responder (a terminal) would receive the text and whose menus

@@ -23,11 +23,12 @@ public struct SettingsSectionHeader: View {
     }
 
     public var body: some View {
-        Text(title)
-            .breeFont(.title)
-            .foregroundStyle(.settingsPrimaryText)
-            .padding(.leading, 2)
-            .padding(.bottom, -2)
+        // The window toolbar already shows the section title
+        // (`navigationTitle`), so the page carries a zero-size anchor only:
+        // it keeps the section id, search highlight and UI-test identifier.
+        Color.clear
+            .frame(width: 0, height: 0)
+            .accessibilityElement()
             .settingsSearchHighlight(section.map { ["section:\($0.rawValue)"] } ?? [])
     }
 }

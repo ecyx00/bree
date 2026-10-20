@@ -23,8 +23,6 @@ extension ContentView {
             return String(localized: "commandPalette.kind.workspaceTodo", defaultValue: "Todos")
         case .notifications:
             return String(localized: "notifications.title", defaultValue: "Notifications")
-        case .accountSignIn:
-            return String(localized: "settings.section.account", defaultValue: "Account")
         }
     }
     func commandPaletteSurfaceKeywords(for panelType: PanelType) -> [String] {
@@ -49,8 +47,6 @@ extension ContentView {
             return ["todo", "todos", "checklist", "task", "status"]
         case .notifications:
             return ["notifications", "alerts", "feed"]
-        case .accountSignIn:
-            return ["account", "auth", "profile", "sign in"]
         }
     }
 }

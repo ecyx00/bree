@@ -118,10 +118,10 @@ struct CommandPaletteNucleoFFITests {
         // Skipped: nucleo FFI dylib not built in this environment.
         let entries = [
             FixtureEntry(
-                id: "workspace.iosMobileTerminal",
+                id: "workspace.iosTerminal",
                 rank: 0,
-                title: "iOS Mobile Terminal",
-                searchableTexts: ["iOS Mobile Terminal", "Workspace", "workspace", "switch", "go"]
+                title: "iOS Terminal",
+                searchableTexts: ["iOS Terminal", "Workspace", "workspace", "switch", "go"]
             ),
             FixtureEntry(
                 id: "workspace.forkSessionNotFound",
@@ -139,7 +139,7 @@ struct CommandPaletteNucleoFFITests {
 
         let resultIDs = try index.search(query: "ios", limit: 5).map(\.id)
 
-        #expect(resultIDs.first == "workspace.iosMobileTerminal")
+        #expect(resultIDs.first == "workspace.iosTerminal")
         #expect(resultIDs.contains("workspace.forkSessionNotFound"))
     }
 

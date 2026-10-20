@@ -3,8 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RELOAD_ORIGINAL_ARGS=("$@")
-# shellcheck source=scripts/lib/mobile-attach.sh
-source "$SCRIPT_DIR/lib/mobile-attach.sh"
+# shellcheck source=scripts/lib/dev-tag.sh
+source "$SCRIPT_DIR/lib/dev-tag.sh"
 
 
 APP_NAME="Bree Dev"
@@ -869,11 +869,11 @@ EOF
 }
 
 sanitize_bundle() {
-  bree_attach__bundle_seg "$1"
+  bree_tag_bundle_seg "$1"
 }
 
 sanitize_path() {
-  bree_attach__slug_raw "$1"
+  bree_tag_slug_raw "$1"
 }
 
 is_valid_port() {
@@ -1213,7 +1213,7 @@ if [[ "$BUILD_ONLY" -eq 1 && "$NAME_SET" -eq 1 && "$APP_NAME" == "$BASE_APP_NAME
 fi
 
 if [[ -n "$TAG" ]]; then
-  if ! bree_attach_validate_dev_tag "$TAG"; then
+  if ! bree_tag_validate_dev_tag "$TAG"; then
     exit 1
   fi
   TAG_ID="$(sanitize_bundle "$TAG")"
@@ -1238,23 +1238,6 @@ if [[ -n "$TAG" ]]; then
   fi
 fi
 
-# Build the bree-tui client from the in-repo crate before the dev backend, GhosttyKit
-# and xcodebuild, so a missing toolchain or a compile error fails early. Cargo's own
-# incremental no-op (~0.5 s) makes repeat reloads cheap. Nothing is downloaded from
-# bree infrastructure. BREE_TUI_CLIENT_LOCAL overrides the binary;
-# BREE_SKIP_BREE_TUI_CLIENT=1 keeps the copy already bundled.
-if [[ "${BREE_SKIP_BREE_TUI_CLIENT:-}" != "1" && -z "${BREE_TUI_CLIENT_LOCAL:-}" ]]; then
-  if ! command -v cargo >/dev/null 2>&1; then
-    echo "error: cargo not found; bree-tui is built locally. Append rustup to PATH:" >&2
-    echo '       export PATH="$PATH:/opt/homebrew/opt/zig@0.16/bin:/opt/homebrew/opt/rustup/bin"' >&2
-    exit 1
-  fi
-  echo "Building bree-tui client (cargo)..."
-  (cd "$PWD/bree-tui" && cargo build -p bree-tui --bin bree-tui) >&2 \
-    || { echo "error: cargo build of bree-tui failed" >&2; exit 1; }
-  BREE_TUI_CLIENT_LOCAL="$PWD/bree-tui/target/debug/bree-tui"
-fi
-
 BREE_DEV_PORT="$(choose_bree_dev_port)"
 BREE_DEV_PORT_RANGE="$(choose_bree_dev_port_range)"
 BREE_DEV_PORT_END="$(choose_bree_dev_port_end "$BREE_DEV_PORT" "$BREE_DEV_PORT_RANGE")"
@@ -1267,7 +1250,7 @@ if [[ -n "$TAG" && "$PROD_AUTH" -eq 0 ]]; then
     export BREE_DEV_BACKEND_URL="$BREE_DEV_ORIGIN"
   fi
 fi
-BREE_DEV_API_BASE_URL_VALUE="$(bree_attach_resolve_dev_api_base_url "$BREE_DEV_ORIGIN")"
+BREE_DEV_API_BASE_URL_VALUE="${BREE_DEV_API_BASE_URL:-$BREE_DEV_ORIGIN}"
 BREE_AUTH_WWW_ORIGIN_VALUE="$BREE_DEV_ORIGIN"
 BREE_WWW_ORIGIN_VALUE="$BREE_DEV_ORIGIN"
 if [[ "$PROD_AUTH" -eq 1 ]]; then
@@ -1839,16 +1822,6 @@ if [[ -x "$BREED_SRC" ]]; then
   mkdir -p "$BIN_DIR"
   cp "$BREED_SRC" "$BIN_DIR/breed"
   chmod +x "$BIN_DIR/breed"
-fi
-# The bree-tui client the Machines panel uses for cloud sessions ships inside the
-# bundle like the Ghostty helper; it is the local cargo build (or BREE_TUI_CLIENT_LOCAL).
-# BREE_SKIP_BREE_TUI_CLIENT=1 preserves an existing copy.
-if [[ "${BREE_SKIP_BREE_TUI_CLIENT:-}" == "1" && -x "$APP_PATH/Contents/Resources/bin/bree-tui" ]]; then
-  echo "Preserving bundled bree-tui client (BREE_SKIP_BREE_TUI_CLIENT=1)"
-else
-  BREE_TUI_CLIENT_LOCAL="${BREE_TUI_CLIENT_LOCAL:-$PWD/bree-tui/target/debug/bree-tui}" \
-    "$PWD/scripts/install-bree-tui-client.sh" "$APP_PATH" \
-    --require-capability wireguard-hub --require-capability browser-proxy
 fi
 if command -v xattr >/dev/null 2>&1; then
   xattr -cr "$APP_PATH" || true

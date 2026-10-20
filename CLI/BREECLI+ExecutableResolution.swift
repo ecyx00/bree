@@ -208,8 +208,6 @@ extension BREECLI {
     /// retain bree's root `--help` contract while forwarding nested help unchanged.
     func shouldDispatchBreeSubcommandHelp(command: String, commandArgs: [String]) -> Bool {
         switch command {
-        case "agent":
-            return BreeTuiRemoteRouting.vmAgentRequestsHelp(commandArgs)
         case "claude-teams", "codex-teams":
             return false
         case "omo", "omx", "omc":

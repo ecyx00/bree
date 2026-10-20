@@ -2,7 +2,7 @@ import BreeSurfaceCatalogModel
 import Foundation
 
 extension SurfaceResource {
-    /// One provider identity drives the tab strip and every Cloud tree placement.
+    /// One provider identity drives the tab strip and every remote tree placement.
     /// Report provenance and user-controlled terminal titles are not provider IDs.
     var terminalAgentIconAssetName: String? {
         guard kind == .terminal, lifecycle != .exited,

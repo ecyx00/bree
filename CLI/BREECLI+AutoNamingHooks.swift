@@ -96,7 +96,6 @@ extension BREECLI {
             workspaceId: workspaceId,
             surfaceId: surfaceId,
             previousTitle: outcome.lastTitle,
-            cloudNameContext: probe["cloud_name_context"],
             client: client,
             telemetryKey: "claude-hook.auto-name",
             telemetry: telemetry
@@ -211,7 +210,6 @@ extension BREECLI {
             lines: lines,
             lineCount: textFileGrowthMetric(path: transcriptPath, fallbackLineCount: lines.count),
             sessionStore: sessionStore,
-            cloudNameContext: probe["cloud_name_context"],
             client: client,
             missingOverride: resolution.missingOverride,
             telemetryKey: "codex-hook.auto-name",

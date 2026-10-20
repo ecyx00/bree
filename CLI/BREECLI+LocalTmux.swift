@@ -33,7 +33,7 @@ extension BREECLI {
         }
 
         switch invocation.action {
-        case .list, .status, .cleanup, .close, .detach:
+        case .list, .status, .cleanup, .close, .detach, .auto, .enter:
             return
         case .start:
             let session = try startLocalTmuxSession(
@@ -118,6 +118,13 @@ extension BREECLI {
         switch invocation.action {
         case .list, .status, .cleanup, .close, .detach:
             return
+        case .auto:
+            let session = try startLocalTmuxSession(invocation: invocation, registry: registry, builder: builder, runner: runner)
+            print(builder.attachCommand(binding: session.binding))
+        case .enter:
+            let session = try startLocalTmuxSession(invocation: invocation, registry: registry, builder: builder, runner: runner)
+            enterLocalTmuxAutoSession(session: session, builder: builder, runner: runner)
+            try runLocalTmuxInteractiveAttach(session: session, builder: builder)
         case .start:
             let session = try startLocalTmuxSession(invocation: invocation, registry: registry, builder: builder, runner: runner)
             if invocation.headless, !invocation.detached {
@@ -156,7 +163,7 @@ extension BREECLI {
         case .detach:
             let record = try requireLocalTmuxRecord(invocation, registry: registry, runner: runner, builder: builder)
             try detachLocalTmuxSession(record: record, invocation: invocation, registry: registry, builder: builder, runner: runner, jsonOutput: jsonOutput, idFormat: idFormat)
-        case .start, .attach:
+        case .start, .attach, .auto, .enter:
             return false
         }
         return true
@@ -252,7 +259,9 @@ extension BREECLI {
 
         let cwd = try requestedCwd ?? localTmuxWorkingDirectory(nil)
         _ = try runner.requireSuccess(
-            builder.newSessionArguments(sessionName: name, workingDirectory: cwd, command: invocation.command),
+            (invocation.action == .auto || invocation.action == .enter)
+                ? builder.autoSessionArguments(sessionName: name, workingDirectory: cwd)
+                : builder.newSessionArguments(sessionName: name, workingDirectory: cwd, command: invocation.command),
             context: "start"
         )
         let observed = try identityResolver.observedSession(named: name)
@@ -271,6 +280,51 @@ extension BREECLI {
         )
         try registry.upsert(record)
         return .init(record: record, binding: observed.binding)
+    }
+
+    /// Runs inside the surface PTY, so the environment is the surface's own.
+    /// Copies it into the session once, then restarts the placeholder pane as
+    /// the user's shell so it inherits it. Later attaches skip all of this.
+    private func enterLocalTmuxAutoSession(
+        session: LocalTmuxSessionIdentityResolver.LiveSession,
+        builder: LocalTmuxCommandBuilder,
+        runner: LocalTmuxProcessRunner
+    ) {
+        let sid = session.binding.sessionID.rawValue
+        let readyKey = "@bree_env_ready"
+        let ready = try? runner.run(arguments: ["-S", builder.socketPath, "show-options", "-v", "-t", sid, readyKey])
+        if let ready, ready.succeeded, !ready.stdout.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return }
+        var arguments = ["-S", builder.socketPath]
+        let skipped: Set<String> = ["TMUX", "TMUX_PANE", "BREE_SOCKET_PASSWORD", "_"]
+        var env = ProcessInfo.processInfo.environment
+        env["BREE_LOCAL_TMUX_AUTO"] = "1"
+        for (key, value) in env.sorted(by: { $0.key < $1.key })
+        where !skipped.contains(key) && !key.isEmpty && !key.contains("=") && !value.hasSuffix(";") && !value.contains("\0") {
+            arguments += ["set-environment", "-t", sid, key, value, ";"]
+        }
+        arguments += ["respawn-pane", "-k", "-t", "\(sid):0.0"]
+        arguments += localTmuxAutoShellArguments(env: env)
+        arguments += [";", "set-option", "-t", sid, readyKey, "1"]
+        _ = try? runner.run(arguments: arguments)
+    }
+
+    /// The user's shell with the same managed launch a plain terminal gets:
+    /// fish sources the integration file, nushell evaluates bootstrap +
+    /// integration. zsh and bash take their integration from the environment.
+    private func localTmuxAutoShellArguments(env: [String: String]) -> [String] {
+        let shell = env["BREE_USER_SHELL"].flatMap { $0.isEmpty ? nil : $0 } ?? env["SHELL"] ?? "/bin/zsh"
+        let name = URL(fileURLWithPath: shell).lastPathComponent
+        if name == "fish", env["BREE_FISH_INTEGRATION_FILE"]?.isEmpty == false {
+            return [shell, "-il", "--init-command", "source \"$BREE_FISH_INTEGRATION_FILE\""]
+        }
+        if name == "nu", let dir = env["BREE_SHELL_INTEGRATION_DIR"], !dir.isEmpty {
+            func quoted(_ file: String) -> String {
+                let path = (dir as NSString).appendingPathComponent("nushell/" + file)
+                return "\"" + path.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+            }
+            return [shell, "-l", "-e", "source \(quoted("bree-nushell-bootstrap.nu")); source \(quoted("bree-nushell-integration.nu"))"]
+        }
+        return [shell, "-l"]
     }
 
     private func localTmuxWorkingDirectory(_ raw: String?) throws -> String {

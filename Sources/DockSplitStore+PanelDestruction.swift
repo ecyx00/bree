@@ -19,7 +19,6 @@ extension DockSplitStore {
             removeBrowserOpenTabSuggestion(panelId: panelId)
         }
         cancelDockReactGrabTask(targetingPanelId: panelId)
-        appLinkHandoffCoordinator.cancel(sourcePanelID: panelId)
         panelCancellables[panelId]?.cancel()
         panelCancellables.removeValue(forKey: panelId)
         resolvedNotificationStore()?.clearNotifications(

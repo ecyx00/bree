@@ -1,6 +1,6 @@
 /// Gates optional render instrumentation behind explicit demand.
 ///
-/// Frame-rendered and tick notifications exist only for observers (the mobile
+/// Frame-rendered and tick notifications exist only for observers (the remote
 /// render observer, debug HUDs). Posting them unconditionally would add work
 /// to the render hot path, so producers first check ``isActive`` and skip the
 /// notification entirely while nobody has retained demand.

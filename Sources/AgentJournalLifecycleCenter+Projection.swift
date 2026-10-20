@@ -10,6 +10,8 @@ extension AgentJournalLifecycleCenter {
         /// The meaningful transition this live event caused, if any. Drives
         /// agent-activity sidebar ordering; startup replay never sets it.
         let activity: AgentLifecycleActivity?
+        /// The event was a permission request (Attention reads "Needs permission").
+        var approval = false
     }
 
     /// - Parameter sourceKind: The kind the producer emitted. The notification
@@ -50,7 +52,8 @@ extension AgentJournalLifecycleCenter {
                 event: sourceKind ?? canonical.kind,
                 from: previousPhase,
                 to: phase
-            )
+            ),
+            approval: (sourceKind ?? canonical.kind) == .approvalRequested
         )
     }
 
@@ -180,7 +183,8 @@ extension AgentJournalLifecycleCenter {
     static func apply(
         _ assignment: AgentLifecycleAssignment,
         workspaceHint: String?,
-        activity: AgentLifecycleActivity? = nil
+        activity: AgentLifecycleActivity? = nil,
+        approval: Bool = false
     ) {
         guard AgentHibernationLifecycleStatusKeys.isAllowed(assignment.agentKey) else { return }
         guard let panelId = UUID(uuidString: assignment.surfaceId) else { return }
@@ -220,6 +224,11 @@ extension AgentJournalLifecycleCenter {
                 panelId: panelId,
                 agentKey: assignment.agentKey,
                 failed: phase == .error
+            )
+            AttentionStore.shared.noteApprovalHint(
+                panelId: panelId,
+                agentKey: assignment.agentKey,
+                approval: phase == .needsInput && approval
             )
             owner.setAgentLifecycle(
                 key: assignment.agentKey,

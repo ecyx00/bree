@@ -8,8 +8,8 @@ import Testing
 #endif
 
 /// A remote tmux request that fails has to say why. Its errors carry their own wording, already
-/// flattened and capped by `RemoteTmuxError`, and the socket wrapper they share with Cloud VM
-/// requests replaced every one of them with the Cloud VM line, which sends the reader to
+/// flattened and capped by `RemoteTmuxError`, and the socket wrapper they share with remote host
+/// requests replaced every one of them with the remote host line, which sends the reader to
 /// `bree vm ls` for a problem with their ssh host.
 @Suite struct RemoteTmuxSocketErrorTextTests {
     @Test(arguments: [
@@ -28,6 +28,6 @@ import Testing
         let message = try #require(error["message"] as? String)
 
         #expect(message == failure.message)
-        #expect(!message.localizedCaseInsensitiveContains("Cloud VM"))
+        #expect(!message.localizedCaseInsensitiveContains("Remote host"))
     }
 }

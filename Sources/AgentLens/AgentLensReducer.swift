@@ -46,9 +46,20 @@ struct AgentLensCard: Equatable, Identifiable, Sendable {
     /// Claude's own session_id (UUID), from the event id or the transcript file name. `id` can be a
     /// bree-side fallback (`bree-<surface>`), which never matches Claude's on-disk session folders.
     var claudeSessionID: String?
+    /// Session id from the transcript file name. After `--continue`/`--resume` it can differ from
+    /// the runtime session id; a status writer may use either, so the Activity panel checks both.
+    var transcriptSessionID: String?
     /// While `state == .needsInput`: true for a permission request (approval), false for a question,
     /// plan review or an agent waiting at its prompt.
     var needsApproval = false
+}
+
+extension AgentLensCard {
+    /// Every id a status writer may have used for this session's `~/.claude/status/<id>/` folder.
+    var statusSessionIDs: [String] {
+        var seen = Set<String>()
+        return [claudeSessionID, transcriptSessionID, id].compactMap { $0 }.filter { seen.insert($0).inserted }
+    }
 }
 
 struct AgentLensUsage: Equatable, Sendable {
@@ -67,6 +78,12 @@ enum AgentLensReducer {
     /// (`.../projects/<slug>/<session_id>.jsonl`).
     static func claudeSessionID(of event: WorkstreamEvent) -> String? {
         if UUID(uuidString: event.sessionId) != nil { return event.sessionId }
+        guard let path = event.transcriptPath, path.hasSuffix(".jsonl") else { return nil }
+        let stem = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
+        return UUID(uuidString: stem) != nil ? stem : nil
+    }
+
+    static func transcriptSessionID(of event: WorkstreamEvent) -> String? {
         guard let path = event.transcriptPath, path.hasSuffix(".jsonl") else { return nil }
         let stem = ((path as NSString).lastPathComponent as NSString).deletingPathExtension
         return UUID(uuidString: stem) != nil ? stem : nil
@@ -95,6 +112,7 @@ enum AgentLensReducer {
         if let name = event.cwd.flatMap(projectName(fromCWD:)) { next.project = name }
         next.lastEventAt = max(next.lastEventAt, event.receivedAt)
         if let real = claudeSessionID(of: event) { next.claudeSessionID = real }
+        if let transcript = transcriptSessionID(of: event) { next.transcriptSessionID = transcript }
 
         let input = event.toolInputJSON.flatMap(parseObject)
         switch event.hookEventName {
@@ -136,7 +154,14 @@ enum AgentLensReducer {
         case .notification:
             // Claude also notifies when idle ("waiting for input"); only a
             // notification during a turn is a real wait.
-            if next.state == .running { next.state = .needsInput; next.needsApproval = false }
+            // A permission_prompt notification is the same wait as a PermissionRequest.
+            if event.extraFieldsJSON?.contains("permission_prompt") == true {
+                next.state = .needsInput
+                next.needsApproval = true
+            } else if next.state == .running {
+                next.state = .needsInput
+                next.needsApproval = false
+            }
         case .stop:
             next.state = event.isError == true ? .error : .idle
             next.step = nil

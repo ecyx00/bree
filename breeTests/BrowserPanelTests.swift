@@ -8,7 +8,7 @@ import Bonsplit
 import UserNotifications
 import Darwin
 import Testing
-import BREEMobileCore
+import BreeAppSupport
 import BreeBrowser
 
 #if canImport(Bree_Dev)
@@ -241,7 +241,6 @@ private final class BrowserHiddenWebViewDiscardTestDelegate: BrowserHiddenWebVie
 private func makeHiddenWebViewDiscardBlockerSnapshot(
     hasActiveMainFrameProvisionalNavigation: Bool = false,
     isVisualAutomationCaptureActive: Bool = false,
-    isMobileBrowserStreamActive: Bool = false,
     isCapturingMedia: Bool = false,
     isPlayingMedia: Bool = false
 ) -> BrowserHiddenWebViewDiscardManager.BlockerSnapshot {
@@ -261,7 +260,6 @@ private func makeHiddenWebViewDiscardBlockerSnapshot(
         isElementFullscreenActive: false,
         isReactGrabActive: false,
         isVisualAutomationCaptureActive: isVisualAutomationCaptureActive,
-        isMobileBrowserStreamActive: isMobileBrowserStreamActive,
         hasPopups: false,
         isCapturingMedia: isCapturingMedia,
         isPlayingMedia: isPlayingMedia
@@ -357,21 +355,6 @@ final class BrowserHiddenWebViewDiscardManagerTests: XCTestCase {
         XCTAssertEqual(manager.blockers(for: snapshot), ["visual_automation"])
 
         manager.scheduleIfNeeded(reason: "test.visualAutomation")
-
-        XCTAssertFalse(manager.hasScheduledDiscard)
-        XCTAssertEqual(delegate.discardRequestCount, 0)
-    }
-
-    func testMobileBrowserStreamBlocksHiddenWebViewDiscardScheduling() {
-        let snapshot = makeHiddenWebViewDiscardBlockerSnapshot(isMobileBrowserStreamActive: true)
-
-        let manager = BrowserHiddenWebViewDiscardManager()
-        let delegate = BrowserHiddenWebViewDiscardTestDelegate(snapshot: snapshot, hiddenAt: Date())
-        manager.delegate = delegate
-
-        XCTAssertEqual(manager.blockers(for: snapshot), ["mobile_browser_stream"])
-
-        manager.scheduleIfNeeded(reason: "test.mobileBrowserStream")
 
         XCTAssertFalse(manager.hasScheduledDiscard)
         XCTAssertEqual(delegate.discardRequestCount, 0)

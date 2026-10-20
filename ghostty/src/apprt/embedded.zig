@@ -1649,6 +1649,10 @@ pub const Surface = struct {
         };
     }
 
+    pub fn setCursorHidden(self: *Surface, hidden: bool) void {
+        self.core_surface.setCursorHidden(hidden);
+    }
+
     pub fn occlusionCallback(self: *Surface, visible: bool) void {
         self.core_surface.occlusionCallback(visible) catch |err| {
             log.err("error in occlusion callback err={}", .{err});
@@ -4806,6 +4810,11 @@ pub const CAPI = struct {
     /// Update the focused state of a surface.
     export fn ghostty_surface_set_focus(surface: *Surface, focused: bool) void {
         surface.focusCallback(focused);
+    }
+
+    /// cmux fork: hide or show the cursor in the renderer only.
+    export fn ghostty_surface_set_cursor_hidden(surface: *Surface, hidden: bool) void {
+        surface.setCursorHidden(hidden);
     }
 
     /// Update the occlusion state of a surface.

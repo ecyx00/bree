@@ -2254,4 +2254,9 @@ These files change frequently upstream; be careful when rebasing the fork:
     typing-latency and tearing evidence on a visible, focused window, which could not be produced
     (see `docs/state/2026-10-09-perf-ghostty.md`).
 
+- Renderer-only cursor hide: `ghostty_surface_set_cursor_hidden` (`include/ghostty.h`,
+  `src/apprt/embedded.zig`, `Surface.setCursorHidden`, `renderer/generic.zig` `cursor_hidden`). An atomic
+  flag read in `updateFrame` forces a full rebuild on change and passes a null cursor style to
+  `rebuildCells` (preedit still draws). Used by the shell editor; nothing is written to the pty.
+
 If you resolve a conflict, update this doc with what changed.

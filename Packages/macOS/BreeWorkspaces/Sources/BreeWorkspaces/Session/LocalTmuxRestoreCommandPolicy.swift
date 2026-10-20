@@ -14,6 +14,15 @@ struct LocalTmuxRestoreCommandPolicy: Sendable {
             return nil
         }
         let words = shellWords(command)
+        // `bree local-tmux enter auto-<uuid>`: the persistent-shell wrapper the app builds in-process.
+        if words.count == 6, words[0] == "/usr/bin/env", words[1] == "TMUX=",
+           words[2].hasPrefix("/"),
+           URL(fileURLWithPath: words[2]).standardizedFileURL.path == words[2],
+           words[3] == "local-tmux", words[4] == "enter",
+           words[5].range(of: "^auto-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", options: .regularExpression) != nil {
+            let canonical = "/usr/bin/env TMUX= \(shellQuote(words[2])) local-tmux enter \(words[5])"
+            return command == canonical ? canonical : nil
+        }
         let isCanonicalCommand = words.count == 11
             && words[0] == "/usr/bin/env"
             && words[1] == "TMUX="

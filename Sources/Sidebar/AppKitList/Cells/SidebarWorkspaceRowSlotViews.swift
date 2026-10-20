@@ -196,10 +196,26 @@ struct SidebarRowAgentLine: Equatable {
                 AppDelegate.shared?.workspaceFor(tabId: card.workspaceID)?.panelTitles[$0]
             }
             var line = make(card: card, terminalTitle: title)
+            // Attention's record wins for the states that need the user, so the
+            // row and the Attention list never disagree. Running and done keep
+            // the card line.
+            if let workspace = AppDelegate.shared?.workspaceFor(tabId: card.workspaceID),
+               let top = AttentionStore.shared.topState(for: workspace) {
+                switch top.state {
+                case .needsInput: line = line.with(kind: top.approval ? .needsApproval : .needsInput)
+                case .failed: line = line.with(kind: .agentError)
+                default: break
+                }
+            }
             line.queued = queuedCount(workspaceId: card.workspaceID)
             result[card.workspaceID] = line
         }
         return result
+    }
+
+    func with(kind: Kind) -> SidebarRowAgentLine {
+        SidebarRowAgentLine(kind: kind, human: human, machine: machine, branch: branch,
+                            directory: directory, since: since, queued: queued)
     }
 
     @MainActor

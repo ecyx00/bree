@@ -71,6 +71,14 @@ Claude Code's `PushNotification` tool (model-initiated "notify the user now" pus
 
 Grok uses its `Notification` hook for user-facing completion messages. bree records `Stop` as idle state, but leaves the visible notification text to the `Notification` payload so repeated turns keep Grok's own message instead of a generic completion fallback.
 
+## File-overlap notice
+
+When two agent sessions work in the same checkout (same git worktree) and agent B edits or writes a file that agent A read or edited in the last 30 minutes, A gets one short agent message: `<file> was changed by <B's workspace title> at <HH:mm>; re-read before editing`. It arrives like any [agent message](agent-messages.md), at A's next hook, and is never typed into the prompt.
+
+bree builds this from the `PostToolUse` events for `Read`, `Edit`, `MultiEdit`, `Write` and `NotebookEdit` that it already receives for Feed. It keeps a bounded in-memory map (about 5,000 paths, entries older than 30 minutes dropped) that is never saved, with no timers. A reader gets at most one note per file per 5 minutes. Sessions in different worktrees, the same session, and files outside a git checkout are skipped.
+
+Turn it off with `agentMessages.fileOverlapNotice: false` in `~/.config/bree/bree.json` (default `true`). Turning off `agentMessages.enabled` or messages for one agent also stops these notes.
+
 ## Workspace auto-naming
 
 When the opt-in `automation.workspaceAutoNaming` setting is enabled, turn-end hooks also drive AI naming of workspaces and tabs. Supported adapters are Claude Code, Codex, Grok, OpenCode, Pi, and OMP; each adapter gates on the live setting over the socket, reuses the session store above for throttle state, summarizes with that agent's own CLI in a no-tools or isolated headless mode, and never overwrites a name the user set. Gemini, Amp, Cursor, Antigravity, Kiro, Rovo Dev, Hermes Agent, Copilot, CodeBuddy, Factory, and Qoder are skipped until they have both a verified conversation source and a safe cheap non-interactive summarizer runner. See [workspace-auto-naming.md](workspace-auto-naming.md).

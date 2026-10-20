@@ -1,4 +1,4 @@
-import BREEMobileCore
+import BreeAppSupport
 import Testing
 
 #if canImport(Bree_Dev)
@@ -129,8 +129,8 @@ struct AgentAutoResumeScreenTests {
         #expect(AgentAutoResumeCoordinator.screenState(in: frame) == .dialog)
     }
 
-    private func screen(_ lines: [String], cursorRow: Int?) throws -> MobileTerminalRenderGridFrame {
-        try MobileTerminalRenderGridFrame.fromPlainRows(
+    private func screen(_ lines: [String], cursorRow: Int?) throws -> TerminalRenderGridFrame {
+        try TerminalRenderGridFrame.fromPlainRows(
             surfaceID: "auto-resume-test",
             stateSeq: 0,
             columns: 120,

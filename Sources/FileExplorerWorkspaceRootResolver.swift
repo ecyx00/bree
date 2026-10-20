@@ -5,8 +5,7 @@ import Foundation
 struct FileExplorerWorkspaceRootResolver {
     func resolve(_ workspace: Workspace) -> FileExplorerWorkspaceRoot {
         if workspace.usesRemoteDirectoryProvenance {
-            guard let configuration = workspace.remoteConfiguration,
-                  configuration.transport == .ssh else { return .none }
+            guard let configuration = workspace.remoteConfiguration else { return .none }
             return .remoteSSH(
                 workspaceId: workspace.id,
                 connection: SSHFileExplorerConnection(destination: configuration.destination,

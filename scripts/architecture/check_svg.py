@@ -8,9 +8,34 @@ issue: the fit scale of a wide board at a narrow window cannot be fixed by the r
 (5) no edge passes through a node rect (inset 4px) other than its source/target, (6) no two edges share a collinear run (parallel within 12px, diagram-design rule 3) > 8px unless it is the last run of both and they end at the same point, (7) edge ports on one node side are >= 12px apart and >= 8px from a corner (rule 4), (8) every edge label mask keeps >= 6px from every edge stroke and does not touch a node (rules 2, 6), (9) counts: nodes and edges found in the SVG equal the model's (a wrapped group must not make the edge checks vacuous). Boxes come from getBoundingClientRect (tolerance 0.5px).
 Usage: check_svg.py <current.html> [width=560] [height=1600]. Exit code 1 on any issue. Reads the HTML, never edits it (a temp copy gets the probe script).
 """
-import json, os, re, subprocess, sys, tempfile
+import glob, json, os, re, subprocess, sys, tempfile
 
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+ENV = "BREE_ARCHITECTURE_BROWSER"
+_APPS = [("Google Chrome", "Google Chrome"), ("Chromium", "Chromium"), ("Google Chrome for Testing", "Google Chrome for Testing"),
+         ("Microsoft Edge", "Microsoft Edge"), ("Brave Browser", "Brave Browser")]
+
+
+def find_browser():
+    """Path of a Chromium-family browser: $BREE_ARCHITECTURE_BROWSER, else the first installed one (Chrome, Chromium, Chrome for Testing, Edge, Brave, Playwright cache). None if absent."""
+    env = os.environ.get(ENV)
+    if env:
+        return env if os.access(env, os.X_OK) else None
+    home = os.path.expanduser("~")
+    for root in ("/Applications", home + "/Applications"):
+        for app, exe in _APPS:
+            p = f"{root}/{app}.app/Contents/MacOS/{exe}"
+            if os.access(p, os.X_OK):
+                return p
+    pw = sorted(glob.glob(home + "/Library/Caches/ms-playwright/chromium-*/chrome-mac*/*.app/Contents/MacOS/*"), reverse=True)
+    return next((p for p in pw if os.access(p, os.X_OK) and "Helper" not in p), None)
+
+
+def browser_or_exit(tool):
+    p = find_browser()
+    if not p:
+        sys.exit(f"{tool}: no usable Chromium-family browser found (looked at ${ENV}, Chrome/Chromium/Chrome for Testing/Edge/Brave in /Applications and ~/Applications, the Playwright cache); install one or set {ENV} to its executable")
+    return p
+
 PROBE = """<script>
 (function(){const out={};const T=0.5;const EXPECT=/*EXPECT*/;
 for(const id in D.boards){open(id);fitView();const svg=document.querySelector('#b-'+id+' svg');
@@ -86,8 +111,7 @@ def expected_counts(jpath):
 
 
 def main():
-    if not os.path.exists(CHROME):
-        sys.exit(f"check_svg.py: Chrome not found at {CHROME}; the layout check needs real Chrome")
+    chrome = browser_or_exit("check_svg.py")
     src, width = sys.argv[1], int(sys.argv[2]) if len(sys.argv) > 2 else 560
     height = int(sys.argv[3]) if len(sys.argv) > 3 else 1600
     expect = expected_counts(os.path.join(os.path.dirname(os.path.abspath(src)), "current.architecture.json"))
@@ -95,7 +119,7 @@ def main():
     with tempfile.TemporaryDirectory() as td:
         p = os.path.join(td, "probe.html")
         open(p, "w", encoding="utf-8").write(page)
-        r = subprocess.run([CHROME, "--headless=new", "--disable-gpu", f"--window-size={width},{height}", "--dump-dom", "file://" + p],
+        r = subprocess.run([chrome, "--headless=new", "--disable-gpu", f"--window-size={width},{height}", "--dump-dom", "file://" + p],
                            capture_output=True, text=True, timeout=120)
     m = re.search(r"<title>PROBE(.*?)</title>", r.stdout, re.S)
     if not m:

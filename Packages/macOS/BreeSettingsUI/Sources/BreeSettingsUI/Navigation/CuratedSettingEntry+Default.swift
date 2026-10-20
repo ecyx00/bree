@@ -431,7 +431,7 @@ extension Array where Element == CuratedSettingEntry {
 
             // Reset
             .init(section: .reset, id: "reset-all", title: String(localized: "settings.reset.resetAll", defaultValue: "Reset All Settings"), synonyms: "Reset All Settings factory reset restore defaults clear preferences"),
-        ]) + terminalGhosttyOptionEntries + sidebarAgentUsageEntries
+        ]).map(\.withAppSplitPage) + terminalGhosttyOptionEntries + sidebarAgentUsageEntries
     }
 
     private static var keyboardShortcutActionSynonyms: String {
@@ -439,5 +439,32 @@ extension Array where Element == CuratedSettingEntry {
             .filter { $0 != .showHideAllWindows }
             .map(\.displayName)
             .joined(separator: " ")
+    }
+}
+
+extension CuratedSettingEntry {
+    /// The App page was split into App, Notifications and Editor & Viewers
+    /// (App Icon moved to Themes). Entry ids keep their `app` prefix; only
+    /// the page a hit opens changes.
+    fileprivate var withAppSplitPage: CuratedSettingEntry {
+        guard section == .app else { return self }
+        let target: SettingsSectionID?
+        switch id {
+        case "app-icon": target = .themes
+        case "file-drops", "preferred-editor", "supported-file-previews", "markdown-viewer":
+            target = .editorViewers
+        case _ where id.hasPrefix("file-editor-"): target = .editorViewers
+        case "imessage-mode", "reorder-notification", "show-menu-bar", "dock-badge", "unread-pane-ring",
+             "desktop-notifications":
+            target = .notifications
+        case _ where id.hasPrefix("pane-flash") || id.hasPrefix("agent-") || id.hasPrefix("notification-"):
+            target = .notifications
+        default: target = nil
+        }
+        guard let target else { return self }
+        return CuratedSettingEntry(
+            section: section, id: id, title: title, detailText: detailText,
+            paths: paths, synonyms: synonyms, anchorPath: anchorPath, page: target
+        )
     }
 }

@@ -33,16 +33,16 @@ consumers must treat omission as unknown rather than copying a runtime UUID.
 | Move pane into another workspace | Same owner identity | Destination workspace's identity | Existing owner behavior |
 | Restore session without a live identity collision | Persisted identity | Persisted identity | May change; reacquire from the new read |
 | Restore a duplicate while the original is live | Restore owner chooses fresh identity | Restore owner chooses fresh identity | New instance |
-| Close/reopen a Cloud mirror | Describes this local mirror only | Describes local placement only | May change independently of daemon resource |
+| Close/reopen a remote tmux mirror | Describes this local mirror only | Describes local placement only | May change independently of daemon resource |
 
-For Cloud resources, `resource` remains machine-namespaced daemon identity.
+For remote resources, `resource` remains machine-namespaced daemon identity.
 The new stable fields identify local projection owners; they do not promise
-process survival, cross-machine identity or conversation resumability. Cloud
+process survival, cross-machine identity or conversation resumability. Catalog
 generation/revision cursors and mutation receipts retain their separate roles.
 These read fields grant no mutation authority and are not accepted as new write
 selectors. A consumer must still reconcile current state before acting.
 
 Native behavioral coverage is in `SurfaceProjectionIdentityTests`: real owner
 capture and JSON serialization, immutable exports, moves, session restore,
-colliding restores, missing/mismatched owners, Cloud mirrors and identical
+colliding restores, missing/mismatched owners, remote mirrors and identical
 label/directory metadata.

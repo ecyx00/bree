@@ -1,6 +1,6 @@
 internal import Foundation
 
-// Inbound frame handling: stdout/websocket framing, response routing into the
+// Inbound frame handling: stdout framing, response routing into the
 // pending-call registry, push-event fan-out to stream/PTY subscriptions, and
 // transport-termination cleanup. Everything in this file runs on stateQueue
 // (the `Locked` suffix and the dispatch in the transport callbacks enforce
@@ -39,91 +39,6 @@ extension RemoteDaemonRPCClient {
         }
     }
 
-    func receiveNextWebSocketMessageLocked() {
-        guard let task = webSocketTask, let delegate = webSocketDelegate else { return }
-        task.receive { [weak self] result in
-            guard let self else { return }
-            self.stateQueue.async {
-                switch result {
-                case .success(let message):
-                    switch message {
-                    case .string(let text):
-                        self.consumeJSONPayload(Data(text.utf8))
-                    case .data(let data):
-                        self.consumeJSONPayload(data)
-                    @unknown default:
-                        break
-                    }
-                    if !self.isClosed {
-                        self.receiveNextWebSocketMessageLocked()
-                    }
-                case .failure(let error):
-                    if delegate.isClosed || self.isClosed {
-                        self.handleWebSocketTermination("daemon websocket closed")
-                    } else {
-                        self.handleWebSocketTermination("daemon websocket failed: \(error.localizedDescription)")
-                    }
-                }
-            }
-        }
-    }
-
-    func startWebSocketKeepaliveLocked() {
-        webSocketKeepaliveTimer?.cancel()
-        webSocketKeepaliveTimeoutWorkItem?.cancel()
-        webSocketKeepaliveTimeoutWorkItem = nil
-        webSocketKeepaliveInFlight = false
-        let timer = DispatchSource.makeTimerSource(queue: stateQueue)
-        timer.schedule(
-            deadline: .now() + Self.webSocketKeepaliveInterval,
-            repeating: Self.webSocketKeepaliveInterval
-        )
-        timer.setEventHandler { [weak self] in
-            self?.sendWebSocketKeepaliveLocked()
-        }
-        webSocketKeepaliveTimer = timer
-        timer.resume()
-    }
-
-    func stopWebSocketKeepaliveLocked() {
-        webSocketKeepaliveTimer?.cancel()
-        webSocketKeepaliveTimer = nil
-        webSocketKeepaliveTimeoutWorkItem?.cancel()
-        webSocketKeepaliveTimeoutWorkItem = nil
-        webSocketKeepaliveInFlight = false
-    }
-
-    func sendWebSocketKeepaliveLocked() {
-        guard !isClosed, let task = webSocketTask else {
-            stopWebSocketKeepaliveLocked()
-            return
-        }
-        if webSocketKeepaliveInFlight {
-            return
-        }
-
-        webSocketKeepaliveInFlight = true
-        let timeoutWorkItem = DispatchWorkItem { [weak self] in
-            guard let self, !self.isClosed, self.webSocketKeepaliveInFlight else { return }
-            self.handleWebSocketTermination("daemon websocket keepalive timed out")
-        }
-        webSocketKeepaliveTimeoutWorkItem?.cancel()
-        webSocketKeepaliveTimeoutWorkItem = timeoutWorkItem
-        stateQueue.asyncAfter(deadline: .now() + Self.webSocketKeepaliveInterval, execute: timeoutWorkItem)
-        task.sendPing { [weak self] error in
-            guard let self else { return }
-            self.stateQueue.async {
-                guard !self.isClosed else { return }
-                self.webSocketKeepaliveTimeoutWorkItem?.cancel()
-                self.webSocketKeepaliveTimeoutWorkItem = nil
-                self.webSocketKeepaliveInFlight = false
-                if let error {
-                    self.handleWebSocketTermination("daemon websocket keepalive failed: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-
     func consumeJSONPayload(_ data: Data) {
         guard let payload = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
             return
@@ -146,9 +61,6 @@ extension RemoteDaemonRPCClient {
     }
 
     func consumeEventPayload(_ payload: [String: Any]) {
-        if consumeCLIRequestPayload(payload) {
-            return
-        }
         if consumePTYEventPayload(payload) {
             return
         }
@@ -187,50 +99,6 @@ extension RemoteDaemonRPCClient {
         guard let subscription, let event else { return }
         subscription.queue.async {
             subscription.handler(event)
-        }
-    }
-
-    func consumeCLIRequestPayload(_ payload: [String: Any]) -> Bool {
-        guard let eventName = (payload["event"] as? String)?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              eventName == "cli.request" else {
-            return false
-        }
-        guard let requestID = (payload["request_id"] as? String)?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-              !requestID.isEmpty else {
-            return true
-        }
-        guard let cliRequestHandler else {
-            sendCLIResponseAsync(requestID: requestID, data: nil, error: "cloud CLI bridge is not configured")
-            return true
-        }
-        guard cliRequestsInFlight < Self.maxCloudCLIRequestsInFlight else {
-            sendCLIResponseAsync(requestID: requestID, data: nil, error: "cloud CLI bridge is busy")
-            return true
-        }
-        cliRequestsInFlight += 1
-        let request = Self.decodeBase64Data(payload["data_base64"])
-        cliRequestQueue.async { [weak self] in
-            guard let self else { return }
-            defer {
-                self.stateQueue.async { [weak self] in
-                    guard let self else { return }
-                    self.cliRequestsInFlight = max(0, self.cliRequestsInFlight - 1)
-                }
-            }
-            do {
-                self.sendCLIResponse(requestID: requestID, data: try cliRequestHandler(request), error: nil)
-            } catch {
-                self.sendCLIResponse(requestID: requestID, data: nil, error: error.localizedDescription)
-            }
-        }
-        return true
-    }
-
-    private func sendCLIResponseAsync(requestID: String, data: Data?, error: String?) {
-        cliRequestQueue.async { [weak self] in
-            self?.sendCLIResponse(requestID: requestID, data: data, error: error)
         }
     }
 
@@ -293,23 +161,6 @@ extension RemoteDaemonRPCClient {
         return true
     }
 
-    func sendCLIResponse(requestID: String, data: Data?, error: String?) {
-        var params: [String: Any] = ["request_id": requestID]
-        if let data {
-            params["ok"] = true
-            params["data_base64"] = data.base64EncodedString()
-        } else {
-            params["ok"] = false
-            params["error"] = error ?? "Bree app rejected cloud CLI request"
-        }
-        do {
-            _ = try call(method: "cli.response", params: params, timeout: 4.0)
-        } catch {
-            // The originating terminal command will time out and show the
-            // daemon-side failure. There is no local UI surface to report here.
-        }
-    }
-
     func handleProcessTermination(_ process: Process) {
         let shouldNotify: Bool = {
             guard self.process === process else { return false }
@@ -318,7 +169,6 @@ extension RemoteDaemonRPCClient {
         let detail = Self.bestErrorLine(stderr: stderrBuffer) ?? "daemon transport exited with status \(process.terminationStatus)"
 
         if self.process === process {
-            removeForwardSocketDirectoryLocked()
         }
         isClosed = true
         self.process = nil
@@ -333,26 +183,6 @@ extension RemoteDaemonRPCClient {
         streamSubscriptions.removeAll(keepingCapacity: false)
         failPTYSubscriptionsLocked(detail)
         signalPendingFailureLocked(detail)
-
-        guard shouldNotify else { return }
-        onUnexpectedTermination(detail)
-    }
-
-    func handleWebSocketTermination(_ detail: String) {
-        let shouldNotify = !isClosed && shouldReportTermination
-        let capturedTask = webSocketTask
-        let capturedSession = webSocketSession
-
-        isClosed = true
-        stopWebSocketKeepaliveLocked()
-        webSocketTask = nil
-        webSocketSession = nil
-        webSocketDelegate = nil
-        streamSubscriptions.removeAll(keepingCapacity: false)
-        failPTYSubscriptionsLocked(detail)
-        signalPendingFailureLocked(detail)
-        capturedTask?.cancel(with: .normalClosure, reason: nil)
-        capturedSession?.invalidateAndCancel()
 
         guard shouldNotify else { return }
         onUnexpectedTermination(detail)

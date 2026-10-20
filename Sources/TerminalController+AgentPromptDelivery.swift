@@ -2,7 +2,7 @@ import BreeTerminal
 
 extension TerminalController {
     /// Clears the agent TUI's current prompt through the same line-editor path
-    /// used by mobile chat before a composed prompt is pasted.
+    /// used by remote chat before a composed prompt is pasted.
     func clearAgentPrompt(_ terminalPanel: TerminalPanel) -> TerminalSurface.NamedKeySendResult {
         var latestAccepted: TerminalSurface.NamedKeySendResult = .sent
         for keyName in ["ctrl+a", "ctrl+k", "ctrl+u"] {
@@ -13,7 +13,7 @@ extension TerminalController {
         return latestAccepted
     }
 
-    /// Clears a mobile chat prompt through the canonical socket-bound surface.
+    /// Clears a remote chat prompt through the canonical socket-bound surface.
     func clearAgentPrompt(
         _ terminalTarget: ControlTerminalSocketTarget
     ) -> TerminalSurface.NamedKeySendResult {

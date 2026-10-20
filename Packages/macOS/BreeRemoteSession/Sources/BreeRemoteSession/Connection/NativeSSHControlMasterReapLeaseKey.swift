@@ -20,7 +20,6 @@ struct NativeSSHControlMasterReapLeaseKey: Hashable, Sendable {
         configuration: WorkspaceRemoteConfiguration,
         sharingOptions: SSHConnectionSharingOptions
     ) {
-        guard configuration.transport == .ssh else { return nil }
         let effectiveOptions = sharingOptions.mergingDefaults(
             into: configuration.sshOptions,
             routeSensitiveOptions: configuration.identityFile.map { ["IdentityFile=\($0)"] } ?? []

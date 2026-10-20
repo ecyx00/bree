@@ -99,12 +99,8 @@ Environment:
 | `sessions [list]` | List saved agent session records without requiring a running bree socket. Filters: `--agent <name>`, `--session <id>`, `--workspace <id>`, `--surface <id>`, `--cwd <text>`. Overrides: `--state-dir <path>`, `--codex-home <path>`. Text output defaults to 100 results; `--limit <n>` takes a positive integer and `--all` removes the limit. Supports `--json`. Records also report metadata for matching bree-owned scratch roots (`scratch_owned`, byte count, file count, and root path); unmarked directories are never scanned. |
 | `session-debug` | Alias for `sessions debug`, kept for older debug scripts. Works without a socket. |
 | `session restore [--list] [--session <id>]...` | Recover stopped Claude sessions from the agent journal. `--list` inspects candidates; repeatable `--session` selects exact ids. Without ids, restore acts only after an unexpected quit. Requires a running bree, but help works without a socket. Each restored session opens in its own background workspace and resumes through its recorded launcher. |
+| `worktree create <branch> [--from <ref>] [--path <dir>]` | `worktree open <path\|branch>` | `worktree remove <path\|branch> [--force]` | Manage git worktrees of the repository in the caller's cwd, as workspaces. `create` runs `git worktree add` (new branch from `--from`, default HEAD, or the existing branch) at `--path` (default sibling `<repo>-<branch>`; refused inside `~/.bree*`, `~/.config` or `~/Library`) and opens a focused workspace on it. `open` focuses the workspace whose directory is in the worktree, or opens one. `remove` refuses a dirty worktree and the main worktree unless `--force` applies (dirty only), closes its workspaces, then runs `git worktree remove`; branches are never deleted. Built from `workspace.create/list/select/close` only (no new socket methods, nothing on the remote relay allowlist). Provenance (root, repo) comes from the workspace cwd, which is what the Task Manager worktree grouping and `bree top` read. |
 | `session move <session-id> --to <ssh-destination\|local>` | Move a stopped Claude Code session between this Mac and an SSH host and resume it there. Refuses while a Claude process for the session runs on either side. Carries the cwd's git checkout (a snapshot commit of the working tree on top of HEAD at `refs/agent-move/<id>`, HEAD on the same branch when it is safe, plus modified, deleted and untracked non-ignored files; adds a worktree when the repository exists on the destination but the path does not; refuses when the destination has its own uncommitted changes or its branch has commits HEAD lacks), then the transcript, its session directory, file history, and the project memory directory (merged both ways, newest wins, nothing deleted). When the destination home is not the same directory at the same path, paths under the home are mapped and the project is re-slugged. Opens a `bree ssh` workspace (or a local workspace for `--to local`) that resumes the session with its recorded launcher (on a host, bree-owned launchers such as `claude-teams` fall back to the plain agent command), and clears the old local surface's resume binding. `--from` defaults to where the last move put the session (`~/.bree/agent-moves/<id>.json`). Flags: `--name`, `--no-code`, `--port`, `--identity`, `--ssh-option`, `--no-focus`. |
-| `auth`, `login`, `logout` | `auth <status\|login\|logout\|team>`, with `status` the default; `team` carries `list`, `use`, and `create`. Sign-in and sign-out run through the app, and `login` waits for the browser round trip. `login` and `logout` are top-level aliases for `auth login` and `auth logout`. |
-| `billing` | `billing checkout --plan <go\|pro\|max> [--no-open]` prints the plan's checkout URL and opens it in the browser. `--no-open` and `--json` print without opening. |
-| `ai-accounts` | Manage the team's uploaded AI provider accounts. `list` (alias `ls`) takes `--team <id>`; `upload <claude\|codex\|anthropic-key\|openai-key>` takes `--label`, `--team`, `--validate`, and, for the key providers only, `--key <value>` (otherwise `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is read from the invoking shell); `remove <id>` needs the account id. Any other provider name is rejected. |
-| `remotes`, `remote` | Manage remote Macs in the team device registry so they appear in the iOS app's device list. `remote` is an alias for `remotes`. |
-| `mobile` | Mobile client settings: `set-font <points>` sets the iOS terminal font size for a surface or workspace, and `compatible-tags [list\|set <tags...>\|add <tags...>\|remove <tags...>\|clear]` manages the sibling Mac dev tags this Mac grants to its paired development phones, so a DEV iPhone build can pair with more than its exact-tag Mac. |
 | `rpc` | Call a raw v2 socket method with optional JSON params. |
 | `identify` | Print server identity and caller context. |
 | `list-windows` | List windows. |
@@ -279,6 +275,29 @@ lifecycle change, that ordinary BREE projection reflects it. The execution
 transport, machine placement, physical attempt, and recovery truth remain with
 their existing owners rather than being duplicated into a second BREE ledger.
 
+## Waiting and snapshots
+
+- `bree agent wait [<surface>|--surface <s>] --until idle|needs-input [--timeout <seconds>]`
+  waits for the agent on a terminal surface. It reads `agent.state`, returns at
+  once when the agent is already in that state, and otherwise follows
+  `agent.lifecycle.changed` events (replayed from the `event_seq` returned by
+  the state read, so no transition is missed). A surface with no agent fails
+  at once. Without `--timeout` it waits forever.
+- `bree wait-output --regex <re> [--workspace <w>] [--surface <s>] [--timeout <seconds>]`
+  polls the visible screen every 250 ms while it runs, prints the first line
+  that newly matches and exits 0. Lines that matched when the command started
+  are ignored.
+- Exit status of both: 0 reached, 1 error, 2 the surface (or its pane or
+  workspace) was closed while waiting, 124 timed out.
+- `bree snapshots list` shows the rolling layout snapshots (`snapshots.list`),
+  newest first. `bree snapshots restore <id>` (`snapshots.restore`) makes one the
+  saved layout and says it applies on the next launch. The running app stops
+  writing its own session file until it quits, so the restored layout is not
+  overwritten; the layout it replaces is kept as a new snapshot.
+- `agent.state`, `agent.lifecycle.changed` delivery over `events.stream`,
+  `snapshots.list` and `snapshots.restore` are not on the remote relay
+  allowlist.
+
 ## Draft Guard
 
 Before writing, `send`, `send-panel` and `paste` (and `send --paste`) ask the
@@ -408,29 +427,11 @@ through its recorded launcher. Some terminals start immediately; the remainder
 start on the workspace's first visit. Listing and recovery require a running
 bree socket; `bree session restore --help` does not.
 
-Auth subcommands:
-
-| Command | Contract |
-| --- | --- |
-| `auth status` | Print signed-in state. Supports `--json`. |
-| `auth login` | Begin sign-in through the app and wait for completion. |
-| `auth logout` | Clear the current session. |
-| `auth team list`, `auth team use <team-id>`, `auth team create <name>` | List teams, select one, or create one. |
-| `auth team members [--team <id>]` | Roster, pending invitations, invite links and seat usage of the active (or named) team. |
-| `auth team invite <email>... [--role admin\|member] [--team <id>]` | Invite by email; the server sends the email. Pro and Max teams hold 3 members. |
-| `auth team link [--expires-days 1\|7\|30] [--max-uses N] [--team <id>]` | Print a reusable member-only invite link (shown once). |
-| `auth team revoke-invite <id> [--link] [--team <id>]` | Revoke a pending email invitation, or an invite link with `--link`. |
-| `auth team remove <user-id> [--team <id>]` | Remove a member, or leave the team with your own user id. |
-
-My Devices connects opted-in Macs on the same account through authenticated Iroh v2 sessions. It runs only while Cloud Machines is enabled. Fresh installations leave both discovery and access to this Mac off. The Cloud sidebar's My Devices menu and **Settings › Remote & Devices › Devices** expose **Discover other Macs** and **Make this Mac discoverable** independently; both write the same preferences. Turning off incoming Mac access disconnects incoming Mac sessions; turning off discovery stops this installation’s outgoing device connections. Existing iPhone pairing remains separately opt-in. Turning Cloud Machines off stops My Devices discovery, connections, and hosting. My Devices requires no Tailscale setup, pairing link, or address entry.
-
-The corresponding preferences are `devices.discovery.enabled`, `devices.incomingAccess.enabled`, and `devices.sidebar.hiddenMacIDs`. Hiding a physical Mac affects its sidebar rows across build tags, preserves pairing and existing panes, and can be reversed in Settings › Devices. Use `surface ls`, `surface open`, and `surface new-terminal` for discovered Mac resources; the cloud-only `vm workspace` commands remain VM operations.
-
 Surface catalog subcommands:
 
 | Command | Contract |
 | --- | --- |
-| `surface ls [<machine>\|local] [--refresh] [--json]` | The surface catalog (This Mac and its paired devices). |
+| `surface ls [<machine>\|local] [--refresh] [--json]` | The surface catalog (This Mac). |
 | `surface tree [<machine>\|local] [--refresh] [--json]` | The same catalog rendered as a tree. |
 | `surface open <resource> [--workspace <id\|ref\|index>] [--pane <id\|ref>] [--left\|--right\|--up\|--down\|--tab] [--new] [--focus\|--no-focus] [--json]` | Put one surface in a pane through the single open path (`surface.project {resource, workspace_id?, pane_id?, direction?, placement?, reuse?, focus?}` → `{surface_id, workspace_id, reused, resource}`). `<resource>` is `<machine>/<kind>/<key>` from `surface ls --json` (`local/terminal/<uuid>`, `<m>/terminal/<term_…>`, `<m>/display/display:1`, `<m>/browser/port:<n>`). Reuses the pane already showing the resource unless `--new`; `--pane` + a side splits that pane on that side, `--tab` adds a tab to it, otherwise the workspace's focused pane; a local terminal moves to the destination (it is shown once). Prints `OK surface=… workspace=… resource=… [reused=true]`. |
 | `surface new-terminal --machine <id\|local> [--cwd <dir>] [--name <name>] [--remote-workspace <ws_…>] [--workspace <id\|ref\|index>] [--no-open] [--focus\|--no-focus] [--json] [-- <command...>]` | Create a terminal on a machine through its provider (`surface.new_terminal {machine, command?, cwd?, name?, remote_workspace_id?, open?, workspace_id?, …}` → `{resource, terminal_id, machine, remote_workspace_id, workspace_id?, surface_id?}`) and open it as a pane unless `--no-open`. Cloud terminals land in the machine's bree-tui session (`--remote-workspace` picks the workspace); local ones are a new shell on This Mac. |
@@ -548,8 +549,6 @@ Semantics:
   spawn and no follow-up `surface.send_text` is issued.
 - **Remote tmux mirrors fail closed.** A mirrored remote-tmux workspace rejects
   creation requests carrying `initial_input` instead of dropping the command.
-  A split next to a cloud-projected pane with explicit `initial_input` stays
-  local.
 
 tmux compatibility commands:
 
@@ -559,6 +558,8 @@ tmux compatibility commands:
 | `resize-pane` | Resize `--pane` in a workspace/window with `-L`, `-R`, `-U`, or `-D` and optional `--amount <n>`. |
 | `pipe-pane` | Pipe the selected surface's text to `--command <shell-command>` or a trailing shell command. Accepts workspace, surface, and window selectors. |
 | `wait-for` | Wait on a named synchronization point with optional `--timeout <seconds>`, or signal it with `-S`/`--signal`. |
+| `wait-output` | Wait until `--regex <re>` newly matches a line on the surface's screen, with optional `--timeout <seconds>`. Exit 124 on timeout, 2 if the surface closes. |
+| `snapshots` | `list` rolling layout snapshots, or `restore <id>` one for the next launch. |
 | `swap-pane` | Swap required `--pane` and `--target-pane` selectors, optionally scoped by workspace/window and `--focus <true\|false>`. |
 | `break-pane` | Move the selected pane/surface into a new pane context; accepts workspace/window selectors and `--focus <true\|false>` or `--no-focus`. |
 | `join-pane` | Join the selected pane/surface into required `--target-pane`; accepts workspace/window selectors and `--focus <true\|false>` or `--no-focus`. |
@@ -882,7 +883,6 @@ the expected text without connecting to a bree socket.
 - `bree help remote` -> `Remote:`
 - `bree help diagnostics` -> `Diagnostics / Advanced:`
 - `bree help diagnostics` -> `socket-status [--json]`
-- `bree help remote` -> `auth <status|login|logout|team>`
 - `bree --help` -> `socket-status [--json]`
 - `bree --help` -> `bree help <start|agents|navigate|inspect|customize|automation|browser|remote|diagnostics>`
 - `bree help --help` -> `Usage: bree help [topic]`
@@ -897,7 +897,6 @@ the expected text without connecting to a bree socket.
 - `bree capabilities --help` -> `Usage: bree capabilities`
 - `bree events --help` -> `Usage: bree events [options]`
 - `bree glaeda --help` -> `Usage: bree glaeda <request|observe> [options]`
-- `bree auth --help` -> `Usage: bree auth <status|login|logout|team>`
 - `bree surface --help` -> `Usage: bree surface ls [<machine>|local] [--refresh] [--json]`
 - `bree surface --help` -> `bree surface resume set [flags] -- <argv...>`
 - `bree surface-resume --help` -> `bree surface resume show [--json] [flags]`

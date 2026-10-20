@@ -1,24 +1,11 @@
 import Foundation
 
-/// Settings under the dotted-id prefix `account.*` — account-related
-/// preferences that persist locally regardless of whether the user is
-/// signed in to the bree backend.
-///
-/// The sign-in flow, token storage, and `BREEAuthUser` model itself
-/// live in the host app's auth package and reach the package's
-/// ``AccountSection`` via an injected delegate (see ``AccountFlow``
-/// in BreeSettingsUI), not through this catalog.
+/// Local settings under the dotted-id prefix `account.*`.
 public struct AccountCatalogSection: SettingCatalogSection {
     public let piiDisplayMode = DefaultsKey<PIIDisplayMode>(
         id: "account.piiDisplayMode",
         defaultValue: .visible,
         userDefaultsKey: "bree.settings.piiDisplayMode"
-    )
-
-    public let selectedTeamID = DefaultsKey<String>(
-        id: "account.selectedTeamID",
-        defaultValue: "",
-        userDefaultsKey: "bree.auth.selectedTeamID"
     )
 
     public let welcomeShown = DefaultsKey<Bool>(

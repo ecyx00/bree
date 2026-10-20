@@ -9,7 +9,7 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 import WebKit
-import BREEMobileCore
+import BreeAppSupport
 import ObjectiveC.runtime
 import Bonsplit
 import UserNotifications
@@ -1246,7 +1246,7 @@ final class TerminalOffscreenStartupTests: XCTestCase {
         XCTAssertGreaterThan(
             pending.inputTextItems,
             0,
-            "Programmatic newline input must use Ghostty committed text input so headless mobile commands execute."
+            "Programmatic newline input must use Ghostty committed text input so headless remote commands execute."
         )
         XCTAssertEqual(
             pending.pasteTextItems,

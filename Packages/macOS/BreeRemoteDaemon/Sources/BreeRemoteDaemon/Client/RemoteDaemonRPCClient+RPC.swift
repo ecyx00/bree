@@ -1,13 +1,5 @@
 public import Foundation
 
-// Hands a write completion's error across the @Sendable URLSession completion
-// boundary to the thread blocked on `semaphore`; the signal->wait pair is the
-// happens-before edge (legacy used a captured local var, which Swift 6
-// rejects in a @Sendable closure).
-private final class RemoteDaemonSendErrorBox: @unchecked Sendable {
-    var error: (any Error)?
-}
-
 // The synchronous RPC surface (proxy streams + PTY sessions) and the JSON
 // request plumbing. Method names, payload keys, timeouts, and NSError
 // domains/codes/messages are wire-pinned; do not change them.
@@ -406,31 +398,6 @@ extension RemoteDaemonRPCClient {
     }
 
     func writePayload(_ payload: Data) throws {
-        let webSocketTask: URLSessionWebSocketTask? = stateQueue.sync {
-            self.webSocketTask
-        }
-        if let webSocketTask {
-            guard let text = String(data: payload, encoding: .utf8) else {
-                throw NSError(domain: "bree.remote.daemon.rpc", code: 27, userInfo: [
-                    NSLocalizedDescriptionKey: "failed encoding daemon websocket request as UTF-8",
-                ])
-            }
-            let semaphore = DispatchSemaphore(value: 0)
-            let sendErrorBox = RemoteDaemonSendErrorBox()
-            webSocketTask.send(.string(text)) { error in
-                sendErrorBox.error = error
-                semaphore.signal()
-            }
-            semaphore.wait()
-            if let sendError = sendErrorBox.error {
-                stop(suppressTerminationCallback: false)
-                throw NSError(domain: "bree.remote.daemon.rpc", code: 16, userInfo: [
-                    NSLocalizedDescriptionKey: "failed writing daemon RPC request: \(sendError.localizedDescription)",
-                ])
-            }
-            return
-        }
-
         let stdinHandle: FileHandle = stateQueue.sync {
             self.stdinHandle ?? FileHandle.nullDevice
         }

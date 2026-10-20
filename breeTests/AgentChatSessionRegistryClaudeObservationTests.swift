@@ -1,4 +1,4 @@
-@testable import BreeMobileHost
+@testable import BreeAgentTranscriptHost
 import Foundation
 import Testing
 import BREEAgentLaunch
@@ -10,7 +10,7 @@ import BREEAgentLaunch
 #endif
 
 struct AgentChatSessionRegistryClaudeObservationTests {
-    @Test func mobileChatObserverDetectsBunHostedClaudeFromProcessDetails() throws {
+    @Test func chatObserverDetectsBunHostedClaudeFromProcessDetails() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "b6fbc8e1-2c4b-4e51-a2b8-fd17c2ad59f0"
@@ -57,7 +57,7 @@ struct AgentChatSessionRegistryClaudeObservationTests {
         #expect(session.workingDirectory == "/Users/example/bun-project")
     }
 
-    @Test func mobileChatObserverDetectsVersionNumberClaudeLauncherFromPath() throws {
+    @Test func chatObserverDetectsVersionNumberClaudeLauncherFromPath() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "5a2df315-4e1a-401f-9a46-b0601872bd5d"
@@ -104,7 +104,7 @@ struct AgentChatSessionRegistryClaudeObservationTests {
         #expect(session.workingDirectory == "/Users/example/versioned-project")
     }
 
-    @Test func mobileChatObserverDetectsClaudeShortResumeFlag() throws {
+    @Test func chatObserverDetectsClaudeShortResumeFlag() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -142,7 +142,7 @@ struct AgentChatSessionRegistryClaudeObservationTests {
         #expect(session.agentKind == .claude)
     }
 
-    @Test func mobileChatObserverRejectsOptionLikeClaudeResumeValues() {
+    @Test func chatObserverRejectsOptionLikeClaudeResumeValues() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let optionUUID = "b6fbc8e1-2c4b-4e51-a2b8-fd17c2ad59f0"
@@ -175,7 +175,7 @@ struct AgentChatSessionRegistryClaudeObservationTests {
         #expect(observed.isEmpty)
     }
 
-    @Test func mobileChatObserverScopedScanIgnoresOtherSurfacesWithoutReadingDetails() throws {
+    @Test func chatObserverScopedScanIgnoresOtherSurfacesWithoutReadingDetails() throws {
         let workspaceID = UUID()
         let includedSurfaceID = UUID()
         let excludedSurfaceID = UUID()
@@ -230,7 +230,7 @@ struct AgentChatSessionRegistryClaudeObservationTests {
         #expect(requestedDetailPIDs == [120])
     }
 
-    @Test func mobileChatObserverIgnoresBackgroundClaudeProcess() {
+    @Test func chatObserverIgnoresBackgroundClaudeProcess() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -267,7 +267,7 @@ struct AgentChatSessionRegistryClaudeObservationTests {
         #expect(observed.isEmpty)
     }
 
-    @Test func mobileChatLivenessIgnoresBackgroundClaudeProcess() {
+    @Test func chatLivenessIgnoresBackgroundClaudeProcess() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let snapshot = BreeTopProcessSnapshot(
@@ -306,7 +306,7 @@ struct AgentChatSessionRegistryClaudeObservationTests {
         #expect(livePID == nil)
     }
 
-    @Test func mobileChatLivenessPrefersDeepestMatchingClaudeSessionIdentity() {
+    @Test func chatLivenessPrefersDeepestMatchingClaudeSessionIdentity() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let expectedSessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"

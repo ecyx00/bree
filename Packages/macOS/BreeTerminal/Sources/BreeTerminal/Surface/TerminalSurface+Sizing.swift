@@ -218,14 +218,8 @@ extension TerminalSurface {
         defer {
             if uncappedPixelSizeChanged { onNaturalGridInputsChanged?() }
         }
-        let fittedSize = mobileViewportFittedSize(
-            width: rawWpx,
-            height: rawHpx,
-            surface: surface,
-            reason: "updateSize"
-        )
-        var wpx = fittedSize.width
-        var hpx = fittedSize.height
+        var wpx = rawWpx
+        var hpx = rawHpx
         guard wpx > 0, hpx > 0 else { return false }
 
         // The tmux-assigned grid outranks the view's points on a mirror,
@@ -286,16 +280,7 @@ extension TerminalSurface {
         Self.sizeLog("updateSize-call surface=\(id.uuidString.prefix(8)) size=\(wpx)x\(hpx) prev=\(lastPixelWidth)x\(lastPixelHeight) changed=\((scaleChanged || sizeChanged) ? 1 : 0)")
         #endif
 
-        if mobileViewportCellLimit != nil {
-            updateMobileViewportBorder(
-                appliedWidth: wpx,
-                appliedHeight: hpx,
-                baseWidth: rawWpx,
-                baseHeight: rawHpx
-            )
-        }
-
-        guard scaleChanged || sizeChanged || fittedSize.fontChanged else { return false }
+        guard scaleChanged || sizeChanged else { return false }
 
         #if DEBUG
         if sizeChanged {
@@ -345,10 +330,7 @@ extension TerminalSurface {
                     "cell=\(currentSize.cell_width_px)x\(currentSize.cell_height_px)"
                 )
                 #endif
-                if fittedSize.fontChanged {
-                    ghostty_surface_refresh(surface)
-                }
-                return scaleChanged || fittedSize.fontChanged
+                return scaleChanged
             }
 
             // Mirror (manual-I/O) surfaces must not reflow their primary screen
@@ -373,10 +355,6 @@ extension TerminalSurface {
                     writeProcessOutputData(Self.decawmEnableSequence, to: surface)
                 }
             }
-        }
-
-        if fittedSize.fontChanged && !sizeChanged {
-            ghostty_surface_refresh(surface)
         }
 
         // Deferred from above on a DPI increase: now that set_size grew the grid,

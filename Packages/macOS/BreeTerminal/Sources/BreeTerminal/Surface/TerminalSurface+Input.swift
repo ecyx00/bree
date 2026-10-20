@@ -600,11 +600,11 @@ extension TerminalSurface {
         return chunks
     }
 
-    // Canonical key text for synthetic key events sent from the mobile/socket
+    // Canonical key text for synthetic key events sent from the remote/socket
     // input path (see `sendKeyEvent`). The desktop `keyDown` handler fills
     // `ghostty_input_key_s.text` from `charactersIgnoringModifiers`; libghostty
     // needs that text to encode control keys whose byte is otherwise filtered by
-    // the raw-text input path. Mobile builds the event from a bare keycode, so we
+    // the raw-text input path. Remote builds the event from a bare keycode, so we
     // reproduce the same canonical text here, keyed purely off the keycode.
     //
     // Backspace/Delete and Tab carry the DEL (0x7F) and TAB (0x09) characters

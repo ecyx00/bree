@@ -64,7 +64,7 @@ struct SurfaceSearchOverlay: View {
                 .accessibilityIdentifier("TerminalFindSearchTextField")
                 .frame(width: 180)
                 .padding(.leading, 8)
-                .padding(.trailing, 50)
+                .padding(.trailing, 72)
                 .padding(.vertical, 6)
                 .background(Color.primary.opacity(0.1))
                 .cornerRadius(6)
@@ -81,7 +81,7 @@ struct SurfaceSearchOverlay: View {
                             .monospacedDigit()
                             .padding(.trailing, 8)
                     } else if let total = searchState.total {
-                        Text("-/\(total)")
+                        Text(verbatim: total == 0 ? "0/0" : total == 1 ? "1 match" : "\(total) matches")
                             .scaledFont(.caption)
                             .foregroundColor(.secondary)
                             .monospacedDigit()

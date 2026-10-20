@@ -131,20 +131,21 @@ public struct SettingsSearchIndex: Sendable {
 
         for entry in curatedEntries {
             let entryID = "setting:\(entry.section.rawValue):\(entry.id)"
+            let page = entry.page ?? entry.section
             let searchPaths = entry.paths.isEmpty
                 ? matcher.dottedTokens(in: entry.synonyms)
                 : entry.paths
             let pathSearchText = searchPaths.flatMap { matcher.searchTokens(forSettingPath: $0) }.joined(separator: " ")
             built.append(Entry(
                 id: entryID,
-                kind: .setting(parent: entry.section),
+                kind: .setting(parent: page),
                 title: entry.title,
-                symbolName: entry.section.symbolName,
+                symbolName: page.symbolName,
                 normalizedSearchText: matcher.normalize(
                     [
-                        entry.section.rawValue,
-                        entry.section.title,
-                        entry.section.searchKeywords,
+                        page.rawValue,
+                        page.title,
+                        page.searchKeywords,
                         entry.id,
                         entry.title,
                         entry.detailText,

@@ -4215,7 +4215,7 @@ struct BREECLI {
     /// Claude Code renamed the spawn tool "Task" -> "Agent" (2.x); both names
     /// remain on the wire depending on CLI version, so both must count (see
     /// `AgentChatSessionRegistry.isTaskSpawn`, which says the same thing for
-    /// the mobile child-run tracker).
+    /// the remote child-run tracker).
     static func spawnsSubagents(toolName: String?) -> Bool {
         toolName == "Task" || toolName == "Agent"
     }
@@ -4384,21 +4384,29 @@ struct BREECLI {
     /// The focus flag at `args[index]` and how many tokens it used, or nil when that
     /// token is not one. For commands that walk their own arguments; the value after a
     /// bare `--focus` is taken only when it is exactly a boolean
-    /// (`BreeTuiRemoteRouting.focusFlagValue`).
+    /// (`focusFlagValue`).
     static func openFocusFlag(in args: [String], at index: Int, command: String) throws -> (focus: Bool, consumed: Int)? {
         let arg = args[index]
         if arg == "--no-focus" { return (false, 1) }
         if arg == "--focus" {
-            if index + 1 < args.count, let value = BreeTuiRemoteRouting.focusFlagValue(args[index + 1]) {
+            if index + 1 < args.count, let value = focusFlagValue(args[index + 1]) {
                 return (value, 2)
             }
             return (true, 1)
         }
         guard arg.hasPrefix("--focus=") else { return nil }
-        guard let value = BreeTuiRemoteRouting.focusFlagValue(String(arg.dropFirst("--focus=".count))) else {
+        guard let value = focusFlagValue(String(arg.dropFirst("--focus=".count))) else {
             throw CLIError(message: "\(command): --focus takes true or false")
         }
         return (value, 1)
+    }
+
+    static func focusFlagValue(_ token: String) -> Bool? {
+        switch token.lowercased() {
+        case "true", "1", "yes": return true
+        case "false", "0", "no": return false
+        default: return nil
+        }
     }
 
     private static func isFlagToken(_ value: String) -> Bool { value.hasPrefix("-") && value != "-" }
@@ -4877,6 +4885,10 @@ struct BREECLI {
         }
         if command == "open" { try runOpenCommand(commandArgs: commandArgs, socketPath: resolvedSocketPath, explicitPassword: socketPasswordArg, jsonOutput: jsonOutput, idFormat: try resolvedIDFormat(jsonOutput: jsonOutput, raw: idFormatArg)); return }
         if command == "diff" { try runDiffCommand(commandArgs: commandArgs, socketPath: resolvedSocketPath, explicitPassword: socketPasswordArg, jsonOutput: jsonOutput, idFormat: try resolvedIDFormat(jsonOutput: jsonOutput, raw: idFormatArg)); return }
+        if command == "worktree" {
+            try runWorktreeCommand(commandArgs: commandArgs, socketPath: resolvedSocketPath, explicitPassword: socketPasswordArg, jsonOutput: jsonOutput)
+            return
+        }
         if command == "session" {
             try runSessionCommand(
                 commandArgs: commandArgs,
@@ -5104,19 +5116,6 @@ struct BREECLI {
             try validateNotificationCommandArguments(command: command, args: commandArgs)
         }
         try prepareStandardInputBeforeSocket(command: command, commandArgs: commandArgs)
-        let isAuthCommand = ["auth", "login", "logout"].contains(command)
-        let authUsage = String(
-            localized: "cli.auth.usage",
-            defaultValue: "Usage: bree auth <status|login|logout|team>"
-        )
-        var authSubcommand: String?
-        if isAuthCommand {
-            let authArgs = command == "auth" ? commandArgs : [command] + commandArgs
-            authSubcommand = BreeCLIArgumentParser().parseAuthSubcommand(authArgs)
-            if authSubcommand == nil {
-                throw CLIError(message: authUsage)
-            }
-        }
         var client = SocketClient(path: resolvedSocketPath)
         let cursorHookSocketTimeout: TimeInterval? = isCursorShellHookCommand ? 0.35 : nil
         let cursorHookDeadline: Date? = isCursorShellHookCommand
@@ -5222,99 +5221,6 @@ struct BREECLI {
         case "agent-hibernation":
             try runAgentHibernation(commandArgs: commandArgs, client: client, jsonOutput: jsonOutput)
 
-        case "auth", "login", "logout":
-            guard let sub = authSubcommand else {
-                throw CLIError(message: authUsage)
-            }
-            switch sub {
-            case "status":
-                let response = try client.sendV2(method: "auth.status")
-                if jsonOutput {
-                    print(jsonString(response))
-                    break
-                }
-                let signedIn = (response["signed_in"] as? Bool) ?? false
-                if !signedIn {
-                    print("Not signed in.")
-                    print("Run: bree auth login")
-                    break
-                }
-                let user = response["user"] as? [String: Any]
-                let email = user?["email"] as? String
-                let display = user?["display_name"] as? String
-                let userID = user?["id"] as? String
-                print("Signed in.")
-                if let email { print("  email:    \(email)") }
-                if let display { print("  name:     \(display)") }
-                if let userID { print("  user_id:  \(userID)") }
-                if let teamID = response["selected_team_id"] as? String {
-                    print("  team_id:  \(teamID)")
-                }
-                if (response["team_scope_ready"] as? Bool) == false {
-                    let recovering = (response["team_scope_recovering"] as? Bool) ?? false
-                    if recovering {
-                        print(String(
-                            localized: "cli.auth.status.teamNotLoadedRetrying",
-                            defaultValue: "  team:     not loaded (retrying)"
-                        ))
-                    } else {
-                        print(String(
-                            localized: "cli.auth.status.teamNotLoaded",
-                            defaultValue: "  team:     not loaded"
-                        ))
-                    }
-                }
-
-            case "login":
-                let statusBefore = try client.sendV2(method: "auth.status")
-                if (statusBefore["signed_in"] as? Bool) == true {
-                    let email = (statusBefore["user"] as? [String: Any])?["email"] as? String
-                    print("Already signed in\(email.map { " as \($0)" } ?? ""). Use `bree auth logout` to sign out first.")
-                    break
-                }
-                if let signInURLResponse = try? client.sendV2(method: "auth.sign_in_url"),
-                   let signInURL = signInURLResponse["url"] as? String,
-                   !signInURL.isEmpty {
-                    print("Fallback sign-in URL:")
-                    print(signInURL)
-                }
-                print("Opening sign-in popup on the Bree web app.")
-                // auth.begin_sign_in blocks on the server side until the
-                // popup completes (or 5min timeout). The response is the
-                // callback — no polling.
-                let result = try client.sendV2(method: "auth.begin_sign_in", responseTimeout: 305)
-                if (result["signed_in"] as? Bool) == true {
-                    let email = (result["user"] as? [String: Any])?["email"] as? String
-                    print("Signed in\(email.map { " as \($0)" } ?? "").")
-                } else if (result["timed_out"] as? Bool) == true {
-                    print("Timed out waiting for sign-in. Run `bree auth status` once you've finished in the popup.")
-                } else {
-                    print("Sign-in did not complete. Run `bree auth status` to check.")
-                }
-
-            case "logout":
-                let statusBefore = try client.sendV2(method: "auth.status")
-                if (statusBefore["signed_in"] as? Bool) != true {
-                    print("Already signed out.")
-                    break
-                }
-                // auth.sign_out awaits the token clear before replying.
-                let result = try client.sendV2(method: "auth.sign_out")
-                if (result["signed_in"] as? Bool) != true {
-                    print("Signed out.")
-                } else {
-                    print("Sign-out requested but state hasn't cleared yet. Run `bree auth status` to confirm.")
-                }
-            case "team":
-                try runAuthTeamCommand(
-                    commandArgs: Array(commandArgs.dropFirst()),
-                    client: client,
-                    jsonOutput: jsonOutput
-                )
-            default:
-                throw CLIError(message: authUsage)
-            }
-
         case "agent":
             // `agent message`, `inbox` and `messages` are local agent messaging;
             // hibernate and wake act on local agents.
@@ -5326,124 +5232,18 @@ struct BREECLI {
                         jsonOutput: jsonOutput,
                         idFormat: idFormat
                     )
+                } else if commandArgs.first?.lowercased() == "wait" {
+                    try runAgentWaitCommand(
+                        commandArgs: Array(commandArgs.dropFirst()),
+                        client: client,
+                        socketPath: resolvedSocketPath,
+                        explicitPassword: socketPasswordArg
+                    )
                 } else if let verb = commandArgs.first?.lowercased(), verb == "hibernate" || verb == "wake" {
                     try runAgentHibernation(commandArgs: commandArgs, client: client, jsonOutput: jsonOutput)
                 } else {
                     throw CLIError(message: Self.agentUsage)
                 }
-            }
-
-        case "mobile":
-            let sub = commandArgs.first?.lowercased()
-            let rest = Array(commandArgs.dropFirst())
-            let mobileUsage = String(
-                localized: "cli.mobile.setFont.usage",
-                defaultValue: "Usage: bree mobile set-font <points> [--surface <id>] [--workspace <id>]"
-            )
-            let compatibleTagsUsage = String(
-                localized: "cli.mobile.compatibleTags.usage",
-                defaultValue: "Usage: bree mobile compatible-tags [list|set <tags...>|add <tags...>|remove <tags...>|clear]"
-            )
-            switch sub {
-            case "set-font":
-                guard let sizeArg = rest.first(where: { !$0.hasPrefix("--") }),
-                      let size = Double(sizeArg), size.isFinite, size > 0 else {
-                    throw CLIError(message: mobileUsage)
-                }
-                var params: [String: Any] = ["font_size": size]
-                if let surface = optionValue(rest, name: "--surface") {
-                    params["surface_id"] = surface
-                }
-                if let workspace = optionValue(rest, name: "--workspace") {
-                    params["workspace_id"] = workspace
-                }
-                let response = try client.sendV2(method: "mobile.terminal.set_font", params: params)
-                if jsonOutput {
-                    print(jsonString(response))
-                    break
-                }
-                let delivered = (response["delivered"] as? Bool) ?? false
-                if delivered {
-                    print(localizedFormat(
-                        "cli.mobile.setFont.applied",
-                        defaultValue: "Set mobile terminal font to %@pt on connected device(s).",
-                        sizeArg
-                    ))
-                } else {
-                    print(localizedFormat(
-                        "cli.mobile.setFont.appliedNoDevice",
-                        defaultValue: "Set mobile terminal font to %@pt (no iOS device is currently connected).",
-                        sizeArg
-                    ))
-                }
-            case "compatible-tags":
-                let action = rest.first?.lowercased() ?? "list"
-                let requestedTags = Array(rest.dropFirst())
-                    .flatMap { $0.split(separator: ",").map(String.init) }
-                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
-                    .filter { !$0.isEmpty }
-                func currentTags() throws -> [String] {
-                    let response = try client.sendV2(method: "mobile.compatible_tags.get", params: [:])
-                    return (response["tags"] as? [String]) ?? []
-                }
-                if action == "list" {
-                    let tags = try currentTags()
-                    if jsonOutput {
-                        print(jsonString(["tags": tags]))
-                    } else if tags.isEmpty {
-                        print(String(
-                            localized: "cli.mobile.compatibleTags.empty",
-                            defaultValue: "No additional Mac dev tags are granted to this Mac's paired phones."
-                        ))
-                    } else {
-                        print(tags.joined(separator: "\n"))
-                    }
-                    break
-                }
-                let resolvedTags: [String]
-                switch action {
-                case "set":
-                    guard !requestedTags.isEmpty else { throw CLIError(message: compatibleTagsUsage) }
-                    resolvedTags = requestedTags
-                case "add":
-                    guard !requestedTags.isEmpty else { throw CLIError(message: compatibleTagsUsage) }
-                    resolvedTags = Array(Set(try currentTags()).union(requestedTags))
-                case "remove":
-                    guard !requestedTags.isEmpty else { throw CLIError(message: compatibleTagsUsage) }
-                    resolvedTags = Array(Set(try currentTags()).subtracting(requestedTags))
-                case "clear":
-                    resolvedTags = []
-                default:
-                    throw CLIError(message: compatibleTagsUsage)
-                }
-                let response = try client.sendV2(
-                    method: "mobile.compatible_tags.set",
-                    params: ["tags": resolvedTags]
-                )
-                if jsonOutput {
-                    print(jsonString(response))
-                    break
-                }
-                let stored = (response["tags"] as? [String]) ?? []
-                let delivered = (response["delivered"] as? Bool) ?? false
-                let storedList = stored.isEmpty
-                    ? String(localized: "cli.mobile.compatibleTags.none", defaultValue: "(none)")
-                    : stored.joined(separator: ", ")
-                if delivered {
-                    print(localizedFormat(
-                        "cli.mobile.compatibleTags.applied",
-                        defaultValue: "Granted Mac dev tags for paired phones: %@ (pushed to connected device(s)).",
-                        storedList
-                    ))
-                } else {
-                    print(localizedFormat(
-                        "cli.mobile.compatibleTags.appliedNoDevice",
-                        defaultValue: "Granted Mac dev tags for paired phones: %@ (applies when a phone next connects).",
-                        storedList
-                    ))
-                }
-            default:
-                throw CLIError(message: mobileUsage + "\n" + compatibleTagsUsage)
             }
 
         case "rpc":
@@ -6341,6 +6141,12 @@ struct BREECLI {
                 jsonOutput: jsonOutput,
                 windowOverride: windowId
             )
+
+        case "wait-output":
+            try runWaitOutputCommand(commandArgs: commandArgs, client: client, windowOverride: windowId)
+
+        case "snapshots":
+            try runSnapshotsCommand(commandArgs: commandArgs, client: client, jsonOutput: jsonOutput)
 
         case "read-screen":
             let selectionOnly = commandArgs.contains("--selection")
@@ -7831,7 +7637,7 @@ struct BREECLI {
         if droppedRemote > 0 {
             lines.append(
                 "Opened \(droppedRemote) workspace\(droppedRemote == 1 ? "" : "s") without the file's "
-                    + "SSH/cloud connection and environment variables."
+                    + "SSH/Remote connection and environment variables."
             )
         }
         return lines
@@ -8546,19 +8352,9 @@ struct BREECLI {
                 idFormat: idFormat,
                 windowOverride: windowOverride
             )
-        case "size", "size-policy", "size-to-me", "size-counts", "participants",
-             "disconnect-participant", "disconnect-others":
-            // Shared terminal sizing (docs/shared-terminal-sizing.md).
-            try runSurfaceSizingCommand(
-                subcommand: subcommand,
-                rest: Array(commandArgs.dropFirst()),
-                client: client,
-                jsonOutput: jsonOutput,
-                windowOverride: windowOverride
-            )
-        case "ls", "list", "tree", "catalog", "open", "project", "new-terminal", "new":
-            // The surface catalog: terminals and browsers on This Mac and every
-            // paired device, and one open path for all of them (`surface.project`).
+        case "ls", "list", "tree", "catalog", "open", "project":
+            // The surface catalog: terminals and browsers on This Mac, and one open
+            // path for them (`surface.project`).
             try runSurfaceCatalogCommand(
                 subcommand: subcommand,
                 rest: Array(commandArgs.dropFirst()),
@@ -10419,14 +10215,6 @@ struct BREECLI {
             windowOverride: windowOverride
         )
     }
-    struct VMDaemonWebSocketEndpoint {
-        let url: String
-        let headers: [String: String]
-        let token: String
-        let sessionId: String
-        let expiresAtUnix: Int64
-    }
-
     private struct RemoteDaemonManifest: Decodable {
         struct Entry: Decodable {
             let goOS: String
@@ -10634,7 +10422,6 @@ struct BREECLI {
         var sshOptions = inputSSHOptions
         let sharingOptions = SSHConnectionSharingOptions()
         let usesImplicitManagedInteractiveShell =
-            !sshOptions.skipDaemonBootstrap &&
             sshOptions.remoteCommand.arguments.isEmpty &&
             sshOptions.initialCommand == nil &&
             sshOptions.terminalProfile.kind == .shell
@@ -10700,13 +10487,6 @@ struct BREECLI {
                     SSHHostConfiguredRemoteCommand().configuredCommand(fromSSHConfigOutput: $0)
                 }
                 : nil
-        if !sshOptions.skipDaemonBootstrap, effectiveTerminalTransport == .ssh,
-           !sshOptions.remoteCommand.disablesTTY(in: sshOptions.sshOptions,
-               hostRequestTTY: resolvedUserSSHConfiguration.flatMap { sshConfigurationValue(named: "requesttty", in: $0) }) {
-            try runSSHTui(options: sshOptions, configuredRemoteCommand: configuredInteractiveRemoteCommand,
-                          client: client, jsonOutput: jsonOutput, idFormat: idFormat)
-            return
-        }
         let sshStartedAt = Date()
         func logSSHTiming(_ stage: String, extra: String = "") {
             let elapsedMs = Int(Date().timeIntervalSince(sshStartedAt) * 1000)
@@ -10743,7 +10523,7 @@ struct BREECLI {
         // the script is only meaningful if breed-remote is participating. Let ssh open
         // a plain interactive shell instead.
         let remoteTerminalBootstrapScript: String?
-        if sshOptions.skipDaemonBootstrap || fallsBackToOpenSSHInteractiveSession {
+        if fallsBackToOpenSSHInteractiveSession {
             remoteTerminalBootstrapScript = nil
         } else {
             remoteTerminalBootstrapScript = sshOptions.remoteCommand.arguments.isEmpty
@@ -10788,7 +10568,7 @@ struct BREECLI {
                 options: sshOptions,
                 localCommandScript: combinedLocalCommandScript
             )
-        // One-shot launchers can carry the Cloud VM password. Only a new
+        // One-shot launchers can carry the remote host password. Only a new
         // workspace's first terminal runs one, and it then deletes itself;
         // every other exit removes them here.
         let launchScripts = SSHStartupLaunchScripts(directory: FileManager.default.temporaryDirectory)
@@ -10984,18 +10764,7 @@ struct BREECLI {
                 configureParams["relay_token"] = relayToken
                 configureParams["local_socket_path"] = sshOptions.localSocketPath
             }
-            if let daemon = sshOptions.daemonWebSocketEndpoint {
-                configureParams["daemon_websocket_url"] = daemon.url
-                configureParams["daemon_websocket_headers"] = daemon.headers
-                configureParams["daemon_websocket_token"] = daemon.token
-                configureParams["daemon_websocket_session_id"] = daemon.sessionId
-                configureParams["daemon_websocket_expires_at_unix"] = daemon.expiresAtUnix
-                configureParams["local_socket_path"] = sshOptions.localSocketPath
-            }
             configureParams["terminal_startup_command"] = reusableTerminalStartupCommand
-            if sshOptions.skipDaemonBootstrap {
-                configureParams["skip_daemon_bootstrap"] = true
-            }
 
             cliDebugLog(
                 "cli.ssh.remote.configure workspace=\(String(workspaceId.prefix(8))) " +
@@ -12183,18 +11952,6 @@ struct BREECLI {
             throw CLIError(message: "ssh-session-attach: control socket returned no owning workspace")
         }
         let workspaceRef = Self.normalizedEnvValue(resolution["workspace_ref"] as? String)
-
-        if resolution["backend"] as? String == "bree-tui", let resource = resolution["resource"] as? String {
-            var projection: [String: Any] = ["resource": resource, "workspace_id": workspaceID]
-            try applyFocusOption(focusOpt, defaultValue: true, to: &projection)
-            if let paneOpt { projection["pane_id"] = paneOpt }
-            if let splitOpt { projection["direction"] = splitOpt; projection["placement"] = "split" }
-            if let surfaceOpt { projection["surface_id"] = surfaceOpt }
-            let payload = try client.sendV2(method: "surface.project", params: projection, responseTimeout: 180)
-            printV2Payload(payload, jsonOutput: jsonOutput, idFormat: idFormat,
-                           fallbackText: v2CreationSummary(payload, idFormat: idFormat, kinds: ["workspace", "surface"]))
-            return
-        }
 
         let initialCommand = sshSessionAttachStartupCommand(sessionID: sessionID)
         var params: [String: Any] = [
@@ -15503,27 +15260,6 @@ struct BREECLI {
             """
         case "automation":
             return BREECLI.automationUsage()
-        case "auth":
-            return String(localized: "cli.auth.help", defaultValue: """
-            Usage: bree auth <status|login|logout|team>
-
-            status   Print whether the user is signed in (add `bree --json` for JSON).
-            login    Open the sign-in popup on the Bree web app and wait for it to finish.
-            logout   Clear the current session.
-            team     List teams or select one (`team list|use <team-id>|create <name>`).
-            """)
-        case "login":
-            return """
-            Usage: bree login
-
-            Alias for `bree auth login`.
-            """
-        case "logout":
-            return """
-            Usage: bree logout
-
-            Alias for `bree auth logout`.
-            """
         case "rpc":
             return """
             Usage: bree rpc <method> [json-params]
@@ -15630,6 +15366,7 @@ struct BREECLI {
             return forkSubcommandUsage()
         case "sessions", "session-debug": return sessionsUsage()
         case "session": return sessionCommandUsage()
+        case "worktree": return worktreeCommandUsage()
         case "feed":
             return """
             Usage: bree feed tui [--opentui|--legacy]
@@ -16671,24 +16408,18 @@ struct BREECLI {
                 defaultValue: """
             Usage: bree surface ls [<machine>|local] [--refresh] [--json]
                    bree surface open <resource> [--workspace <id|ref|index>] [--pane <id|ref>] [--left|--right|--up|--down|--tab] [--new] [--focus|--no-focus]
-                   bree surface new-terminal --machine <id|local> [--cwd <dir>] [--name <name>] [--remote-workspace <ws_…>] [--workspace <id|ref|index>] [--no-open] [--focus|--no-focus] [-- <command...>]
                    bree surface resume set [flags] -- <argv...>
                    bree surface resume set [flags] --shell <command>
                    bree surface resume show [--json] [flags]
                    bree surface resume get [--json] [flags]
                    bree surface resume clear [flags]
-                   bree surface size|participants [--surface <id|ref|index>] [--json]
-                   bree surface size-policy <latest|smallest|largest|priority|fixed> [--cols <n> --rows <n>] [--surface <id|ref|index>]
-                   bree surface size-to-me|disconnect-others [--surface <id|ref|index>]
-                   bree surface size-counts <true|false|auto> [--participant <id>] [--surface <id|ref|index>]
-                   bree surface disconnect-participant <participant-id> [--surface <id|ref|index>]
 
             ls / open / new-terminal: the surface catalog. Terminals and browsers
-            on This Mac and on paired devices are resources (`<machine>/<kind>/<key>`,
+            on This Mac are resources (`<machine>/<kind>/<key>`,
             e.g. local/terminal/<uuid>); panes project them. `open` reuses the pane already
             showing a resource unless --new; --pane with a side splits that pane on that side,
             --tab adds a tab to it. A local terminal moves to the destination (it is shown once).
-            `new-terminal` creates a terminal on the machine (a remote bree-tui machine: in its session).
+            `new-terminal` creates a terminal on the machine.
 
             resume: attach restart command metadata to a terminal surface.
             Public CLI bindings are stored for inspection and manual restore.
@@ -16851,6 +16582,10 @@ struct BREECLI {
               --window <id|ref|index>      Window context for workspace/surface refs and indexes
               --command <command>    Shell command to run (or pass as trailing text)
             """
+        case "wait-output":
+            return Self.waitOutputUsage
+        case "snapshots":
+            return Self.snapshotsUsage
         case "wait-for":
             return """
             Usage: bree wait-for [-S|--signal] <name> [--timeout <seconds>]
@@ -19306,6 +19041,16 @@ struct BREECLI {
             }
         }
 
+        for leaked in payload["leaked_processes"] as? [[String: Any]] ?? [] {
+            let name = topLabelText(leaked["name"] as? String)
+            let pid = topInt(leaked["pid"]).map(String.init) ?? "?"
+            let reason = topLabelText(leaked["reason"] as? String)
+            let worktree = topLabelText(leaked["worktree"] as? String)
+            let resources = leaked["resources"] as? [String: Any] ?? [:]
+            lines.append("\(topResourceColumns(resources: resources))process \(pid) \(name) [leaked] [\(reason)]"
+                + (worktree.isEmpty ? "" : " worktree=\(worktree)") + " (hint, not killed)")
+        }
+
         return lines.joined(separator: "\n")
     }
 
@@ -19711,6 +19456,11 @@ struct BREECLI {
         if (workspace["pinned"] as? Bool) == true {
             parts.append("[pinned]")
         }
+        if let worktree = workspace["worktree"] as? [String: Any],
+           let root = worktree["root"] as? String, !root.isEmpty {
+            let linked = (worktree["linked"] as? Bool) == true ? " (linked)" : ""
+            parts.append("worktree=\(root)\(linked)")
+        }
         return parts.joined(separator: " ")
     }
 
@@ -19736,6 +19486,9 @@ struct BREECLI {
         let tty = topLabelText(surface["tty"] as? String)
         if !tty.isEmpty {
             parts.append("tty=\(tty)")
+        }
+        if let lastActivity = (surface["last_activity_at"] as? NSNumber)?.doubleValue {
+            parts.append("idle=\(max(0, Int(Date().timeIntervalSince1970 - lastActivity) / 60))m")
         }
         if let pid = topInt(surface["browser_web_content_pid"]) {
             parts.append("webpid=\(pid)")
@@ -19789,6 +19542,10 @@ struct BREECLI {
         let name = topLabelText(process["name"] as? String)
         let label = name.isEmpty ? "process" : name
         var parts = ["process", pid, label]
+        let processClass = topLabelText(process["class"] as? String)
+        if !processClass.isEmpty {
+            parts.append("[\(processClass)]")
+        }
         let attributionReason = topLabelText(process["attribution_reason"] as? String)
         if !attributionReason.isEmpty {
             parts.append("[\(attributionReason)]")
@@ -21012,7 +20769,7 @@ struct BREECLI {
     ]
     private static let codexTeamsProbeClientName = "codex_app_server_daemon"
     private static let codexTeamsWatcherClientName = "bree-codex-teams"
-    private static let codexTeamsClientVersion = "0.1.0"
+    private static let codexClientVersion = "0.1.0"
     private static let codexTeamsWatcherResumeOptOutNotificationMethods = [
         "thread/tokenUsage/updated",
         "turn/diff/updated",
@@ -21332,7 +21089,7 @@ struct BREECLI {
                     defer { connection.close() }
                     try connection.initialize(
                         clientName: BREECLI.codexTeamsWatcherClientName,
-                        version: BREECLI.codexTeamsClientVersion,
+                        version: BREECLI.codexClientVersion,
                         optOutNotificationMethods: BREECLI.codexTeamsWatcherResumeOptOutNotificationMethods
                     )
                     resetConnectionSubscriptions()
@@ -21934,7 +21691,7 @@ struct BREECLI {
             defer { connection.close() }
             try connection.initialize(
                 clientName: codexTeamsProbeClientName,
-                version: codexTeamsClientVersion,
+                version: codexClientVersion,
                 responseTimeout: 1
             )
             return connection.canResumeThread(threadId: threadId)
@@ -22479,7 +22236,7 @@ struct BREECLI {
                 let responseTimeout = max(0.1, min(1, deadline.timeIntervalSinceNow))
                 try connection.initialize(
                     clientName: Self.codexTeamsProbeClientName,
-                    version: Self.codexTeamsClientVersion,
+                    version: Self.codexClientVersion,
                     responseTimeout: responseTimeout
                 )
                 return
@@ -36183,7 +35940,14 @@ export default {
             }
         }
 
-        let devURL = URL(fileURLWithPath: #filePath)
+        let devURL = URL(fileURLWithPath: {
+            // Release binaries must not embed the build machine's source path.
+            #if DEBUG
+            return #filePath
+            #else
+            return "/bree/a/b/c/d/e/f/g/h/dev-source-unavailable.swift"
+            #endif
+        }())
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("Resources", isDirectory: true)
@@ -37104,7 +36868,14 @@ export default {
             }
         }
 
-        let devRelative = URL(fileURLWithPath: #filePath)
+        let devRelative = URL(fileURLWithPath: {
+            // Release binaries must not embed the build machine's source path.
+            #if DEBUG
+            return #filePath
+            #else
+            return "/bree/a/b/c/d/e/f/g/h/dev-source-unavailable.swift"
+            #endif
+        }())
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("Resources/opencode-plugin.js")

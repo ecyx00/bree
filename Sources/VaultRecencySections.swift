@@ -169,6 +169,9 @@ struct VaultSessionRowAccessory: Equatable, Sendable {
     /// Wire/API metadata retained for non-UI consumers. It is intentionally
     /// never rendered in either Default or Compact Vault view.
     let messageCount: Int?
+    /// Live agent state of the workspace running this session, set by the
+    /// view layer from AttentionStore; nil for a past session.
+    var agentState: AttentionState?
 
     /// True when the row renders a second (subtitle) line.
     var hasSubtitle: Bool { detail != nil }
@@ -181,7 +184,8 @@ struct VaultSessionRowAccessory: Equatable, Sendable {
             return VaultSessionRowAccessory(
                 liveStatus: liveStatus,
                 detail: nil,
-                messageCount: messageCount
+                messageCount: messageCount,
+                agentState: agentState
             )
         }
         return self

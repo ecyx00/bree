@@ -36,18 +36,6 @@ public struct BetaFeaturesCatalogSection: SettingCatalogSection {
         userDefaultsKey: "sidebarWorkspaceTodosChecklistStyle"
     )
 
-    /// Cloud Machines' persisted first-use activation marker. The row moved out
-    /// of Beta Features when Cloud graduated; this storage key remains stable
-    /// so installed users keep their activation and existing configuration
-    /// domains migrate without a destructive reset.
-    public let cloudMachines = DefaultsKey<Bool>(
-        id: "cloud.beta.machines.enabled",
-        defaultValue: Self.cloudMachinesDefault,
-        userDefaultsKey: "cloud.beta.machines.enabled"
-    )
-
-    private static let cloudMachinesDefault = false
-
     /// Remote tmux: mirror a remote host's tmux sessions in the bree sidebar
     /// over `ssh … tmux -CC` (iTerm2-style control mode). Sessions appear as
     /// sidebar workspaces, tmux windows as tabs, and tmux panes as splits;

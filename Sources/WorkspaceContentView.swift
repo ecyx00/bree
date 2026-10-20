@@ -342,8 +342,6 @@ struct WorkspaceContentView: View {
                         workspace.bonsplitController.focusPane(paneId)
                     }
                 }
-            } else if workspace.cloudVMID != nil {
-                TerminalPanelUnavailableView(appearance: appearance)
             } else {
                 EmptyPanelView(workspace: workspace, paneId: paneId)
             }

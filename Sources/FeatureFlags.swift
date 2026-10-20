@@ -17,11 +17,6 @@ final class BreeFeatureFlags {
 
     private static let appKitSidebarListDefault = true
     private static let agentInboxQuickViewDefault = true
-    #if DEBUG
-    nonisolated static let cloudMachinesDefault = true
-    #else
-    nonisolated static let cloudMachinesDefault = false
-    #endif
 
     private static let overrideKeyPrefix = "bree.flags.override."
 
@@ -44,7 +39,7 @@ final class BreeFeatureFlags {
     )
 
     // FLAG(key: agent-inbox-quick-view-enabled-release, owner: lawrencecchen,
-    //      reviewBy: 2026-10-15, defaultWhenUnavailable: true)
+    //      reviewBy: 2027-01-15, defaultWhenUnavailable: true)
     // Keeps the agent inbox quick view behind an explicit rollout while the
     // placement and cross-agent attention model are evaluated.
     static let agentInboxQuickViewFlag = BreeFeatureFlagDefinition(
@@ -56,7 +51,6 @@ final class BreeFeatureFlags {
 
     static let allFlags: [BreeFeatureFlagDefinition] = [
         appKitSidebarListFlag,
-        cloudMachinesFlag,
         agentInboxQuickViewFlag,
     ]
 
@@ -102,20 +96,6 @@ final class BreeFeatureFlags {
         self.defaults = defaults
         self.overrideCapability = overrideCapability
         self.publishesOffMainSnapshot = publishesOffMainSnapshot
-        // Cloud's local value is now a first-use activation marker, so it must
-        // survive tagged debug artifact reloads just like any other persisted
-        // product state. The explicit dogfood marker may still opt a fresh
-        // debug artifact in; only the temporary cloud override is reset when
-        // a tagged artifact is reopened.
-        if overrideCapability.enablesCloudDogfood {
-            defaults.set(true, forKey: BetaFeaturesCatalogSection().cloudMachines.userDefaultsKey)
-            defaults.set(true, forKey: Self.overrideDefaultsKey(for: Self.cloudMachinesFlag.key))
-        } else if overrideCapability.isTaggedDebugArtifact {
-            defaults.removeObject(forKey: Self.overrideDefaultsKey(for: Self.cloudMachinesFlag.key))
-            if overrideCapability.hasCloudDogfoodMarker {
-                defaults.set(false, forKey: Self.overrideDefaultsKey(for: Self.cloudMachinesFlag.key))
-            }
-        }
         localOverridesByKey = Self.allFlags.reduce(into: [:]) { values, definition in
             if let value = Self.storedOverrideValue(for: definition.key, defaults: defaults) {
                 values[definition.key] = value

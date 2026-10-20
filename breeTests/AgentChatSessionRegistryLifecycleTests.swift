@@ -1,6 +1,6 @@
 import BREEAgentLaunch
 import BreeFoundation
-@testable import BreeMobileHost
+@testable import BreeAgentTranscriptHost
 import Foundation
 import Testing
 
@@ -375,7 +375,7 @@ struct AgentChatSessionRegistryLifecycleTests {
     }
 
     @MainActor
-    @Test func endedSessionWithMissingTranscriptIsNotListableForMobileChat() throws {
+    @Test func endedSessionWithMissingTranscriptIsNotListableForChat() throws {
         let home = try temporaryHomeDirectory()
         let service = AgentChatTranscriptService(
             registry: AgentChatSessionRegistry(),

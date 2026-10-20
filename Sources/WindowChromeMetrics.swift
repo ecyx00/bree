@@ -72,7 +72,9 @@ enum RightSidebarChromeMetrics {
 }
 
 enum SidebarWorkspaceListMetrics {
-    static let firstRowTopOffset: CGFloat = MinimalModeChromeMetrics.titlebarHeight + 2
+    static let firstRowTopOffset: CGFloat = MinimalModeChromeMetrics.titlebarHeight + 4
+    /// Rows scrolled under the titlebar controls are fully hidden down to here, then fade in.
+    static let topClearHeight: CGFloat = MinimalModeChromeMetrics.titlebarHeight - 4
     static let rowVerticalPadding: CGFloat = 8
     static let rowOuterHorizontalPadding: CGFloat = 6
     static let rowContentHorizontalPadding: CGFloat = 10

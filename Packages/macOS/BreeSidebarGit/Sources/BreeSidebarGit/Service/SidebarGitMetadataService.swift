@@ -44,8 +44,6 @@ public final class SidebarGitMetadataService: SidebarGitMetadataServing {
     let probeLimiter: WorkspaceGitMetadataProbeLimiter
     // Drives the initial-probe retry gaps.
     let clock: any GitPollClock
-    // Mobile-host background-work deferral intervals.
-    let mobileHostDeferral: MobileHostDeferralPolicy
     // Debug diagnostics sink (the app injects its debug logger in DEBUG).
     let debugLog: @Sendable (String) -> Void
     let makeWatcher: @Sendable (GitWorkspaceMetadataWatchDescriptor) async -> RecursivePathWatcher?
@@ -89,14 +87,12 @@ public final class SidebarGitMetadataService: SidebarGitMetadataServing {
     ///   - gitMetadataService: Resolves watched git paths for the watcher.
     ///   - probeLimiter: Process-wide concurrent probe cap.
     ///   - clock: Initial-probe retry clock; tests inject virtual time.
-    ///   - mobileHostDeferral: Mobile-host deferral intervals.
     ///   - debugLog: Diagnostics sink; defaults to a no-op.
     public convenience init(
         workspaceGitMetadataReader: any WorkspaceGitMetadataReading,
         gitMetadataService: any GitMetadataWatchDescriptorReading,
         probeLimiter: WorkspaceGitMetadataProbeLimiter,
         clock: any GitPollClock = SystemGitPollClock(),
-        mobileHostDeferral: MobileHostDeferralPolicy = .standard,
         debugLog: @escaping @Sendable (String) -> Void = { _ in }
     ) {
         self.init(
@@ -104,7 +100,6 @@ public final class SidebarGitMetadataService: SidebarGitMetadataServing {
             gitMetadataService: gitMetadataService,
             probeLimiter: probeLimiter,
             clock: clock,
-            mobileHostDeferral: mobileHostDeferral,
             debugLog: debugLog,
             makeWatcher: { descriptor in
                 await RecursivePathWatcher(
@@ -123,7 +118,6 @@ public final class SidebarGitMetadataService: SidebarGitMetadataServing {
         gitMetadataService: any GitMetadataWatchDescriptorReading,
         probeLimiter: WorkspaceGitMetadataProbeLimiter,
         clock: any GitPollClock,
-        mobileHostDeferral: MobileHostDeferralPolicy = .standard,
         debugLog: @escaping @Sendable (String) -> Void = { _ in },
         makeWatcher: @escaping @Sendable (GitWorkspaceMetadataWatchDescriptor) async -> RecursivePathWatcher?
     ) {
@@ -131,7 +125,6 @@ public final class SidebarGitMetadataService: SidebarGitMetadataServing {
         self.gitMetadataService = gitMetadataService
         self.probeLimiter = probeLimiter
         self.clock = clock
-        self.mobileHostDeferral = mobileHostDeferral
         self.debugLog = debugLog
         self.makeWatcher = makeWatcher
     }

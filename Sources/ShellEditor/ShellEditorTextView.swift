@@ -797,36 +797,9 @@ struct ShellEditorDockView: View {
     @State private var isEditorFocused = false
     @Environment(\.breePalette) private var palette
 
-    private var cwdChip: String? {
-        guard let cwd = workingDirectory, !cwd.isEmpty else { return nil }
-        let home = NSHomeDirectory()
-        let path = cwd == home || cwd.hasPrefix(home + "/") ? "~" + String(cwd.dropFirst(home.count)) : cwd
-        return path.split(separator: "/").suffix(2).joined(separator: "/").nilIfEmpty ?? path
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if let chip = cwdChip {
-                HStack(spacing: 6) {
-                    Text(chip)
-                        .lineLimit(1)
-                    if let branch, !branch.isEmpty {
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.triangle.branch")
-                                .imageScale(.small)
-                                .accessibilityHidden(true)
-                            Text(branch)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                    }
-                }
-                    .breeFont(.mono)
-                    .foregroundStyle(palette.textSecondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(palette.hoverFill))
-            }
+            ShellEditorCwdChip(workingDirectory: workingDirectory, branch: branch)
             HStack(alignment: .top, spacing: 8) {
                 Text("❯")
                     .font(Font(font))
@@ -852,6 +825,44 @@ struct ShellEditorDockView: View {
         .padding(.horizontal, 10)
         .padding(.top, 6)
         .padding(.bottom, 10)
+    }
+}
+
+/// The cwd/branch capsule above the shell editor frame; the TextBox input reuses it.
+struct ShellEditorCwdChip: View {
+    let workingDirectory: String?
+    var branch: String?
+    @Environment(\.breePalette) private var palette
+
+    private var chip: String? {
+        guard let cwd = workingDirectory, !cwd.isEmpty else { return nil }
+        let home = NSHomeDirectory()
+        let path = cwd == home || cwd.hasPrefix(home + "/") ? "~" + String(cwd.dropFirst(home.count)) : cwd
+        return path.split(separator: "/").suffix(2).joined(separator: "/").nilIfEmpty ?? path
+    }
+
+    var body: some View {
+        if let chip {
+            HStack(spacing: 6) {
+                Text(chip)
+                    .lineLimit(1)
+                if let branch, !branch.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.triangle.branch")
+                            .imageScale(.small)
+                            .accessibilityHidden(true)
+                        Text(branch)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                }
+            }
+            .breeFont(.mono)
+            .foregroundStyle(palette.textSecondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(palette.hoverFill))
+        }
     }
 }
 

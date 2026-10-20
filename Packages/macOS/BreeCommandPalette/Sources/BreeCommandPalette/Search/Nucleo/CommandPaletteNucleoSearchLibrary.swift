@@ -122,7 +122,14 @@ final class CommandPaletteNucleoSearchLibrary: @unchecked Sendable {
 
         // Repo source root: this file lives at
         // Packages/macOS/BreeCommandPalette/Sources/BreeCommandPalette/Search/Nucleo/.
-        let sourceRoot = URL(fileURLWithPath: #filePath)
+        let sourceRoot = URL(fileURLWithPath: {
+            // Release binaries must not embed the build machine's source path.
+            #if DEBUG
+            return #filePath
+            #else
+            return "/bree/a/b/c/d/e/f/g/h/dev-source-unavailable.swift"
+            #endif
+        }())
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()

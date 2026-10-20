@@ -2,12 +2,15 @@ import SwiftUI
 
 struct SidebarWorkspaceScrollEdgeFadeMask: View {
     let topHeight: CGFloat
+    /// Part of the top edge that stays fully transparent (the controls bar).
+    var topClearHeight: CGFloat = 0
     let bottomHeight: CGFloat
 
     var body: some View {
         VStack(spacing: 0) {
+            Color.clear.frame(height: topClearHeight)
             SidebarEdgeFadeGradient(edge: .top)
-                .frame(height: topHeight)
+                .frame(height: max(0, topHeight - topClearHeight))
             Rectangle()
                 .fill(Color.black)
             SidebarEdgeFadeGradient(edge: .bottom)
@@ -34,7 +37,7 @@ private struct SidebarEdgeFadeGradient: View {
 
     private var maskColors: [Color] {
         let colors = [
-            Color.black.opacity(0.05),
+            Color.black.opacity(0),
             Color.black.opacity(0.25),
             Color.black.opacity(0.65),
             Color.black,

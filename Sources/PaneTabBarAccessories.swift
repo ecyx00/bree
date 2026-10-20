@@ -13,15 +13,16 @@ enum PaneTabBarAccessories {
         }
     }
 
-    /// Only while the right sidebar is closed; zero width otherwise.
+    /// The bell lives here only while the right sidebar is closed; with it open the bell sits in
+    /// the sidebar header row so a narrow rightmost pane keeps room for its buttons.
     private struct Trailing: View {
         @ObservedObject var fileExplorerState: FileExplorerState
 
         var body: some View {
             HStack(spacing: 2) {
-                TitlebarNotificationsBell()
-                    .padding(.leading, 6)
                 if !fileExplorerState.isVisible {
+                    TitlebarNotificationsBell()
+                        .padding(.leading, 6)
                     TitlebarRightSidebarToggle(window: nil)
                 }
             }

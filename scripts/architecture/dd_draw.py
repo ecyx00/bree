@@ -8,7 +8,9 @@ import argparse, json, os, re, subprocess, sys, tempfile, pathlib
 
 PAPER, INK = "#262624", "#ECEBE6"
 SERIF, SANS, MONO = "ui-serif, Georgia, serif", "-apple-system, system-ui, sans-serif", "ui-monospace, Menlo, monospace"
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from check_svg import browser_or_exit
+CHROME = browser_or_exit("dd_draw.py")
 
 
 def load(model_json, flow_id):

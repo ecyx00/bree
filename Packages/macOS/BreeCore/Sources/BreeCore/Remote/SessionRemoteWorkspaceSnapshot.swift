@@ -9,8 +9,6 @@ public struct SessionRemoteWorkspaceSnapshot: Codable, Equatable, Sendable {
     /// Explicit persistent SSH owner; absent in legacy daemon snapshots.
     public var sshSessionOwner: String? = nil
 
-    /// The transport the workspace used when the snapshot was taken.
-    public var transport: WorkspaceRemoteTransport
     /// The interactive terminal protocol, absent in snapshots written before Mosh support.
     public var terminalTransport: WorkspaceRemoteTerminalTransport? = nil
     /// Durable terminal program intent, absent in snapshots written before terminal profiles.
@@ -27,18 +25,16 @@ public struct SessionRemoteWorkspaceSnapshot: Codable, Equatable, Sendable {
     public var sshOptions: [String]
     /// Whether remote PTY sessions outlive their local terminal surface.
     public var preserveAfterTerminalExit: Bool?
-    /// Whether daemon bootstrap is skipped (pre-baked Cloud VM images).
+    /// Decode-only marker: snapshots written for pre-baked remote hosts (removed) carry `true`
+    /// and are never restored. Never written by current code.
     public var skipDaemonBootstrap: Bool?
     /// The CLI relay port captured for persistent-PTY restore.
     public var relayPort: Int? = nil
     /// The persistent daemon slot captured for persistent-PTY restore.
     public var persistentDaemonSlot: String? = nil
-    /// Provider-issued Cloud VM id for bree-managed Cloud VM workspaces.
-    public var managedCloudVMID: String? = nil
 
     /// Creates a snapshot value; mirrors the synthesized memberwise initializer.
     public init(
-        transport: WorkspaceRemoteTransport,
         terminalTransport: WorkspaceRemoteTerminalTransport? = nil,
         terminalProfile: WorkspaceRemoteTerminalProfile? = nil,
         configuredRemoteCommand: String? = nil,
@@ -49,10 +45,8 @@ public struct SessionRemoteWorkspaceSnapshot: Codable, Equatable, Sendable {
         preserveAfterTerminalExit: Bool? = nil,
         skipDaemonBootstrap: Bool? = nil,
         relayPort: Int? = nil,
-        persistentDaemonSlot: String? = nil,
-        managedCloudVMID: String? = nil
+        persistentDaemonSlot: String? = nil
     ) {
-        self.transport = transport
         self.terminalTransport = terminalTransport
         self.terminalProfile = terminalProfile
         self.configuredRemoteCommand = configuredRemoteCommand
@@ -64,6 +58,5 @@ public struct SessionRemoteWorkspaceSnapshot: Codable, Equatable, Sendable {
         self.skipDaemonBootstrap = skipDaemonBootstrap
         self.relayPort = relayPort
         self.persistentDaemonSlot = persistentDaemonSlot
-        self.managedCloudVMID = managedCloudVMID
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Outcome of a terminal split/surface creation request in a workspace that may
-/// route the mutation to Cloud or a remote tmux mirror instead of mutating locally.
+/// route the mutation to remote or a remote tmux mirror instead of mutating locally.
 ///
 /// Socket/CLI handlers need to distinguish "the request became a tmux command
 /// and the panel arrives asynchronously via the mirror's topology events"

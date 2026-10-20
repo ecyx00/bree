@@ -1,4 +1,3 @@
-import BreeCloud
 import BreeCore
 import BreeRemoteDaemon
 import BreeRemoteSession
@@ -155,14 +154,6 @@ extension Workspace {
     @discardableResult
     func reconnectRemoteConnection(surfaceId: UUID? = nil) -> Bool {
         guard !managedDevicePolicy.isEnforced(.disableRemoteConnections) else { return false }
-        if isManagedCloudVMWorkspace, !CloudMachinesFeature.offMainIsEnabled() { return false }
-        if let surfaceId, let session = tuiMirrorSession(for: surfaceId) { return session.retryConnection() }
-        if usesSSHTui, let configuration = remoteConfiguration {
-            // A targeted pane reconnect cannot escalate into retrying every SSH viewer.
-            guard surfaceId == nil else { return false }
-            AppDelegate.shared?.sshTuiWorkspaceCoordinator.connect(workspace: self, configuration: configuration)
-            return true
-        }
         // `DisableRemoteConnections` (MDM): a configuration retained from
         // before the policy activated must not redial. New connections are
         // refused by `configureRemoteConnection`, and the enforcement observer
@@ -190,8 +181,7 @@ extension Workspace {
         } else if let startupCommand = effectiveRemoteTerminalStartupCommand(from: configuration),
                   !startupCommand.isEmpty,
                   let reconnectingSurfaceId {
-            let shouldRespawnSurface = isDefaultFreestyleSSHDRemoteWorkspace ||
-                surfaceId != nil ||
+            let shouldRespawnSurface = surfaceId != nil ||
                 remoteDisconnectPlaceholderPanelIds.contains(reconnectingSurfaceId) ||
                 pendingRemoteTerminalChildExitSurfaceIds.contains(reconnectingSurfaceId) ||
                 !activeRemoteTerminalSurfaceIds.contains(reconnectingSurfaceId) ||
@@ -225,42 +215,6 @@ extension Workspace {
         }
         configureRemoteConnection(configuration, autoConnect: true)
         return didRespawnTerminal
-    }
-
-    @discardableResult
-    func reconnectCloudTerminalSurface(surfaceId: UUID) -> Bool {
-        guard !managedDevicePolicy.isEnforced(.disableRemoteConnections), CloudMachinesFeature.offMainIsEnabled() else { return false }
-        // An optimistic pane whose creation failed replays its own request.
-        if retryReservedCloudTerminalPane(surfaceId: surfaceId) { return true }
-        if let resource = cloudProjectedResource(forPanel: surfaceId),
-           let provider = SurfaceCatalog.shared.provider(for: resource.id.machine) as? BreeTuiSurfaceProvider {
-            guard let session = provider.manualMirrorSessions[surfaceId] else {
-                clearCloudMaterializationFailure(surfaceID: surfaceId)
-                provider.scheduleRefresh()
-                return true
-            }
-            (panels[surfaceId] as? TerminalPanel)?.requestViewReattach()
-            return session.retryConnection()
-        }
-        guard isManagedCloudVMWorkspace,
-              isRemoteTerminalSurface(surfaceId) || remoteDisconnectPlaceholderPanelIds.contains(surfaceId) else {
-            return false
-        }
-        return reconnectRemoteConnection(surfaceId: surfaceId)
-    }
-
-    func suspendCloudRemoteConfiguration(_ configuration: WorkspaceRemoteConfiguration) -> Bool {
-        disconnectRemoteConnection(clearConfiguration: false, disconnectedDetail: CloudMachinesFeature.disabledMessage)
-        remoteConfiguration = configuration.scopedToOwnerWorkspace(id)
-        remoteControllerConnectionState = .disconnected
-        remoteConnectionState = .disconnected
-        remoteConnectionDetail = String(
-            localized: "cloud.feature.disabled",
-            defaultValue: "Cloud Machines are temporarily unavailable."
-        )
-        applyBrowserRemoteWorkspaceStatusToPanels()
-        postRemoteConnectionPresentationDidChange()
-        return true
     }
 
     private func remoteReconnectTerminalSurfaceId(requestedSurfaceId: UUID?) -> UUID? {

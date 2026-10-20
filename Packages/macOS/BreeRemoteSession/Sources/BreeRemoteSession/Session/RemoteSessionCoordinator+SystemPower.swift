@@ -39,10 +39,8 @@ extension RemoteSessionCoordinator {
     @discardableResult
     func resetReconnectPolicyLocked(reason: String) -> Bool {
         guard !isStopping else { return false }
-        let expectsProxyEndpoint = !configuration.skipDaemonBootstrap ||
-            configuration.daemonWebSocketEndpoint != nil
         let shouldReconnect = reconnectSuspended || reconnectRetryCount > 0 ||
-            (expectsProxyEndpoint && proxyEndpoint == nil) || !daemonReady
+            proxyEndpoint == nil || !daemonReady
         isSystemSleeping = false
         cancelReconnectRetryLocked()
         reconnectRetryCount = 0

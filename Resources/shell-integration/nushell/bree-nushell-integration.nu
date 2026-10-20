@@ -350,3 +350,21 @@ if (_bree_integration_enabled) {
         ($env.config.hooks.pre_prompt? | default []) | append "_bree_pre_prompt"
     ))
 }
+
+# Inside Bree's private tmux (BREE_LOCAL_TMUX_AUTO=1) tmux swallows nushell's own OSC 133,
+# so the exit-code badges vanish. Turn the built-in marks off and send them in a tmux DCS
+# passthrough from hooks instead.
+def _bree_tmux_mark_prompt [] { print -n $"\u{1b}Ptmux;\u{1b}\u{1b}]133;D;($env.LAST_EXIT_CODE? | default 0)\u{07}\u{1b}\\\u{1b}Ptmux;\u{1b}\u{1b}]133;A\u{07}\u{1b}\\" }
+def _bree_tmux_mark_exec [] { print -n $"\u{1b}Ptmux;\u{1b}\u{1b}]133;C\u{07}\u{1b}\\" }
+if (($env.BREE_LOCAL_TMUX_AUTO? | default "") == "1") or (($env.BREE_LOCAL_TMUX? | default "") == "1") {
+    $env.config = ($env.config | upsert shell_integration.osc133 false)
+    $env.config = ($env.config | upsert hooks.pre_prompt (
+        ($env.config.hooks.pre_prompt? | default []) | append "_bree_tmux_mark_prompt"
+    ))
+    $env.config = ($env.config | upsert hooks.pre_execution (
+        ($env.config.hooks.pre_execution? | default []) | append "_bree_tmux_mark_exec"
+    ))
+    # Prompt end (B): appended to the prompt indicator, which reedline prints last.
+    let base = ($env.PROMPT_INDICATOR? | default "> ")
+    $env.PROMPT_INDICATOR = {|| (if ($base | describe) == "closure" { do $base } else { $base }) + $"\u{1b}Ptmux;\u{1b}\u{1b}]133;B\u{07}\u{1b}\\" }
+}

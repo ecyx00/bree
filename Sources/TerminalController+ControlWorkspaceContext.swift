@@ -1,4 +1,3 @@
-import BreeCloud
 import BreeControlSocket
 import BreeCore
 import BreeFoundation
@@ -507,8 +506,7 @@ extension TerminalController: ControlWorkspaceContext {
         if let error = remoteTransports.error { return error }
         let remoteTerminalProfile = remoteTerminalProfileConfiguration(params)
         if let error = remoteTerminalProfile.error { return error }
-        let (transport, terminalTransport, skipDaemonBootstrap) =
-            (remoteTransports.management, remoteTransports.terminal, remoteTransports.skipDaemonBootstrap)
+        let terminalTransport = remoteTransports.terminal
         let terminalProfile = remoteTerminalProfile.profile
         let autoConnect = v2Bool(params, "auto_connect") ?? true
         var relayPort: Int?
@@ -549,37 +547,6 @@ extension TerminalController: ControlWorkspaceContext {
                 )
             }
         }
-        let daemonWebSocketURL = v2RawString(params, "daemon_websocket_url")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let daemonWebSocketToken = v2RawString(params, "daemon_websocket_token")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let daemonWebSocketSessionID = v2RawString(params, "daemon_websocket_session_id")?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let daemonWebSocketExpiresAtUnix = (params["daemon_websocket_expires_at_unix"] as? Int64)
-            ?? Int64((params["daemon_websocket_expires_at_unix"] as? Double) ?? 0)
-        let rawDaemonHeaders = params["daemon_websocket_headers"] as? [String: Any] ?? [:]
-        let daemonWebSocketHeaders = rawDaemonHeaders.reduce(into: [String: String]()) { result, pair in
-            if let value = pair.value as? String {
-                result[pair.key] = value
-            }
-        }
-        let daemonWebSocketEndpoint: WorkspaceRemoteWebSocketDaemonEndpoint?
-        if let daemonWebSocketURL,
-           !daemonWebSocketURL.isEmpty,
-           let daemonWebSocketToken,
-           !daemonWebSocketToken.isEmpty,
-           let daemonWebSocketSessionID,
-           !daemonWebSocketSessionID.isEmpty {
-            daemonWebSocketEndpoint = WorkspaceRemoteWebSocketDaemonEndpoint(
-                url: daemonWebSocketURL,
-                headers: daemonWebSocketHeaders,
-                token: daemonWebSocketToken,
-                sessionId: daemonWebSocketSessionID,
-                expiresAtUnix: daemonWebSocketExpiresAtUnix
-            )
-        } else {
-            daemonWebSocketEndpoint = nil
-        }
         let preserveAfterTerminalExit = v2Bool(params, "preserve_after_terminal_exit") ?? false
         if v2HasNonNullParam(params, "preserve_after_terminal_exit"),
            v2Bool(params, "preserve_after_terminal_exit") == nil {
@@ -600,9 +567,6 @@ extension TerminalController: ControlWorkspaceContext {
         // bree-tui in #13866). A hand-written call still gets a persistent PTY
         // slot, but agent resume bindings are not registered or replayed for it.
         if preserveAfterTerminalExit,
-           transport == .ssh,
-           !skipDaemonBootstrap,
-           daemonWebSocketEndpoint == nil,
            persistentDaemonSlot == nil {
             persistentDaemonSlot = "ssh-\(workspaceId.uuidString.lowercased())"
         }
@@ -619,7 +583,7 @@ extension TerminalController: ControlWorkspaceContext {
 #if DEBUG
         breeDebugLog(
             "workspace.remote.configure.request workspace=\(workspaceId.uuidString.prefix(8)) " +
-            "target=\(destination) transport=\(transport.rawValue) terminalTransport=\(terminalTransport.rawValue) " +
+            "target=\(destination) terminalTransport=\(terminalTransport.rawValue) " +
             "port=\(sshPort.map(String.init) ?? "nil") " +
             "autoConnect=\(autoConnect ? 1 : 0) relayPort=\(relayPort.map(String.init) ?? "nil") " +
             "localSocket=\(localSocketPath?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? localSocketPath! : "nil") " +
@@ -646,7 +610,6 @@ extension TerminalController: ControlWorkspaceContext {
             ]))
         }
         let config = WorkspaceRemoteConfiguration(
-            transport: transport,
             terminalTransport: terminalTransport,
             terminalProfile: terminalProfile,
             destination: destination,
@@ -666,10 +629,8 @@ extension TerminalController: ControlWorkspaceContext {
                 explicitAgentSocketPath: agentSocketPath,
                 explicitAgentSocketPathIsSet: hasExplicitAgentSocketPath
             ),
-            daemonWebSocketEndpoint: daemonWebSocketEndpoint,
             preserveAfterTerminalExit: preserveAfterTerminalExit,
-            persistentDaemonSlot: persistentDaemonSlot?.isEmpty == true ? nil : persistentDaemonSlot,
-            skipDaemonBootstrap: skipDaemonBootstrap
+            persistentDaemonSlot: persistentDaemonSlot?.isEmpty == true ? nil : persistentDaemonSlot
         )
         guard workspace.configureRemoteConnection(
             config,

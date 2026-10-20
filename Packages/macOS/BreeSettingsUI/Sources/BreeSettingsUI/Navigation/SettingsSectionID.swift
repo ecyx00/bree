@@ -14,12 +14,14 @@ import Foundation
 /// `Sections/`.
 public enum SettingsSectionID: String, CaseIterable, Identifiable, Sendable, Hashable {
     case app
+    /// Unread indicators, dock badge, agent alerts and notification sounds.
+    case notifications
+    /// Markdown viewer, file editor and file-opening behavior.
+    case editorViewers
     /// App appearance, accent color, terminal themes, and browser theme.
     case themes
     case terminal
     case textBox
-    /// Cloud Machines: persistent cloud VM plan and entry points.
-    case cloudMachines
     case sidebarAppearance
     case automation
     case browser
@@ -51,10 +53,11 @@ public enum SettingsSectionID: String, CaseIterable, Identifiable, Sendable, Has
     public var title: String {
         switch self {
         case .app: return String(localized: "settings.section.app", defaultValue: "App")
+        case .notifications: return String(localized: "settings.section.notifications", defaultValue: "Notifications")
+        case .editorViewers: return String(localized: "settings.section.editorViewers", defaultValue: "Editor & Viewers")
         case .themes: return String(localized: "settings.section.themes", defaultValue: "Themes")
         case .terminal: return String(localized: "settings.section.terminal", defaultValue: "Terminal")
         case .textBox: return String(localized: "settings.section.textBox", defaultValue: "TextBox")
-        case .cloudMachines: return String(localized: "settings.section.cloudMachines", defaultValue: "Cloud")
         case .sidebarAppearance: return String(localized: "settings.section.sidebarAppearance", defaultValue: "Sidebar")
         case .automation: return String(localized: "settings.section.automation", defaultValue: "Automation")
         case .browser: return String(localized: "settings.section.browser", defaultValue: "Browser")
@@ -73,10 +76,11 @@ public enum SettingsSectionID: String, CaseIterable, Identifiable, Sendable, Has
     public var symbolName: String {
         switch self {
         case .app: return "gearshape"
+        case .notifications: return "bell"
+        case .editorViewers: return "doc.richtext"
         case .themes: return "paintbrush"
         case .terminal: return "terminal"
         case .textBox: return "textformat"
-        case .cloudMachines: return "cloud"
         case .sidebarAppearance: return "sidebar.left"
         case .automation: return "wand.and.sparkles"
         case .browser: return "globe"
@@ -96,11 +100,12 @@ public enum SettingsSectionID: String, CaseIterable, Identifiable, Sendable, Has
     /// by capability rather than only by title.
     public var searchKeywords: String {
         switch self {
-        case .app: return "language workspace notifications menu bar"
+        case .app: return "language workspace menu bar"
+        case .notifications: return "notifications dock badge unread ring flash sound agent alert desktop imessage menu bar"
+        case .editorViewers: return "markdown viewer file editor word wrap syntax line numbers drops open files preview"
         case .themes: return "theme themes color scheme palette ghostty terminal colors appearance light dark accent browser"
         case .terminal: return "scrollbar copy on select agent resume hibernation"
         case .textBox: return "textbox text box rich input prompt default new terminal workspace split tab focus show"
-        case .cloudMachines: return "cloud machines vm virtual machine persistent computer plan upgrade fleet sandbox"
         case .sidebarAppearance: return "sidebar details branches material terminal background"
         case .automation: return "socket integrations hooks ports claude cursor gemini naming auto naming workspace tabs"
         case .browser: return "search engine links history theme"

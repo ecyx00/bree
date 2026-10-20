@@ -13,7 +13,9 @@ Shots (optional): board 1 at open, selected (collapsed, expanded), contents open
 import json, os, re, sys
 from playwright.sync_api import sync_playwright
 
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from check_svg import browser_or_exit
+CHROME = browser_or_exit("ui_polish_check.py")
 fails = []
 
 

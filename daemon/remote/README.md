@@ -8,11 +8,9 @@ Go remote daemon for `bree ssh` bootstrap, capability negotiation, and remote pr
 2. `breed-remote serve --stdio`
 3. `breed-remote serve --stdio --persistent --slot <slot> [--persistent-lease-port <port>]`
 4. `breed-remote serve --persistent-stop --slot <slot>` — internal authenticated slot teardown
-5. `breed-remote serve --ws --auth-lease-file <path> [--rpc-auth-lease-file <path>] [--listen 127.0.0.1:7777]`
-6. `breed-remote cli <command> [args...]` — relay bree commands to the local app over the reverse SSH forward
+5. `breed-remote cli <command> [args...]` — relay bree commands to the local app over the reverse SSH forward
 
-`serve --ws` is explicit opt-in for cloud VM images only. The normal `bree ssh`
-code path uses `serve --stdio --persistent --slot <slot>` over an SSH exec
+The `bree ssh` code path uses `serve --stdio --persistent --slot <slot>` over an SSH exec
 channel. That stdio process is only a proxy to an authenticated per-slot daemon
 with credentials and logs under `~/.bree/daemon/<version>/<slot>/`, so remote PTY sessions
 can survive local surface close, local reconnect, and app relaunch. The persistent
@@ -76,48 +74,6 @@ PTY lifecycle:
 5. Sessions with no attachments keep their last-known size and are reaped by the daemon idle TTL.
 6. Closing the owning workspace sends an authenticated slot-shutdown request, waits a bounded interval for the daemon lock to be released, and removes the relay's shell-state directory. As defense in depth, a daemon launched with `--persistent-lease-port` observes that exact `~/.bree/relay/<port>.slot` lease, exits after the observed lease disappears and stdio disconnects, and removes the matching shell-state directory. Older callers that omit the flag retain the prior behavior without unsafe broad lease scanning.
 
-## Cloud WebSocket PTY transport
-
-The WebSocket PTY transport is locked until the backend writes a short-lived
-lease file. The baked image contains only the daemon binary and service command,
-not user secrets or provider API keys.
-
-Lease file shape:
-
-```json
-{
-  "version": 1,
-  "token_sha256": "<sha256 hex of client attach token>",
-  "expires_at_unix": 1770000000,
-  "session_id": "optional-session-binding",
-  "single_use": true
-}
-```
-
-Client flow:
-
-1. Connect to `/terminal`.
-2. Send a text JSON auth frame first: `{"type":"auth","token":"...","session_id":"...","cols":80,"rows":24}`.
-3. After `{"type":"ready"}`, binary WebSocket frames are terminal input/output.
-4. Text frames after auth are control frames such as `{"type":"resize","cols":120,"rows":40}`.
-
-Security invariants:
-
-1. `serve --ws` fails to start without `--auth-lease-file`.
-2. Missing, expired, wrong-token, or wrong-session leases close with WebSocket
-   policy violation before a PTY is started.
-3. Successful single-use leases are consumed before the shell is spawned, so a
-   replay gets `no active lease`.
-4. Provider traffic auth remains separate. E2B images should be created with
-   `network.allowPublicTraffic: false`, so E2B requires
-   `e2b-traffic-access-token` before the daemon sees the request.
-
-`workspace.remote.configure` contract notes:
-1. `port` / `local_proxy_port` accept integer values and numeric strings; explicit `null` clears each field.
-2. Out-of-range values and invalid types return `invalid_params`.
-3. `local_proxy_port` is an internal deterministic test hook used by bind-conflict regressions.
-4. SSH option precedence checks are case-insensitive; user overrides for `StrictHostKeyChecking` and control-socket keys prevent default injection.
-
 ## Distribution
 
 Release and nightly builds publish prebuilt `breed-remote` binaries on GitHub Releases for:
@@ -142,10 +98,6 @@ The command prints the exact release asset URL, expected SHA-256, local cache st
 ## CLI relay
 
 The `cli` subcommand (or `bree` wrapper/symlink) connects to the local bree app through an SSH reverse forward and relays commands using the v2 JSON-RPC protocol.
-
-Cloud VM images install `/usr/local/bin/bree` as a symlink to `breed-remote`,
-so `bree --help` works before a user-specific SSH bootstrap has written
-`~/.bree/bin/bree`.
 
 Socket discovery order:
 1. `--socket <path>` flag

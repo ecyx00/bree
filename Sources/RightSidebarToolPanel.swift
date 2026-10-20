@@ -200,6 +200,7 @@ final class RightSidebarToolPanel: Panel, ObservableObject {
 struct RightSidebarToolPanelView: View {
     @ObservedObject var panel: RightSidebarToolPanel
     @EnvironmentObject private var tabManager: TabManager
+    @ObservedObject private var attention = AttentionStore.shared
     @Environment(\.breePalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let isFocused: Bool
@@ -247,6 +248,7 @@ struct RightSidebarToolPanelView: View {
                     SessionEntryResumeCoordinator.open(entry, tabManager: tabManager)
                 },
                 activeSessionKeys: SessionEntryResumeCoordinator.inPaneSessionKeys(tabManager: tabManager),
+                agentStates: SessionEntryResumeCoordinator.agentStates(tabManager: tabManager),
                 onFocus: { entry in
                     _ = SessionEntryResumeCoordinator.focusIfActive(entry, tabManager: tabManager)
                 }

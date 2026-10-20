@@ -29,14 +29,25 @@ cd "$(dirname "$SELF")/.."
 BREE_VERSION="$(tr -d '[:space:]' < VERSION)"
 [[ "$BREE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "error: VERSION must be MAJOR.MINOR.PATCH, got '$BREE_VERSION'" >&2; exit 1; }
 
-# Serialize heavy work with every other build and test job on this machine.
-if [[ "${BREE_BUILD_LOCKED:-}" != "1" ]]; then
-  BREE_BUILD_LOCKED=1 exec lockf /tmp/heavy-bench.lock "$SELF" "$@"
-fi
-
 # Xcode build phases need zig and cargo; append so system tools keep priority.
 export PATH="$PATH:/opt/homebrew/opt/zig@0.16/bin:/opt/homebrew/opt/rustup/bin"
 export BREE_GHOSTTYKIT_PREPROVISIONED=1
+
+# Release binaries must not carry the build machine's paths (they embed the user name).
+# Remap every absolute root to a neutral one for Swift, C/ObjC and Rust. Later maps win, so
+# the broad $HOME map comes first. Paths are derived at runtime, never hard-coded.
+REPO_ROOT="$PWD"
+CARGO_ROOT="${CARGO_HOME:-$HOME/.cargo}"
+RUSTUP_ROOT="${RUSTUP_HOME:-$HOME/.rustup}"
+PATH_MAP_PAIRS=("$HOME=/home" "$CARGO_ROOT=/cargo" "$RUSTUP_ROOT=/rustup" "$DERIVED_DATA=/build" "$REPO_ROOT=/bree")
+SWIFT_PATH_FLAGS=""; C_PATH_FLAGS=""; RUST_PATH_FLAGS=""
+for pair in "${PATH_MAP_PAIRS[@]}"; do
+  SWIFT_PATH_FLAGS+=" -file-prefix-map $pair -debug-prefix-map $pair"
+  C_PATH_FLAGS+=" -ffile-prefix-map=$pair"
+  RUST_PATH_FLAGS+=" --remap-path-prefix=$pair"
+done
+export RUSTFLAGS="${RUSTFLAGS:-}${RUST_PATH_FLAGS}"
+export BREE_PATH_MAP_CFLAGS="$C_PATH_FLAGS"
 
 # Production Bree never comes from an incremental build: drop stale intermediates first.
 rm -rf "$DERIVED_DATA/Build/Intermediates.noindex"
@@ -61,6 +72,9 @@ xcodebuild \
   CODE_SIGN_STYLE=Manual \
   CODE_SIGN_ENTITLEMENTS="$PWD/Resources/bree.entitlements" \
   DEVELOPMENT_TEAM= \
+  OTHER_SWIFT_FLAGS="\$(inherited)$SWIFT_PATH_FLAGS" \
+  OTHER_CFLAGS="\$(inherited)$C_PATH_FLAGS" \
+  OTHER_LDFLAGS="\$(inherited) -Wl,-S" \
   clean build
 
 PRODUCTS_DIR="$DERIVED_DATA/Build/Products/Release"

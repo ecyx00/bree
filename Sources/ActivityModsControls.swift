@@ -311,7 +311,8 @@ final class ModAttentionStore: ObservableObject {
     }
 
     private func poll() async {
-        let sessions = AgentLensStore.shared.cards.map { ($0.claudeSessionID ?? $0.id, $0.workspaceID) }
+        let cards = AgentLensStore.shared.cards
+        let sessions = zip(ActivityModsStream.newestIds(cards.map(\.statusSessionIDs)), cards.map(\.workspaceID)).map { ($0, $1) }
         guard !sessions.isEmpty else { return }
         let hidden = Set(UserDefaults.standard.stringArray(forKey: ModFilterRules.hiddenDefaultsKey) ?? [])
         let known = cursors

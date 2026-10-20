@@ -161,9 +161,6 @@ doneFlags:
 		socketPath = readSocketAddrFile()
 		refreshAddr = readSocketAddrFile
 	}
-	if socketPath == "" {
-		socketPath = defaultCloudCLIBridgeSocketIfExists()
-	}
 	// Agent entrypoints fail open: without a relay they launch or answer
 	// normally instead of blocking Claude.
 	switch cmdName {
@@ -1098,7 +1095,7 @@ func currentRelayAuth(socketPath string) *relayAuthState {
 }
 
 // cliSocketPeerUserID reports the user serving a dialed Unix socket.
-var cliSocketPeerUserID = cloudCLIConnectionUserID
+var cliSocketPeerUserID = cliConnectionUserID
 
 // dialSocket connects to the bree socket. If addr contains a colon and doesn't
 // start with '/', it's treated as a TCP address (host:port); otherwise Unix socket.

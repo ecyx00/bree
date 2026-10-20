@@ -3,7 +3,7 @@ import BreeCore
 
 /// Remote-workspace browser settings the Dock forwards to `BrowserPanel`, so
 /// Dock browsers route through the same remote proxy / website-data store as
-/// main-area browser panes instead of navigating locally on a remote/cloud
+/// main-area browser panes instead of navigating locally on a remote/Remote
 /// workspace.
 struct DockRemoteBrowserSettings: Sendable {
     let proxyEndpoint: BrowserProxyEndpoint?

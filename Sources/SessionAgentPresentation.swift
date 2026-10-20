@@ -32,6 +32,9 @@ extension SessionAgent {
         switch self {
         case .registered:
             return assetName == nil ? "person.crop.circle" : nil
+        case .opencode:
+            // The brand PNG is an opaque square that reads as a checkbox once tinted.
+            return "chevron.left.forwardslash.chevron.right"
         default:
             return nil
         }

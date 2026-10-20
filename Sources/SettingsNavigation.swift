@@ -3,10 +3,11 @@ import SwiftUI
 
 enum SettingsNavigationTarget: String, CaseIterable, Identifiable {
     case app
+    case notifications
+    case editorViewers
     case themes
     case terminal
     case textBox
-    case cloudMachines
     case sidebarAppearance
     case automation
     case browser
@@ -25,14 +26,16 @@ enum SettingsNavigationTarget: String, CaseIterable, Identifiable {
         switch self {
         case .app:
             return String(localized: "settings.section.app", defaultValue: "App")
+        case .notifications:
+            return String(localized: "settings.section.notifications", defaultValue: "Notifications")
+        case .editorViewers:
+            return String(localized: "settings.section.editorViewers", defaultValue: "Editor & Viewers")
         case .themes:
             return String(localized: "settings.section.themes", defaultValue: "Themes")
         case .terminal:
             return String(localized: "settings.section.terminal", defaultValue: "Terminal")
         case .textBox:
             return String(localized: "settings.section.textBox", defaultValue: "TextBox")
-        case .cloudMachines:
-            return String(localized: "settings.section.cloudMachines", defaultValue: "Cloud")
         case .workspaceColors:
             return String(localized: "settings.section.workspaceColors", defaultValue: "Workspace Colors")
         case .wiki:
@@ -62,14 +65,16 @@ enum SettingsNavigationTarget: String, CaseIterable, Identifiable {
         switch self {
         case .app:
             return "gearshape"
+        case .notifications:
+            return "bell"
+        case .editorViewers:
+            return "doc.richtext"
         case .themes:
             return "paintbrush"
         case .terminal:
             return "terminal"
         case .textBox:
             return "textformat"
-        case .cloudMachines:
-            return "cloud"
         case .workspaceColors:
             return "paintpalette"
         case .wiki:
@@ -98,15 +103,17 @@ enum SettingsNavigationTarget: String, CaseIterable, Identifiable {
     var searchText: String {
         switch self {
         case .app:
-            return "\(title) language workspace notifications menu bar telemetry default terminal"
+            return "\(title) language workspace menu bar telemetry default terminal"
+        case .notifications:
+            return "\(title) dock badge unread ring flash sound agent alert desktop imessage menu bar"
+        case .editorViewers:
+            return "\(title) markdown viewer file editor word wrap syntax line numbers drops open files preview"
         case .themes:
             return "\(title) theme themes color scheme palette ghostty terminal colors appearance light dark accent browser"
         case .terminal:
             return "\(title) scrollbar auto resume restore reopen relaunch quit sessions agents claude codex opencode rovodev hibernation idle suspend commands approvals prefixes toggle"
         case .textBox:
             return "\(title) textbox text box rich input prompt new terminal workspace split tab focus height"
-        case .cloudMachines:
-            return "\(title) cloud machines vm virtual machine persistent computer plan upgrade fleet"
         case .workspaceColors:
             return "\(title) palette tabs"
         case .wiki:

@@ -91,12 +91,12 @@ final class FileDropHintBadgeView: NSView {
         nil
     }
 
-    func show(text: String, centeredIn targetBounds: CGRect, clippedTo bounds: CGRect, warning: Bool = false) {
+    func show(text: String, centeredIn targetBounds: CGRect, clippedTo bounds: CGRect, warning: Bool = false, minWidth: CGFloat = 140) {
         animationGeneration &+= 1
         label.stringValue = text
         label.textColor = warning ? BreeChromePalette.currentSnapshot.ns.signalError : .labelColor
         label.maximumNumberOfLines = warning ? 0 : 1
-        label.lineBreakMode = warning ? .byWordWrapping : .byClipping
+        label.lineBreakMode = warning ? .byWordWrapping : .byTruncatingTail
         label.setContentCompressionResistancePriority(warning ? .defaultLow : .required, for: .horizontal)
         setAccessibilityElement(true)
         setAccessibilityRole(.staticText)
@@ -108,7 +108,7 @@ final class FileDropHintBadgeView: NSView {
         }
         let fitting = label.intrinsicContentSize
         let maxWidth = max(1, min(bounds.width, warning ? 420 : targetBounds.width) - 16)
-        let width = min(max(140, fitting.width + 20), maxWidth)
+        let width = min(max(minWidth, fitting.width + 20), maxWidth)
         label.preferredMaxLayoutWidth = warning ? max(1, width - 20) : 0
         let textHeight = (text as NSString).boundingRect(
             with: CGSize(width: max(1, width - 20), height: .greatestFiniteMagnitude),

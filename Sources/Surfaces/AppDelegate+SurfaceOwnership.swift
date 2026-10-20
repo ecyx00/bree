@@ -1,5 +1,4 @@
 import Bonsplit
-import BreeCloud
 import BreeSurfaceCatalogModel
 import Foundation
 
@@ -33,12 +32,6 @@ extension AppDelegate {
     func surfaceResourceKind(for panel: (any Panel)?) -> SurfaceResourceKind? {
         guard let panel else { return nil }
         if let resource = SurfaceCatalog.shared.projectionRecord(forPanel: panel.id)?.resource {
-            return resource.kind
-        }
-        if let deferred = panel as? DeferredBrowserPanel {
-            return deferred.sessionPanelSnapshot.browser?.cloudResource?.kind
-        }
-        if let browser = panel as? BrowserPanel, let resource = browser.cloudAccess.resourceID {
             return resource.kind
         }
         return panel.panelType == .terminal ? .terminal : nil

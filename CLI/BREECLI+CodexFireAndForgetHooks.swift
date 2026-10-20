@@ -94,7 +94,7 @@ extension BREECLI {
             telemetry.breadcrumb("codex-hook.native-title-sync.invalid-target")
             return
         }
-        // Capture the Cloud name revision before reading Codex's database.
+        // Capture the remote name revision before reading Codex's database.
         let probe = try? client.sendV2(method: "surface.sync_codex_native_title", params: [
             "probe": true, "workspace_id": workspaceId, "panel_id": surfaceId
         ])
@@ -115,7 +115,6 @@ extension BREECLI {
                 "workspace_id": workspaceId,
                 "panel_id": surfaceId,
                 "title": title,
-                "cloud_name_context": probe?["cloud_name_context"] ?? NSNull()
             ])
             telemetry.breadcrumb("codex-hook.native-title-sync.sent")
         } catch {

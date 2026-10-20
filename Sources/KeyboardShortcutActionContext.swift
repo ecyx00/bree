@@ -207,7 +207,7 @@ extension KeyboardShortcutSettings.Action {
              .switchRightSidebarToActivity, .switchRightSidebarToArchitecture, .fileExplorerOpenSelection,
              .fileExplorerOpenSelectionFinderAlias, .fileExplorerToggleHiddenFiles:
             return .rightSidebarFocus
-        case .renameTab, .renameWorkspace, .sendCtrlFToTerminal, .pasteLastScreenshot, .sizeTerminalToMyWindow, .clearScreenKeepScrollback, .toggleShellEditor:
+        case .renameTab, .renameWorkspace, .sendCtrlFToTerminal, .pasteLastScreenshot, .clearScreenKeepScrollback, .toggleShellEditor:
             return .nonBrowserPanel
         case .focusHistoryBack, .focusHistoryForward:
             return .outsideBrowserPanel

@@ -26,7 +26,7 @@ extension WorkstreamItem {
     }
 }
 
-/// UTF-8 pages keep a single long message below the mobile frame limit.
+/// UTF-8 pages keep a single long message below the remote frame limit.
 /// Offsets refer to bytes; boundaries never split a Unicode scalar.
 public struct WorkstreamTextPage: Sendable {
     public let text: String

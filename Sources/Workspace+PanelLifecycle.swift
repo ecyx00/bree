@@ -469,10 +469,11 @@ extension Workspace {
     ) -> WorkspaceRemoteConfiguration? {
         if closePanel, !preservesTerminalForTransfer {
             journalClosedAgentSessions(panelId: panelId)
+            if origin != "terminal_respawn",
+               (panel as? TerminalPanel)?.surface.tmuxStartCommand != nil {
+                PersistentLocalShell.closeSession(panelId: panelId)
+            }
         }
-        clearCloudMaterializationFailure(surfaceID: panelId)
-        cancelReservedCloudTerminalPane(panelID: panelId)
-        appLinkHandoffCoordinator.cancel(sourcePanelID: panelId)
         if publishSurfaceClosedEvent {
             publishBreeSurfaceClosed(panelId, paneId: paneId, panel: panel, origin: origin)
         }

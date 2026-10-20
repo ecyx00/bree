@@ -32,92 +32,6 @@ struct SSHConfiguredRemoteCommandHostTests {
 
     private let processSupport = CLINotifyProcessIntegrationRegressionTests(invocation: nil)
 
-    /// `bree ssh` default flow (ControlMaster/ControlPath defaults, TTY
-    /// requested): the session belongs to bree-tui, so the CLI must hand the
-    /// host-configured RemoteCommand to `workspace.ssh.open` as the program
-    /// to chain instead of building a local startup script whose
-    /// command-carrying hops could conflict with it.
-    @Test
-    func sshStartupConnectsWhenHostConfigSetsRemoteCommandAndRequestTTY() throws {
-        let cliPath = try processSupport.bundledCLIPath()
-        let socketPath = processSupport.makeSocketPath("ssh-rc-host")
-        let listenerFD = try processSupport.bindUnixSocket(at: socketPath)
-        let workspaceID = "11111111-1111-1111-1111-111111111111"
-        let surfaceID = "22222222-2222-2222-2222-222222222222"
-
-        defer {
-            Darwin.close(listenerFD)
-            unlink(socketPath)
-        }
-
-        let state = MockSocketServerState()
-        let handled = processSupport.startMockServer(listenerFD: listenerFD, state: state) { line in
-            guard let payload = processSupport.jsonObject(line),
-                  let id = payload["id"] as? String,
-                  let method = payload["method"] as? String else {
-                return processSupport.malformedRequestResponse(raw: line)
-            }
-            switch method {
-            case "workspace.ssh.open":
-                return processSupport.v2Response(id: id, ok: true, result: [
-                    "workspace_id": workspaceID,
-                    "workspace_ref": "workspace:9",
-                    "surface_id": surfaceID,
-                    "surface_ref": "surface:9",
-                ])
-            default:
-                return processSupport.v2Response(
-                    id: id,
-                    ok: false,
-                    error: ["code": "unexpected", "message": "Unexpected method \(method)"]
-                )
-            }
-        }
-
-        var environment = ProcessInfo.processInfo.environment
-        environment["BREE_SOCKET_PATH"] = socketPath
-        environment["BREE_CLI_SENTRY_DISABLED"] = "1"
-        environment["BREE_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
-
-        let result = processSupport.runProcess(
-            executablePath: cliPath,
-            arguments: [
-                "ssh",
-                "--no-focus",
-                "--ssh-option", "RemoteCommand=sudo su -",
-                "--ssh-option", "RequestTTY=yes",
-                "bree-remotecommand-host",
-            ],
-            environment: environment,
-            timeout: 20
-        )
-        #expect(
-            XCTWaiter().wait(for: [handled], timeout: 5) == .completed,
-            "cli mock socket was not handled within 5 seconds"
-        )
-        #expect(!result.timedOut, Comment(rawValue: result.stderr))
-        #expect(result.status == 0, Comment(rawValue: result.stderr))
-
-        let requests = state.commands.compactMap(processSupport.jsonObject)
-        let methods = requests.compactMap { $0["method"] as? String }
-        #expect(!methods.contains("workspace.create"), "\(methods)")
-        #expect(!methods.contains("workspace.remote.configure"), "\(methods)")
-        let openParams = try #require(
-            requests.first { $0["method"] as? String == "workspace.ssh.open" }?["params"] as? [String: Any]
-        )
-        #expect(openParams["destination"] as? String == "bree-remotecommand-host")
-        #expect(openParams["focus"] as? Bool == false)
-        #expect(
-            openParams["configured_remote_command"] as? String == "sudo su -",
-            "The host RemoteCommand must reach bree-tui as the program to chain: \(openParams)"
-        )
-        #expect(openParams["initial_command"] == nil, "\(openParams)")
-        #expect(openParams["terminal_profile"] as? String == "shell")
-        let forwardedOptions = openParams["ssh_options"] as? [String] ?? []
-        #expect(forwardedOptions.contains("RemoteCommand=sudo su -"), "\(forwardedOptions)")
-        #expect(forwardedOptions.contains("RequestTTY=yes"), "\(forwardedOptions)")
-    }
-
     @Test(arguments: [false, true])
     func sshStartupFallsBackToUnmanagedSessionWhenConfigurationResolutionIsUnavailable(
         usesMosh: Bool
@@ -175,10 +89,8 @@ struct SSHConfiguredRemoteCommandHostTests {
         if usesMosh {
             arguments += ["--transport", "mosh"]
         }
-        // The unmanaged fallback forces the ssh transport, so a TTY session
-        // would go to bree-tui through `workspace.ssh.open`. Pin
-        // RequestTTY=no to keep covering the startup script this CLI still
-        // builds for sessions without a TTY.
+        // Pin RequestTTY=no to cover the startup script built for sessions
+        // without a TTY.
         arguments += [
             "--ssh-option", "RemoteCommand=printf explicit-fallback",
             "--ssh-option", "BreeTestInvalidOption=yes",
@@ -290,8 +202,7 @@ struct SSHConfiguredRemoteCommandHostTests {
                 "--ssh-option", "HostName=resolved.example",
                 "--ssh-option", "User=remote-token-user",
                 "--ssh-option", "RemoteCommand=\(configuredRemoteCommand)",
-                // TTY sessions go to bree-tui through `workspace.ssh.open`;
-                // the staged startup script is only built without a TTY.
+                // The staged startup script is only built without a TTY.
                 "--ssh-option", "RequestTTY no",
                 "bree-remotecommand-host",
             ],

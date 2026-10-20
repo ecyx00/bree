@@ -48,6 +48,10 @@ public struct CuratedSettingEntry: Sendable, Hashable {
     /// become row anchors.
     public let anchorPath: String?
 
+    /// Page that opens on click when it differs from ``section``. The entry
+    /// id stays `setting:<section>:<id>`, so saved ids and anchors do not change.
+    public let page: SettingsSectionID?
+
     public init(
         section: SettingsSectionID,
         id: String,
@@ -55,7 +59,8 @@ public struct CuratedSettingEntry: Sendable, Hashable {
         detailText: String = "",
         paths: [String] = [],
         synonyms: String,
-        anchorPath: String? = nil
+        anchorPath: String? = nil,
+        page: SettingsSectionID? = nil
     ) {
         self.section = section
         self.id = id
@@ -64,6 +69,7 @@ public struct CuratedSettingEntry: Sendable, Hashable {
         self.paths = paths
         self.synonyms = synonyms
         self.anchorPath = anchorPath
+        self.page = page
     }
 
     /// Projects one catalog descriptor into the Settings search model.

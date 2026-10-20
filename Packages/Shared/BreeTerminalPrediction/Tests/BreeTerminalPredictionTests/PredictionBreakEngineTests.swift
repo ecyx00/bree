@@ -29,7 +29,7 @@ private struct Session {
 }
 
 struct PredictionBreakEngineTests {
-    /// A 1.3 s link with ±400 ms jitter (a congested satellite or mobile link), the latency where prediction matters
+    /// A 1.3 s link with ±400 ms jitter (a congested satellite or remote link), the latency where prediction matters
     /// most. `speculativeLifetime` is a fixed 1.5 s, so every late echo
     /// withdraws what the user saw, counts as a misprediction, and four of
     /// them suspend prediction for 30 s.

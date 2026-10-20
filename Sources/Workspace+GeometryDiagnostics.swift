@@ -1,5 +1,5 @@
 import Foundation
-import BREEMobileCore
+import BreeAppSupport
 
 extension Workspace {
     /// Keeps the originating operation available to synchronous staging calls.

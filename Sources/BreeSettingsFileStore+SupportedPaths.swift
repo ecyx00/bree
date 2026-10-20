@@ -177,6 +177,7 @@ extension BreeSettingsFileStore {
         "fileEditor.tabWidth",
         "fileExplorer.doubleClickAction",
         "agentMessages.enabled",
+        "agentMessages.fileOverlapNotice",
         "shortcuts.bindings",
         "shortcuts.showModifierHoldHints",
     ]

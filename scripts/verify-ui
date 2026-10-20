@@ -1,0 +1,4 @@
+#!/bin/bash
+# Thin wrapper: incremental tagged build + relaunch, then run the given checks (default: title check).
+# Needs /tmp/cr/live.sh and /tmp/cr/s/{cap.py,title.sh} (local scratch helpers).
+exec lockf /tmp/heavy-bench.lock bash /tmp/cr/live.sh "${*:-bash /tmp/cr/s/title.sh}"

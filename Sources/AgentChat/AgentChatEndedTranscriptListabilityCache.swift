@@ -1,4 +1,4 @@
-import BreeMobileHost
+import BreeAgentTranscriptHost
 import Foundation
 
 struct AgentChatEndedTranscriptListabilityCache {

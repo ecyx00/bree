@@ -51,7 +51,7 @@ public final class WorkspaceSurfaceListModel {
     /// the list never drops a panel (legacy `Workspace.orderedPanelIds`).
     ///
     /// This is the single source of truth for serializing panels (e.g. the
-    /// mobile terminal list) and for detecting reorders.
+    /// remote terminal list) and for detecting reorders.
     public var orderedPanelIds: [UUID] {
         guard let tree else { return [] }
         var result: [UUID] = []

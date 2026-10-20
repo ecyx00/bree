@@ -35,12 +35,14 @@ extension BREECLI {
     /// Family text for `bree agent`.
     static var agentUsage: String {
         """
-        Usage: bree agent <message|inbox|messages|explain|hibernate|wake> [args...]
+        Usage: bree agent <message|inbox|messages|explain|wait|hibernate|wake> [args...]
 
           bree agent message ...           Send a message to another local agent
           bree agent inbox                 Read this agent's inbox
           bree agent messages [on|off]     Show or change agent messaging
           bree agent explain               Show why a pane shows its agent state
+          bree agent wait <surface> --until idle|needs-input [--timeout <s>]
+                                           Wait for the agent's state
           bree agent hibernate <surface>   Hibernate one idle, off-screen agent now
           bree agent wake <surface>        Resume a hibernated agent in place
 
@@ -57,6 +59,7 @@ extension BREECLI {
         case "inbox": return agentInboxHelp
         case "messages": return agentMessagesHelp
         case "explain": return agentExplainUsage
+        case "wait": return agentWaitUsage
         default: return nil
         }
     }

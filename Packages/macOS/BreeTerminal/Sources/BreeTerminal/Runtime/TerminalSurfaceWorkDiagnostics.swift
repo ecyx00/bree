@@ -1,4 +1,4 @@
-public import BREEMobileCore
+public import BreeAppSupport
 public import Foundation
 
 /// Injects phase recording without making the terminal package reach into app state.

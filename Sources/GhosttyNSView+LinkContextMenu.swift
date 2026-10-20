@@ -124,7 +124,7 @@ extension GhosttyNSView {
               let terminalSurface else { return }
         // The raw hovered text through the shared coordinator, not the resolved
         // URL and not `NSWorkspace.open`, so the remote-file guard, the
-        // cloud-terminal URL rewrite and the embedded browser's own fallbacks
+        // Remote-terminal URL rewrite and the embedded browser's own fallbacks
         // all apply here exactly as they do to a click.
         _ = TerminalLinkOpenCoordinator().open(
             TerminalLinkOpenRequest(

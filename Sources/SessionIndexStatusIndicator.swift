@@ -7,8 +7,8 @@ struct SessionStatusIndicator: View {
     let model: SessionIndexStatusIndicatorModel
     @Environment(\.breePalette) private var palette
 
-    init(isInPane: Bool, liveStatus: VaultSessionLiveStatus?) {
-        model = .make(isInPane: isInPane, liveStatus: liveStatus)
+    init(isInPane: Bool, liveStatus: VaultSessionLiveStatus?, agentState: AttentionState? = nil) {
+        model = .make(isInPane: isInPane, liveStatus: liveStatus, agentState: agentState)
     }
 
     var body: some View {

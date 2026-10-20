@@ -1,4 +1,5 @@
 import AppKit
+import BreeFoundation
 import Darwin
 import Observation
 import SwiftUI
@@ -21,15 +22,18 @@ final class TaskManagerWindowController: ReleasingWindowController {
     override func makeWindow() -> NSWindow {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 940, height: 600),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.identifier = NSUserInterfaceItemIdentifier("bree.taskManager")
+        // Transparent title band shows the window background, so it matches the body.
+        window.titlebarAppearsTransparent = true
         window.title = String(localized: "taskManager.windowTitle", defaultValue: "Task Manager")
         window.center()
         window.contentView = NSHostingView(rootView: BreeTaskManagerView(model: model))
         AppDelegate.shared?.applyWindowDecorations(to: window)
+        window.backgroundColor = GhosttyApp.shared.defaultBackgroundColor
         return window
     }
 
@@ -58,6 +62,9 @@ final class BreeTaskManagerModel {
     private(set) var isRefreshing = false
     private(set) var errorMessage: String?
     private(set) var sortOrder = BreeTaskManagerSortOrder.defaultOrder {
+        didSet { updateSortedRows() }
+    }
+    var groupsByWorktree = false {
         didSet { updateSortedRows() }
     }
     var includesProcesses = false {
@@ -288,7 +295,7 @@ final class BreeTaskManagerModel {
     }
 
     private func updateSortedRows() {
-        sortedRows = sortOrder.sortedRows(snapshot.rows)
+        sortedRows = sortOrder.sortedRows(groupsByWorktree ? snapshot.worktreeRows : snapshot.rows)
         sortedAgentRows = sortOrder.sortedRows(snapshot.agentRows)
         sortedAggregateRows = sortOrder.sortedRows(snapshot.aggregateRows)
         sortedChildMemoryRows = sortOrder.sortedRows(snapshot.childMemoryRows)

@@ -19,7 +19,7 @@ struct SettingsSectionSlot<Content: View>: View {
     let isActive: Bool
     let isMounted: Bool
     /// `false` renders nothing while unmounted, for sections that hide
-    /// themselves entirely (Cloud before it is available).
+    /// themselves entirely.
     let showsPlaceholder: Bool
     let onMountedAppear: @MainActor () -> Void
     @ViewBuilder let content: () -> Content

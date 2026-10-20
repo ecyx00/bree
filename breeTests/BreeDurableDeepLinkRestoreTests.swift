@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import Bonsplit
 import Combine
@@ -32,7 +31,7 @@ private final class DurableDeepLinkDockTestPanel: Panel, ObservableObject {
 @MainActor
 @Suite("Durable deep link restore")
 struct BreeDurableDeepLinkRestoreTests {
-    private let scheme = AuthEnvironment.callbackScheme
+    private let scheme = AppURLScheme.current
 
     private func parsedRequest(_ link: String) throws -> BreeNavigationURLRequest {
         let url = try #require(URL(string: link))

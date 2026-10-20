@@ -1,5 +1,5 @@
 import BREEAgentLaunch
-import BreeMobileHost
+import BreeAgentTranscriptHost
 import Foundation
 
 /// Child-run (subagent) bookkeeping from the parent session's hook events.

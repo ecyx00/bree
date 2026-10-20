@@ -47,7 +47,7 @@ with Path(__file__).with_name("bytes").open("ab", buffering=0) as output:
                 wait_for(ready.exists, "raw PTY recorder ready")
                 surface = client._call("surface.list", {"workspace_id": workspace})["surfaces"][0]["id"]
                 expected = b""
-                for method in ("terminal.paste", "mobile.terminal.paste"):
+                for method in ("terminal.paste",):
                     text = "literal\n世界 🧪"
                     result = client._call(method, {"workspace_id": workspace, "surface_id": surface,
                                                     "text": text, "submit_key": "none"})

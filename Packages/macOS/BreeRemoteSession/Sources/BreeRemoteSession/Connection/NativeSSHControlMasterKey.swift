@@ -9,8 +9,7 @@ struct NativeSSHControlMasterKey: Hashable, Sendable {
         configuration: WorkspaceRemoteConfiguration,
         sharingOptions: SSHConnectionSharingOptions
     ) {
-        guard configuration.transport == .ssh,
-              let controlPath = sharingOptions.breeOwnedControlPath(in: configuration.sshOptions),
+        guard let controlPath = sharingOptions.breeOwnedControlPath(in: configuration.sshOptions),
               !controlPath.contains("%") else {
             return nil
         }

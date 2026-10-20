@@ -154,6 +154,8 @@ extension TerminalController {
                     "since_ms": v2OrNull(item.sinceMs),
                     "last_prompt": v2OrNull(item.lastPrompt),
                     "last_output": v2OrNull(item.lastOutput),
+                    "needs_approval": item.needsApproval,
+                    "label": v2OrNull(AttentionStyle.word(for: item.state, needsApproval: item.needsApproval)),
                     "changed_count": item.changedCount,
                 ]
             }

@@ -1,4 +1,3 @@
-import BreeCloud
 import class XCTest.XCTestCase
 import func XCTest.XCTSkipIf
 import func XCTest.XCTAssertEqual
@@ -2450,13 +2449,13 @@ final class BrowserSimpleUserGesturePopupRetargetingTests: XCTestCase {
         )
     }
 
-    func testCloudFrontTenantsStayPopup() {
+    func testCDNHostTenantsStayPopup() {
         XCTAssertFalse(
             browserNavigationShouldOpenSimpleUserGesturePopupInCurrentTab(
                 navigationType: .other,
                 requestMethod: "GET",
-                requestURL: URL(string: "https://foo.cloudfront.net/search"),
-                openerURL: URL(string: "https://bar.cloudfront.net/login"),
+                requestURL: URL(string: "https://foo.cdn-host.net/search"),
+                openerURL: URL(string: "https://bar.cdn-host.net/login"),
                 currentEventType: .keyUp,
                 popupFeaturesWereSpecified: false
             )
@@ -5770,30 +5769,6 @@ final class BrowserLinkOpenSettingsTests: XCTestCase {
                 navigationType: .linkActivated,
                 targetFrameIsMain: false
             )
-        )
-        let callbackURL = try XCTUnwrap(
-            URL(string: "\(AuthEnvironment.callbackScheme)://auth-callback?stack_refresh=refresh&stack_access=access")
-        )
-        defaults.set([".*"], forKey: BrowserLinkOpenSettings.browserExternalOpenPatternsKey)
-        XCTAssertFalse(
-            BrowserExternalNavigationHandler(defaults: defaults).shouldOpenExternally(
-                callbackURL,
-                navigationType: .linkActivated,
-                targetFrameIsMain: true
-            )
-        )
-        let siblingCallbackURL = try XCTUnwrap(
-            URL(string: "bree-dev-other://auth-callback?stack_refresh=refresh&stack_access=access")
-        )
-        XCTAssertFalse(
-            BrowserExternalNavigationHandler(defaults: defaults).shouldOpenExternally(
-                siblingCallbackURL,
-                navigationType: .linkActivated,
-                targetFrameIsMain: true
-            )
-        )
-        XCTAssertFalse(
-            BrowserExternalNavigationHandler(defaults: defaults).shouldOpenExternally(siblingCallbackURL)
         )
         let diffViewerURL = try XCTUnwrap(
             URL(string: "bree-diff-viewer://session-token/document")

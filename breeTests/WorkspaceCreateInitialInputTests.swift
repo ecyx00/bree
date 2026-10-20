@@ -11,10 +11,9 @@ import Testing
 
 extension WorkspaceCreateWorkingDirectoryTests {
     @MainActor
-    private final class CloudRoutingProvider: SurfaceProvider {
+    private final class RoutingProvider: SurfaceProvider {
         let machine: SurfaceMachineID
         let info: SurfaceMachineInfo
-        private(set) var createTerminalCallCount = 0
 
         init(machine: SurfaceMachineID) {
             self.machine = machine
@@ -45,25 +44,6 @@ extension WorkspaceCreateWorkingDirectoryTests {
                 resource: resource.id,
                 workspaceID: destination.workspaceID,
                 panelID: UUID()
-            )
-        }
-
-        func createTerminal(
-            command _: [String]?,
-            cwd _: String?,
-            name _: String?,
-            remoteWorkspaceID _: String?
-        ) async throws -> SurfaceResource {
-            createTerminalCallCount += 1
-            return SurfaceResource(
-                id: SurfaceResourceID(machine: machine, kind: .terminal, key: "created"),
-                title: "created",
-                detail: nil,
-                lifecycle: .running,
-                agent: nil,
-                remoteWorkspace: nil,
-                port: nil,
-                url: nil
             )
         }
 
@@ -255,58 +235,6 @@ extension WorkspaceCreateWorkingDirectoryTests {
         #expect(panel.surface.debugInitialInputForTesting() == initialInput)
         #expect(panel.surface.debugInitialCommand() == nil)
         #expect(panel.surface.debugWaitAfterCommand() == false)
-    }
-
-    @Test func explicitInitialInputRejectsCloudProjectedSplit() throws {
-        let catalog = SurfaceCatalog.shared
-        let machine = SurfaceMachineID.cloud("test-cloud-\(UUID().uuidString)")
-        let provider = CloudRoutingProvider(machine: machine)
-        catalog.register(provider)
-
-        // A loading panel is not registered as a local surface, so the synthetic
-        // cloud projection can be installed without replacing a real catalog entry.
-        let workspace = Workspace(initialSurface: .terminal)
-        let sourcePanelID = try #require(workspace.focusedPanelId)
-        defer {
-            workspace.teardownAllPanels()
-            catalog.unregister(machine: machine)
-        }
-        let resource = SurfaceResource(
-            id: SurfaceResourceID(machine: machine, kind: .terminal, key: "source"),
-            title: "cloud shell",
-            detail: "/tmp",
-            lifecycle: .running,
-            agent: nil,
-            remoteWorkspace: SurfaceRemoteWorkspace(
-                id: "workspace",
-                name: "main",
-                index: 0,
-                focused: true
-            ),
-            port: nil,
-            url: nil
-        )
-        catalog.replaceResources([resource], on: machine)
-        catalog.record(
-            SurfaceProjection(
-                resource: resource.id,
-                workspaceID: workspace.id,
-                panelID: sourcePanelID
-            )
-        )
-
-        let input = "printf 'cloud split stays local\\n'\r"
-        let outcome = workspace.newTerminalSplitOutcome(
-            from: sourcePanelID,
-            orientation: .horizontal,
-            focus: false,
-            initialInput: input
-        )
-        guard case .failed = outcome else {
-            Issue.record("Cloud-owned terminal creation must reject unsupported local startup input")
-            return
-        }
-        #expect(provider.createTerminalCallCount == 0)
     }
 
     private static func v2SocketResponse(

@@ -14,8 +14,15 @@ import SwiftUI
 /// Warn Before Quit, Warn Before Closing Tab /
 /// X Button / Hide Tab Close Button, Rename Selects Existing Name,
 /// Command Palette Searches All Surfaces.
+///
+/// One view renders three Settings pages (`Page`), so every value model
+/// stays in one place: App, Notifications, Editor & Viewers. App Icon
+/// lives in Themes.
 @MainActor
 public struct AppSection: View {
+    public enum Page { case app, notifications, editorViewers }
+
+    private let page: Page
     private let catalog: SettingCatalog
     private let hostActions: SettingsHostActions
     /// Bree-only (not bree.json): the pill that shows what a socket client did to the UI.
@@ -25,7 +32,6 @@ public struct AppSection: View {
     // and persisted across renders so the @Observable change tracking
     // actually drives invalidation.
     @State private var language: DefaultsValueModel<AppLanguage>
-    @State private var appIcon: DefaultsValueModel<AppIconMode>
     @State private var placement: DefaultsValueModel<WorkspacePlacement>
     @State private var inheritDir: DefaultsValueModel<Bool>
     @State private var minimalMode: DefaultsValueModel<WorkspacePresentationMode>
@@ -86,13 +92,14 @@ public struct AppSection: View {
         defaultsStore: UserDefaultsSettingsStore,
         catalog: SettingCatalog,
         hostActions: SettingsHostActions,
-        soundAgentCache: NotificationSoundAgentCache = NotificationSoundAgentCache()
+        soundAgentCache: NotificationSoundAgentCache = NotificationSoundAgentCache(),
+        page: Page = .app
     ) {
+        self.page = page
         self.catalog = catalog
         self.hostActions = hostActions
         self.soundAgentCache = soundAgentCache
         _language = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.language))
-        _appIcon = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.appIcon))
         _placement = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.newWorkspacePlacement))
         _inheritDir = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.workspaceInheritWorkingDirectory))
         _minimalMode = State(initialValue: DefaultsValueModel(store: defaultsStore, key: catalog.app.presentationMode))
@@ -161,14 +168,25 @@ public struct AppSection: View {
 
     public var body: some View {
         Group {
-            SettingsSectionHeader(String(localized: "settings.section.app", defaultValue: "App"), section: .app)
-                .accessibilityIdentifier("SettingsAppSection")
-            mainCard
-            advancedNotificationsCard
+            switch page {
+            case .app:
+                SettingsSectionHeader(String(localized: "settings.section.app", defaultValue: "App"), section: .app)
+                    .accessibilityIdentifier("SettingsAppSection")
+                appCard
+            case .notifications:
+                SettingsSectionHeader(String(localized: "settings.section.notifications", defaultValue: "Notifications"), section: .notifications)
+                    .accessibilityIdentifier("SettingsNotificationsSection")
+                notificationsCard
+                advancedNotificationsCard
+            case .editorViewers:
+                SettingsSectionHeader(String(localized: "settings.section.editorViewers", defaultValue: "Editor & Viewers"), section: .editorViewers)
+                    .accessibilityIdentifier("SettingsEditorViewersSection")
+                editorViewersCard
+            }
         }
         .task {
-            startSettingsObservation([language, appIcon, placement, inheritDir, minimalMode, keepWorkspaceOpen, firstClick, focusHistoryIncludesPanesAndTabs, equalizeSplitsOnCreate, fileDrop, preferredEditor, openSupported, openMarkdown, globalFontMagnification, interfaceTextSize, markdownFontSize, markdownFontFamily, markdownMaxWidth, fileEditorWordWrap, fileEditorSyntaxHighlighting, fileEditorLineNumbers, fileEditorIndentGuides, fileEditorCurrentLineHighlight, fileEditorTabWidth, iMessage, reorder, dockBadge, menuBarOnly, showInMenuBar, paneRing, paneFlash, paneFlashDoubleBlink, paneFlashOnTyping, paneFlashThemeColor, desktopNotifications, agentPermissionPrompt, agentTurnComplete, agentIdleReminder, soundName, soundWhenFocused, soundCommand, customSoundFile, soundOverrides, confirmQuit, warnCloseTab, warnCloseX, warnCloseWorkspace, warnCloseWindow, hideCloseButton, renameSelects, paletteAllSurfaces])
-            await soundAgentCache.loadIfNeeded { await hostActions.notificationSoundAgentOptions() }
+            startSettingsObservation([language, placement, inheritDir, minimalMode, keepWorkspaceOpen, firstClick, focusHistoryIncludesPanesAndTabs, equalizeSplitsOnCreate, fileDrop, preferredEditor, openSupported, openMarkdown, globalFontMagnification, interfaceTextSize, markdownFontSize, markdownFontFamily, markdownMaxWidth, fileEditorWordWrap, fileEditorSyntaxHighlighting, fileEditorLineNumbers, fileEditorIndentGuides, fileEditorCurrentLineHighlight, fileEditorTabWidth, iMessage, reorder, dockBadge, menuBarOnly, showInMenuBar, paneRing, paneFlash, paneFlashDoubleBlink, paneFlashOnTyping, paneFlashThemeColor, desktopNotifications, agentPermissionPrompt, agentTurnComplete, agentIdleReminder, soundName, soundWhenFocused, soundCommand, customSoundFile, soundOverrides, confirmQuit, warnCloseTab, warnCloseX, warnCloseWorkspace, warnCloseWindow, hideCloseButton, renameSelects, paletteAllSurfaces])
+            if page == .notifications { await soundAgentCache.loadIfNeeded { await hostActions.notificationSoundAgentOptions() } }
             if languageAtAppear == nil { languageAtAppear = language.current }
         }
         .onChange(of: soundOverrides.current) { _, newValue in
@@ -200,7 +218,7 @@ public struct AppSection: View {
     }
 
     @ViewBuilder
-    private var mainCard: some View {
+    private var appCard: some View {
         SettingsCard {
             // Language
             SettingsCardRow(
@@ -217,14 +235,6 @@ public struct AppSection: View {
                 .labelsHidden()
                 .pickerStyle(.menu)
             }
-            SettingsCardDivider()
-
-            // App Icon — three-up visual picker mirroring legacy
-            AppIconPickerRow(
-                selectedMode: appIcon.current,
-                onSelect: { appIcon.set($0) }
-            )
-            .settingsSearchAnchors(["setting:app:app-icon"])
             SettingsCardDivider()
 
             // New Workspace Placement
@@ -349,50 +359,6 @@ public struct AppSection: View {
             }
             SettingsCardDivider()
 
-            // File Drops
-            SettingsCardRow(
-                configurationReview: .settingsOnly,
-                searchAnchorID: "setting:app:file-drops",
-                String(localized: "settings.app.fileDrop.defaultBehavior", defaultValue: "File Drops"),
-                subtitle: String(localized: "settings.app.fileDrop.defaultBehavior.subtitle", defaultValue: "Choose what dropping files on a terminal or editor does. Holding Shift while dragging does the other."),
-                controlWidth: Self.columnWidth
-            ) {
-                Picker("", selection: Binding(get: { fileDrop.current }, set: { fileDrop.set($0) })) {
-                    Text(String(localized: "settings.app.fileDrop.defaultBehavior.text", defaultValue: "Drop path text")).tag(FileDropDefaultBehavior.text)
-                    Text(String(localized: "settings.app.fileDrop.defaultBehavior.preview", defaultValue: "Open file preview")).tag(FileDropDefaultBehavior.preview)
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-            }
-            SettingsCardDivider()
-
-            // Preferred Editor
-            SettingsCardRow(
-                configurationReview: .json("app.preferredEditor"),
-                String(localized: "settings.app.preferredEditor", defaultValue: "Open Files With"),
-                subtitle: String(localized: "settings.app.preferredEditor.subtitle", defaultValue: "Command used when Cmd-click file previews are disabled or a file is unsupported. Leave empty for system default.")
-            ) {
-                TextField(
-                    String(localized: "settings.app.preferredEditor.placeholder", defaultValue: "e.g. code, zed, subl"),
-                    text: Binding(get: { preferredEditor.current }, set: { preferredEditor.set($0) })
-                )
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 200)
-            }
-            SettingsCardDivider()
-
-            // Open Supported Files in bree
-            SettingsCardRow(
-                configurationReview: .json("app.openSupportedFilesInBree"),
-                String(localized: "settings.app.openSupportedFilesInBree", defaultValue: "Open Supported Files in Bree"),
-                subtitle: String(localized: "settings.app.openSupportedFilesInBree.subtitle", defaultValue: "Cmd-clicking readable files opens text, code, PDFs, images, audio, video, and Quick Look previews in Bree.")
-            ) {
-                Toggle("", isOn: Binding(get: { openSupported.current }, set: { openSupported.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-            }
-            SettingsCardDivider()
-
             // Terminal Config (host action)
             SettingsCardRow(
                 configurationReview: .action,
@@ -435,81 +401,6 @@ public struct AppSection: View {
             }
             SettingsCardDivider()
 
-            // Open Markdown in bree Viewer
-            SettingsCardRow(
-                configurationReview: .json("app.openMarkdownInBreeViewer"),
-                String(localized: "settings.app.openMarkdownInBreeViewer", defaultValue: "Open Markdown in Bree Viewer"),
-                subtitle: String(localized: "settings.app.openMarkdownInBreeViewer.subtitle", defaultValue: "When supported file routing is on, Cmd-clicking Markdown files opens the rendered Bree markdown viewer instead of the generic file preview.")
-            ) {
-                Toggle("", isOn: Binding(get: { openMarkdown.current }, set: { openMarkdown.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-            }
-            SettingsCardDivider()
-
-            // Markdown Viewer Font Size
-            SettingsCardRow(
-                configurationReview: .json("markdown.fontSize"),
-                String(localized: "settings.app.markdownFontSize", defaultValue: "Markdown Viewer Font Size"),
-                subtitle: String(localized: "settings.app.markdownFontSize.subtitle", defaultValue: "Default body font size, in points, for newly opened markdown viewers. Zoom a viewer live with Cmd-+ / Cmd-- / Cmd-0."),
-                controlWidth: Self.columnWidth
-            ) {
-                Stepper(
-                    value: Binding(get: { markdownFontSize.current }, set: { markdownFontSize.set($0) }),
-                    in: 8...96
-                ) {
-                    Text(verbatim: "\(markdownFontSize.current)")
-                        .monospacedDigit()
-                        .frame(width: 28, alignment: .trailing)
-                }
-                .controlSize(.small)
-                .accessibilityIdentifier("SettingsMarkdownFontSizeStepper")
-                .accessibilityLabel(
-                    String(localized: "settings.app.markdownFontSize", defaultValue: "Markdown Viewer Font Size")
-                )
-            }
-            SettingsCardDivider()
-
-            // Markdown Viewer Max Width
-            SettingsCardRow(
-                configurationReview: .json("markdown.maxWidth"),
-                String(localized: "settings.app.markdownMaxWidth", defaultValue: "Markdown Viewer Max Width"),
-                subtitle: String(localized: "settings.app.markdownMaxWidth.subtitle", defaultValue: "Default maximum reading column width, in CSS pixels, for newly opened markdown viewers."),
-                controlWidth: Self.columnWidth
-            ) {
-                Stepper(
-                    value: Binding(get: { markdownMaxWidth.current }, set: { markdownMaxWidth.set($0) }),
-                    in: 320...2400,
-                    step: 20
-                ) {
-                    Text(verbatim: "\(markdownMaxWidth.current)")
-                        .monospacedDigit()
-                        .frame(width: 44, alignment: .trailing)
-                }
-                .controlSize(.small)
-                .accessibilityIdentifier("SettingsMarkdownMaxWidthStepper")
-                .accessibilityLabel(
-                    String(localized: "settings.app.markdownMaxWidth", defaultValue: "Markdown Viewer Max Width")
-                )
-            }
-            SettingsCardDivider()
-
-            // Markdown Viewer Font Family
-            SettingsCardRow(
-                configurationReview: .json("markdown.fontFamily"),
-                String(localized: "settings.app.markdownFontFamily", defaultValue: "Markdown Viewer Font"),
-                subtitle: String(localized: "settings.app.markdownFontFamily.subtitle", defaultValue: "Default body font family for newly opened markdown viewers. Leave empty for the system markdown font stack.")
-            ) {
-                TextField(
-                    String(localized: "settings.app.markdownFontFamily.placeholder", defaultValue: "System"),
-                    text: Binding(get: { markdownFontFamily.current }, set: { markdownFontFamily.set($0) })
-                )
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 200)
-                .accessibilityIdentifier("SettingsMarkdownFontFamilyTextField")
-            }
-            SettingsCardDivider()
-
             SettingsCardRow(
                 String(localized: "settings.app.remoteActionToast", defaultValue: "Show Agent Actions"),
                 subtitle: String(localized: "settings.app.remoteActionToast.subtitle", defaultValue: "Show a short note in the window when a command-line client or agent types, focuses, opens or closes something. It never shows what was typed.")
@@ -518,118 +409,6 @@ public struct AppSection: View {
                     .labelsHidden()
                     .controlSize(.small)
                     .accessibilityIdentifier("SettingsRemoteActionToastToggle")
-            }
-            SettingsCardDivider()
-
-            // File Editor Word Wrap
-            SettingsCardRow(
-                configurationReview: .json("fileEditor.wordWrap"),
-                String(localized: "settings.app.fileEditorWordWrap", defaultValue: "File Editor Word Wrap"),
-                subtitle: String(localized: "settings.app.fileEditorWordWrap.subtitle", defaultValue: "Wrap long lines at the editor's right edge instead of scrolling horizontally. Applies to the plain-text file editor.")
-            ) {
-                Toggle("", isOn: Binding(get: { fileEditorWordWrap.current }, set: { fileEditorWordWrap.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-                    .accessibilityIdentifier("SettingsFileEditorWordWrapToggle")
-            }
-            SettingsCardDivider()
-
-            SettingsCardRow(
-                configurationReview: .json("fileEditor.syntaxHighlighting"),
-                String(localized: "settings.app.fileEditorSyntaxHighlighting", defaultValue: "File Editor Syntax Highlighting"),
-                subtitle: String(localized: "settings.app.fileEditorSyntaxHighlighting.subtitle", defaultValue: "Color keywords, strings, and other tokens in the built-in file editor.")
-            ) {
-                Toggle("", isOn: Binding(get: { fileEditorSyntaxHighlighting.current }, set: { fileEditorSyntaxHighlighting.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-                    .accessibilityIdentifier("SettingsFileEditorSyntaxHighlightingToggle")
-            }
-            SettingsCardDivider()
-
-            SettingsCardRow(
-                configurationReview: .json("fileEditor.lineNumbers"),
-                String(localized: "settings.app.fileEditorLineNumbers", defaultValue: "File Editor Line Numbers"),
-                subtitle: String(localized: "settings.app.fileEditorLineNumbers.subtitle", defaultValue: "Show a line-number gutter beside the built-in file editor.")
-            ) {
-                Toggle("", isOn: Binding(get: { fileEditorLineNumbers.current }, set: { fileEditorLineNumbers.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-                    .accessibilityIdentifier("SettingsFileEditorLineNumbersToggle")
-            }
-            SettingsCardDivider()
-
-            SettingsCardRow(
-                configurationReview: .json("fileEditor.indentGuides"),
-                String(localized: "settings.app.fileEditorIndentGuides", defaultValue: "File Editor Indent Guides"),
-                subtitle: String(localized: "settings.app.fileEditorIndentGuides.subtitle", defaultValue: "Draw vertical guides at indent columns in the built-in file editor.")
-            ) {
-                Toggle("", isOn: Binding(get: { fileEditorIndentGuides.current }, set: { fileEditorIndentGuides.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-                    .accessibilityIdentifier("SettingsFileEditorIndentGuidesToggle")
-            }
-            SettingsCardDivider()
-
-            SettingsCardRow(
-                configurationReview: .json("fileEditor.currentLineHighlight"),
-                String(localized: "settings.app.fileEditorCurrentLineHighlight", defaultValue: "File Editor Current Line Highlight"),
-                subtitle: String(localized: "settings.app.fileEditorCurrentLineHighlight.subtitle", defaultValue: "Highlight the line that contains the caret when nothing is selected.")
-            ) {
-                Toggle("", isOn: Binding(get: { fileEditorCurrentLineHighlight.current }, set: { fileEditorCurrentLineHighlight.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-                    .accessibilityIdentifier("SettingsFileEditorCurrentLineHighlightToggle")
-            }
-            SettingsCardDivider()
-
-            SettingsCardRow(
-                configurationReview: .json("fileEditor.tabWidth"),
-                String(localized: "settings.app.fileEditorTabWidth", defaultValue: "File Editor Tab Width"),
-                subtitle: String(localized: "settings.app.fileEditorTabWidth.subtitle", defaultValue: "Columns per tab stop, used by indent guides.")
-            ) {
-                Stepper(
-                    value: Binding(
-                        get: { fileEditorTabWidth.current },
-                        set: { fileEditorTabWidth.set($0) }
-                    ),
-                    in: FileEditorCatalogSection.supportedTabWidthRange
-                ) {
-                    Text("\(fileEditorTabWidth.current)")
-                        .monospacedDigit()
-                }
-                .accessibilityLabel(
-                    String(localized: "settings.app.fileEditorTabWidth", defaultValue: "File Editor Tab Width")
-                )
-                .accessibilityIdentifier("SettingsFileEditorTabWidthStepper")
-            }
-            SettingsCardDivider()
-
-            // Reorder on Notification
-            SettingsCardRow(
-                configurationReview: .json("app.reorderOnNotification"),
-                String(localized: "settings.app.reorderOnNotification", defaultValue: "Reorder on Notification"),
-                subtitle: String(localized: "settings.app.reorderOnNotification.modeSubtitle", defaultValue: "Move workspaces to the top when they receive a notification. Agent Activity also moves them when you send a prompt or an agent finishes a turn, needs input, or fails, but never while you point at the sidebar. Off keeps shortcut positions stable."),
-                controlWidth: Self.columnWidth
-            ) {
-                Picker("", selection: Binding(get: { reorder.current }, set: { reorder.set($0) })) {
-                    Text(String(localized: "settings.app.reorderOnNotification.mode.off", defaultValue: "Off")).tag(WorkspaceAutoReorderMode.off)
-                    Text(String(localized: "settings.app.reorderOnNotification.mode.notifications", defaultValue: "Notifications")).tag(WorkspaceAutoReorderMode.notifications)
-                    Text(String(localized: "settings.app.reorderOnNotification.mode.agentActivity", defaultValue: "Agent Activity")).tag(WorkspaceAutoReorderMode.agentActivity)
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-            }
-            SettingsCardDivider()
-
-            // Dock Badge
-            SettingsCardRow(
-                configurationReview: .json("notifications.dockBadge"),
-                String(localized: "settings.app.dockBadge", defaultValue: "Dock Badge"),
-                subtitle: String(localized: "settings.app.dockBadge.subtitle", defaultValue: "Show unread count on app icon (Dock and Cmd+Tab).")
-            ) {
-                Toggle("", isOn: Binding(get: { dockBadge.current }, set: { dockBadge.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
             }
             SettingsCardDivider()
 
@@ -647,145 +426,6 @@ public struct AppSection: View {
                     .labelsHidden()
                     .controlSize(.small)
                     .accessibilityIdentifier("SettingsMenuBarOnlyToggle")
-            }
-            SettingsCardDivider()
-
-            // Show in Menu Bar
-            SettingsCardRow(
-                configurationReview: .json("notifications.showInMenuBar"),
-                String(localized: "settings.app.showInMenuBar", defaultValue: "Show in Menu Bar"),
-                subtitle: String(localized: "settings.app.showInMenuBar.subtitle", defaultValue: "Keep Bree in the menu bar for unread notifications and quick actions.")
-            ) {
-                Toggle("", isOn: Binding(get: { showInMenuBar.current }, set: { showInMenuBar.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-            }
-            .disabled(menuBarOnly.current)
-            SettingsCardDivider()
-
-            // Unread Pane Ring
-            SettingsCardRow(
-                configurationReview: .json("notifications.unreadPaneRing"),
-                String(localized: "settings.notifications.paneRing.title", defaultValue: "Unread Pane Ring"),
-                subtitle: String(localized: "settings.notifications.paneRing.subtitle", defaultValue: "Show a ring around panes with unread notifications.")
-            ) {
-                Toggle("", isOn: Binding(get: { paneRing.current }, set: { paneRing.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-            }
-            SettingsCardDivider()
-
-            // Pane Flash
-            SettingsCardRow(
-                configurationReview: .json("notifications.paneFlash"),
-                String(localized: "settings.notifications.paneFlash.title", defaultValue: "Pane Flash"),
-                subtitle: String(localized: "settings.notifications.paneFlash.subtitle", defaultValue: "Briefly flash an outline when Bree highlights a pane.")
-            ) {
-                Toggle("", isOn: Binding(get: { paneFlash.current }, set: { paneFlash.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-            }
-            SettingsCardDivider()
-
-            // Agent: Needs Permission
-            SettingsCardRow(
-                configurationReview: .json("notifications.agentPermissionPrompt"),
-                String(localized: "settings.notifications.agentPermissionPrompt.title", defaultValue: "Agent Needs Permission"),
-                subtitle: String(localized: "settings.notifications.agentPermissionPrompt.subtitle", defaultValue: "Notify when an agent is blocked waiting for your permission to run a tool.")
-            ) {
-                Toggle("", isOn: Binding(get: { agentPermissionPrompt.current }, set: { agentPermissionPrompt.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-            }
-            SettingsCardDivider()
-
-            // Agent: Turn Complete
-            SettingsCardRow(
-                configurationReview: .json("notifications.agentTurnComplete"),
-                String(localized: "settings.notifications.agentTurnComplete.title", defaultValue: "Agent Finished"),
-                subtitle: String(localized: "settings.notifications.agentTurnComplete.subtitle", defaultValue: "When to notify that an agent finished. When idle waits until background tasks and scheduled wakeups drain.")
-            ) {
-                Picker("", selection: Binding(get: { agentTurnComplete.current }, set: { agentTurnComplete.set($0) })) {
-                    Text(String(localized: "settings.notifications.agentTurnComplete.option.whenIdle", defaultValue: "When idle")).tag("whenIdle")
-                    Text(String(localized: "settings.notifications.agentTurnComplete.option.always", defaultValue: "Always")).tag("always")
-                    Text(String(localized: "settings.notifications.agentTurnComplete.option.never", defaultValue: "Never")).tag("never")
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-            }
-            SettingsCardDivider()
-
-            // Agent: Idle Reminder
-            SettingsCardRow(
-                configurationReview: .json("notifications.agentIdleReminder"),
-                String(localized: "settings.notifications.agentIdleReminder.title", defaultValue: "Agent Waiting for Input"),
-                subtitle: String(localized: "settings.notifications.agentIdleReminder.subtitle", defaultValue: "Notify when an agent has been idle waiting for your input. Suppressed while background work is still running.")
-            ) {
-                Toggle("", isOn: Binding(get: { agentIdleReminder.current }, set: { agentIdleReminder.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-            }
-
-            // Desktop Notifications
-            SettingsCardDivider()
-            DesktopNotificationsSettingsRow(
-                state: desktopNotifications.current,
-                requestAuthorization: { hostActions.requestNotificationAuthorization() },
-                openSystemSettings: { hostActions.openSystemNotificationSettings() },
-                sendTest: { hostActions.sendTestNotification() }
-            )
-            SettingsCardDivider()
-
-            NotificationSoundGlobalRow(
-                soundModel: soundName,
-                customFileModel: customSoundFile,
-                hostActions: hostActions
-            )
-            SettingsCardDivider()
-
-            SettingsCardRow(
-                configurationReview: .json("notifications.soundWhenFocused"),
-                String(localized: "settings.notifications.soundWhenFocused.title", defaultValue: "Sound for Focused Pane"),
-                subtitle: String(localized: "settings.notifications.soundWhenFocused.subtitle", defaultValue: "Play the notification sound even when the pane that notified is already focused. When off, a focused pane shows its ring without a sound.")
-            ) {
-                Toggle("", isOn: Binding(get: { soundWhenFocused.current }, set: { soundWhenFocused.set($0) }))
-                    .labelsHidden()
-                    .controlSize(.small)
-            }
-            SettingsCardDivider()
-
-            SettingsCardRow(
-                configurationReview: .json("notifications.soundOverrides"),
-                String(localized: "settings.notifications.soundOverrides.title", defaultValue: "Per-Agent Notification Sounds"),
-                subtitle: String(localized: "settings.notifications.soundOverrides.subtitle", defaultValue: "Override the sound for a specific agent and alert type."),
-                verticalAlignment: .top,
-                trailingFillsWidth: true
-            ) {
-                NotificationSoundOverridesView(
-                    parsedOverrides: soundOverridesModel.parsed ?? .empty,
-                    isPersistedValueMalformed: soundOverridesModel.isMalformed,
-                    onChange: { value, agentID, alertType in
-                        guard var overrides = NotificationSoundOverrides(
-                            jsonString: soundOverrides.current
-                        ) else {
-                            // Never replace a malformed persisted matrix with
-                            // an empty one while editing a different cell.
-                            return
-                        }
-                        guard overrides.set(value, forAgentID: agentID, alertType: alertType) else {
-                            return
-                        }
-                        let encoded = overrides.jsonString
-                        // A non-empty matrix must never be replaced by the
-                        // serializer's failure sentinel when a cell contains
-                        // an oversized value.
-                        guard overrides.isEmpty || encoded != "{}" else { return }
-                        soundOverrides.set(encoded)
-                    },
-                    hostActions: hostActions,
-                    agents: soundAgentCache.agents ?? []
-                )
-                .frame(minWidth: 510, maxWidth: .infinity, alignment: .leading)
             }
             SettingsCardDivider()
 
@@ -898,6 +538,386 @@ public struct AppSection: View {
             }
         }
     }
+
+    @ViewBuilder
+    private var notificationsCard: some View {
+        SettingsCard {
+            // Reorder on Notification
+            SettingsCardRow(
+                configurationReview: .json("app.reorderOnNotification"),
+                String(localized: "settings.app.reorderOnNotification", defaultValue: "Reorder on Notification"),
+                subtitle: String(localized: "settings.app.reorderOnNotification.modeSubtitle", defaultValue: "Move workspaces to the top when they receive a notification. Agent Activity also moves them when you send a prompt or an agent finishes a turn, needs input, or fails, but never while you point at the sidebar. Off keeps shortcut positions stable."),
+                controlWidth: Self.columnWidth
+            ) {
+                Picker("", selection: Binding(get: { reorder.current }, set: { reorder.set($0) })) {
+                    Text(String(localized: "settings.app.reorderOnNotification.mode.off", defaultValue: "Off")).tag(WorkspaceAutoReorderMode.off)
+                    Text(String(localized: "settings.app.reorderOnNotification.mode.notifications", defaultValue: "Notifications")).tag(WorkspaceAutoReorderMode.notifications)
+                    Text(String(localized: "settings.app.reorderOnNotification.mode.agentActivity", defaultValue: "Agent Activity")).tag(WorkspaceAutoReorderMode.agentActivity)
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+            SettingsCardDivider()
+
+            // Dock Badge
+            SettingsCardRow(
+                configurationReview: .json("notifications.dockBadge"),
+                String(localized: "settings.app.dockBadge", defaultValue: "Dock Badge"),
+                subtitle: String(localized: "settings.app.dockBadge.subtitle", defaultValue: "Show unread count on app icon (Dock and Cmd+Tab).")
+            ) {
+                Toggle("", isOn: Binding(get: { dockBadge.current }, set: { dockBadge.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+            SettingsCardDivider()
+
+            // Show in Menu Bar
+            SettingsCardRow(
+                configurationReview: .json("notifications.showInMenuBar"),
+                String(localized: "settings.app.showInMenuBar", defaultValue: "Show in Menu Bar"),
+                subtitle: String(localized: "settings.app.showInMenuBar.subtitle", defaultValue: "Keep Bree in the menu bar for unread notifications and quick actions.")
+            ) {
+                Toggle("", isOn: Binding(get: { showInMenuBar.current }, set: { showInMenuBar.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+            .disabled(menuBarOnly.current)
+            SettingsCardDivider()
+
+            // Unread Pane Ring
+            SettingsCardRow(
+                configurationReview: .json("notifications.unreadPaneRing"),
+                String(localized: "settings.notifications.paneRing.title", defaultValue: "Unread Pane Ring"),
+                subtitle: String(localized: "settings.notifications.paneRing.subtitle", defaultValue: "Show a ring around panes with unread notifications.")
+            ) {
+                Toggle("", isOn: Binding(get: { paneRing.current }, set: { paneRing.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+            SettingsCardDivider()
+
+            // Pane Flash
+            SettingsCardRow(
+                configurationReview: .json("notifications.paneFlash"),
+                String(localized: "settings.notifications.paneFlash.title", defaultValue: "Pane Flash"),
+                subtitle: String(localized: "settings.notifications.paneFlash.subtitle", defaultValue: "Briefly flash an outline when Bree highlights a pane.")
+            ) {
+                Toggle("", isOn: Binding(get: { paneFlash.current }, set: { paneFlash.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+            SettingsCardDivider()
+
+            // Agent: Needs Permission
+            SettingsCardRow(
+                configurationReview: .json("notifications.agentPermissionPrompt"),
+                String(localized: "settings.notifications.agentPermissionPrompt.title", defaultValue: "Agent Needs Permission"),
+                subtitle: String(localized: "settings.notifications.agentPermissionPrompt.subtitle", defaultValue: "Notify when an agent is blocked waiting for your permission to run a tool.")
+            ) {
+                Toggle("", isOn: Binding(get: { agentPermissionPrompt.current }, set: { agentPermissionPrompt.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+            SettingsCardDivider()
+
+            // Agent: Turn Complete
+            SettingsCardRow(
+                configurationReview: .json("notifications.agentTurnComplete"),
+                String(localized: "settings.notifications.agentTurnComplete.title", defaultValue: "Agent Finished"),
+                subtitle: String(localized: "settings.notifications.agentTurnComplete.subtitle", defaultValue: "When to notify that an agent finished. When idle waits until background tasks and scheduled wakeups drain.")
+            ) {
+                Picker("", selection: Binding(get: { agentTurnComplete.current }, set: { agentTurnComplete.set($0) })) {
+                    Text(String(localized: "settings.notifications.agentTurnComplete.option.whenIdle", defaultValue: "When idle")).tag("whenIdle")
+                    Text(String(localized: "settings.notifications.agentTurnComplete.option.always", defaultValue: "Always")).tag("always")
+                    Text(String(localized: "settings.notifications.agentTurnComplete.option.never", defaultValue: "Never")).tag("never")
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+            SettingsCardDivider()
+
+            // Agent: Idle Reminder
+            SettingsCardRow(
+                configurationReview: .json("notifications.agentIdleReminder"),
+                String(localized: "settings.notifications.agentIdleReminder.title", defaultValue: "Agent Waiting for Input"),
+                subtitle: String(localized: "settings.notifications.agentIdleReminder.subtitle", defaultValue: "Notify when an agent has been idle waiting for your input. Suppressed while background work is still running.")
+            ) {
+                Toggle("", isOn: Binding(get: { agentIdleReminder.current }, set: { agentIdleReminder.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+
+            // Desktop Notifications
+            SettingsCardDivider()
+
+            DesktopNotificationsSettingsRow(
+                state: desktopNotifications.current,
+                requestAuthorization: { hostActions.requestNotificationAuthorization() },
+                openSystemSettings: { hostActions.openSystemNotificationSettings() },
+                sendTest: { hostActions.sendTestNotification() }
+            )
+            SettingsCardDivider()
+
+            NotificationSoundGlobalRow(
+                soundModel: soundName,
+                customFileModel: customSoundFile,
+                hostActions: hostActions
+            )
+            SettingsCardDivider()
+
+            SettingsCardRow(
+                configurationReview: .json("notifications.soundWhenFocused"),
+                String(localized: "settings.notifications.soundWhenFocused.title", defaultValue: "Sound for Focused Pane"),
+                subtitle: String(localized: "settings.notifications.soundWhenFocused.subtitle", defaultValue: "Play the notification sound even when the pane that notified is already focused. When off, a focused pane shows its ring without a sound.")
+            ) {
+                Toggle("", isOn: Binding(get: { soundWhenFocused.current }, set: { soundWhenFocused.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+            SettingsCardDivider()
+
+            SettingsCardRow(
+                configurationReview: .json("notifications.soundOverrides"),
+                String(localized: "settings.notifications.soundOverrides.title", defaultValue: "Per-Agent Notification Sounds"),
+                subtitle: String(localized: "settings.notifications.soundOverrides.subtitle", defaultValue: "Override the sound for a specific agent and alert type."),
+                verticalAlignment: .top,
+                trailingFillsWidth: true
+            ) {
+                NotificationSoundOverridesView(
+                    parsedOverrides: soundOverridesModel.parsed ?? .empty,
+                    isPersistedValueMalformed: soundOverridesModel.isMalformed,
+                    onChange: { value, agentID, alertType in
+                        guard var overrides = NotificationSoundOverrides(
+                            jsonString: soundOverrides.current
+                        ) else {
+                            // Never replace a malformed persisted matrix with
+                            // an empty one while editing a different cell.
+                            return
+                        }
+                        guard overrides.set(value, forAgentID: agentID, alertType: alertType) else {
+                            return
+                        }
+                        let encoded = overrides.jsonString
+                        // A non-empty matrix must never be replaced by the
+                        // serializer's failure sentinel when a cell contains
+                        // an oversized value.
+                        guard overrides.isEmpty || encoded != "{}" else { return }
+                        soundOverrides.set(encoded)
+                    },
+                    hostActions: hostActions,
+                    agents: soundAgentCache.agents ?? []
+                )
+                .frame(minWidth: 510, maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var editorViewersCard: some View {
+        SettingsCard {
+            // File Drops
+            SettingsCardRow(
+                configurationReview: .settingsOnly,
+                searchAnchorID: "setting:app:file-drops",
+                String(localized: "settings.app.fileDrop.defaultBehavior", defaultValue: "File Drops"),
+                subtitle: String(localized: "settings.app.fileDrop.defaultBehavior.subtitle", defaultValue: "Choose what dropping files on a terminal or editor does. Holding Shift while dragging does the other."),
+                controlWidth: Self.columnWidth
+            ) {
+                Picker("", selection: Binding(get: { fileDrop.current }, set: { fileDrop.set($0) })) {
+                    Text(String(localized: "settings.app.fileDrop.defaultBehavior.text", defaultValue: "Drop path text")).tag(FileDropDefaultBehavior.text)
+                    Text(String(localized: "settings.app.fileDrop.defaultBehavior.preview", defaultValue: "Open file preview")).tag(FileDropDefaultBehavior.preview)
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+            SettingsCardDivider()
+
+            // Preferred Editor
+            SettingsCardRow(
+                configurationReview: .json("app.preferredEditor"),
+                String(localized: "settings.app.preferredEditor", defaultValue: "Open Files With"),
+                subtitle: String(localized: "settings.app.preferredEditor.subtitle", defaultValue: "Command used when Cmd-click file previews are disabled or a file is unsupported. Leave empty for system default.")
+            ) {
+                TextField(
+                    String(localized: "settings.app.preferredEditor.placeholder", defaultValue: "e.g. code, zed, subl"),
+                    text: Binding(get: { preferredEditor.current }, set: { preferredEditor.set($0) })
+                )
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 200)
+            }
+            SettingsCardDivider()
+
+            // Open Supported Files in bree
+            SettingsCardRow(
+                configurationReview: .json("app.openSupportedFilesInBree"),
+                String(localized: "settings.app.openSupportedFilesInBree", defaultValue: "Open Supported Files in Bree"),
+                subtitle: String(localized: "settings.app.openSupportedFilesInBree.subtitle", defaultValue: "Cmd-clicking readable files opens text, code, PDFs, images, audio, video, and Quick Look previews in Bree.")
+            ) {
+                Toggle("", isOn: Binding(get: { openSupported.current }, set: { openSupported.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+            SettingsCardDivider()
+
+            // Open Markdown in bree Viewer
+            SettingsCardRow(
+                configurationReview: .json("app.openMarkdownInBreeViewer"),
+                String(localized: "settings.app.openMarkdownInBreeViewer", defaultValue: "Open Markdown in Bree Viewer"),
+                subtitle: String(localized: "settings.app.openMarkdownInBreeViewer.subtitle", defaultValue: "When supported file routing is on, Cmd-clicking Markdown files opens the rendered Bree markdown viewer instead of the generic file preview.")
+            ) {
+                Toggle("", isOn: Binding(get: { openMarkdown.current }, set: { openMarkdown.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+            }
+            SettingsCardDivider()
+
+            // Markdown Viewer Font Size
+            SettingsCardRow(
+                configurationReview: .json("markdown.fontSize"),
+                String(localized: "settings.app.markdownFontSize", defaultValue: "Markdown Viewer Font Size"),
+                subtitle: String(localized: "settings.app.markdownFontSize.subtitle", defaultValue: "Default body font size, in points, for newly opened markdown viewers. Zoom a viewer live with Cmd-+ / Cmd-- / Cmd-0."),
+                controlWidth: Self.columnWidth
+            ) {
+                Stepper(
+                    value: Binding(get: { markdownFontSize.current }, set: { markdownFontSize.set($0) }),
+                    in: 8...96
+                ) {
+                    Text(verbatim: "\(markdownFontSize.current)")
+                        .monospacedDigit()
+                        .frame(width: 28, alignment: .trailing)
+                }
+                .controlSize(.small)
+                .accessibilityIdentifier("SettingsMarkdownFontSizeStepper")
+                .accessibilityLabel(
+                    String(localized: "settings.app.markdownFontSize", defaultValue: "Markdown Viewer Font Size")
+                )
+            }
+            SettingsCardDivider()
+
+            // Markdown Viewer Max Width
+            SettingsCardRow(
+                configurationReview: .json("markdown.maxWidth"),
+                String(localized: "settings.app.markdownMaxWidth", defaultValue: "Markdown Viewer Max Width"),
+                subtitle: String(localized: "settings.app.markdownMaxWidth.subtitle", defaultValue: "Default maximum reading column width, in CSS pixels, for newly opened markdown viewers."),
+                controlWidth: Self.columnWidth
+            ) {
+                Stepper(
+                    value: Binding(get: { markdownMaxWidth.current }, set: { markdownMaxWidth.set($0) }),
+                    in: 320...2400,
+                    step: 20
+                ) {
+                    Text(verbatim: "\(markdownMaxWidth.current)")
+                        .monospacedDigit()
+                        .frame(width: 44, alignment: .trailing)
+                }
+                .controlSize(.small)
+                .accessibilityIdentifier("SettingsMarkdownMaxWidthStepper")
+                .accessibilityLabel(
+                    String(localized: "settings.app.markdownMaxWidth", defaultValue: "Markdown Viewer Max Width")
+                )
+            }
+            SettingsCardDivider()
+
+            // Markdown Viewer Font Family
+            SettingsCardRow(
+                configurationReview: .json("markdown.fontFamily"),
+                String(localized: "settings.app.markdownFontFamily", defaultValue: "Markdown Viewer Font"),
+                subtitle: String(localized: "settings.app.markdownFontFamily.subtitle", defaultValue: "Default body font family for newly opened markdown viewers. Leave empty for the system markdown font stack.")
+            ) {
+                TextField(
+                    String(localized: "settings.app.markdownFontFamily.placeholder", defaultValue: "System"),
+                    text: Binding(get: { markdownFontFamily.current }, set: { markdownFontFamily.set($0) })
+                )
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 200)
+                .accessibilityIdentifier("SettingsMarkdownFontFamilyTextField")
+            }
+            SettingsCardDivider()
+
+            // File Editor Word Wrap
+            SettingsCardRow(
+                configurationReview: .json("fileEditor.wordWrap"),
+                String(localized: "settings.app.fileEditorWordWrap", defaultValue: "File Editor Word Wrap"),
+                subtitle: String(localized: "settings.app.fileEditorWordWrap.subtitle", defaultValue: "Wrap long lines at the editor's right edge instead of scrolling horizontally. Applies to the plain-text file editor.")
+            ) {
+                Toggle("", isOn: Binding(get: { fileEditorWordWrap.current }, set: { fileEditorWordWrap.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsFileEditorWordWrapToggle")
+            }
+            SettingsCardDivider()
+
+            SettingsCardRow(
+                configurationReview: .json("fileEditor.syntaxHighlighting"),
+                String(localized: "settings.app.fileEditorSyntaxHighlighting", defaultValue: "File Editor Syntax Highlighting"),
+                subtitle: String(localized: "settings.app.fileEditorSyntaxHighlighting.subtitle", defaultValue: "Color keywords, strings, and other tokens in the built-in file editor.")
+            ) {
+                Toggle("", isOn: Binding(get: { fileEditorSyntaxHighlighting.current }, set: { fileEditorSyntaxHighlighting.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsFileEditorSyntaxHighlightingToggle")
+            }
+            SettingsCardDivider()
+
+            SettingsCardRow(
+                configurationReview: .json("fileEditor.lineNumbers"),
+                String(localized: "settings.app.fileEditorLineNumbers", defaultValue: "File Editor Line Numbers"),
+                subtitle: String(localized: "settings.app.fileEditorLineNumbers.subtitle", defaultValue: "Show a line-number gutter beside the built-in file editor.")
+            ) {
+                Toggle("", isOn: Binding(get: { fileEditorLineNumbers.current }, set: { fileEditorLineNumbers.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsFileEditorLineNumbersToggle")
+            }
+            SettingsCardDivider()
+
+            SettingsCardRow(
+                configurationReview: .json("fileEditor.indentGuides"),
+                String(localized: "settings.app.fileEditorIndentGuides", defaultValue: "File Editor Indent Guides"),
+                subtitle: String(localized: "settings.app.fileEditorIndentGuides.subtitle", defaultValue: "Draw vertical guides at indent columns in the built-in file editor.")
+            ) {
+                Toggle("", isOn: Binding(get: { fileEditorIndentGuides.current }, set: { fileEditorIndentGuides.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsFileEditorIndentGuidesToggle")
+            }
+            SettingsCardDivider()
+
+            SettingsCardRow(
+                configurationReview: .json("fileEditor.currentLineHighlight"),
+                String(localized: "settings.app.fileEditorCurrentLineHighlight", defaultValue: "File Editor Current Line Highlight"),
+                subtitle: String(localized: "settings.app.fileEditorCurrentLineHighlight.subtitle", defaultValue: "Highlight the line that contains the caret when nothing is selected.")
+            ) {
+                Toggle("", isOn: Binding(get: { fileEditorCurrentLineHighlight.current }, set: { fileEditorCurrentLineHighlight.set($0) }))
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsFileEditorCurrentLineHighlightToggle")
+            }
+            SettingsCardDivider()
+
+            SettingsCardRow(
+                configurationReview: .json("fileEditor.tabWidth"),
+                String(localized: "settings.app.fileEditorTabWidth", defaultValue: "File Editor Tab Width"),
+                subtitle: String(localized: "settings.app.fileEditorTabWidth.subtitle", defaultValue: "Columns per tab stop, used by indent guides.")
+            ) {
+                Stepper(
+                    value: Binding(
+                        get: { fileEditorTabWidth.current },
+                        set: { fileEditorTabWidth.set($0) }
+                    ),
+                    in: FileEditorCatalogSection.supportedTabWidthRange
+                ) {
+                    Text("\(fileEditorTabWidth.current)")
+                        .monospacedDigit()
+                }
+                .accessibilityLabel(
+                    String(localized: "settings.app.fileEditorTabWidth", defaultValue: "File Editor Tab Width")
+                )
+                .accessibilityIdentifier("SettingsFileEditorTabWidthStepper")
+            }
+        }
+    }
+
 
     @ViewBuilder
     private var advancedNotificationsCard: some View {

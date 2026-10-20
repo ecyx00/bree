@@ -90,7 +90,7 @@ struct NewWorkspaceMenuModel: Equatable {
             sections.append(.templates(templateNames))
         }
         // Always present: the Save affordance must survive an otherwise-empty
-        // menu (no create/cloud/layout/template rows), matching the pre-model menu.
+        // menu (no create/Remote/layout/template rows), matching the pre-model menu.
         sections.append(.management(management))
 
         return NewWorkspaceMenuModel(sections: sections)

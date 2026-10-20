@@ -1788,7 +1788,7 @@ struct ChatUsageAccumulatorTests {
             ]),
         ])
 
-        // Transcripts are written by remote and cloud hosts, so a count no
+        // Transcripts are written by remote and remote hosts, so a count no
         // `Int` can hold is untrusted input, not a crash. The fields that do
         // parse still count.
         let totals = accumulator.totals

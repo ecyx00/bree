@@ -65,7 +65,7 @@ extension TabManager {
         anchorGroupName ?? workspace.title
     }
 
-    /// The display title with the workspace's host appended for SSH and Cloud
+    /// The display title with the workspace's host appended for SSH and remote
     /// workspaces (`title · host`), as shown in the window title bar and
     /// `NSWindow.title`. Local workspaces keep the plain display title.
     func resolvedWorkspaceWindowTitle(for tab: Workspace) -> String {
@@ -78,7 +78,7 @@ extension TabManager {
     }
 
     /// Refreshes title chrome after a workspace's host changed, for example
-    /// when `bree ssh` attaches its remote configuration or a Cloud machine's
+    /// when `bree ssh` attaches its remote configuration or a remote machine's
     /// name arrives after the workspace was selected.
     func workspaceHostLabelDidChange(_ workspace: Workspace) {
         guard workspace.owningTabManager === self,

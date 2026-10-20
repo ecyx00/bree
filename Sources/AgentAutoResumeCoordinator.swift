@@ -1,5 +1,5 @@
 import BreeAgentJournal
-import BREEMobileCore
+import BreeAppSupport
 import BreeSettings
 import BreeSidebar
 import BreeTerminal
@@ -192,7 +192,7 @@ final class AgentAutoResumeCoordinator {
 
     @MainActor
     private func screenState(for surface: TerminalSurface) -> ScreenState {
-        guard let frame = surface.mobileRenderGridFrame(
+        guard let frame = surface.renderGridFrame(
             stateSeq: 0,
             includeTheme: false,
             anchor: .screen
@@ -200,7 +200,7 @@ final class AgentAutoResumeCoordinator {
         return Self.screenState(in: frame)
     }
 
-    static func screenState(in frame: MobileTerminalRenderGridFrame) -> ScreenState {
+    static func screenState(in frame: TerminalRenderGridFrame) -> ScreenState {
         let faintStyles = Set(frame.styles.filter(\.faint).map(\.id))
         var rows = Array(repeating: [(column: Int, text: String, faint: Bool)](), count: max(frame.rows, 0))
         for span in frame.rowSpans where span.row >= 0 && span.row < rows.count {

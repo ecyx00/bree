@@ -502,38 +502,6 @@ struct TerminalLinkOpenCoordinatorTests {
         )
     }
 
-    @Test(
-        "Links from a terminal on another machine never open a file on this Mac",
-        arguments: [false, true]
-    )
-    @MainActor
-    func remoteTerminalLinksNeverOpenLocalFiles(remoteInitiated: Bool) throws {
-        let defaults = makeDefaults()
-        let directory = try makeLaunchableFixtures()
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let container = CloudGuestURLTestContainer()
-        let fileOpener = RecordingFileOpener()
-        let coordinator = TerminalLinkOpenCoordinator(
-            defaults: defaults,
-            containerResolver: { _, _ in container },
-            externalOpen: { url in Issue.record("Remote file link escaped to \(url)"); return true },
-            fileOpen: fileOpener,
-            deferOperation: { operation in operation() }
-        )
-
-        for rawValue in launchableRawValues(in: directory) {
-            #expect(!coordinator.open(TerminalLinkOpenRequest(
-                rawValue: rawValue,
-                sourceWorkspaceId: UUID(),
-                sourcePanelId: UUID(),
-                workingDirectory: directory.path,
-                isRemoteInitiated: remoteInitiated
-            )), "\(rawValue)")
-        }
-        #expect(fileOpener.opened.isEmpty)
-        #expect(container.opened.isEmpty)
-    }
-
     @Test("A remote-initiated open never reaches a file on this Mac")
     @MainActor
     func remoteInitiatedOpenNeverOpensLocalFile() throws {
@@ -567,7 +535,7 @@ struct TerminalLinkOpenCoordinatorTests {
     @MainActor
     func remoteInitiatedWebLinkFailsClosedBeforeRouting() throws {
         let defaults = makeDefaults()
-        let container = CloudGuestURLTestContainer()
+        let container = LocalLinkContainer()
         var external: [URL] = []
         let coordinator = TerminalLinkOpenCoordinator(
             defaults: defaults,
@@ -586,7 +554,7 @@ struct TerminalLinkOpenCoordinatorTests {
             workingDirectory: nil,
             isRemoteInitiated: true
         )))
-        #expect(container.opened.isEmpty)
+        #expect(container.deferredFilePaths.isEmpty)
         #expect(external.isEmpty)
     }
 
@@ -665,7 +633,6 @@ private final class RemotePreviewLinkContainer: TerminalLinkOpenContainer {
     var terminalLinkContainerDebugName: String { "remote-preview-test" }
     func terminalLinkWorkingDirectory(for sourcePanelId: UUID) -> String? { "/remote/project" }
     func terminalLinkIsRemoteTerminal(_ sourcePanelId: UUID) -> Bool { true }
-    func cloudTerminalLinkTarget(url: URL, sourcePanelId: UUID) -> CloudTerminalLinkTarget? { nil }
     func deferRemoteTerminalFileLinkOpen(sourcePanelId: UUID, rawValue: String) -> Bool {
         sourcePanelIDs.append(sourcePanelId)
         remoteLinks.append(rawValue)
@@ -689,7 +656,6 @@ private final class LocalLinkContainer: TerminalLinkOpenContainer {
     var terminalLinkContainerDebugName: String { "local-test" }
     func terminalLinkWorkingDirectory(for sourcePanelId: UUID) -> String? { nil }
     func terminalLinkIsRemoteTerminal(_ sourcePanelId: UUID) -> Bool { false }
-    func cloudTerminalLinkTarget(url: URL, sourcePanelId: UUID) -> CloudTerminalLinkTarget? { nil }
     func deferTerminalFileLinkOpen(
         sourcePanelId: UUID,
         filePath: String,

@@ -218,26 +218,6 @@ public final class RemoteSessionCoordinator: @unchecked Sendable {
         queue.setSpecific(key: queueKey, value: ())
     }
 
-    /// The capabilities advertised by the breed-remote baked into the Freestyle snapshot
-    /// (scratch/vm-experiments/images/install.sh pins v0.63.2). Keep this in lockstep with
-    /// the daemon's `hello` response — if the baked version advertises a new capability,
-    /// bump it here too.
-    static func bakedVMDaemonHello() -> DaemonHello {
-        DaemonHello(
-            name: "breed-remote",
-            version: "v0.63.2-baked",
-            capabilities: [
-                "session.basic",
-                "session.resize.min",
-                "proxy.http_connect",
-                "proxy.socks5",
-                "proxy.stream",
-                "proxy.stream.push",
-            ],
-            remotePath: "/usr/local/bin/breed-remote"
-        )
-    }
-
     // MARK: - Lifecycle
 
     /// Begins the connection attempt on the coordinator's queue.
@@ -313,25 +293,11 @@ public final class RemoteSessionCoordinator: @unchecked Sendable {
         publishDaemonStatus(.bootstrapping, detail: bootstrapDetail)
         do {
             try prepareControlMasterOwnershipLocked()
-            proxyConnectionDesired = !configuration.skipDaemonBootstrap ||
-                configuration.daemonWebSocketEndpoint != nil
+            proxyConnectionDesired = true
             let requiredCapabilities = requiredDaemonCapabilities
-            let hello: DaemonHello
-            if configuration.skipDaemonBootstrap {
-                // Cloud-VM path: breed-remote is pre-baked in the image and exposed via
-                // systemd socket activation at /run/breed-remote.sock. We skip the probe,
-                // upload, and stdio-hello steps entirely — they all depend on ssh-exec
-                // channel I/O, which the Freestyle gateway doesn't forward.
-                hello = Self.bakedVMDaemonHello()
-                debugLog("remote.bootstrap.skipped reason=vm-baked remotePath=\(hello.remotePath)")
-            } else {
-                hello = try bootstrapDaemonLocked(requiredCapabilities: requiredCapabilities)
-            }
-            let preflightRequiredCapabilities = configuration.skipDaemonBootstrap
-                ? bakedDaemonPreflightRequiredCapabilities
-                : requiredCapabilities
+            let hello = try bootstrapDaemonLocked(requiredCapabilities: requiredCapabilities)
             let missingCapabilities = Self.missingRequiredCapabilities(
-                preflightRequiredCapabilities,
+                requiredCapabilities,
                 in: hello.capabilities
             )
             guard missingCapabilities.isEmpty else {
@@ -353,24 +319,9 @@ public final class RemoteSessionCoordinator: @unchecked Sendable {
             )
             recordHeartbeatActivityLocked()
             armReadinessDeadlineLocked()
-            if configuration.skipDaemonBootstrap {
-                debugLog("remote.relay.skipped reason=vm-baked transport=\(configuration.transport.rawValue)")
-                if configuration.daemonWebSocketEndpoint != nil {
-                    startProxyLocked()
-                } else {
-                    // SSH-only cloud VM fallback cannot use ssh-exec or local socket forwarding
-                    // through provider gateways. Keep the shell connected and leave proxy off.
-                    resetBootstrapFailureTrackingLocked()
-                    publishState(
-                        .connected,
-                        detail: String(format: strings.connectedVMNoProxyFormat, configuration.displayTarget)
-                    )
-                }
-            } else {
-                startReverseRelayLocked(remotePath: hello.remotePath)
-                requestBootstrapRemoteTTYIfNeededLocked()
-                startProxyLocked()
-            }
+            startReverseRelayLocked(remotePath: hello.remotePath)
+            requestBootstrapRemoteTTYIfNeededLocked()
+            startProxyLocked()
         } catch {
             daemonReady = false
             daemonBootstrapVersion = nil
@@ -611,12 +562,6 @@ public final class RemoteSessionCoordinator: @unchecked Sendable {
 
     var requiredDaemonCapabilities: [String] {
         RemoteDaemonRPCClient.requiredCapabilities(for: configuration)
-    }
-
-    var bakedDaemonPreflightRequiredCapabilities: [String] {
-        requiredDaemonCapabilities.filter {
-            !RemoteDaemonCapability.persistentPTYFamily.contains($0)
-        }
     }
 
     static func missingRequiredCapabilities(_ required: [String], in capabilities: [String]) -> [String] {

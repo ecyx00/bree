@@ -1,5 +1,5 @@
 import AppKit
-import BREEMobileCore
+import BreeAppSupport
 import ObjectiveC
 import BreeAppKitSupportUI
 import BreeFoundation

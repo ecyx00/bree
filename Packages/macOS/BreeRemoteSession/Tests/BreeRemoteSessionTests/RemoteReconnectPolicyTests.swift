@@ -340,50 +340,6 @@ struct RemoteReconnectPolicyTests {
         #expect(!state.bootstrapTTYFetchInFlight)
     }
 
-    @Test("Wake leaves a healthy proxy-less Cloud fallback connected")
-    func wakeLeavesProxylessCloudFallbackConnected() {
-        let provider = IntentionalCleanupTestTunnelProvider()
-        let configuration = WorkspaceRemoteConfiguration(
-            destination: "vm+bree@vm-ssh.freestyle.sh",
-            port: 22,
-            identityFile: nil,
-            sshOptions: [],
-            localProxyPort: nil,
-            relayPort: nil,
-            relayID: nil,
-            relayToken: nil,
-            localSocketPath: nil,
-            terminalStartupCommand: nil,
-            preserveAfterTerminalExit: true,
-            persistentDaemonSlot: "bree-default-freestyle-sshd-v1",
-            skipDaemonBootstrap: true
-        )
-        let coordinator = makeCoordinator(
-            broker: RemoteProxyBroker(tunnelProvider: provider),
-            configuration: configuration
-        )
-        defer {
-            coordinator.stop()
-            coordinator.queue.sync {}
-            provider.tunnel.stop()
-        }
-        coordinator.queue.sync {
-            coordinator.isSystemSleeping = true
-            coordinator.daemonReady = true
-            coordinator.proxyEndpoint = nil
-        }
-
-        coordinator.resetReconnectPolicyAndReconnect(reason: "test wake")
-        coordinator.queue.sync {}
-
-        let state = coordinator.queue.sync {
-            (coordinator.reconnectRetryCount, coordinator.reconnectToken, coordinator.daemonReady)
-        }
-        #expect(state.0 == 0)
-        #expect(state.1 == nil)
-        #expect(state.2)
-    }
-
     private func makeCoordinator(
         broker: RemoteProxyBroker,
         configuration: WorkspaceRemoteConfiguration? = nil
@@ -416,13 +372,9 @@ struct RemoteReconnectPolicyTests {
             buildInfo: IntentionalCleanupBuildInfo(),
             daemonStrings: RemoteDaemonStrings(
                 missingPersistentPTYCapability: "",
-                missingRequiredFunctionality: "",
-                cloudNotificationClearWorkspaceInvalid: "",
-                cloudNotificationClearWorkspaceDenied: "",
-                cloudNotificationClearSurfaceInvalid: ""
+                missingRequiredFunctionality: ""
             ),
             strings: RemoteSessionStrings(
-                connectedVMNoProxyFormat: "%@",
                 suspendedDetailFormat: "%@",
                 reverseRelayUnavailableRetrying: "",
                 reverseRelayPortUnavailableRetrying: "",

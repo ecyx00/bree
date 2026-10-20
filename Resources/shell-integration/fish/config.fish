@@ -761,3 +761,32 @@ end
 # `shell-integration` layout, so the helper leaves their PATH unchanged.
 functions -q _bree_fix_path; and _bree_fix_path
 functions -e _bree_fix_path
+
+# Inside Bree's private tmux (BREE_LOCAL_TMUX_AUTO=1) tmux swallows OSC 133, so the
+# exit-code badges vanish. Ghostty's own fish integration does not load in that pane
+# (its env does not survive login(1) and tmux), so define the marks here, each one in a
+# tmux DCS passthrough.
+if test "$BREE_LOCAL_TMUX" = 1; or test "$BREE_LOCAL_TMUX_AUTO" = 1
+    function __bree_mark_prompt_start --on-event fish_prompt --on-event fish_posterror
+        if test "$__bree_prompt_state" != prompt-start
+            printf '\033Ptmux;\033\033]133;D\007\033\\'
+        end
+        set --global __bree_prompt_state prompt-start
+        printf '\033Ptmux;\033\033]133;A\007\033\\'
+    end
+    function __bree_mark_output_start --on-event fish_preexec
+        set --global __bree_prompt_state pre-exec
+        printf '\033Ptmux;\033\033]133;C\007\033\\'
+    end
+    function __bree_mark_output_end --on-event fish_postexec
+        set -l last_status $status
+        set --global __bree_prompt_state post-exec
+        printf '\033Ptmux;\033\033]133;D;%s\007\033\\' $last_status
+    end
+end
+
+# The docked shell editor owns input, and a right prompt on the command row leaves
+# no room for the exit-code badge (it skips rows that reach the right edge).
+if test "$BREE_SHELL_EDITOR" = 1; and status is-interactive
+    function fish_right_prompt; end
+end

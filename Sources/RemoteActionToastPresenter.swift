@@ -82,14 +82,19 @@ final class RemoteActionToastPresenter {
             content.addSubview(toast.container, positioned: .above, relativeTo: nil)
         }
         let bounds = toast.container.bounds
-        // Top-right of the terminal content area: below the tab bar, left of the right sidebar.
-        let sidebar = AppDelegate.shared?.mainWindowContexts.values
-            .first { AppDelegate.shared?.resolvedWindow(for: $0) === window }?.fileExplorerState
-        let rightEdge = bounds.maxX - ((sidebar?.isVisible ?? false) ? sidebar?.width ?? 0 : 0) - 8
-        let top = bounds.maxY - WindowChromeMetrics.bonsplitTabBarHeight - 8
-        let anchor = CGRect(x: rightEdge - 360, y: top - 24, width: 360, height: 24)
-        toast.badge.show(text: entry.text, centeredIn: anchor, clippedTo: bounds)
-        toast.badge.frame.origin.x = max(bounds.minX + 8, rightEdge - toast.badge.frame.width)
+        // Sidebar visible: bottom of the left sidebar at its width minus margins, never over pane
+        // content. Collapsed: the titlebar row right of the leading controls, over the tab strip.
+        let context = AppDelegate.shared?.mainWindowContexts.values
+            .first { AppDelegate.shared?.resolvedWindow(for: $0) === window }
+        let anchor: CGRect
+        if let sidebar = context?.sidebarState, sidebar.isVisible {
+            let width = bounds.width < ContentView.narrowSidebarWindowWidth ? ContentView.narrowSidebarWidth : sidebar.persistedWidth
+            anchor = CGRect(x: bounds.minX, y: bounds.minY + 8, width: width, height: 28)
+        } else {
+            let barHeight = WindowChromeMetrics.appTitlebarHeight
+            anchor = CGRect(x: 142, y: bounds.maxY - barHeight, width: 236, height: barHeight)
+        }
+        toast.badge.show(text: entry.text, centeredIn: anchor, clippedTo: bounds, minWidth: 0)
         // Reduce Motion: the badge only fades, it never slides, so nothing more to disable.
         toast.hideTask?.cancel()
         toast.hideTask = Task { @MainActor [weak toast] in

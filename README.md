@@ -102,9 +102,9 @@ The first build compiles GhosttyKit from the vendored `ghostty/` source with Zig
 
 ## How Bree differs from cmux
 
-**Removed:** cloud VMs, accounts and sign-in, Sparkle auto-update, telemetry, the GitHub PR poller, iPhone pairing, Mac-to-Mac devices, Hive, Canvas layout mode, the window-level Dock, the iOS simulator panel, agent-chat panels and checkpoint storage.
+**Removed:** cloud VMs, accounts and sign-in, Sparkle auto-update, telemetry, the GitHub PR poller, iPhone pairing, Mac-to-Mac devices, Hive, Canvas layout mode, the window-level Dock, the iOS simulator panel, agent-chat panels, checkpoint storage and SSH-TUI.
 
-**Kept:** SSH (browser proxy, port forwarding, remote file preview, remote tmux), SSH-TUI, webhooks, the Agent Inbox, Sessions and `bree fork`.
+**Kept:** SSH (browser proxy, port forwarding, remote file preview, remote tmux), webhooks, the Agent Inbox, Sessions and `bree fork`.
 
 **Added:** the agent states in the sidebar, the Attention Center with risk notes, turn review, the Wiki and Architecture popovers, the agent CLI (`ask-human`, `queue`, `agent explain`, `guide`), the remote-action toast, a dark-only look whose chrome follows your terminal theme, and its own identity (`~/.bree`, `Application Support/Bree`, `bree.sock`).
 

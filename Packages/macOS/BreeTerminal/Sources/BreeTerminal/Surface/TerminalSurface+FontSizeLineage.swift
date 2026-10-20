@@ -187,13 +187,6 @@ extension TerminalSurface {
         let percent =
             magnificationPercent
             ?? globalFontMagnificationPercent()
-        if runtimeSurface != nil,
-           let mobileFitResult = adjustDurableMobileViewportFontSize(
-                applying: transform,
-                magnificationPercent: percent
-           ) {
-            return mobileFitResult
-        }
         guard let baseline = fontSizeAdjustmentBaseline(
             fallbackRuntimePoints: fallbackRuntimePoints,
             magnificationPercent: percent
@@ -421,12 +414,6 @@ extension TerminalSurface {
         )
 
         if let runtimeSurface = liveSurfaceForGhosttyAccess(reason: "fontSize.reset") {
-            if let mobileFitResult = resetDurableMobileViewportFontSize(
-                to: targetRuntimePoints,
-                lineage: targetLineage
-            ) {
-                return mobileFitResult
-            }
             let nativeIsExplicitOverride =
                 ghostty_surface_font_size_adjusted(runtimeSurface)
             let observedRuntimePoints =
@@ -473,107 +460,6 @@ extension TerminalSurface {
             : .applied
     }
 
-    @MainActor
-    private func adjustDurableMobileViewportFontSize(
-        applying transform: TerminalFontSizeDeltaTransform,
-        magnificationPercent: Int
-    ) -> TerminalFontSizeMutationOutcome? {
-        guard var nextFitState = mobileViewportFontFitState else {
-            return nil
-        }
-        let policy = TerminalFontSizePolicy()
-        let currentRuntimePoints = policy.clampedRuntimePoints(
-            nextFitState.baseRuntimePointSize
-        )
-        let targetRuntimePoints = transform.applying(
-            to: currentRuntimePoints
-        )
-        guard targetRuntimePoints != currentRuntimePoints else {
-            let previousLineage =
-                lastKnownFontSizeLineage
-                ?? TerminalFontSizeLineage(
-                    basePoints:
-                        BreeSurfaceConfigTemplate.baseFontSize(
-                            fromRuntimePoints:
-                                currentRuntimePoints,
-                            percent:
-                                magnificationPercent
-                        ),
-                    isExplicitOverride: false
-                )
-            guard !previousLineage.isExplicitOverride else {
-                return .alreadySatisfied
-            }
-            claimExplicitFontSizeOwnership(
-                atRuntimePoints: targetRuntimePoints,
-                previousLineage: previousLineage,
-                magnificationPercent: magnificationPercent
-            )
-            return .applied
-        }
-
-        let previousFittedRuntimePoints =
-            nextFitState.fittedRuntimePointSize
-        nextFitState.updateDurableBase(to: targetRuntimePoints)
-        if nextFitState.fittedRuntimePointSize
-                != previousFittedRuntimePoints,
-           !performMobileViewportFontPointSizeAction(
-                nextFitState.fittedRuntimePointSize
-           ) {
-            return .failed
-        }
-
-        mobileViewportFontFitState = nextFitState
-        followsConfiguredFontSize = false
-        recordCurrentFontSizeLineage(
-            TerminalFontSizeLineage(
-                basePoints: BreeSurfaceConfigTemplate.baseFontSize(
-                    fromRuntimePoints: targetRuntimePoints,
-                    percent: magnificationPercent
-                ),
-                isExplicitOverride: true
-            )
-        )
-        return .applied
-    }
-
-    @MainActor
-    private func resetDurableMobileViewportFontSize(
-        to targetRuntimePoints: Float32,
-        lineage targetLineage: TerminalFontSizeLineage
-    ) -> TerminalFontSizeMutationOutcome? {
-        guard var nextFitState = mobileViewportFontFitState else {
-            return nil
-        }
-        let previousFitState = nextFitState
-        nextFitState.updateDurableBase(to: targetRuntimePoints)
-        let alreadyFollowsTarget =
-            followsConfiguredFontSize
-            && (
-                lastKnownFontSizeLineage == nil
-                    || lastKnownFontSizeLineage == targetLineage
-            )
-        guard nextFitState != previousFitState
-                || !alreadyFollowsTarget else {
-            return .alreadySatisfied
-        }
-
-        if nextFitState.fittedRuntimePointSize
-                != previousFitState.fittedRuntimePointSize,
-           !performMobileViewportFontPointSizeAction(
-                nextFitState.fittedRuntimePointSize
-           ) {
-            return .failed
-        }
-
-        mobileViewportFontFitState = nextFitState
-        followsConfiguredFontSize = true
-        if !alreadyFollowsTarget {
-            recordCurrentFontSizeLineage(targetLineage)
-        }
-        return .applied
-    }
-
     /// Captures durable font ownership against the config that is still live.
     ///
     /// This must run before `ghostty_app_update_config`. An adjusted Ghostty
@@ -614,9 +500,7 @@ extension TerminalSurface {
     /// Reconciles native runtime points with a newly applied app config.
     ///
     /// Explicit terminals retain their unscaled base and receive the new
-    /// magnification. Config followers adopt the new configured size. A
-    /// temporary mobile fit keeps its fitted live size while its durable base
-    /// is rebased to either result.
+    /// magnification. Config followers adopt the new configured size.
     @MainActor
     public func reconcileFontSizeAfterConfigurationReload(
         from state: TerminalFontSizeConfigurationReloadState,
@@ -642,22 +526,9 @@ extension TerminalSurface {
             resolvedTarget.retainsExplicitBase
         let targetLineage = resolvedTarget.lineage
 
-        let desiredLiveRuntimePoints: Float32
-        let retainsMobileFit: Bool
-        let nextFitState: MobileViewportFontFitState?
-        if var fitState = mobileViewportFontFitState {
-            fitState.updateDurableBase(to: durableRuntimePoints)
-            nextFitState = fitState
-            desiredLiveRuntimePoints = fitState.fittedRuntimePointSize
-            retainsMobileFit = true
-        } else {
-            nextFitState = nil
-            desiredLiveRuntimePoints = durableRuntimePoints
-            retainsMobileFit = false
-        }
+        let desiredLiveRuntimePoints = durableRuntimePoints
 
         func commitDurableState() {
-            mobileViewportFontFitState = nextFitState
             followsConfiguredFontSize = !retainsExplicitBase
             recordCurrentFontSizeLineage(targetLineage)
             if pendingFontSizeConfigurationReloadState?
@@ -682,13 +553,13 @@ extension TerminalSurface {
             abs($0 - desiredLiveRuntimePoints) <= 0.000_1
         } ?? false
 
-        if retainsExplicitBase || retainsMobileFit {
+        if retainsExplicitBase {
             guard !nativeMatchesTarget || !nativeIsAdjusted else {
                 commitDurableState()
                 return .alreadySatisfied
             }
-            guard performMobileViewportFontPointSizeAction(
-                desiredLiveRuntimePoints
+            guard performInternalBindingAction(
+                ghosttySetFontSizeBindingAction(desiredLiveRuntimePoints)
             ) else {
                 return .failed
             }
@@ -709,9 +580,7 @@ extension TerminalSurface {
 
     /// Finishes a reconciliation that exhausted its native retries.
     ///
-    /// The desired state was never committed. A mobile viewport fit keeps the
-    /// captured durable target separate from its temporary live points.
-    /// Otherwise, an observed post-config value becomes the fallback lineage
+    /// The desired state was never committed. An observed post-config value becomes the fallback lineage
     /// so snapshots cannot reinterpret old points with new magnification.
     @MainActor
     public func abandonFontSizeConfigurationReloadReconciliation(
@@ -737,44 +606,22 @@ extension TerminalSurface {
             )
             let isExplicitOverride =
                 ghostty_surface_font_size_adjusted(runtimeSurface)
-            if var fitState = mobileViewportFontFitState,
-               let targetLineage =
-                    activeState.resolvedTargetLineage() {
-                let durableRuntimePoints =
-                    policy.clampedRuntimePoints(
+            followsConfiguredFontSize =
+                !isExplicitOverride
+            recordCurrentFontSizeLineage(
+                TerminalFontSizeLineage(
+                    basePoints:
                         BreeSurfaceConfigTemplate
-                            .runtimeFontSize(
-                                fromBasePoints:
-                                    targetLineage.basePoints,
+                            .baseFontSize(
+                                fromRuntimePoints:
+                                    runtimePoints,
                                 percent:
                                     magnificationPercent
-                            )
-                    )
-                fitState.updateDurableBase(
-                    to: durableRuntimePoints
+                            ),
+                    isExplicitOverride:
+                        isExplicitOverride
                 )
-                mobileViewportFontFitState = fitState
-                followsConfiguredFontSize =
-                    !targetLineage.isExplicitOverride
-                recordCurrentFontSizeLineage(targetLineage)
-            } else {
-                followsConfiguredFontSize =
-                    !isExplicitOverride
-                recordCurrentFontSizeLineage(
-                    TerminalFontSizeLineage(
-                        basePoints:
-                            BreeSurfaceConfigTemplate
-                                .baseFontSize(
-                                    fromRuntimePoints:
-                                        runtimePoints,
-                                    percent:
-                                        magnificationPercent
-                                ),
-                        isExplicitOverride:
-                            isExplicitOverride
-                    )
-                )
-            }
+            )
         }
         pendingFontSizeConfigurationReloadState = nil
     }
@@ -818,9 +665,7 @@ extension TerminalSurface {
 
     /// Reconciles observed runtime points with durable surface ownership.
     ///
-    /// A live value matching the active mobile fit is temporary and leaves the
-    /// pre-fit lineage unchanged. A different live value came from outside the
-    /// fitter, so it becomes the new durable base and restore point.
+    /// A live value becomes the new durable base and restore point.
     @MainActor
     func recordObservedFontSizeLineage(
         runtimePoints: Float32,
@@ -833,14 +678,6 @@ extension TerminalSurface {
         }
         guard runtimePoints.isFinite, runtimePoints > 0 else {
             return lastKnownFontSizeLineage
-        }
-        if var fitState = mobileViewportFontFitState {
-            guard !isExplicitOverride
-                    || !fitState.matchesFittedRuntimePointSize(runtimePoints) else {
-                return lastKnownFontSizeLineage
-            }
-            fitState.rebase(to: runtimePoints)
-            mobileViewportFontFitState = fitState
         }
         if isExplicitOverride,
            let lastKnownFontSizeLineage,

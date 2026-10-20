@@ -86,7 +86,7 @@ extension Workspace {
 
         // A caller notification carries a preferred workspace/surface.  Once
         // those selectors are present, normalize it to the membership-confined
-        // target method used by the cloud relay; the caller resolver otherwise
+        // target method used by the remote relay; the caller resolver otherwise
         // has permission to fall back to globally focused state.
         if remoteWorkspaceID != nil,
            method == "notification.create_for_caller",

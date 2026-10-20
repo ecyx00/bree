@@ -81,6 +81,12 @@ extension BREECLI {
                 matcher: "PushNotification",
                 subcommand: "push-notification"
             ),
+            // File-overlap notice feed: telemetry only, prints {} and exits 0.
+            Self.claudeHookGroup(
+                matcher: "Read|Edit|MultiEdit|Write|NotebookEdit",
+                command: "\(hookCLI) hooks feed --source claude",
+                timeout: 5
+            ),
         ]
         hooks["PermissionRequest"] = [
             Self.claudeHookGroup(

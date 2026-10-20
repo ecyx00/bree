@@ -319,7 +319,7 @@ public struct CodexTranscriptParser: Sendable {
         // Codex's interactive picker is a `request_user_input` function call whose
         // arguments carry `questions[]` in the same shape as Claude's
         // AskUserQuestion. Render each as a tappable `.question` so the GUI shows
-        // a real picker (wired to mobile.chat.answer) instead of plain text.
+        // a real picker (wired to `chat.answer`) instead of plain text.
         if name == "request_user_input" {
             let questions = Self.codexQuestions(from: parsedArguments)
             if !questions.isEmpty {

@@ -1,4 +1,3 @@
-import BreeCloud
 import BreeSurfaceCatalogModel
 import Foundation
 import BreeTerminal
@@ -17,158 +16,9 @@ struct SurfaceCatalogTests {
     /// Local destinations each test registers so ownership checks resolve a live workspace.
     private let live = LiveWorkspaceFixture()
 
-    @Test("Cloud rename ordering is shared across local windows")
-    func cloudRenameCoordinatorSerializesOneRemoteIdentity() async {
-        let coordinator = CloudRenameCoordinator()
-        let key = CloudRenameCoordinator.Key.tab(machine: .cloud("vm-1"), id: "tab-1")
-        let recorder = RenameEventRecorder()
-
-        let first = coordinator.enqueue(key: key, pendingName: "first") {
-            recorder.events.append("first-start")
-            await Task.yield()
-            recorder.events.append("first-end")
-        }
-        let second = coordinator.enqueue(key: key, pendingName: "second") {
-            recorder.events.append("second-start")
-            recorder.events.append("second-end")
-        }
-
-        #expect(coordinator.pendingName(for: key) == "second")
-        _ = try? await second.value
-        _ = try? await first.value
-        #expect(recorder.events == ["first-start", "first-end", "second-start", "second-end"])
-        #expect(coordinator.pendingName(for: key) == nil)
-    }
-
-    @Test("Cloud rename ordering shares one machine lane across scopes")
-    func cloudRenameCoordinatorSerializesDifferentRemoteIdentities() async {
-        let coordinator = CloudRenameCoordinator()
-        let machine = SurfaceMachineID.cloud("vm-1")
-        let workspaceKey = CloudRenameCoordinator.Key.workspace(machine: machine, id: "workspace-1")
-        let tabKey = CloudRenameCoordinator.Key.tab(machine: machine, id: "tab-1")
-        let recorder = RenameEventRecorder()
-
-        let workspace = coordinator.enqueue(key: workspaceKey, pendingName: "workspace") {
-            recorder.events.append("workspace-start")
-            await Task.yield()
-            recorder.events.append("workspace-end")
-        }
-        let tab = coordinator.enqueue(key: tabKey, pendingName: "tab") {
-            recorder.events.append("tab-start")
-            recorder.events.append("tab-end")
-        }
-
-        _ = try? await tab.value
-        _ = try? await workspace.value
-        #expect(recorder.events == ["workspace-start", "workspace-end", "tab-start", "tab-end"])
-        #expect(coordinator.pendingName(for: workspaceKey) == nil)
-        #expect(coordinator.pendingName(for: tabKey) == nil)
-    }
-
-    @Test("Cloud rename coordinator preserves an empty pending tab name")
-    func cloudRenameCoordinatorPreservesEmptyPendingTabName() async throws {
-        let coordinator = CloudRenameCoordinator()
-        let key = CloudRenameCoordinator.Key.tab(machine: .cloud("vivid-newt"), id: "tab-1")
-        let operation = coordinator.enqueue(key: key, pendingName: "") {}
-        #expect(coordinator.pendingName(for: key) == "")
-        try await operation.value
-        #expect(coordinator.pendingName(for: key) == nil)
-    }
-
     @MainActor
     private final class RenameEventRecorder {
         var events: [String] = []
-    }
-
-    @Test("Explicit remote placement fails closed without view metadata")
-    func explicitRemotePlacementFailsClosedWithoutViewMetadata() throws {
-        let machine = SurfaceMachineID.cloud("vivid-newt")
-        let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-        let id = SurfaceResourceID(machine: machine, kind: .terminal, key: "term_1")
-        var resource = terminal(machine, "term_1")
-        resource.remoteViews = nil
-        catalog.upsert(resource)
-
-        #expect(throws: SurfaceCatalogError.unavailable(
-            id,
-            reason: "remote placement data is unavailable"
-        )) {
-            try catalog.remoteView(for: id, tabID: "tab_1")
-        }
-    }
-
-    @Test("A membership-less terminal placement still fails closed")
-    func membershiplessTerminalPlacementFailsClosed() throws {
-        // The membership-less preview allowance is for displays and forwarded
-        // ports only. A terminal with no view metadata has no local-preview
-        // reading, so it must keep failing closed rather than projecting with
-        // no remote provenance.
-        let machine = SurfaceMachineID.cloud("vivid-newt")
-        let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-        var resource = terminal(machine, "term_1")
-        resource.remoteViews = nil
-        catalog.upsert(resource)
-
-        #expect(throws: SurfaceCatalogError.unavailable(
-            resource.id,
-            reason: "remote placement data is unavailable"
-        )) {
-            try catalog.remoteView(
-                for: SurfaceResourcePlacement(resource: resource.id, remoteWorkspaceID: "a")
-            )
-        }
-    }
-
-    @Test("A display placement keeps its daemon tab identity")
-    func displayPlacementKeepsDaemonTabIdentity() throws {
-        // A display that really is a daemon tab must resolve to that tab. The
-        // membership-less allowance only applies when the resource carries no
-        // view metadata at all.
-        let machine = SurfaceMachineID.cloud("vivid-newt")
-        let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-        let workspace = SurfaceRemoteWorkspace(id: "a", name: "Workspace a", index: 0, focused: true)
-        var resource = SurfaceResource(
-            id: SurfaceResourceID(machine: machine, kind: .display, key: "display_1"),
-            title: "Display", detail: nil, lifecycle: .running, agent: nil,
-            remoteWorkspace: workspace, remoteViews: nil, port: nil, url: nil
-        )
-        resource.remoteViews = [SurfaceRemoteView(tabID: "tab_d", workspace: workspace)]
-        catalog.upsert(resource)
-
-        let view = try catalog.remoteView(
-            for: SurfaceResourcePlacement(resource: resource.id, remoteWorkspaceID: "a")
-        )
-        #expect(view?.tabID == "tab_d")
-        #expect(view?.workspace.id == "a")
-    }
-
-    @Test("Duplicate remote tab placement fails closed")
-    func duplicateRemoteTabPlacementFailsClosed() throws {
-        let machine = SurfaceMachineID.cloud("vivid-newt")
-        let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-        let id = SurfaceResourceID(machine: machine, kind: .terminal, key: "term_1")
-        var resource = terminal(machine, "term_1")
-        let workspace = SurfaceRemoteWorkspace(id: "ws_1", name: "main", index: 0, focused: true)
-        resource.remoteViews = [
-            SurfaceRemoteView(tabID: "tab_1", workspace: workspace),
-            SurfaceRemoteView(tabID: "tab_1", workspace: workspace),
-        ]
-        catalog.upsert(resource)
-
-        #expect(throws: SurfaceCatalogError.unavailable(
-            id,
-            reason: "remote tab tab_1 has ambiguous placement"
-        )) {
-            try catalog.remoteView(for: id, tabID: "tab_1")
-        }
     }
 
     /// Lets timeout behavior be tested without waiting on wall-clock time.
@@ -297,10 +147,6 @@ struct SurfaceCatalogTests {
             return SurfaceProjection(resource: resource.id, workspaceID: destination.workspaceID, panelID: panelID)
         }
 
-        func createTerminal(command: [String]?, cwd: String?, name: String?, remoteWorkspaceID: String?) async throws -> SurfaceResource {
-            SurfaceResource(id: SurfaceResourceID(machine: machine, kind: .terminal, key: "term_new"), title: name ?? "shell", detail: cwd, lifecycle: .launching, agent: nil, remoteWorkspace: nil, port: nil, url: nil)
-        }
-
         var closedTerminals: [SurfaceResourceID] = []
         var closedRemoteWorkspaces: [String] = []
         var renamedRemoteWorkspaces: [(id: String, name: String)] = []
@@ -352,169 +198,13 @@ struct SurfaceCatalogTests {
         SurfaceResource(id: SurfaceResourceID(machine: machine, kind: .terminal, key: key), title: title, detail: "/root", lifecycle: .running, agent: nil, remoteWorkspace: remoteView?.workspace, remoteViews: remoteView.map { [$0] }, port: nil, url: nil)
     }
 
-    @Test("Opening a remote pane preserves its selected tab and original tab order")
-    func layoutProjectionPreservesSelectedTabOrder() async throws {
-        let catalog = SurfaceCatalog(live: live)
-        let machine = SurfaceMachineID.device(SurfaceDeviceInstanceID(deviceID: UUID().uuidString, tag: "layout-test"))
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-        let workspace = SurfaceRemoteWorkspace(id: "remote", name: "remote", index: 0, focused: true)
-        let resources = ["first", "selected", "last"].enumerated().map { index, key in
-            var resource = terminal(machine, key)
-            resource.remoteWorkspace = workspace
-            resource.remoteViews = [SurfaceRemoteView(tabID: key, workspace: workspace, paneID: "pane", index: index, focused: index == 1)]
-            return resource
-        }
-        catalog.replaceResources(resources, on: machine, from: provider)
-        let placements = resources.map { SurfaceResourcePlacement(resource: $0.id, remoteView: $0.remoteViews?.first) }
-        let workspaceID = live.id()
-        _ = try await catalog.projectGroupAsNewLocalWorkspace(
-            SurfaceResourceGroup(title: "remote", placements: placements, remoteWorkspaceID: workspace.id),
-            title: "remote", focus: false,
-            host: .init(
-                create: { _, _ in (workspaceID, nil) }, paneLookup: { _, _ in "pane" }, closeStarter: { _, _ in },
-                optimistic: .init(
-                    reserve: { _, _, _ in Issue.record("Device terminals cannot use Cloud VM reservations"); return nil },
-                    attach: { _, _, _ in Issue.record("Device terminals must attach through their own provider") }
-                )
-            ),
-            layout: .leaf(placements: placements)
-        )
-        #expect(provider.materialized.map { $0.0.key } == ["selected", "first", "last"])
-        #expect(provider.materialized[1].1 == .tab(workspaceID: workspaceID, paneID: "pane", index: 0))
-        #expect(provider.materialized[2].1 == .tab(workspaceID: workspaceID, paneID: "pane", index: 2))
-    }
-
-    @Test("Cloud delta patch preserves unaffected capability rows")
-    func cloudDeltaPatchPreservesUnaffectedRows() throws {
-        let machine = SurfaceMachineID.cloud("vivid-newt")
-        let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-
-        let snapshot: [String: Any] = [
-            "cursor": ["generation": "g1", "revision": "1"],
-            "workspaces": [["id": "ws", "name": "main"]],
-            "screens": [["id": "screen", "workspace_id": "ws"]],
-            "panes": [["id": "pane", "screen_id": "screen"]],
-            "tabs": [
-                ["id": "tab_one", "pane_id": "pane", "content_kind": "terminal", "content_id": "term_one", "name": "one"],
-                ["id": "tab_two", "pane_id": "pane", "content_kind": "terminal", "content_id": "term_two", "name": "two"],
-            ],
-            "terminals": [
-                ["id": "term_one", "tab_id": "tab_one", "tab_ids": ["tab_one"], "title": "old", "lifecycle": "running"],
-                ["id": "term_two", "tab_id": "tab_two", "tab_ids": ["tab_two"], "title": "untouched", "lifecycle": "running"],
-            ],
-            "browsers": [],
-            "agents": [],
-        ]
-        let initial = try #require(BreeTuiSnapshotParser.state(fromSnapshot: snapshot, machine: machine))
-        let termOne = try #require(BreeTuiSnapshotParser.resources(from: initial).first { $0.id.key == "term_one" })
-        let termTwo = try #require(BreeTuiSnapshotParser.resources(from: initial).first { $0.id.key == "term_two" })
-        let port = BreeTuiSnapshotParser.portBrowser(machine: machine, port: 3000)
-        catalog.replaceCloudState(initial, resources: [termOne, termTwo, port], info: provider.info)
-        #expect(catalog.hasResources(on: machine))
-
-        let delta: [String: Any] = [
-            "changes": [[
-                "kind": "upsert",
-                "resource": "tab",
-                "id": "tab_one",
-                "value": ["id": "tab_one", "pane_id": "pane", "content_kind": "terminal", "content_id": "term_one", "name": "new"],
-            ]],
-        ]
-        let application = try #require(BreeTuiSnapshotParser.applyingWithImpact(
-            deltaPayload: try JSONSerialization.data(withJSONObject: delta),
-            cursor: CloudVMCursor(generation: "g1", revision: 2),
-            to: initial
-        ))
-        let updated = try #require(BreeTuiSnapshotParser.resources(from: application.state, matching: application.impact.resourceIDs).first { $0.id.key == "term_one" })
-        _ = catalog.applyCloudStateResourcePatch(
-            application.state,
-            resources: [updated],
-            affectedResourceIDs: application.impact.resourceIDs,
-            info: provider.info
-        )
-
-        #expect(catalog.snapshot.resources(on: machine).first { $0.id.key == "term_one" }?.remoteViews?.first?.name == "new")
-        #expect(catalog.snapshot.resources(on: machine).contains(termTwo))
-        #expect(catalog.snapshot.resources(on: machine).contains(port))
-        #expect(catalog.cloudStates[machine]?.cursor == CloudVMCursor(generation: "g1", revision: 2))
-        #expect(catalog.hasResources(on: machine))
-    }
-
-    @Test("Cloud unavailable replacement keeps the reverse resource index exact")
-    func cloudUnavailableReplacementKeepsResourceIndexExact() throws {
-        let machine = SurfaceMachineID.cloud("vivid-newt")
-        let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-
-        let snapshot: [String: Any] = [
-            "cursor": ["generation": "g1", "revision": "1"],
-            "workspaces": [["id": "ws", "name": "main"]],
-            "screens": [],
-            "panes": [],
-            "tabs": [],
-            "terminals": [["id": "term", "tab_ids": [], "title": "shell", "lifecycle": "running"]],
-            "browsers": [],
-            "agents": [],
-        ]
-        let state = try #require(BreeTuiSnapshotParser.state(fromSnapshot: snapshot, machine: machine))
-        let terminal = try #require(BreeTuiSnapshotParser.resources(from: state).first)
-        catalog.replaceCloudState(state, resources: [terminal], info: provider.info)
-        #expect(catalog.hasResources(on: machine))
-
-        catalog.replaceUnavailableCloudState(on: machine, resources: [], info: provider.info)
-        #expect(catalog.snapshot.resources(on: machine).isEmpty)
-        #expect(!catalog.hasResources(on: machine))
-
-        catalog.replaceUnavailableCloudState(on: machine, resources: [terminal], info: provider.info)
-        #expect(catalog.hasResources(on: machine))
-    }
-
-    @Test("Stale machine metadata cannot regress the accepted cloud workspace graph")
-    func staleMachineMetadataPreservesCanonicalWorkspaceNames() throws {
-        let machine = SurfaceMachineID.cloud("vivid-newt")
-        let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-        let snapshot: [String: Any] = [
-            "cursor": ["generation": "g1", "revision": "1"],
-            "workspaces": [["id": "ws", "name": "canonical", "focused": true]],
-            "screens": [],
-            "panes": [],
-            "tabs": [],
-            "terminals": [],
-            "browsers": [],
-            "agents": [],
-        ]
-        let state = try #require(BreeTuiSnapshotParser.state(fromSnapshot: snapshot, machine: machine))
-        var canonicalInfo = provider.info
-        canonicalInfo.remoteWorkspaces = [
-            SurfaceRemoteWorkspace(id: "ws", name: "canonical", index: 0, focused: true),
-        ]
-        catalog.replaceCloudState(state, resources: [], info: canonicalInfo)
-
-        var staleInfo = provider.info
-        staleInfo.remoteWorkspaces = [
-            SurfaceRemoteWorkspace(id: "ws", name: "old-name", index: 0, focused: false),
-            SurfaceRemoteWorkspace(id: "removed", name: "removed", index: 1, focused: false),
-        ]
-        catalog.updateMachine(staleInfo, from: provider)
-
-        #expect(catalog.machines[machine]?.remoteWorkspaces == [
-            SurfaceRemoteWorkspace(id: "ws", name: "canonical", index: 0, focused: true),
-        ])
-    }
-
     @Test func `Restoring a projection of a published resource wakes its provider`() async throws {
         // A restored device pane is a blank placeholder until its provider
         // materializes the mirror. When the provider published the resource
         // before the workspace restored (the link was already up, or a closed
         // tab is reopened), nothing else republishes, so the catalog must ask
         // the provider itself. If the resource publishes after restore, the
-        // pending projection must wake the provider too, or a Cloud browser
+        // pending projection must wake the provider too, or a remote browser
         // remains stuck on the restore-time unavailable card.
         let catalog = SurfaceCatalog(live: live)
         let machine = SurfaceMachineID(rawValue: "device:6f0d1c5e-2b5a-4d6e-9c1a-1c2d3e4f5a6b@nightly")
@@ -551,7 +241,7 @@ struct SurfaceCatalogTests {
     }
 
     @Test func `Resource ID round trips through the wire form`() {
-        let id = SurfaceResourceID(machine: .cloud("vivid-newt"), kind: .browser, key: "port:8000/https://x.y/z")
+        let id = SurfaceResourceID(machine: .remote("vivid-newt"), kind: .browser, key: "port:8000/https://x.y/z")
         #expect(id.rawValue == "vivid-newt/browser/port:8000/https://x.y/z")
         #expect(SurfaceResourceID(rawValue: id.rawValue) == id)
         #expect(SurfaceResourceID(rawValue: "local/terminal/ABC")?.machine == .local)
@@ -561,10 +251,10 @@ struct SurfaceCatalogTests {
 
     @Test func `Project materializes once and reuses the open pane`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("vivid-newt"))
+        let provider = FakeProvider(machine: .remote("vivid-newt"))
         catalog.register(provider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        let term = terminal(.remote("vivid-newt"), "term_1")
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
         var focused: [SurfaceProjection] = []
         catalog.focusProjection = { focused.append($0) }
 
@@ -588,10 +278,10 @@ struct SurfaceCatalogTests {
 
     @Test func `Workspace-scoped reuse ignores panes in other workspaces`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("vivid-newt"))
+        let provider = FakeProvider(machine: .remote("vivid-newt"))
         catalog.register(provider)
-        let term = terminal(.cloud("vivid-newt"), "display_like")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        let term = terminal(.remote("vivid-newt"), "display_like")
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
         var focused: [SurfaceProjection] = []
         catalog.focusProjection = { focused.append($0) }
 
@@ -622,12 +312,12 @@ struct SurfaceCatalogTests {
 
     @Test func `Concurrent reuse waits for the in-flight materialization`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("vivid-newt"))
+        let provider = FakeProvider(machine: .remote("vivid-newt"))
         let gate = MaterializeGate()
         provider.materializeGate = gate
         catalog.register(provider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        let term = terminal(.remote("vivid-newt"), "term_1")
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
         let destination = SurfaceDestination.workspace(id: live.id(), placement: .split)
 
         let first = Task { try await catalog.project(term.id, into: destination) }
@@ -655,12 +345,12 @@ struct SurfaceCatalogTests {
 
     @Test func `An adopted projection wins a materialization race`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("vivid-newt"))
+        let provider = FakeProvider(machine: .remote("vivid-newt"))
         let gate = MaterializeGate()
         provider.materializeGate = gate
         catalog.register(provider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        let term = terminal(.remote("vivid-newt"), "term_1")
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
         let destination = SurfaceDestination.workspace(id: live.id(), placement: .split)
 
         let project = Task { try await catalog.project(term.id, into: destination) }
@@ -679,7 +369,7 @@ struct SurfaceCatalogTests {
 
     @Test func `Cancelling the last project caller detaches without leaking a late materialization`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("vivid-newt"))
+        let provider = FakeProvider(machine: .remote("vivid-newt"))
         let (discarded, discardedContinuation) = AsyncStream<SurfaceProjection>.makeStream(
             bufferingPolicy: .bufferingNewest(1)
         )
@@ -690,8 +380,8 @@ struct SurfaceCatalogTests {
         let gate = MaterializeGate()
         provider.materializeGate = gate
         catalog.register(provider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        let term = terminal(.remote("vivid-newt"), "term_1")
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
 
         let project = Task { try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split)) }
         try #require(await gate.waitUntilEntered(orEndOf: project), "the project call ended before reaching the provider")
@@ -723,12 +413,12 @@ struct SurfaceCatalogTests {
 
     @Test func `Cancellation at provider completion discards an unclaimed projection`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("vivid-newt"))
+        let provider = FakeProvider(machine: .remote("vivid-newt"))
         let gate = MaterializeGate()
         provider.materializeGate = gate
         catalog.register(provider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        let term = terminal(.remote("vivid-newt"), "term_1")
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
 
         var project: Task<SurfaceProjectionMaterialization.Result, any Error>?
         let task = Task { @MainActor in
@@ -799,84 +489,18 @@ struct SurfaceCatalogTests {
         #expect(provider.discarded.isEmpty)
     }
 
-    @Test func `An abandoned materialization deadline allows a replacement operation`() async throws {
-        let (retirementDeadline, retirementDeadlineContinuation) = AsyncStream<Void>.makeStream(
-            bufferingPolicy: .bufferingNewest(1)
-        )
-        let clock = ImmediateClock { sleepCount in
-            guard sleepCount == 2 else { return }
-            retirementDeadlineContinuation.yield(())
-            retirementDeadlineContinuation.finish()
-        }
-        let catalog = SurfaceCatalog(
-            abandonedMaterializationTimeout: .seconds(30),
-            retiredMaterializationRetention: .seconds(30),
-            materializationClock: clock,
-            cloudWorkspaceRenameService: live.renameService
-        )
-        let oldProvider = FakeProvider(machine: .cloud("vivid-newt"))
-        let (discarded, discardedContinuation) = AsyncStream<SurfaceProjection>.makeStream(
-            bufferingPolicy: .bufferingNewest(1)
-        )
-        oldProvider.onDiscard = { projection in
-            discardedContinuation.yield(projection)
-            discardedContinuation.finish()
-        }
-        let gate = MaterializeGate()
-        oldProvider.materializeGate = gate
-        catalog.register(oldProvider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
-
-        let first = Task { try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split)) }
-        try #require(await gate.waitUntilEntered(orEndOf: first), "the project call ended before reaching the provider")
-        first.cancel()
-        await #expect(throws: CancellationError.self) {
-            try await first.value
-        }
-
-        let replacementProvider = FakeProvider(machine: .cloud("vivid-newt"))
-        catalog.register(replacementProvider)
-        let replacement = Task {
-            try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split))
-        }
-        defer {
-            replacement.cancel()
-            gate.release()
-        }
-
-        let result = try await withThrowingTaskGroup(of: SurfaceProjectionMaterialization.Result.self) { group in
-            group.addTask { try await replacement.value }
-            group.addTask {
-                try await ContinuousClock().sleep(for: .seconds(1))
-                throw TestTimeout()
-            }
-            defer { group.cancelAll() }
-            guard let result = try await group.next() else { throw TestTimeout() }
-            return result
-        }
-        #expect(result.reused == false)
-        #expect(replacementProvider.materialized.count == 1)
-
-        _ = try await awaitFirst(retirementDeadline)
-        await Task.yield()
-        gate.release()
-        _ = try await awaitFirst(discarded)
-        #expect(oldProvider.discarded.count == 1, "a result after retirement eviction must still close its pane")
-    }
-
     @Test func `Unregistering cancels in-flight materialization`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("vivid-newt"))
+        let provider = FakeProvider(machine: .remote("vivid-newt"))
         let gate = MaterializeGate()
         provider.materializeGate = gate
         catalog.register(provider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        let term = terminal(.remote("vivid-newt"), "term_1")
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
 
         let project = Task { try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split)) }
         try #require(await gate.waitUntilEntered(orEndOf: project), "the project call ended before reaching the provider")
-        catalog.unregister(machine: .cloud("vivid-newt"))
+        catalog.unregister(machine: .remote("vivid-newt"))
         gate.release()
 
         await #expect(throws: SurfaceCatalogError.unknownResource(term.id)) {
@@ -887,19 +511,19 @@ struct SurfaceCatalogTests {
 
     @Test func `Registering a replacement provider retires its old materialization`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let oldProvider = FakeProvider(machine: .cloud("vivid-newt"))
+        let oldProvider = FakeProvider(machine: .remote("vivid-newt"))
         let gate = MaterializeGate()
         oldProvider.materializeGate = gate
         catalog.register(oldProvider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        let term = terminal(.remote("vivid-newt"), "term_1")
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
 
         let oldProject = Task {
             try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split))
         }
         try #require(await gate.waitUntilEntered(orEndOf: oldProject), "the project call ended before reaching the provider")
 
-        let replacementProvider = FakeProvider(machine: .cloud("vivid-newt"))
+        let replacementProvider = FakeProvider(machine: .remote("vivid-newt"))
         catalog.register(replacementProvider)
         await #expect(throws: SurfaceCatalogError.unknownResource(term.id)) {
             try await oldProject.value
@@ -915,156 +539,25 @@ struct SurfaceCatalogTests {
         #expect(result.projection == catalog.projections(of: term.id).first)
     }
 
-    @Test func `Tracked materialization capacity bounds permanently detached work per machine`() async throws {
-        let catalog = SurfaceCatalog(maximumTrackedMaterializations: 1, cloudWorkspaceRenameService: live.renameService)
-        let oldProvider = FakeProvider(machine: .cloud("vivid-newt"))
-        let gate = MaterializeGate()
-        oldProvider.materializeGate = gate
-        catalog.register(oldProvider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
-
-        let oldProject = Task {
-            try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split))
-        }
-        try #require(await gate.waitUntilEntered(orEndOf: oldProject), "the project call ended before reaching the provider")
-        oldProject.cancel()
-        await #expect(throws: CancellationError.self) {
-            try await oldProject.value
-        }
-
-        let second = terminal(.cloud("vivid-newt"), "term_2")
-        catalog.upsert(second)
-        await #expect(throws: SurfaceCatalogError.unavailable(second.id, reason: "materialization capacity exhausted")) {
-            try await catalog.project(second.id, into: .workspace(id: live.id(), placement: .split))
-        }
-
-        gate.release()
-        #expect(oldProvider.materialized.count == 1)
-    }
-
-    @Test func `Tracked materialization capacity is isolated per machine`() async throws {
-        let catalog = SurfaceCatalog(maximumTrackedMaterializations: 1, cloudWorkspaceRenameService: live.renameService)
-        let stuckProvider = FakeProvider(machine: .cloud("stuck"))
-        let gate = MaterializeGate()
-        stuckProvider.materializeGate = gate
-        catalog.register(stuckProvider)
-        let stuckTerm = terminal(.cloud("stuck"), "term_1")
-        catalog.replaceResources([stuckTerm], on: .cloud("stuck"))
-
-        let stuckProject = Task {
-            try await catalog.project(stuckTerm.id, into: .workspace(id: live.id(), placement: .split))
-        }
-        try #require(await gate.waitUntilEntered(orEndOf: stuckProject), "the project call ended before reaching the provider")
-        stuckProject.cancel()
-        await #expect(throws: CancellationError.self) {
-            try await stuckProject.value
-        }
-
-        let healthyProvider = FakeProvider(machine: .cloud("healthy"))
-        catalog.register(healthyProvider)
-        let healthyTerm = terminal(.cloud("healthy"), "term_1")
-        catalog.replaceResources([healthyTerm], on: .cloud("healthy"))
-        let result = try await catalog.project(healthyTerm.id, into: .workspace(id: live.id(), placement: .split))
-        #expect(result.projection.resource == healthyTerm.id)
-        #expect(healthyProvider.materialized.count == 1)
-
-        gate.release()
-    }
-
-    @Test func `Tracked materialization capacity spans provider replacement`() async throws {
-        let catalog = SurfaceCatalog(maximumTrackedMaterializations: 1, cloudWorkspaceRenameService: live.renameService)
-        let oldProvider = FakeProvider(machine: .cloud("vivid-newt"))
-        let gate = MaterializeGate()
-        oldProvider.materializeGate = gate
-        catalog.register(oldProvider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
-
-        let oldProject = Task {
-            try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split))
-        }
-        try #require(await gate.waitUntilEntered(orEndOf: oldProject), "the project call ended before reaching the provider")
-        oldProject.cancel()
-        await #expect(throws: CancellationError.self) {
-            try await oldProject.value
-        }
-
-        let replacementProvider = FakeProvider(machine: .cloud("vivid-newt"))
-        catalog.register(replacementProvider)
-        await #expect(throws: SurfaceCatalogError.unavailable(term.id, reason: "materialization capacity exhausted")) {
-            try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split))
-        }
-
-        gate.release()
-    }
-
-    @Test func `Retired materialization eviction releases its machine capacity`() async throws {
-        let (evictionStarted, evictionStartedContinuation) = AsyncStream<Void>.makeStream(
-            bufferingPolicy: .bufferingNewest(1)
-        )
-        let clock = ImmediateClock { sleepCount in
-            guard sleepCount == 2 else { return }
-            evictionStartedContinuation.yield(())
-            evictionStartedContinuation.finish()
-        }
-        let catalog = SurfaceCatalog(
-            abandonedMaterializationTimeout: .seconds(30),
-            retiredMaterializationRetention: .seconds(30),
-            maximumTrackedMaterializations: 1,
-            materializationClock: clock,
-            cloudWorkspaceRenameService: live.renameService
-        )
-        let oldProvider = FakeProvider(machine: .cloud("vivid-newt"))
-        let oldGate = MaterializeGate()
-        oldProvider.materializeGate = oldGate
-        catalog.register(oldProvider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
-
-        let oldProject = Task {
-            try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split))
-        }
-        try #require(await oldGate.waitUntilEntered(orEndOf: oldProject), "the project call ended before reaching the provider")
-        oldProject.cancel()
-        await #expect(throws: CancellationError.self) {
-            try await oldProject.value
-        }
-
-        _ = try await awaitFirst(evictionStarted)
-        await Task.yield()
-
-        let replacementProvider = FakeProvider(machine: .cloud("vivid-newt"))
-        catalog.register(replacementProvider)
-        let replacement = try await catalog.project(
-            term.id,
-            into: .workspace(id: live.id(), placement: .split)
-        )
-        #expect(!replacement.reused)
-        #expect(replacementProvider.materialized.count == 1)
-
-        oldGate.release()
-    }
-
     @Test func `A replacement provider does not join retired materialization`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let oldProvider = FakeProvider(machine: .cloud("vivid-newt"))
+        let oldProvider = FakeProvider(machine: .remote("vivid-newt"))
         let gate = MaterializeGate()
         oldProvider.materializeGate = gate
         catalog.register(oldProvider)
-        let term = terminal(.cloud("vivid-newt"), "term_1")
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        let term = terminal(.remote("vivid-newt"), "term_1")
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
 
         let oldProject = Task { try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split)) }
         try #require(await gate.waitUntilEntered(orEndOf: oldProject), "the project call ended before reaching the provider")
-        catalog.unregister(machine: .cloud("vivid-newt"))
+        catalog.unregister(machine: .remote("vivid-newt"))
         await #expect(throws: SurfaceCatalogError.unknownResource(term.id)) {
             try await oldProject.value
         }
 
-        let newProvider = FakeProvider(machine: .cloud("vivid-newt"))
+        let newProvider = FakeProvider(machine: .remote("vivid-newt"))
         catalog.register(newProvider)
-        catalog.replaceResources([term], on: .cloud("vivid-newt"))
+        catalog.replaceResources([term], on: .remote("vivid-newt"))
         let newProject = Task { try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split)) }
 
         gate.release()
@@ -1076,10 +569,10 @@ struct SurfaceCatalogTests {
 
     @Test func `Ending a projection keeps the remote resource and tells the provider`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("m"))
+        let provider = FakeProvider(machine: .remote("m"))
         catalog.register(provider)
-        let term = terminal(.cloud("m"), "term_1")
-        catalog.replaceResources([term], on: .cloud("m"))
+        let term = terminal(.remote("m"), "term_1")
+        catalog.replaceResources([term], on: .remote("m"))
         let projection = try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split)).projection
 
         catalog.endProjections(panelID: projection.panelID)
@@ -1116,252 +609,46 @@ struct SurfaceCatalogTests {
         #expect(secondLaunch.projectionRecords(forWorkspace: workspace) == [record])
     }
 
-    @Test("A restored Mac terminal never becomes a local process while discovery reconnects")
-    func restoredMacTerminalHasNoLocalProcess() throws {
-        let original = Workspace()
-        var snapshot = original.sessionSnapshot(includeScrollback: false)
-        let savedPanel = try #require(snapshot.panels.first(where: { $0.type == .terminal }))
-        let machine = SurfaceMachineID.device(SurfaceDeviceInstanceID(deviceID: UUID().uuidString, tag: "restore-test"))
-        defer { SurfaceCatalog.shared.unregister(machine: machine) }
-        let resource = SurfaceResourceID(machine: machine, kind: .terminal, key: UUID().uuidString)
-        snapshot.surfaceProjections = [SurfaceProjectionRecord(
-            panelID: savedPanel.id, resource: resource, remoteWorkspaceID: "mac-workspace", remoteTabID: "mac-tab"
-        )]
-        // The shared catalog restores only into a workspace the app can resolve.
-        let manager = TabManager()
-        let restored = try #require(manager.selectedWorkspace)
-        defer { manager.finalizeAllWorkspacesForWindowClose() }
-        try LiveWorkspaceFixture.withAppRegistration(of: manager) {
-            let remap = restored.restoreSessionSnapshot(snapshot)
-            let panelID = try #require(remap[savedPanel.id])
-            let panel = try #require(restored.terminalPanel(for: panelID))
-            #expect(panel.surface.ioMode == .manualMirror)
-            let savedAgain = restored.sessionSnapshot(includeScrollback: false)
-            #expect(savedAgain.surfaceProjections?.first?.resource == resource)
-            #expect(savedAgain.surfaceProjections?.first?.remoteWorkspaceID == "mac-workspace")
-        }
-    }
-
     @Test func `Restored projections resolve when the provider reports the resource`() {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("m"))
+        let provider = FakeProvider(machine: .remote("m"))
         catalog.register(provider)
         let ws = live.id(), panel = UUID()
-        let id = SurfaceResourceID(machine: .cloud("m"), kind: .terminal, key: "term_9")
+        let id = SurfaceResourceID(machine: .remote("m"), kind: .terminal, key: "term_9")
         catalog.restore([SurfaceProjectionRecord(panelID: panel, resource: id)], workspaceID: ws)
         #expect(!catalog.snapshot.isOpen(id), "unknown until the link reports it")
 
-        catalog.replaceResources([terminal(.cloud("m"), "term_9")], on: .cloud("m"))
+        catalog.replaceResources([terminal(.remote("m"), "term_9")], on: .remote("m"))
         #expect(catalog.projection(forPanel: panel) == SurfaceProjection(resource: id, workspaceID: ws, panelID: panel))
         #expect(catalog.projectionRecords(forWorkspace: ws) == [SurfaceProjectionRecord(panelID: panel, resource: id)])
     }
 
     @Test func `Snapshot orders local first, then by name and workspace index`() {
         let catalog = SurfaceCatalog(live: live)
-        catalog.register(FakeProvider(machine: .cloud("zeta")))
-        catalog.register(FakeProvider(machine: .cloud("alpha")))
+        catalog.register(FakeProvider(machine: .remote("zeta")))
+        catalog.register(FakeProvider(machine: .remote("alpha")))
         catalog.register(FakeProvider(machine: .local))
-        var t1 = terminal(.cloud("alpha"), "term_b"); t1.remoteWorkspace = SurfaceRemoteWorkspace(id: "ws_1", name: "1", index: 1, focused: false)
-        var t0 = terminal(.cloud("alpha"), "term_a"); t0.remoteWorkspace = SurfaceRemoteWorkspace(id: "ws_0", name: "0", index: 0, focused: true)
-        catalog.replaceResources([t1, t0], on: .cloud("alpha"))
+        var t1 = terminal(.remote("alpha"), "term_b"); t1.remoteWorkspace = SurfaceRemoteWorkspace(id: "ws_1", name: "1", index: 1, focused: false)
+        var t0 = terminal(.remote("alpha"), "term_a"); t0.remoteWorkspace = SurfaceRemoteWorkspace(id: "ws_0", name: "0", index: 0, focused: true)
+        catalog.replaceResources([t1, t0], on: .remote("alpha"))
         let snapshot = catalog.snapshot
-        #expect(snapshot.machines.map { $0.id } == [.local, .cloud("alpha"), .cloud("zeta")])
-        #expect(snapshot.resources(on: .cloud("alpha")).map { $0.id.key } == ["term_a", "term_b"])
-    }
-
-    @Test func `Opening a group as a new workspace lays every resource out as its own pane`() async throws {
-        let catalog = SurfaceCatalog(live: live)
-        let machine = SurfaceMachineID.cloud("vm-1")
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-        let ids = ["a", "b", "c", "d"].map { SurfaceResourceID(machine: machine, kind: .terminal, key: $0) }
-        catalog.replaceResources(ids.map { terminal(machine, $0.key) }, on: machine)
-
-        let newWorkspace = live.id()
-        let starter = UUID()
-        var created: [String] = []
-        var closedStarters: [(UUID, UUID)] = []
-        var lookups = 0
-        let host = SurfaceCatalog.NewWorkspaceHost(
-            create: { title, _ in created.append(title); return (newWorkspace, starter) },
-            paneLookup: { _, _ in lookups += 1; return "pane-\(lookups)" },
-            closeStarter: { panel, workspace in closedStarters.append((panel, workspace)) }
-        )
-
-        let opened = try await catalog.projectGroupAsNewLocalWorkspace(ids, title: "vm-1: main", focus: true, host: host)
-
-        #expect(created == ["vm-1: main"])
-        #expect(opened.workspaceID == newWorkspace)
-        #expect(opened.projections.count == 4)
-        // The first resource takes the starter pane's place; the rest split the previous
-        // pane, alternating right and down, so four terminals form a grid.
-        let destinations = provider.materialized.map(\.1)
-        #expect(destinations[0] == .workspace(id: newWorkspace, placement: .split))
-        #expect(destinations[1] == .split(workspaceID: newWorkspace, paneID: "pane-1", direction: .right))
-        #expect(destinations[2] == .split(workspaceID: newWorkspace, paneID: "pane-2", direction: .down))
-        #expect(destinations[3] == .split(workspaceID: newWorkspace, paneID: "pane-3", direction: .right))
-        #expect(closedStarters.count == 1)
-        #expect(closedStarters.first?.0 == starter)
-        #expect(closedStarters.first?.1 == newWorkspace)
-        #expect(catalog.snapshot.projections.count == 4)
-    }
-
-    @Test func `Opening an unknown group as a new workspace closes the empty workspace again`() async {
-        let catalog = SurfaceCatalog(live: live)
-        let machine = SurfaceMachineID.cloud("vm-1")
-        catalog.register(FakeProvider(machine: machine))
-        let starter = UUID(), newWorkspace = live.id()
-        var closedStarters = 0
-        let host = SurfaceCatalog.NewWorkspaceHost(
-            create: { _, _ in (newWorkspace, starter) },
-            paneLookup: { _, _ in nil },
-            closeStarter: { _, _ in closedStarters += 1 }
-        )
-        do {
-            _ = try await catalog.projectGroupAsNewLocalWorkspace(
-                [SurfaceResourceID(machine: machine, kind: .terminal, key: "missing")], title: "x", focus: true, host: host
-            )
-            Issue.record("expected the unknown resource to fail")
-        } catch {
-            #expect(closedStarters == 1, "nothing landed, so the empty workspace's starter pane is closed")
-        }
-    }
-
-    @Test func openingLayoutKeepsUnplacedGroupResources() async throws {
-        let catalog = SurfaceCatalog(live: live)
-        let machine = SurfaceMachineID.cloud("vm-layout")
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-        let members = ["placed-a", "placed-b", "pool-terminal"].map {
-            SurfaceResourcePlacement(resource: SurfaceResourceID(machine: machine, kind: .terminal, key: $0))
-        }
-        catalog.replaceResources(members.map { terminal(machine, $0.resource.key) }, on: machine)
-        let group = SurfaceResourceGroup(title: "layout", placements: members)
-        let layout = SurfaceProjectionLayout.split(
-            direction: .right,
-            ratio: 0.6,
-            first: .leaf(placements: [members[0]]),
-            second: .leaf(placements: [members[1]])
-        )
-        let workspace = live.id()
-        let host = SurfaceCatalog.NewWorkspaceHost(
-            create: { _, _ in (workspace, nil) },
-            paneLookup: { _, panel in panel.uuidString },
-            closeStarter: { _, _ in }
-        )
-        let opened = try await catalog.projectGroupAsNewLocalWorkspace(
-            group, title: "layout", focus: false, host: host, layout: layout
-        )
-        #expect(opened.projections.count == members.count)
-        #expect(Set(opened.projections.map(\.resource)) == Set(group.resources))
-        #expect(provider.materialized.count == members.count)
+        #expect(snapshot.machines.map { $0.id } == [.local, .remote("alpha"), .remote("zeta")])
+        #expect(snapshot.resources(on: .remote("alpha")).map { $0.id.key } == ["term_a", "term_b"])
     }
 
     @Test func `Unregistering a machine drops its resources and projections`() async throws {
         let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("m"))
+        let provider = FakeProvider(machine: .remote("m"))
         catalog.register(provider)
-        let term = terminal(.cloud("m"), "term_1")
-        catalog.replaceResources([term], on: .cloud("m"))
-        #expect(catalog.hasResources(on: .cloud("m")))
+        let term = terminal(.remote("m"), "term_1")
+        catalog.replaceResources([term], on: .remote("m"))
+        #expect(catalog.hasResources(on: .remote("m")))
         _ = try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split))
-        catalog.unregister(machine: .cloud("m"))
+        catalog.unregister(machine: .remote("m"))
         #expect(catalog.snapshot.resources.isEmpty)
-        #expect(!catalog.hasResources(on: .cloud("m")))
+        #expect(!catalog.hasResources(on: .remote("m")))
         #expect(catalog.snapshot.projections.isEmpty)
-        #expect(catalog.provider(for: .cloud("m")) == nil)
-    }
-
-    @Test func `A late refresh from a deleted machine cannot resurrect catalog state`() {
-        let catalog = SurfaceCatalog(live: live)
-        let machine = SurfaceMachineID.cloud("gone")
-        let provider = FakeProvider(machine: machine)
-        let term = terminal(machine, "term_late")
-
-        catalog.register(provider)
-        catalog.replaceResources([term], on: machine)
-        catalog.unregister(machine: machine)
-
-        // The old provider can finish a refresh after unregister has returned.
-        // Those writes are stale and must not put the machine back in the tree.
-        catalog.replaceResources([term], on: machine, info: provider.info)
-        catalog.upsert(term)
-        catalog.updateMachine(provider.info)
-
-        #expect(catalog.provider(for: machine) == nil)
-        #expect(catalog.snapshot.machines.contains(where: { $0.id == machine }) == false)
-        #expect(catalog.snapshot.resources.contains(where: { $0.machine == machine }) == false)
-    }
-
-    @Test func `A retired provider cannot write through its replacement`() {
-        let catalog = SurfaceCatalog(live: live)
-        let machine = SurfaceMachineID.cloud("reused")
-        let retired = FakeProvider(machine: machine)
-        let replacement = FakeProvider(machine: machine)
-        let resourceID = SurfaceResourceID(machine: machine, kind: .terminal, key: "term_1")
-        let current = SurfaceResource(id: resourceID, title: "current", detail: "/root", lifecycle: .running, agent: nil, remoteWorkspace: nil, port: nil, url: nil)
-        var stale = current
-        stale.title = "stale"
-
-        catalog.register(retired)
-        catalog.replaceResources([current], on: machine, from: retired)
-        catalog.register(replacement)
-        catalog.replaceResources([current], on: machine, from: replacement)
-
-        // A refresh that was already in flight on the retired provider must not
-        // overwrite either the replacement's resource or machine metadata.
-        catalog.replaceResources([stale], on: machine, from: retired)
-        catalog.upsert(stale, from: retired)
-        var retiredInfo = retired.info
-        retiredInfo.name = "retired"
-        catalog.updateMachine(retiredInfo, from: retired)
-
-        #expect(catalog.resources[resourceID]?.title == "current")
-        #expect(catalog.machines[machine]?.name == replacement.info.name)
-    }
-
-    @Test func `Unregister removes pending restores before a machine ID is reused`() {
-        let catalog = SurfaceCatalog(live: live)
-        let machine = SurfaceMachineID.cloud("reused")
-        let original = FakeProvider(machine: machine)
-        let replacement = FakeProvider(machine: machine)
-        let panelID = UUID()
-        let resourceID = SurfaceResourceID(machine: machine, kind: .terminal, key: "term_old")
-        let record = SurfaceProjectionRecord(panelID: panelID, resource: resourceID)
-
-        catalog.register(original)
-        catalog.restore([record], workspaceID: live.id())
-        #expect(catalog.pendingRestoredMachineIDs == Set(["reused"]))
-
-        catalog.unregister(machine: machine)
-        catalog.register(replacement)
-        catalog.replaceResources([terminal(machine, "term_old")], on: machine, from: replacement)
-
-        // The resource ID was reused, but the restored pane belonged to the
-        // deleted machine instance and must not attach to the replacement.
-        #expect(catalog.pendingRestoredMachineIDs.isEmpty)
-        #expect(catalog.projection(forPanel: panelID) == nil)
-    }
-
-    @Test func `Unregistering a machine closes its display and browser panes but not terminals`() async throws {
-        let catalog = SurfaceCatalog(live: live)
-        let provider = FakeProvider(machine: .cloud("m"))
-        catalog.register(provider)
-        let term = terminal(.cloud("m"), "term_1")
-        let display = SurfaceResource(id: SurfaceResourceID(machine: .cloud("m"), kind: .display, key: "display:1"), title: "Desktop", detail: "noVNC", lifecycle: .running, agent: nil, remoteWorkspace: nil, port: 6901, url: nil)
-        let browser = SurfaceResource(id: SurfaceResourceID(machine: .cloud("m"), kind: .browser, key: "port:3000"), title: ":3000", detail: nil, lifecycle: .running, agent: nil, remoteWorkspace: nil, port: 3000, url: nil)
-        catalog.replaceResources([term, display, browser], on: .cloud("m"))
-        let termProjection = try await catalog.project(term.id, into: .workspace(id: live.id(), placement: .split)).projection
-        let displayProjection = try await catalog.project(display.id, into: .workspace(id: live.id(), placement: .split)).projection
-        let browserProjection = try await catalog.project(browser.id, into: .workspace(id: live.id(), placement: .split)).projection
-
-        catalog.unregister(machine: .cloud("m"))
-
-        // The tokened gateway panes close with the machine (their URL decays into
-        // the hosting provider's raw error page); the terminal pane stays.
-        #expect(Set(provider.discardInvocations.map(\.panelID)) == [displayProjection.panelID, browserProjection.panelID])
-        #expect(!provider.discardInvocations.map(\.panelID).contains(termProjection.panelID))
-        #expect(catalog.snapshot.projections.isEmpty)
+        #expect(catalog.provider(for: .remote("m")) == nil)
     }
 
     private func workspaceTerminal(_ machine: SurfaceMachineID, _ key: String, workspace: SurfaceRemoteWorkspace?) -> SurfaceResource {
@@ -1373,100 +660,4 @@ struct SurfaceCatalogTests {
 // MARK: - Optimistic layout open (https://github.com/ecyx00/bree/issues/12537)
 
 extension SurfaceCatalogTests {
-    /// Reserves the whole Cloud layout before attaching any terminal.
-    @Test @MainActor
-    func `Opening a workspace optimistically reserves the whole layout first and attaches every pane`() async throws {
-        let catalog = SurfaceCatalog(live: live)
-        let machine = SurfaceMachineID.cloud("vm-1")
-        catalog.register(FakeProvider(machine: machine))
-        let ids = ["a", "b", "c", "d"].map { SurfaceResourceID(machine: machine, kind: .terminal, key: $0) }
-        let remoteWorkspace = SurfaceRemoteWorkspace(id: "ws-1", name: "main", index: 0, focused: true)
-        catalog.replaceResources(ids.map {
-            terminal(machine, $0.key, remoteView: SurfaceRemoteView(tabID: "tab-\($0.key)", workspace: remoteWorkspace))
-        }, on: machine)
-        let placements = ids.map { SurfaceResourcePlacement(resource: $0, remoteWorkspaceID: remoteWorkspace.id, remoteTabID: "tab-\($0.key)") }
-        let newWorkspace = live.id()
-        let starter = UUID()
-        var reserved: [(SurfaceDestination, Bool)] = []
-        var attached: [SurfaceResourceID] = []
-        var closedStarters = 0
-        var attachedBeforeAllReserved = false
-        var lookups = 0
-        let host = SurfaceCatalog.NewWorkspaceHost(
-            create: { _, _ in (newWorkspace, starter) },
-            paneLookup: { _, _ in lookups += 1; return "pane-\(lookups)" },
-            closeStarter: { _, _ in closedStarters += 1 },
-            optimistic: SurfaceCatalog.OptimisticPaneHost(
-                reserve: { machine, destination, focus in
-                    reserved.append((destination, focus))
-                    return CloudTerminalPaneReservation(workspaceID: newWorkspace, panelID: UUID(), machine: machine)
-                },
-                attach: { _, resource, _ in
-                    if reserved.count < ids.count { attachedBeforeAllReserved = true }
-                    attached.append(resource.id)
-                }
-            )
-        )
-        let layout = SurfaceProjectionLayout.split(
-            direction: .right, ratio: 0.5,
-            first: .leaf(placements: [placements[0], placements[1]]),
-            second: .split(
-                direction: .down, ratio: 0.5,
-                first: .leaf(placements: [placements[2]]),
-                second: .leaf(placements: [placements[3]])
-            )
-        )
-        let opened = try await catalog.projectGroupAsNewLocalWorkspace(
-            SurfaceResourceGroup(title: "main", placements: placements, remoteWorkspaceID: remoteWorkspace.id), title: "vm-1: main", focus: true, host: host, layout: layout
-        )
-
-        #expect(opened.workspaceID == newWorkspace)
-        #expect(closedStarters == 1)
-        // Parent splits precede child tabs, preserving the layout's nesting.
-        #expect(reserved.map(\.0) == [
-            .workspace(id: newWorkspace, placement: .split),
-            .split(workspaceID: newWorkspace, paneID: "pane-1", direction: .right),
-            .tab(workspaceID: newWorkspace, paneID: "pane-1", index: 1),
-            .split(workspaceID: newWorkspace, paneID: "pane-2", direction: .down),
-        ])
-        #expect(reserved.map(\.1) == [true, false, false, false])
-        #expect(!attachedBeforeAllReserved)
-        #expect(Set(attached) == Set(ids))
-        // Every reservation already carries its exact remote projection during attachment.
-        #expect(opened.projections.count == 4)
-        #expect(opened.projections.allSatisfy { $0.remoteWorkspaceID == remoteWorkspace.id })
-        #expect(Set(opened.projections.compactMap(\.remoteTabID)) == Set(ids.map { "tab-\($0.key)" }))
-        for projection in opened.projections {
-            #expect(catalog.projection(forPanel: projection.panelID) == projection)
-        }
-    }
-
-    /// A group with anything but known cloud terminals keeps the awaited path.
-    @Test @MainActor
-    func `Optimistic hosts fall back to awaited projection for groups with unknown resources`() async throws {
-        let catalog = SurfaceCatalog(live: live)
-        let machine = SurfaceMachineID.cloud("vm-1")
-        let provider = FakeProvider(machine: machine)
-        catalog.register(provider)
-        let known = SurfaceResourceID(machine: machine, kind: .terminal, key: "a")
-        catalog.replaceResources([terminal(machine, "a")], on: machine)
-        let newWorkspace = live.id()
-        var reservations = 0
-        let host = SurfaceCatalog.NewWorkspaceHost(
-            create: { _, _ in (newWorkspace, nil) },
-            paneLookup: { _, _ in nil },
-            closeStarter: { _, _ in },
-            optimistic: SurfaceCatalog.OptimisticPaneHost(
-                reserve: { machine, _, _ in reservations += 1; return CloudTerminalPaneReservation(workspaceID: UUID(), panelID: UUID(), machine: machine) },
-                attach: { _, _, _ in }
-            )
-        )
-        let unknown = SurfaceResourceID(machine: machine, kind: .terminal, key: "missing")
-
-        let opened = try await catalog.projectGroupAsNewLocalWorkspace([known, unknown], title: "x", focus: false, host: host)
-
-        #expect(reservations == 0)
-        #expect(provider.materialized.map(\.0) == [known])
-        #expect(opened.projections.count == 1)
-    }
 }

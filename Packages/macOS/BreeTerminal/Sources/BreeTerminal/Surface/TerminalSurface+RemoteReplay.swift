@@ -4,7 +4,7 @@ import GhosttyKit
 extension TerminalSurface {
     /// Enqueues replacement output and refreshes after the parser has applied it.
     ///
-    /// A Cloud snapshot is a replacement state, so refreshing when its bytes
+    /// A Remote snapshot is a replacement state, so refreshing when its bytes
     /// are merely admitted can present the previous IOSurface contents. The
     /// completion runs after the generation FIFO has parsed the bytes.
     @MainActor

@@ -70,7 +70,7 @@ public struct TerminalArtifactReference: Sendable, Equatable, Codable, Identifia
     }
 }
 
-/// Response for `mobile.terminal.artifact.scan`.
+/// Response for `terminal.artifact.scan`.
 public struct TerminalArtifactScanResponse: Sendable, Equatable, Codable {
     /// Capped terminal artifacts sorted by detection order.
     public let artifacts: [TerminalArtifactReference]

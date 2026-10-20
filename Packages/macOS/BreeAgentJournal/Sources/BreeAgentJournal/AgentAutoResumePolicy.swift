@@ -188,7 +188,7 @@ public struct AgentRetryableFailureClassifier: Sendable, Equatable {
     /// message does not count as transient.
     static let permanentMarkers = [
         "authentication", "authentication_failed", "unauthorized", "invalid api key", "invalid_api_key",
-        "oauth_org_not_allowed", "account_on_hold", "billing", "cloud_credential",
+        "oauth_org_not_allowed", "account_on_hold", "billing",
         "invalid_request", "model_not_found", "max_output_tokens", "prompt is too long", "context length",
         "context_length", "usage limit", "usage_limit", "quota", "insufficient",
         "permission denied",

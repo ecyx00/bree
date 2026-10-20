@@ -144,7 +144,7 @@ struct SurfaceProjectionIdentityTests {
                             workspacesByID: owner.map { [workspace.id: $0] } ?? [:]
                         )
                     },
-                    discoverCloudMachine: { _ in Issue.record("A cached identity read must not discover Cloud") }
+                    discoverRemoteMachine: { _ in Issue.record("A cached identity read must not discover remote") }
                 )
                 let export = await query.read(machine: nil, refresh: false)
                 let row = try projectionRow(export, panelID: panel.id)
@@ -168,36 +168,6 @@ struct SurfaceProjectionIdentityTests {
         }
     }
 
-    @Test("Cloud mirror identity describes local owners without changing daemon identity")
-    func cloudMirrorKeepsDaemonIdentitySeparate() async throws {
-        try await withWorkspaces(count: 1) { workspaces in
-            let workspace = workspaces[0]
-            let panel = try terminal(in: workspace)
-            let catalog = await localCatalog(workspaces)
-            let machine = SurfaceMachineID.cloud("identity-fixture")
-            // The catalog ignores writes about a Cloud machine with no registered provider
-            // (a22bde65ad), so register the fixture provider before publishing its resource.
-            let provider = try CloudCatalogQueryTestProvider(machine: machine, catalog: catalog)
-            catalog.register(provider)
-            let resourceID = SurfaceResourceID(machine: machine, kind: .terminal, key: "daemon-terminal")
-            let resource = SurfaceResource(id: resourceID, title: "same title", detail: nil, lifecycle: .running, agent: nil, remoteWorkspace: nil, port: nil, url: nil)
-            var info = LocalSurfaceProvider(catalog: catalog, workspaces: { workspaces }).info
-            info.id = machine
-            info.linkState = .connected
-            catalog.replaceResources([resource], on: machine, info: info, from: provider)
-            catalog.record(SurfaceProjection(resource: resourceID, workspaceID: workspace.id, panelID: panel.id, remoteWorkspaceID: "daemon-workspace", remoteTabID: "daemon-tab"))
-            let export = await read(catalog, workspaces: workspaces)
-            for cloudOnly in [false, true] {
-                let row = try projectionRow(export, panelID: panel.id, cloudOnly: cloudOnly)
-                #expect(row["stable_surface_id"] as? String == panel.stableSurfaceId.uuidString)
-                #expect(row["stable_workspace_id"] as? String == workspace.stableId.uuidString)
-                #expect(row["resource"] as? String == resourceID.rawValue)
-                #expect(row["remote_workspace_id"] as? String == "daemon-workspace")
-                #expect(row["remote_tab_id"] as? String == "daemon-tab")
-            }
-        }
-    }
-
     @Test("Identical labels and directories do not merge distinct stable owners")
     func sameMetadataDoesNotImplySameIdentity() async throws {
         try await withWorkspaces(count: 2) { workspaces in
@@ -215,35 +185,6 @@ struct SurfaceProjectionIdentityTests {
             #expect(secondRow["stable_surface_id"] as? String == second.stableSurfaceId.uuidString)
             #expect(first.stableSurfaceId != second.stableSurfaceId)
             #expect(firstRow["stable_workspace_id"] as? String != secondRow["stable_workspace_id"] as? String)
-        }
-    }
-
-    @Test("A read captures owner identities once after optional discovery and refresh")
-    func batchCaptureUsesOwnersAfterRefresh() async throws {
-        try await withWorkspaces(count: 2) { workspaces in
-            let catalog = await localCatalog(workspaces)
-            let machine = SurfaceMachineID.cloud("identity-capture-order")
-            let provider = try CloudCatalogQueryTestProvider(machine: machine, catalog: catalog)
-            var refreshedOwnerIndex: [UUID: Workspace] = [:]
-            var captures = 0
-            let query = SurfaceCatalogQueryService(
-                catalog: catalog,
-                projectionIdentities: { projections in
-                    captures += 1
-                    #expect(refreshedOwnerIndex.count == workspaces.count)
-                    #expect(projections.count == workspaces.count)
-                    #expect(provider.forcedRefreshes == [true])
-                    return SurfaceProjectionIdentity.capture(projections: projections, workspacesByID: refreshedOwnerIndex)
-                },
-                discoverCloudMachine: { _ in
-                    await Task.yield()
-                    refreshedOwnerIndex = Dictionary(uniqueKeysWithValues: workspaces.map { ($0.id, $0) })
-                    catalog.register(provider)
-                }
-            )
-            let export = await query.read(machine: machine, refresh: true)
-            #expect(captures == 1)
-            #expect(export.projectionIdentities.count == workspaces.count)
         }
     }
 
@@ -333,19 +274,19 @@ struct SurfaceProjectionIdentityTests {
                     workspacesByID: Dictionary(uniqueKeysWithValues: workspaces.map { ($0.id, $0) })
                 )
             },
-            discoverCloudMachine: { _ in Issue.record("A cached identity read must not discover Cloud") }
+            discoverRemoteMachine: { _ in Issue.record("A cached identity read must not discover remote") }
         )
         return await query.read(machine: nil, refresh: false)
     }
 
-    private func jsonPayload(_ export: SurfaceCatalogExport, cloudOnly: Bool = false) throws -> [String: Any] {
-        let payload = TerminalController.surfaceCatalogPayload(export, machine: nil, cloudOnly: cloudOnly)
+    private func jsonPayload(_ export: SurfaceCatalogExport, remoteOnly: Bool = false) throws -> [String: Any] {
+        let payload = TerminalController.surfaceCatalogPayload(export, machine: nil, remoteOnly: remoteOnly)
         let data = try JSONSerialization.data(withJSONObject: payload)
         return try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
-    private func projectionRow(_ export: SurfaceCatalogExport, panelID: UUID, cloudOnly: Bool = false) throws -> [String: Any] {
-        let rows = try #require(jsonPayload(export, cloudOnly: cloudOnly)["projections"] as? [[String: Any]])
+    private func projectionRow(_ export: SurfaceCatalogExport, panelID: UUID, remoteOnly: Bool = false) throws -> [String: Any] {
+        let rows = try #require(jsonPayload(export, remoteOnly: remoteOnly)["projections"] as? [[String: Any]])
         return try #require(rows.first { $0["panel_id"] as? String == panelID.uuidString })
     }
 }

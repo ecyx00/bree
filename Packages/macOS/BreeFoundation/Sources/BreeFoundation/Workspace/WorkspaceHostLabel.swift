@@ -10,7 +10,7 @@ import Foundation
 ///   with the user and port removed (`leo@big-red:2222` shows as `big-red`).
 ///   An ssh_config alias stays as typed; bree never resolves it to its
 ///   `HostName`, because the alias is the name the user knows the host by.
-/// - Cloud: built from the Cloud machine. The label is the machine's name,
+/// - Remote: built from the remote machine. The label is the machine's name,
 ///   or its id when the name is unknown.
 /// - Local: this Mac. It has no label; surfaces show nothing extra.
 public struct WorkspaceHostLabel: Hashable, Sendable {
@@ -18,7 +18,7 @@ public struct WorkspaceHostLabel: Hashable, Sendable {
     public enum Kind: String, Hashable, Sendable {
         case local
         case ssh
-        case cloud
+        case remote
     }
 
     /// The kind of host.
@@ -29,13 +29,13 @@ public struct WorkspaceHostLabel: Hashable, Sendable {
     /// `my-vm (vm_123)`). Empty for local workspaces.
     public let detail: String
     /// Stable, case-insensitive key for grouping workspaces that share a host:
-    /// `local`, `ssh:<host>[:<port>]` (user ignored) or `cloud:<machine id>`.
+    /// `local`, `ssh:<host>[:<port>]` (user ignored) or `Remote:<machine id>`.
     public let groupingKey: String
 
     /// This Mac.
     public static let local = WorkspaceHostLabel(kind: .local, label: "", detail: "", groupingKey: "local")
 
-    /// True for SSH and Cloud workspaces.
+    /// True for SSH and remote workspaces.
     public var isRemote: Bool { kind != .local }
 
     private init(kind: Kind, label: String, detail: String, groupingKey: String) {
@@ -68,19 +68,19 @@ public struct WorkspaceHostLabel: Hashable, Sendable {
         return WorkspaceHostLabel(kind: .ssh, label: parsed.host, detail: detail, groupingKey: key)
     }
 
-    /// Label for a Cloud machine workspace.
+    /// Label for a remote machine workspace.
     ///
     /// - Parameters:
-    ///   - machineID: The Cloud machine id.
+    ///   - machineID: The remote machine id.
     ///   - machineName: The machine's display name, when known.
     /// - Returns: `nil` when the id is empty.
-    public static func cloud(machineID: String, machineName: String?) -> WorkspaceHostLabel? {
+    public static func remote(machineID: String, machineName: String?) -> WorkspaceHostLabel? {
         let id = machineID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !id.isEmpty else { return nil }
         let name = machineName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let label = name.isEmpty ? id : name
         let detail = label == id ? id : "\(label) (\(id))"
-        return WorkspaceHostLabel(kind: .cloud, label: label, detail: detail, groupingKey: "cloud:" + id.lowercased())
+        return WorkspaceHostLabel(kind: .remote, label: label, detail: detail, groupingKey: "Remote:" + id.lowercased())
     }
 
     /// Appends the host label to a window title (`title · host`), unless the

@@ -13,7 +13,9 @@ arch-scripts-dir defaults to this directory; pass another checkout of scripts/ar
 import json, os, re, shutil, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from check_svg import browser_or_exit
+CHROME = browser_or_exit("lang_check.py")
 TR = re.compile(r"[çğıöşüÇĞİÖŞÜ]|AÇIKLAMA|\b(Adım|Giriş|Çağrı|Modül|Bağlantı|bulunamadı|çizilmedi)\b")
 fails = []
 

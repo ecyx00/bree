@@ -1,3 +1,4 @@
+import BREEAgentLaunch
 import BreeFoundation
 import BreeAgentJournal
 import BreeSettings
@@ -183,4 +184,156 @@ private final class AgentMessageEnabledObserver: @unchecked Sendable {
             store.failBlockedQueued()
         }
     }
+}
+
+// MARK: - File overlap notice
+
+/// Tells an agent when another agent in the same checkout changed a file it
+/// read or edited recently. Fed by the PostToolUse Read/Edit/Write events the
+/// Feed already receives; the note travels as a normal agent message, so it
+/// lands at the reader's next hook and is never typed into its prompt.
+///
+/// Event-driven: no timers. Entries expire lazily when the map is touched.
+@MainActor
+final class FileOverlapNotice {
+    static let shared = FileOverlapNotice()
+
+    static let maxEntries = 5_000
+    static let accessWindow: TimeInterval = 30 * 60
+    static let noteInterval: TimeInterval = 5 * 60
+
+    private struct Access {
+        let sessionId: String
+        let surfaceId: String
+        let workspaceId: String?
+        var time: Date
+    }
+
+    private static let readTools: Set<String> = ["Read"]
+    private static let writeTools: Set<String> = ["Edit", "MultiEdit", "Write", "NotebookEdit"]
+
+    /// "<worktree root>\0<absolute path>" -> accesses, one per session.
+    private var accesses: [String: [Access]] = [:]
+    /// "<reader session>\0<worktree root>\0<absolute path>" -> last note time.
+    private var lastNote: [String: Date] = [:]
+
+    static func isEnabled(defaults: UserDefaults = .standard) -> Bool {
+        AgentMessagesCatalogSection().fileOverlapNotice.value(in: defaults)
+    }
+
+    func note(_ event: WorkstreamEvent, now: Date = Date()) {
+        guard event.hookEventName == .postToolUse,
+              event.isError != true,
+              let tool = event.toolName,
+              Self.readTools.contains(tool) || Self.writeTools.contains(tool),
+              let surfaceId = event.surfaceId,
+              let path = Self.filePath(from: event),
+              Self.isEnabled(),
+              let root = Self.worktreeRoot(forFile: path) else { return }
+
+        let key = root + "\0" + path
+        let isWrite = Self.writeTools.contains(tool)
+        var list = (accesses[key] ?? []).filter { now.timeIntervalSince($0.time) < Self.accessWindow }
+
+        if isWrite {
+            let others = list.filter { $0.sessionId != event.sessionId && $0.surfaceId != surfaceId }
+            if !others.isEmpty {
+                let writerTitle = Self.workspaceTitle(surfaceId: surfaceId, workspaceId: event.workspaceId)
+                let relative = path.hasPrefix(root + "/") ? String(path.dropFirst(root.count + 1)) : path
+                for reader in others {
+                    let noteKey = reader.sessionId + "\0" + key
+                    if let last = lastNote[noteKey], now.timeIntervalSince(last) < Self.noteInterval { continue }
+                    lastNote[noteKey] = now
+                    Self.send(
+                        file: relative,
+                        writer: writerTitle,
+                        time: now,
+                        to: reader.surfaceId,
+                        workspaceId: reader.workspaceId
+                    )
+                }
+            }
+        }
+
+        list.removeAll { $0.sessionId == event.sessionId }
+        list.append(Access(sessionId: event.sessionId, surfaceId: surfaceId, workspaceId: event.workspaceId, time: now))
+        accesses[key] = list
+        if accesses.count > Self.maxEntries || lastNote.count > Self.maxEntries { prune(now: now) }
+    }
+
+    /// Drops expired entries, then the oldest tenth if the map is still full.
+    private func prune(now: Date) {
+        accesses = accesses.compactMapValues { list in
+            let live = list.filter { now.timeIntervalSince($0.time) < Self.accessWindow }
+            return live.isEmpty ? nil : live
+        }
+        lastNote = lastNote.filter { now.timeIntervalSince($0.value) < Self.noteInterval }
+        for (cap, drop) in [(accesses.count, true), (lastNote.count, false)] where cap > Self.maxEntries {
+            if drop {
+                let oldest = accesses.sorted { ($0.value.last?.time ?? .distantPast) < ($1.value.last?.time ?? .distantPast) }
+                oldest.prefix(cap / 10).forEach { accesses[$0.key] = nil }
+            } else {
+                lastNote.sorted { $0.value < $1.value }.prefix(cap / 10).forEach { lastNote[$0.key] = nil }
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private static func filePath(from event: WorkstreamEvent) -> String? {
+        guard let data = event.toolInputJSON?.data(using: .utf8),
+              let input = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let raw = (input["file_path"] ?? input["notebook_path"]) as? String,
+              raw.hasPrefix("/") else { return nil }
+        let url = URL(fileURLWithPath: raw)
+        // Resolve symlinks on the directory only, so /tmp and /private/tmp agree
+        // and a file that was just deleted still maps to a key.
+        return url.deletingLastPathComponent().resolvingSymlinksInPath()
+            .appendingPathComponent(url.lastPathComponent).path
+    }
+
+    /// Nearest ancestor holding a `.git` entry (a directory, or the file a
+    /// linked worktree uses), so two worktrees of one repo never share a key.
+    private static func worktreeRoot(forFile path: String) -> String? {
+        var dir = (path as NSString).deletingLastPathComponent
+        let fm = FileManager.default
+        while dir.count > 1 {
+            if fm.fileExists(atPath: dir + "/.git") { return dir }
+            dir = (dir as NSString).deletingLastPathComponent
+        }
+        return nil
+    }
+
+    private static func workspaceTitle(surfaceId: String, workspaceId: String?) -> String {
+        let fallback = "another agent"
+        guard let app = AppDelegate.shared, let panel = UUID(uuidString: surfaceId) else { return fallback }
+        let title = app.workspaceContainingPanel(
+            panelId: panel,
+            preferredWorkspaceId: workspaceId.flatMap(UUID.init(uuidString:))
+        )?.workspace.title ?? ""
+        let clean = String(title.unicodeScalars.filter { !$0.properties.generalCategory.isControl }.map(Character.init))
+            .trimmingCharacters(in: .whitespaces)
+        return clean.isEmpty ? fallback : String(clean.prefix(64))
+    }
+
+    private static func send(file: String, writer: String, time: Date, to surfaceId: String, workspaceId: String?) {
+        let parts = Calendar.current.dateComponents([.hour, .minute], from: time)
+        let clock = String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+        let cleanFile = String(file.unicodeScalars.filter { !$0.properties.generalCategory.isControl }.map(Character.init))
+        // Agent-facing text, not localized.
+        let draft = AgentMessageDraft(
+            senderName: "bree",
+            recipientSurfaceId: surfaceId,
+            recipientWorkspaceId: workspaceId,
+            body: "\(cleanFile) was changed by \(writer) at \(clock); re-read before editing"
+        )
+        // The journal write is file I/O; keep it off the main actor.
+        DispatchQueue.global(qos: .utility).async {
+            _ = try? AgentMessageCenter.store.append(draft)
+        }
+    }
+}
+
+private extension Unicode.GeneralCategory {
+    var isControl: Bool { self == .control || self == .lineSeparator || self == .paragraphSeparator }
 }

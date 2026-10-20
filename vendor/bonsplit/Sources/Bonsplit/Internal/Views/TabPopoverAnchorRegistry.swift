@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Laid-out AppKit views a host can anchor a popover to, per tab: the tab
-/// item itself and, when shown, its presence accessory.
+/// item itself.
 ///
 /// Views register while they are in a window and drop out when they leave or
 /// deallocate, so a lookup never returns a view from a torn-down strip.
@@ -10,16 +10,13 @@ import SwiftUI
 enum TabPopoverAnchorRegistry {
     enum Kind {
         case tabItem
-        case presenceAccessory
     }
 
     private static let tabItems = NSMapTable<NSUUID, NSView>.strongToWeakObjects()
-    private static let accessories = NSMapTable<NSUUID, NSView>.strongToWeakObjects()
 
     private static func table(_ kind: Kind) -> NSMapTable<NSUUID, NSView> {
         switch kind {
         case .tabItem: tabItems
-        case .presenceAccessory: accessories
         }
     }
 
@@ -33,9 +30,9 @@ enum TabPopoverAnchorRegistry {
         table.removeObject(forKey: tabId as NSUUID)
     }
 
-    /// The accessory when it is on screen, else the tab item, else nil.
+    /// The tab item when it is on screen, else nil.
     static func anchorView(for tabId: UUID) -> NSView? {
-        for kind in [Kind.presenceAccessory, .tabItem] {
+        for kind in [Kind.tabItem] {
             if let view = table(kind).object(forKey: tabId as NSUUID), isOnScreen(view) {
                 return view
             }
@@ -104,8 +101,7 @@ struct TabPopoverAnchorView: NSViewRepresentable {
 }
 
 extension BonsplitController {
-    /// The view a popover about this tab should point at: the presence
-    /// accessory when it is shown, else the tab item. Nil when the tab is not
+    /// The view a popover about this tab should point at: the tab item. Nil when the tab is not
     /// laid out in a window (hidden tab bar, scrolled out of the strip).
     ///
     /// - Parameter tabId: The tab.

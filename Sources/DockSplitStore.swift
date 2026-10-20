@@ -48,8 +48,6 @@ final class DockSplitStore: BonsplitDelegate, FilePreviewTabMetadataHost {
     /// and new host, so visibility is the union rather than a single flag.
     private var visibleUIHostIds: Set<UUID> = []
     @ObservationIgnored let dockPortalReconcileState = DockPortalReconcileState()
-    @ObservationIgnored let appLinkHandoffCoordinator = BrowserAppLinkHandoffCoordinator()
-    @ObservationIgnored let appLinkPlacementPolicy = BrowserAppLinkPlacementPolicy()
 
     private let baseDirectoryProvider: () -> String?
     private let remoteBrowserSettingsProvider: () -> DockRemoteBrowserSettings

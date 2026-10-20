@@ -163,10 +163,9 @@ extension Workspace {
         return visibleStatusKeys
     }
 
-    /// Relay-host agents report state only through relayed hooks. bree-tui SSH
-    /// workspaces publish their own remote status keys instead.
+    /// Relay-host agents report state only through relayed hooks.
     var showsRelayHostAgentStatus: Bool {
-        (remoteConfiguration?.relayPort ?? 0) > 0 && !usesSSHTui
+        (remoteConfiguration?.relayPort ?? 0) > 0
     }
 
     /// Drops relay-host agent status and lifecycle once the relay is down: no

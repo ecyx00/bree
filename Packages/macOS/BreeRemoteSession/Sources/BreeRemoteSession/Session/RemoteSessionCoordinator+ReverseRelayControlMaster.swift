@@ -20,8 +20,7 @@ extension RemoteSessionCoordinator {
 
     /// Claims the exact bree-owned socket before background SSH can reuse it.
     func prepareControlMasterOwnershipLocked() throws {
-        guard configuration.transport != .ssh ||
-                resolvedControlMasterSSHOptionsLocked() != nil else {
+        guard resolvedControlMasterSSHOptionsLocked() != nil else {
             throw NSError(
                 domain: "bree.remote.control-master",
                 code: 1,

@@ -20,8 +20,8 @@ enum TextBoxLayout {
     static let placeholderVerticalOffset: CGFloat = 0
     static let minimumTextHeight: CGFloat = 30
     static let pillCornerRadius: CGFloat = BreeMetrics.radiusCard
-    static let pillHorizontalPadding: CGFloat = 5
-    static let pillVerticalPadding: CGFloat = 0
+    static let pillHorizontalPadding: CGFloat = 12
+    static let pillVerticalPadding: CGFloat = 6
     static let iconButtonSize: CGFloat = 24
     static let iconSymbolSize: CGFloat = 13
     static let sendSymbolSize: CGFloat = 14
@@ -139,17 +139,22 @@ final class TextBoxFilePanelFocusRestorer {
     }
 }
 
-/// The text box pill is a floating surface: `surfaceOverlay`, hairline `separator`, shared shadow.
+/// The text box frame is the shell editor dock's: `surfaceSunken`, `radiusCard`, 1 pt `borderStrong`,
+/// swapped for a 2 pt `activeIndicator` ring while the input has focus.
 private struct TextBoxInputPillBackground: View {
+    let isFocused: Bool
     @Environment(\.breePalette) private var palette
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: TextBoxLayout.pillCornerRadius, style: .continuous)
         shape
-            .fill(palette.surfaceOverlay)
-            .overlay(shape.strokeBorder(palette.separator, lineWidth: 1))
-            // Shadows stay black on every theme; they are not chrome colour.
-            .shadow(color: Color.black.opacity(0.18), radius: 12, y: 4)
+            .fill(palette.surfaceSunken)
+            .overlay(
+                shape.strokeBorder(
+                    isFocused ? palette.activeIndicator : palette.borderStrong,
+                    lineWidth: isFocused ? 2 : 1
+                )
+            )
     }
 }
 
@@ -2226,6 +2231,9 @@ struct TextBoxInputContainer: View {
     @Binding var pendingProviderLaunchAction: TextBoxSubmitAction?
     @Binding var pendingProviderLaunchStartedAt: Date?
     let surface: TerminalSurface
+    /// Shown in the shared editor-frame chip above the input; nil hides it.
+    var workingDirectory: String?
+    var branch: String?
     let terminalBackgroundColor: NSColor
     let terminalForegroundColor: NSColor
     let terminalFont: NSFont
@@ -2245,6 +2253,7 @@ struct TextBoxInputContainer: View {
     @State private var textViewHeight: CGFloat = 0
     @State private var hasPendingAttachmentUpload = false
     @State private var hasMarkedText = false
+    @State private var isTextFocused = false
     @State private var textViewReference = TextBoxInputViewReference()
     @State private var contentRevision: UInt64 = 0
     @State var pendingProviderLaunchTimeoutScheduler = MainActorDeferredActionScheduler()
@@ -2295,6 +2304,9 @@ struct TextBoxInputContainer: View {
         )
         let canSend = Self.shouldEnableSubmitButton(baseCanSend: baseCanSend, pendingProviderLaunchAction: pendingProviderLaunchAction, action: effectiveSubmitAction, shouldForceTextEntrySubmit: shouldForceTextEntrySubmit, allowsCommandTemplateSubmit: allowsCommandTemplateSubmit)
 
+        // Same frame as the shell editor dock: cwd chip above, sunken box with ring below.
+        VStack(alignment: .leading, spacing: 6) {
+        ShellEditorCwdChip(workingDirectory: workingDirectory, branch: branch)
         VStack(alignment: .leading, spacing: 6) {
             if pendingCommentCount > 0 {
                 pendingCommentsChip(count: pendingCommentCount)
@@ -2319,6 +2331,7 @@ struct TextBoxInputContainer: View {
                     onSubmit: submit,
                     onEscape: onEscape,
                     onFocusTextBox: onFocusTextBox,
+                    onFocusChange: { isTextFocused = $0 },
                     onToggleFocus: onToggleFocus,
                     onCycleSubmitAction: cycleSubmitAction,
                     onForwardText: forwardText(_:focusTerminalAfterSend:),
@@ -2359,10 +2372,12 @@ struct TextBoxInputContainer: View {
         .padding(.horizontal, TextBoxLayout.pillHorizontalPadding)
         .padding(.vertical, TextBoxLayout.pillVerticalPadding)
         .background(
-            TextBoxInputPillBackground()
+            TextBoxInputPillBackground(isFocused: isTextFocused)
         )
+        }
         .padding(.horizontal, 10)
-        .padding(.bottom, 7)
+        .padding(.top, 6)
+        .padding(.bottom, 10)
         .task(id: submitActionImageCacheTaskKey) {
             await refreshSubmitActionImageCache(keys: submitActionImageCacheKeys)
         }
@@ -2953,6 +2968,7 @@ struct TextBoxInputView: NSViewRepresentable {
     let onSubmit: () -> Void
     let onEscape: () -> Void
     let onFocusTextBox: () -> Void
+    let onFocusChange: (Bool) -> Void
     let onToggleFocus: () -> Void
     let onCycleSubmitAction: () -> Void
     let onForwardText: (String, Bool) -> Void
@@ -2980,6 +2996,7 @@ struct TextBoxInputView: NSViewRepresentable {
         onSubmit: @escaping () -> Void,
         onEscape: @escaping () -> Void,
         onFocusTextBox: @escaping () -> Void,
+        onFocusChange: @escaping (Bool) -> Void = { _ in },
         onToggleFocus: @escaping () -> Void,
         onCycleSubmitAction: @escaping () -> Void = {},
         onForwardText: @escaping (String, Bool) -> Void,
@@ -3006,6 +3023,7 @@ struct TextBoxInputView: NSViewRepresentable {
         self.onSubmit = onSubmit
         self.onEscape = onEscape
         self.onFocusTextBox = onFocusTextBox
+        self.onFocusChange = onFocusChange
         self.onToggleFocus = onToggleFocus
         self.onCycleSubmitAction = onCycleSubmitAction
         self.onForwardText = onForwardText
@@ -3108,6 +3126,7 @@ struct TextBoxInputView: NSViewRepresentable {
         textView.onSubmit = onSubmit
         textView.onEscape = onEscape
         textView.onFocusTextBox = onFocusTextBox
+        textView.onFocusChange = onFocusChange
         textView.onToggleFocus = onToggleFocus
         textView.onCycleSubmitAction = onCycleSubmitAction
         textView.onForwardText = onForwardText
@@ -3308,6 +3327,7 @@ final class TextBoxInputTextView: NSTextView {
     var onSubmit: () -> Void = {}
     var onEscape: () -> Void = {}
     var onFocusTextBox: () -> Void = {}
+    var onFocusChange: (Bool) -> Void = { _ in }
     var onToggleFocus: () -> Void = {}
     var onCycleSubmitAction: () -> Void = {}
     var onForwardText: (String, Bool) -> Void = { _, _ in }
@@ -3446,6 +3466,7 @@ final class TextBoxInputTextView: NSTextView {
         let result = super.becomeFirstResponder()
         if result {
             onFocusTextBox()
+            onFocusChange(true)
             layer?.borderColor = BreeChromePalette.currentSnapshot.ns.borderStrong.cgColor
         }
         return result
@@ -3454,6 +3475,7 @@ final class TextBoxInputTextView: NSTextView {
     override func resignFirstResponder() -> Bool {
         let result = super.resignFirstResponder()
         if result {
+            onFocusChange(false)
             dismissMentionCompletions()
             layer?.borderColor = BreeChromePalette.currentSnapshot.ns.separator.cgColor
             if preserveAttachmentFocusOnNextResign,

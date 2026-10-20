@@ -16,6 +16,8 @@ extension DockSplitStore {
         sourceWorkspaceResolver: (UUID) -> Workspace? = { _ in nil }
     ) -> [UUID: UUID] {
         guard !isRetired, snapshot.panels.allSatisfy(acceptsRestoredDisplay) else { return [:] }
+        PersistentLocalShell.suppressDepth += 1
+        defer { PersistentLocalShell.suppressDepth -= 1 }
         sessionRestoreDepth += 1
         defer {
             sessionRestoreDepth = max(sessionRestoreDepth - 1, 0)
@@ -124,6 +126,8 @@ extension DockSplitStore {
         sourceWorkspaceResolver: (UUID) -> Workspace?
     ) -> UUID? {
         let restorableAgentIndex = restoreAgentIndex(for: [snapshot])
+        PersistentLocalShell.suppressDepth += 1
+        defer { PersistentLocalShell.suppressDepth -= 1 }
         let restoredPanelId = createSessionRestoredPanel(
             from: snapshot,
             inPane: paneId,

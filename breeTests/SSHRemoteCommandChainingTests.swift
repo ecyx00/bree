@@ -186,7 +186,6 @@ struct SSHRemoteCommandChainingTests {
 
         let configuredRemoteCommand = #"printf '%s\n' "command 'ran'" "$PWD" > "$RESULT_FILE""#
         let snapshot = SessionRemoteWorkspaceSnapshot(
-            transport: .ssh,
             terminalTransport: .ssh,
             configuredRemoteCommand: configuredRemoteCommand,
             destination: "dev@example.com",

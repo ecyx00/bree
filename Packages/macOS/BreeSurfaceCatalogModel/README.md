@@ -1,6 +1,6 @@
 # BreeSurfaceCatalogModel
 
-The surface catalog's value types: the vocabulary shared by `SurfaceCatalog`, the Cloud sidebar, the socket commands and the CLI. Pure `Hashable`/`Codable`/`Sendable` values plus the bree-tui snapshot parser that produces them. No app imports; depends on `BreeCore`, `BREEDebugLog` and `BREEMobileCore` (for device-ID canonicalization).
+The surface catalog's value types: the vocabulary shared by `SurfaceCatalog`, the Cloud sidebar, the socket commands and the CLI. Pure `Hashable`/`Codable`/`Sendable` values plus the bree-tui snapshot parser that produces them. No app imports; depends on `BreeCore`, `BREEDebugLog` and `BreeAppSupport` (for device-ID canonicalization).
 
 ```swift
 import BreeSurfaceCatalogModel

@@ -19,6 +19,8 @@ final class TabBarPopoverSession: NSObject, NSPopoverDelegate {
     /// Room the popover arrow and its gap take between the button and the content.
     private static let arrowAllowance: CGFloat = 18
     private static let textBoxClearance: CGFloat = 12
+    /// Pane width from which the whole button lane is drawn (above bonsplit's compact bar threshold of 300 pt).
+    private static let minimumPaneWidthWithButtons: CGFloat = 400
 
     /// Non-flipped so `preferredEdge: .minY` always means "below" regardless of the host view.
     private final class AnchorView: NSView {
@@ -172,7 +174,12 @@ final class TabBarPopoverSession: NSObject, NSPopoverDelegate {
         } else {
             target = userSize.map { NSSize(width: $0.width, height: $0.height) } ?? defaultSize
         }
-        guard popover.contentSize != target else { return }
+        if popover.contentSize == target {
+            // The content size can equal the target while the hosted view is still laid out at an earlier, smaller
+            // size (the Wiki list measured 0 on first layout); NSPopover only re-lays out on a change, so nudge it.
+            guard host.view.window != nil, host.view.frame.height < target.height - 1 else { return }
+            popover.contentSize = NSSize(width: target.width, height: target.height - 1)
+        }
         popover.contentSize = target
     }
 
@@ -258,6 +265,14 @@ final class TabBarPopoverSession: NSObject, NSPopoverDelegate {
             }
         }
         if target == nil, let focused = snapshot.focusedPaneId { target = snapshot.panes.first { $0.paneId == focused } }
+        // Menu, shortcut and socket opens have no click. A pane narrower than the lane folds the button into
+        // "...", so anchor to the widest pane instead, where the button is drawn.
+        // ponytail: width heuristic, exact slot visibility would need bonsplit to publish it.
+        if target == nil || target!.frame.width < minimumPaneWidthWithButtons,
+           let widest = snapshot.panes.max(by: { $0.frame.width < $1.frame.width }),
+           widest.frame.width > (target?.frame.width ?? 0) {
+            target = widest
+        }
         guard let pane = target else { return nil }
         func screenRect(_ topLeft: CGRect) -> NSRect {
             parent.convertToScreen(NSRect(

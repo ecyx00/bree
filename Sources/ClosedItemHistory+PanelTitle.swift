@@ -35,8 +35,6 @@ extension ClosedItemHistoryStore {
             return String(localized: "workspaceTodoPane.title", defaultValue: "Todos")
         case .notifications:
             return String(localized: "notifications.title", defaultValue: "Notifications")
-        case .accountSignIn:
-            return String(localized: "account.signIn.workspace.title", defaultValue: "Sign In")
         }
     }
 }

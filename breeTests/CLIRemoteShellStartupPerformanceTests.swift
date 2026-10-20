@@ -112,9 +112,8 @@ struct CLIRemoteShellStartupPerformanceTests {
         environment["BREE_SOCKET_PATH"] = socketPath
         environment["BREE_CLI_SENTRY_DISABLED"] = "1"
         environment["BREE_CLAUDE_HOOK_SENTRY_DISABLED"] = "1"
-        // `bree ssh` hands TTY sessions to bree-tui through
-        // `workspace.ssh.open`; the startup wrapper measured here is only
-        // produced for sessions without a TTY, so pin RequestTTY=no.
+        // The startup wrapper measured here is only produced for sessions
+        // without a TTY, so pin RequestTTY=no.
         let result = runProcess(
             executablePath: cliPath,
             arguments: [

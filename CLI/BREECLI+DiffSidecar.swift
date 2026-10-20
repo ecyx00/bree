@@ -222,7 +222,14 @@ extension BREECLI {
                 .appendingPathComponent("webviews-app", isDirectory: true)
         )
 
-        let devRelative = URL(fileURLWithPath: #filePath)
+        let devRelative = URL(fileURLWithPath: {
+            // Release binaries must not embed the build machine's source path.
+            #if DEBUG
+            return #filePath
+            #else
+            return "/bree/a/b/c/d/e/f/g/h/dev-source-unavailable.swift"
+            #endif
+        }())
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appendingPathComponent("Resources", isDirectory: true)

@@ -10,7 +10,7 @@ not need the same first step. Run commands from the repository root.
 | Pure package logic | Focused package test, including the failing case | Package suite; app/test compilation if a public interface or integration changed |
 | App ownership extraction | Parse changed files; focused behavior tests | App **and test** compilation; relevant runtime check |
 | Shortcut, focus, window, socket or persistence behavior | Focused regression at the owning layer | Tagged runtime reproduction through each affected entrypoint |
-| Rendering, accessibility, multi-display, macOS-version or iPhone behavior | Focused model tests where available | UI verification and physical dogfood on the affected environment |
+| Rendering, accessibility, multi-display, or macOS-version behavior | Focused model tests where available | UI verification and physical dogfood on the affected environment |
 
 ## 1. Start with bounded source checks
 
@@ -169,11 +169,6 @@ and hardware. Verify the concrete before/after reproduction and every changed
 entrypoint (for example, shortcut, palette and context menu). Accessibility output
 or a screenshot alone may not establish keyboard focus, input delivery, persistence
 across restart, or real display behavior. State exactly what you exercised.
-
-For iPhone changes, a simulator pass does not establish physical input, networking,
-or reconnection behavior. Use `ios/scripts/reload.sh --help` and the project's
-[development workflow](../skills/bree-dev-workflow/SKILL.md) to build the same-tag
-Mac companion and install on an authorized physical device. Do not claim phone dogfood for an unreachable device. Record the missing check and the owner who will run it.
 
 ## Report evidence and stop at the right boundary
 

@@ -15,7 +15,6 @@ extension WorkspaceRemoteConfiguration {
                 resolver.optionKey($0) != "controlpath"
             }
         var copy = WorkspaceRemoteConfiguration(
-            transport: transport,
             terminalTransport: terminalTransport,
             terminalProfile: terminalProfile,
             destination: destination,
@@ -28,14 +27,11 @@ extension WorkspaceRemoteConfiguration {
             relayToken: relayToken,
             localSocketPath: localSocketPath,
             ownerWorkspaceID: ownerWorkspaceID,
-            managedCloudVMID: managedCloudVMID,
             terminalStartupCommand: terminalStartupCommand,
             foregroundAuthToken: foregroundAuthToken,
             agentSocketPath: agentSocketPath,
-            daemonWebSocketEndpoint: daemonWebSocketEndpoint,
             preserveAfterTerminalExit: preserveAfterTerminalExit,
             persistentDaemonSlot: persistentDaemonSlot,
-            skipDaemonBootstrap: skipDaemonBootstrap,
             sshControlMasterLeaseGeneration:
                 sshControlMasterLeaseGeneration
         )

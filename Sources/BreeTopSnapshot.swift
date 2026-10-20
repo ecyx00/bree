@@ -843,6 +843,9 @@ final class BreeTopProcessSnapshot: @unchecked Sendable {
             "resources": summary(for: [pid]).payload(),
             "children": childNodes
         ]
+        if let processClass = BreeTaskManagerRow.ProcessClass.classify(processName: process.name, isAgent: false) {
+            payload["class"] = processClass.rawValue
+        }
         if let ttyDevice = process.ttyDevice {
             payload["tty_device"] = ttyDevice
         } else {

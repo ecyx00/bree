@@ -3379,9 +3379,9 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
 
         XCTAssertFalse(
             window.titlebarAccessoryViewControllers.contains {
-                $0.view.identifier?.rawValue == "bree.titlebarMobileConnect"
+                $0.view.identifier?.rawValue == "bree.titlebarRemoved"
             },
-            "Account, Upgrade, and Mobile controls belong exclusively in the sidebar footer"
+            "Account and Upgrade controls belong exclusively in the sidebar footer"
         )
 
         let titlebarAccessory: () -> NSTitlebarAccessoryViewController? = {
@@ -6384,44 +6384,6 @@ final class AppDelegateShortcutRoutingTests: XCTestCase {
         }
 #else
         throw XCTSkip("debugHandleCustomShortcut is only available in DEBUG builds")
-#endif
-    }
-
-    func testWindowSendEventPreservesFirstCloudKeyBeforePortalMount() throws {
-        let appDelegate = try XCTUnwrap(AppDelegate.shared)
-        let windowId = appDelegate.createMainWindow()
-        defer { closeWindow(withId: windowId) }
-        let window = try XCTUnwrap(window(withId: windowId))
-        let manager = try XCTUnwrap(appDelegate.tabManagerFor(windowId: windowId))
-        let workspace = try XCTUnwrap(manager.selectedWorkspace)
-        let panel = coldCloudTerminalPanel(workspace: workspace)
-        _ = try workspace.insertCloudManualMirrorPanel(
-            panel, at: .workspace(id: workspace.id, placement: .tab), focus: true, isLoading: false
-        )
-        // Keep the real manual pane unmounted and cold. Early typing must reach
-        // its actual input queue without depending on renderer availability.
-        TerminalWindowPortalRegistry.detach(hostedView: panel.hostedView)
-        panel.hostedView.removeFromSuperview()
-        _ = window.makeFirstResponder(nil)
-        let view = panel.hostedView.surfaceView
-        XCTAssertFalse(view.window === window)
-        XCTAssertFalse(panel.surface.hasLiveSurface)
-        XCTAssertTrue(panel.surface.canCreateRuntimeSurface)
-        XCTAssertEqual(workspace.focusedTerminalInputTarget()?.0, panel.id)
-#if DEBUG
-        let specification = try XCTUnwrap(SyntheticKeyEventFactory.parseShortcutCombo("e"))
-        let event = try XCTUnwrap(SyntheticKeyEventFactory.keyEvent(
-            specification: specification, keyDown: true, timestamp: ProcessInfo.processInfo.systemUptime
-        ))
-        window.sendEvent(event)
-        XCTAssertEqual(pendingKeyEvents(in: view).map(\.type), [.keyDown])
-        XCTAssertEqual(pendingKeyEvents(in: view).map(\.keyCode), [14])
-        let keyUp = try XCTUnwrap(SyntheticKeyEventFactory.keyEvent(
-            specification: specification, keyDown: false, timestamp: ProcessInfo.processInfo.systemUptime
-        ))
-        window.sendEvent(keyUp)
-        XCTAssertEqual(pendingKeyEvents(in: view).map(\.type), [.keyDown, .keyUp])
-        XCTAssertEqual(pendingKeyEvents(in: view).map(\.keyCode), [14, 14])
 #endif
     }
 

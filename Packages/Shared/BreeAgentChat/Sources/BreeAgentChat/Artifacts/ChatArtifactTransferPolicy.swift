@@ -5,8 +5,8 @@ public struct ChatArtifactTransferPolicy: Sendable, Equatable {
 
     /// Maximum raw bytes returned by one fetch RPC chunk.
     public let maxRawChunkBytes: Int
-    /// Maximum mobile-sync frame size the chunk envelope must remain below.
-    public let mobileSyncFrameLimitBytes: Int
+    /// Maximum sync frame size the chunk envelope must remain below.
+    public let frameLimitBytes: Int
     /// Maximum file size the iOS viewer previews inline.
     public let maxPreviewBytes: Int64
     /// Maximum movie or audio size streamed to an iOS temporary file.
@@ -16,17 +16,17 @@ public struct ChatArtifactTransferPolicy: Sendable, Equatable {
     ///
     /// - Parameters:
     ///   - maxRawChunkBytes: Maximum raw bytes returned by one fetch chunk.
-    ///   - mobileSyncFrameLimitBytes: Maximum mobile-sync frame size.
+    ///   - frameLimitBytes: Maximum sync frame size.
     ///   - maxPreviewBytes: Maximum inline preview file size.
     ///   - maxMediaPreviewBytes: Maximum temporary-file media preview size.
     public init(
         maxRawChunkBytes: Int = 3 * 1024 * 1024,
-        mobileSyncFrameLimitBytes: Int = 8 * 1024 * 1024,
+        frameLimitBytes: Int = 8 * 1024 * 1024,
         maxPreviewBytes: Int64 = 64 * 1024 * 1024,
         maxMediaPreviewBytes: Int64 = 512 * 1024 * 1024
     ) {
         self.maxRawChunkBytes = maxRawChunkBytes
-        self.mobileSyncFrameLimitBytes = mobileSyncFrameLimitBytes
+        self.frameLimitBytes = frameLimitBytes
         self.maxPreviewBytes = maxPreviewBytes
         self.maxMediaPreviewBytes = maxMediaPreviewBytes
     }

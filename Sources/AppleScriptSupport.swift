@@ -471,18 +471,8 @@ final class ScriptTab: NSObject {
             return nil
         }
 
-        if state.tabManager.tabs.count > 1 {
-            state.tabManager.closeWorkspace(workspace)
-            return nil
-        }
-
-        guard let window = state.window else {
-            command.scriptErrorNumber = errAEEventFailed
-            command.scriptErrorString = AppleScriptStrings.windowUnavailable
-            return nil
-        }
-
-        window.performClose(nil)
+        // Same rule as the row x: the last workspace goes, the window stays.
+        state.tabManager.closeWorkspace(workspace, allowEmpty: true)
         return nil
     }
 
@@ -644,18 +634,7 @@ final class ScriptTerminal: NSObject {
         }
 
         if workspace.panels.count == 1 {
-            if state.tabManager.tabs.count > 1 {
-                state.tabManager.closeWorkspace(workspace)
-                return nil
-            }
-
-            guard let window = state.window else {
-                command.scriptErrorNumber = errAEEventFailed
-                command.scriptErrorString = AppleScriptStrings.windowUnavailable
-                return nil
-            }
-
-            window.performClose(nil)
+            state.tabManager.closeWorkspace(workspace, allowEmpty: true)
             return nil
         }
 

@@ -28,8 +28,7 @@ struct WorkspaceRemoteDaemonRecoveryTests {
             relayToken: String(repeating: "d", count: 64),
             localSocketPath: "/tmp/bree-debug-test.sock",
             terminalStartupCommand: "ssh dev@example.com",
-            preserveAfterTerminalExit: true,
-            skipDaemonBootstrap: true
+            preserveAfterTerminalExit: true
         )
         workspace.configureRemoteConnection(config, autoConnect: false)
 
@@ -81,8 +80,7 @@ struct WorkspaceRemoteDaemonRecoveryTests {
             relayToken: String(repeating: "f", count: 64),
             localSocketPath: "/tmp/bree-debug-test-bootstrap.sock",
             terminalStartupCommand: "ssh dev@example.com",
-            preserveAfterTerminalExit: true,
-            skipDaemonBootstrap: true
+            preserveAfterTerminalExit: true
         )
         workspace.configureRemoteConnection(config, autoConnect: false)
 
@@ -149,8 +147,7 @@ struct WorkspaceRemoteDaemonRecoveryTests {
             relayToken: String(repeating: "b", count: 64),
             localSocketPath: "/tmp/bree-debug-test-ssh-error.sock",
             terminalStartupCommand: "ssh dev@example.com",
-            preserveAfterTerminalExit: true,
-            skipDaemonBootstrap: true
+            preserveAfterTerminalExit: true
         )
         workspace.configureRemoteConnection(config, autoConnect: false)
         workspace.logEntries.append(
@@ -223,8 +220,7 @@ struct WorkspaceRemoteDaemonRecoveryTests {
             relayToken: String(repeating: "2", count: 64),
             localSocketPath: "/tmp/bree-debug-test-suspended.sock",
             terminalStartupCommand: "ssh dev@example.com",
-            preserveAfterTerminalExit: true,
-            skipDaemonBootstrap: true
+            preserveAfterTerminalExit: true
         )
         workspace.configureRemoteConnection(config, autoConnect: false)
         workspace.logEntries.append(

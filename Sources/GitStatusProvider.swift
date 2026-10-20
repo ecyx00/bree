@@ -163,6 +163,23 @@ struct GitStatusProvider: Sendable {
         return result
     }
 
+    /// The worktree root for `directory`, the repository name and whether the
+    /// root is a linked worktree (its git dir lives outside `<root>/.git`).
+    func worktreeIdentity(for directory: String) -> (root: String, repo: String, linked: Bool)? {
+        guard let output = runGit(
+            in: directory,
+            arguments: ["rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir"]
+        ) else { return nil }
+        let lines = output.split(separator: "\n").map(String.init)
+        guard lines.count >= 2 else { return nil }
+        let root = lines[0]
+        let common = lines[1]
+        let repo = URL(fileURLWithPath: common).deletingLastPathComponent().lastPathComponent
+        let linked = URL(fileURLWithPath: common).standardizedFileURL.path
+            != URL(fileURLWithPath: root + "/.git").standardizedFileURL.path
+        return (root, repo, linked)
+    }
+
     private func gitRepoRoot(for directory: String) -> String? {
         runGit(in: directory, arguments: ["rev-parse", "--show-toplevel"])?
             .trimmingCharacters(in: .whitespacesAndNewlines)

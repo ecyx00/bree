@@ -181,7 +181,7 @@ extension Workspace {
         Self.surfaceKind(for: panel.panelType)
     }
 
-    /// Surface-kind mapping used by snapshots and mobile mapping parity tests.
+    /// Surface-kind mapping used by snapshots and remote mapping parity tests.
     static func surfaceKind(for panelType: PanelType) -> String {
         switch panelType {
         case .terminal:
@@ -204,8 +204,6 @@ extension Workspace {
             return SurfaceKind.todo.rawValue
         case .notifications:
             return SurfaceKind.notifications.rawValue
-        case .accountSignIn:
-            return SurfaceKind.accountSignIn.rawValue
         }
     }
 

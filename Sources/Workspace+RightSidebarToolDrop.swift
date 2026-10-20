@@ -2,7 +2,7 @@ import Bonsplit
 import Foundation
 
 extension Workspace {
-    /// Opens or repositions one tool at the actual drop location. No Cloud
+    /// Opens or repositions one tool at the actual drop location. No remote
     /// resource is projected, moved, or created when the tool itself is opened.
     func handleRightSidebarToolDrop(
         mode: RightSidebarMode,

@@ -10,10 +10,6 @@ extension RemoteSessionStrings {
     /// and injected into each `RemoteSessionCoordinator`.
     static var appLocalized: RemoteSessionStrings {
         RemoteSessionStrings(
-            connectedVMNoProxyFormat: String(
-                localized: "remote.state.connected.vmNoProxy",
-                defaultValue: "Connected to %@ (VM, proxy disabled)"
-            ),
             suspendedDetailFormat: String(
                 localized: "remote.state.suspended.detail",
                 defaultValue: "Can't reach %@ — automatic reconnect is paused. Use Reconnect when your network is back."

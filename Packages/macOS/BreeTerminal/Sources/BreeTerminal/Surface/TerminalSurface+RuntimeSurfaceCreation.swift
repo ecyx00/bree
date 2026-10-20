@@ -118,6 +118,8 @@ extension TerminalSurface {
 
         if let resolvedUserShell = engine.resolvedUserShell {
             setManagedEnvironmentValue("SHELL", resolvedUserShell)
+            // login(1) resets SHELL to the passwd shell; `local-tmux enter` needs the resolved one.
+            setManagedEnvironmentValue("BREE_USER_SHELL", resolvedUserShell)
         }
 
         let socketPath = spawnPolicyProvider.controlSocketPath()

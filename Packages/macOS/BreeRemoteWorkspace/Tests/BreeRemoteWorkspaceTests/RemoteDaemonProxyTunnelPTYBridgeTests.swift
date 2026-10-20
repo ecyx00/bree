@@ -437,10 +437,7 @@ struct RemoteDaemonProxyTunnelPTYBridgeTests {
             credential: .random(),
             strings: .init(
                 missingPersistentPTYCapability: "",
-                missingRequiredFunctionality: "",
-                cloudNotificationClearWorkspaceInvalid: "",
-                cloudNotificationClearWorkspaceDenied: "",
-                cloudNotificationClearSurfaceInvalid: ""
+                missingRequiredFunctionality: ""
             ),
             ptyBridgeStrings: TestPTYBridgeStrings(),
             onFatalError: { _ in }

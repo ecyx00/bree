@@ -43,7 +43,6 @@ final class TabItem: Identifiable, Hashable, Codable {
     var isAudioPlaying: Bool
     var isPinned: Bool
     var showsRemoteIndicator: Bool
-    var presence: TabPresence?
 
     init(
         id: UUID = UUID(),
@@ -59,8 +58,7 @@ final class TabItem: Identifiable, Hashable, Codable {
         isAudioMuted: Bool = false,
         isAudioPlaying: Bool = false,
         isPinned: Bool = false,
-        showsRemoteIndicator: Bool = false,
-        presence: TabPresence? = nil
+        showsRemoteIndicator: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -76,7 +74,6 @@ final class TabItem: Identifiable, Hashable, Codable {
         self.isAudioPlaying = isAudioPlaying
         self.isPinned = isPinned
         self.showsRemoteIndicator = showsRemoteIndicator
-        self.presence = presence
     }
 
     func hash(into hasher: inout Hasher) {
@@ -102,7 +99,6 @@ final class TabItem: Identifiable, Hashable, Codable {
         case isAudioPlaying
         case isPinned
         case showsRemoteIndicator
-        case presence
     }
 
     required init(from decoder: Decoder) throws {
@@ -121,7 +117,6 @@ final class TabItem: Identifiable, Hashable, Codable {
         self.isAudioPlaying = try c.decodeIfPresent(Bool.self, forKey: .isAudioPlaying) ?? false
         self.isPinned = try c.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
         self.showsRemoteIndicator = try c.decodeIfPresent(Bool.self, forKey: .showsRemoteIndicator) ?? false
-        self.presence = try c.decodeIfPresent(TabPresence.self, forKey: .presence)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -140,7 +135,6 @@ final class TabItem: Identifiable, Hashable, Codable {
         try c.encode(isAudioPlaying, forKey: .isAudioPlaying)
         try c.encode(isPinned, forKey: .isPinned)
         try c.encode(showsRemoteIndicator, forKey: .showsRemoteIndicator)
-        try c.encodeIfPresent(presence, forKey: .presence)
     }
 }
 

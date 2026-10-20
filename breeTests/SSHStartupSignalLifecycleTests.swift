@@ -1330,9 +1330,8 @@ extension CLINotifyProcessIntegrationRegressionTests {
         XCTAssertTrue(((try? String(contentsOf: attemptFile, encoding: .utf8)) ?? "").hasPrefix("ssh\n"))
     }
 
-    /// Generates the legacy SSH startup wrapper. `bree ssh` hands TTY
-    /// sessions to bree-tui through `workspace.ssh.open`, so this wrapper is
-    /// only produced for sessions without a TTY and for mosh. Unless the
+    /// Generates the SSH startup wrapper. It is only produced for
+    /// sessions without a TTY and for mosh. Unless the
     /// caller already sets `RequestTTY`, `requestTTYOption` pins the session
     /// to that path; pass nil for mosh, which keeps its own terminal.
     private func generatedSSHStartupCommand(

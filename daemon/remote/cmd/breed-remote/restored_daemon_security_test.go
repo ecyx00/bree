@@ -1,34 +1,14 @@
 package main
 
 import (
-	"context"
 	"crypto/sha256"
 	"fmt"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
-
-func TestRestoredCloudBridgeIsPrivate(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	path := makeShortUnixSocketPath(t)
-	if err := newCloudCLIBridge().start(ctx, path, io.Discard); err != nil {
-		t.Fatal(err)
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Mode().Perm() != 0600 {
-		t.Fatalf("bridge socket mode = %o, want 600", info.Mode().Perm())
-	}
-}
 
 func TestRestoredWaitSignalRejectsSymlink(t *testing.T) {
 	home := t.TempDir()
@@ -129,24 +109,5 @@ func TestCurrentWorkspaceEnvironmentUsesFallbackInsteadOfRecursing(t *testing.T)
 	rc := &rpcContext{socketPath: filepath.Join(t.TempDir(), "unavailable.sock")}
 	if _, err := tmuxResolveWorkspaceId(rc, "current"); err == nil || !strings.Contains(err.Error(), "no workspace selected") {
 		t.Fatalf("expected normal workspace lookup failure, got %v", err)
-	}
-}
-
-func TestAdminLeaseIgnoresRetiredRPCClientPayload(t *testing.T) {
-	leasePath := filepath.Join(t.TempDir(), "lease.json")
-	sum := sha256.Sum256([]byte("admin-token"))
-	handler := newWebSocketPTYHandler(wsPTYServerConfig{
-		PTYAuthLeaseFile: leasePath,
-		AdminTokenSHA256: fmt.Sprintf("%x", sum),
-	}, io.Discard)
-	request := httptest.NewRequest(http.MethodPost, "/admin/leases", strings.NewReader(`{"pty_lease":{"version":1},"rpc_client":0}`))
-	request.Header.Set("Authorization", "Bearer admin-token")
-	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, request)
-	if response.Code != http.StatusOK {
-		t.Fatalf("lease install failed: %d %s", response.Code, response.Body.String())
-	}
-	if _, err := os.Stat(leasePath); err != nil {
-		t.Fatal(err)
 	}
 }

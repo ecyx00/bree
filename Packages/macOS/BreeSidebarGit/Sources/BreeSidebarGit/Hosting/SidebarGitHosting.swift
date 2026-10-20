@@ -82,11 +82,6 @@ public protocol SidebarGitHosting: AnyObject {
 
     /// The active/passive/disabled work level for sidebar git metadata.
     var gitMetadataActivity: SidebarGitMetadataActivity { get }
-    /// Whether the paired mobile host served a request within `interval`
-    /// seconds (background git/PR work defers while true).
-    func mobileHostHasRecentActivity(within interval: TimeInterval) -> Bool
-    /// How long until the mobile host has been quiet for `interval` seconds.
-    func mobileHostQuietDelay(for interval: TimeInterval) -> TimeInterval
 
     /// Whether terminal input was received within `interval` seconds. Local
     /// metadata probes defer during this short window so their apply hop does

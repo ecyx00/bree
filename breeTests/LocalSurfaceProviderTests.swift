@@ -108,7 +108,7 @@ final class LocalSurfaceProviderTests: XCTestCase {
         catalog.upsert(local)
         catalog.record(SurfaceProjection(resource: local.id, workspaceID: workspaceID, panelID: panelID))
 
-        let remoteID = SurfaceResourceID(machine: .cloud("vivid-newt"), kind: .terminal, key: "term_1")
+        let remoteID = SurfaceResourceID(machine: .remote("vivid-newt"), kind: .terminal, key: "term_1")
         catalog.upsert(SurfaceResource(id: remoteID, title: "root@vivid-newt", detail: "/root", lifecycle: .running, agent: nil, remoteWorkspace: nil, port: nil, url: nil))
         catalog.record(SurfaceProjection(resource: remoteID, workspaceID: workspaceID, panelID: panelID))
 

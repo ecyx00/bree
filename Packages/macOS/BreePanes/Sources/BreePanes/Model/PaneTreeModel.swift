@@ -26,7 +26,7 @@ public final class PaneTreeModel<Panel> {
     /// changing — i.e. a pure drag-reorder of tabs within or across panes.
     /// Membership changes already fire the `panels` observers; pure reorders
     /// mutate only `BonsplitController` state, which is not observed, so
-    /// observers (e.g. the mobile workspace-list observer) would otherwise
+    /// observers (e.g. the remote workspace-list observer) would otherwise
     /// never learn about a reorder (legacy `Workspace.paneLayoutVersion`).
     public var paneLayoutVersion: Int = 0 {
         willSet { host?.paneLayoutVersionWillChange(to: newValue) }

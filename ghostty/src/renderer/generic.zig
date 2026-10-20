@@ -231,6 +231,13 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
         /// True if the window is focused
         focused: bool,
 
+        /// cmux fork: the app asked for the cursor not to be drawn (the
+        /// shell editor owns input). Written by any thread, read by the
+        /// renderer; `cursor_hidden_applied` is the renderer-thread copy so a
+        /// change forces a full rebuild.
+        cursor_hidden: std.atomic.Value(bool) = std.atomic.Value(bool).init(false),
+        cursor_hidden_applied: bool = false,
+
         /// Flag to indicate that our focus state changed for custom
         /// shaders to update their state.
         custom_shader_focused_changed: bool = false,
@@ -1523,6 +1530,12 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
                     state.terminal,
                 );
 
+                const hidden_now = self.cursor_hidden.load(.acquire);
+                if (hidden_now != self.cursor_hidden_applied) {
+                    self.cursor_hidden_applied = hidden_now;
+                    self.terminal_state.dirty = .full;
+                }
+
                 // If our terminal state is dirty at all we need to redo
                 // the viewport search.
                 if (self.terminal_state.dirty != .false) {
@@ -1725,11 +1738,14 @@ pub fn Renderer(comptime GraphicsAPI: type) type {
                 // Build our GPU cells
                 self.rebuildCells(
                     critical.preedit,
-                    renderer.cursorStyle(&self.terminal_state, .{
-                        .preedit = critical.preedit != null,
-                        .focused = self.focused,
-                        .blink_visible = cursor_blink_visible,
-                    }),
+                    if (self.cursor_hidden_applied and critical.preedit == null)
+                        null
+                    else
+                        renderer.cursorStyle(&self.terminal_state, .{
+                            .preedit = critical.preedit != null,
+                            .focused = self.focused,
+                            .blink_visible = cursor_blink_visible,
+                        }),
                     &critical.links,
                 ) catch |err| {
                     // This means we weren't able to allocate our buffer

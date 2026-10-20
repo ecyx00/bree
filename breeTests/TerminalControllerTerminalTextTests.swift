@@ -35,6 +35,24 @@ final class TerminalControllerTerminalTextTests: XCTestCase {
         XCTAssertEqual(payload.base64, Data("three\nfour\nfive".utf8).base64EncodedString())
     }
 
+    func testTerminalTextPayloadDropsKittyImagePlaceholderCells() throws {
+        let cell = "\u{10EEEE}\u{0305}\u{030D}"
+        let result = TerminalController.terminalTextPayload(
+            from: TerminalController.TerminalTextRawSnapshot(
+                viewport: "a\(cell)\(cell)b\n\(cell)\ncaf\u{0065}\u{0301}",
+                screen: nil,
+                history: nil,
+                active: nil
+            ),
+            includeScrollback: false,
+            lineLimit: nil
+        )
+        let payload = try result.get()
+
+        XCTAssertEqual(payload.text, "ab\n\ncaf\u{0065}\u{0301}")
+        XCTAssertEqual(payload.base64, Data(payload.text.utf8).base64EncodedString())
+    }
+
     func testNotRunningReplyForHibernatedTerminalCarriesWakeCommand() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()

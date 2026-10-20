@@ -157,6 +157,25 @@ enum SessionEntryResumeCoordinator {
         return keys
     }
 
+    /// Agent state (AttentionStore, the source Attention and the sidebar rows
+    /// share) of the live workspace behind each managed session key; a session
+    /// with no live workspace is absent and keeps the neutral dot.
+    static func agentStates(tabManager: TabManager) -> [String: AttentionState] {
+        var states: [String: AttentionState] = [:]
+        let index = SharedLiveAgentIndex.shared.currentIndexSchedulingRefresh()
+        for workspace in tabManager.tabs {
+            guard let top = AttentionStore.shared.topState(for: workspace)?.state else { continue }
+            for (panelID, snapshot) in workspace.restoredAgentSnapshotsByPanelId where workspace.panels[panelID] != nil {
+                states[VaultLiveSessionKeys.key(kind: snapshot.kind.rawValue, sessionID: snapshot.sessionId)] = top
+            }
+            // Hook-fed sessions live in the shared index, not in the restore snapshots.
+            for (key, entry) in index?.forkValidationEntries() ?? [] where key.workspaceId == workspace.id {
+                states[VaultLiveSessionKeys.key(kind: entry.snapshot.kind.rawValue, sessionID: entry.snapshot.sessionId)] = top
+            }
+        }
+        return states
+    }
+
     /// Opens an indexed session in a new split in the selected workspace.
     ///
     /// This is intentionally different from ``focusIfActive``: Open Session
@@ -258,6 +277,8 @@ struct SessionIndexView: View {
     /// use it only for status and menu presentation; the actual focus mutation
     /// still goes through `onOpen`/`onFocus` and `SessionEntryResumeCoordinator`.
     let activeSessionKeys: Set<String>
+    /// Live agent state per session key, for the status dot colour.
+    let agentStates: [String: AttentionState]
     /// Focus-only action. Unlike `onOpen`, it never launches another session
     /// if the pane disappears between menu presentation and click.
     let onFocus: ((SessionEntry) -> Void)?
@@ -269,12 +290,14 @@ struct SessionIndexView: View {
         onResume: ((SessionEntry) -> Void)?,
         onOpen: ((SessionEntry) -> Void)?,
         activeSessionKeys: Set<String> = [],
+        agentStates: [String: AttentionState] = [:],
         onFocus: ((SessionEntry) -> Void)? = nil
     ) {
         self.store = store
         self.onResume = onResume
         self.onOpen = onOpen
         self.activeSessionKeys = activeSessionKeys
+        self.agentStates = agentStates
         self.onFocus = onFocus
     }
     static let relativeFormatter: RelativeDateTimeFormatter = {
@@ -328,9 +351,13 @@ struct SessionIndexView: View {
                 title: section.title,
                 icon: section.icon,
                 entries: section.entries,
-                accessories: section.accessories.mapValues {
-                    $0.withDetailVisibility(showsDetails)
-                },
+                accessories: Dictionary(section.entries.compactMap { entry in
+                    section.accessories[entry.id].map { accessory in
+                        var shown = accessory.withDetailVisibility(showsDetails)
+                        shown.agentState = agentStates[VaultLiveSessionKeys.key(for: entry)]
+                        return (entry.id, shown)
+                    }
+                }, uniquingKeysWith: { first, _ in first }),
                 activeEntryIDs: activeEntryIDs
             )
         }
@@ -1083,7 +1110,8 @@ private struct SessionRow: View, Equatable {
                 Spacer(minLength: 8)
                 SessionStatusIndicator(
                     isInPane: isActive,
-                    liveStatus: accessory?.liveStatus
+                    liveStatus: accessory?.liveStatus,
+                    agentState: accessory?.agentState
                 )
                 Text(relativeTime(entry.modified))
                     .breeFont(.count, countRow: .secondary)
@@ -2889,7 +2917,8 @@ private struct PopoverRow: View, Equatable {
                 Spacer(minLength: 8)
                 SessionStatusIndicator(
                     isInPane: isActive,
-                    liveStatus: accessory?.liveStatus
+                    liveStatus: accessory?.liveStatus,
+                    agentState: accessory?.agentState
                 )
                 modifiedText
             }

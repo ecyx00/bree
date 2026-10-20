@@ -79,12 +79,6 @@ NOT_IN_BREE_JSON = frozenset({
     "devices.discovery.enabled",
     "devices.incomingAccess.enabled",
     "devices.sidebar.hiddenMacIDs",
-    "mobile.iOSPairingHost.displayName",
-    "mobile.iOSPairingHost.enabled",
-    "mobile.iOSPairingHost.port",
-    "mobile.phonePush.forwardingEnabled",
-    "mobile.phonePush.hideContent",
-    "mobile.phonePush.mode",
     # Settings-catalog aliases of automation.* keys (same UserDefaults slot).
     "integrations.amp.hooksEnabled",
     "integrations.claudeCode.customClaudePath",

@@ -20,6 +20,7 @@ final class AttentionStore: ObservableObject {
     private struct Record {
         var lifecycle: AgentHibernationLifecycleState
         var failed: Bool
+        var approval = false
         var sinceMs: Int64
     }
 
@@ -36,6 +37,7 @@ final class AttentionStore: ObservableObject {
     /// Set by the journal apply path just before the lifecycle write, which
     /// maps `.error` to `.needsInput`.
     private var failedHints: Set<RecordKey> = []
+    private var approvalHints: Set<RecordKey> = []
     private var seenAtMs: [UUID: Int64] = [:]
     /// Closed workspaces never get a watcher, even when the close races a selection change.
     private var closedWorkspaceIds: Set<UUID> = []
@@ -114,17 +116,26 @@ final class AttentionStore: ObservableObject {
         if failed { failedHints.insert(key) } else { failedHints.remove(key) }
     }
 
+    /// Set just before the lifecycle write: the needs-input came from a permission request.
+    func noteApprovalHint(panelId: UUID, agentKey: String, approval: Bool) {
+        let key = RecordKey(panelId: panelId, agentKey: agentKey)
+        if approval { approvalHints.insert(key) } else { approvalHints.remove(key) }
+    }
+
     /// Records when a panel's agent state was entered; no-op when it did not change.
     func noteLifecycle(panelId: UUID, agentKey: String, lifecycle: AgentHibernationLifecycleState) {
         let key = RecordKey(panelId: panelId, agentKey: agentKey)
         let failed = lifecycle == .needsInput && failedHints.remove(key) != nil
-        if let existing = records[key], existing.lifecycle == lifecycle, existing.failed == failed {
+        let approval = lifecycle == .needsInput && approvalHints.contains(key)
+        if let existing = records[key], existing.lifecycle == lifecycle, existing.failed == failed,
+           existing.approval == approval {
             seeds.removeValue(forKey: key)
             return
         }
         records[key] = Record(
             lifecycle: lifecycle,
             failed: failed,
+            approval: approval,
             sinceMs: seeds.removeValue(forKey: key) ?? Self.nowMs()
         )
         revision &+= 1
@@ -154,6 +165,7 @@ final class AttentionStore: ObservableObject {
         pendingToolByPanel: [UUID: AttentionPendingTool] = [:],
         showSnoozed: Bool = false,
         includeSeenDone: Bool = false,
+        hideFinished: Bool = false,
         nowMs: Int64 = AttentionStore.nowMs()
     ) -> (items: [AttentionItem], snoozedCount: Int) {
         let managers = AppDelegate.shared?.allMainWindowTabManagersForDebug() ?? []
@@ -166,7 +178,7 @@ final class AttentionStore: ObservableObject {
                 let isSelected = manager.selectedTabId == workspace.id
                 for (panelId, states) in workspace.agentLifecycleStatesByPanelId {
                     guard workspace.panels[panelId] != nil else { continue }
-                    var best: (state: AttentionState, sinceMs: Int64, agentKey: String)?
+                    var best: (state: AttentionState, sinceMs: Int64, agentKey: String, approval: Bool)?
                     for (agentKey, lifecycle) in states {
                         guard let record = records[RecordKey(panelId: panelId, agentKey: agentKey)],
                               record.lifecycle == lifecycle else { continue }
@@ -178,7 +190,7 @@ final class AttentionStore: ObservableObject {
                             includeSeenDone: includeSeenDone
                         ) else { continue }
                         if best == nil || state < best!.state {
-                            best = (state, record.sinceMs, agentKey)
+                            best = (state, record.sinceMs, agentKey, record.approval)
                         }
                     }
                     guard let best else { continue }
@@ -188,9 +200,9 @@ final class AttentionStore: ObservableObject {
                         .max(by: { $0.createdAt < $1.createdAt })?.body
                     let output = lastOutputByPanel[panelId] ?? notificationBody
                     let pendingTool = best.state == .needsInput ? pendingToolByPanel[panelId] : nil
-                    let approval = best.state == .needsInput && AgentLensStore.shared.cards.contains {
+                    let approval = best.state == .needsInput && (best.approval || AgentLensStore.shared.cards.contains {
                         $0.surfaceID == panelId && $0.state == .needsInput && $0.needsApproval
-                    }
+                    })
                     items.append(AttentionItem(
                         id: "\(workspace.id.uuidString)|\(panelId.uuidString)",
                         workspaceId: workspace.id,
@@ -210,6 +222,8 @@ final class AttentionStore: ObservableObject {
             }
         }
         if let thermalItem { items.append(thermalItem) }
+        // Hidden rows must not count toward the snoozed footer.
+        if hideFinished { items.removeAll { $0.state == .done || $0.state == .running } }
         let filtered = AttentionSnooze.apply(
             to: items,
             snoozes: snoozes,
@@ -265,6 +279,33 @@ final class AttentionStore: ObservableObject {
         case .unknown:
             return nil
         }
+    }
+
+    /// The workspace's top agent state and whether it is a permission request,
+    /// read from the same records and `attentionState` rules as the Attention
+    /// rows, so the sidebar row and Attention never disagree. `nil` when no
+    /// agent pane has a record (plain shells keep their own running line).
+    /// Seen finishes still count as done here.
+    func topState(for workspace: Workspace) -> (state: AttentionState, approval: Bool)? {
+        var best: (state: AttentionState, approval: Bool)?
+        for (panelId, states) in workspace.agentLifecycleStatesByPanelId where workspace.panels[panelId] != nil {
+            for (agentKey, lifecycle) in states {
+                guard let record = records[RecordKey(panelId: panelId, agentKey: agentKey)],
+                      record.lifecycle == lifecycle,
+                      let state = attentionState(
+                          for: record,
+                          workspace: workspace,
+                          agentKey: agentKey,
+                          isSelected: false,
+                          includeSeenDone: true
+                      ) else { continue }
+                let approval = state == .needsInput && (record.approval || AgentLensStore.shared.cards.contains {
+                    $0.surfaceID == panelId && $0.state == .needsInput && $0.needsApproval
+                })
+                if best == nil || state < best!.state { best = (state, approval) }
+            }
+        }
+        return best
     }
 
     /// The agent state entry time of a workspace's top agent pane, for the Pulse.

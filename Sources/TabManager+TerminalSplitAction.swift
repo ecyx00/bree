@@ -41,7 +41,7 @@ extension TabManager {
 
     /// Adds a terminal pane from the focused panel and arranges the
     /// workspace in Zellij's default tiling, the bree-tui Alt-n behavior.
-    /// Remote tmux mirrors and Cloud panes keep their own layout owner, so
+    /// Remote tmux mirrors and remote panes keep their own layout owner, so
     /// they receive an ordinary split right.
     func createAutoLayoutPaneOutcome(
         tabId: UUID,

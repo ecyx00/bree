@@ -845,7 +845,7 @@ final class WorkspaceGitMetadataSidebarTests: XCTestCase {
     // (backgroundGitMetadataPollBatchLimit), which main's refactor replaced with
     // a full sweep (refreshTrackedWorkspaceGitMetadata now returns Void). Git
     // metadata behavior is covered by BreeGit/GitMetadataServiceTests; restoring
-    // the batched throttle + this test is a deliberate follow-up if mobile-host
+    // the batched throttle + this test is a deliberate follow-up if remote-host
     // scale needs it.
 
     func testUnrelatedDefaultsChangeDoesNotRestartGitMetadataRefreshes() throws {

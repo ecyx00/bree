@@ -3,6 +3,15 @@ import BreeFoundation
 import Observation
 import SwiftUI
 
+/// Shared chrome tokens for the Task Manager (warm surface, hairline, text).
+@MainActor private var tmPalette: BreeChromePalette { BreeChromePaletteStore.shared.palette }
+
+private struct TaskManagerHairline: View {
+    var body: some View {
+        Rectangle().fill(tmPalette.separator).frame(height: 1)
+    }
+}
+
 struct BreeTaskManagerView: View {
     @Bindable var model: BreeTaskManagerModel
 
@@ -16,11 +25,11 @@ struct BreeTaskManagerView: View {
         // subtrees" rule and issues #2586 / #4529.
         VStack(spacing: 0) {
             toolbar
-            Divider()
+            TaskManagerHairline()
             summary
-            Divider()
+            TaskManagerHairline()
             tableHeader
-            Divider()
+            TaskManagerHairline()
             BreeTaskManagerListView(
                 errorMessage: model.errorMessage,
                 isInitialLoading: model.isInitialLoading,
@@ -32,6 +41,7 @@ struct BreeTaskManagerView: View {
             )
         }
         .frame(minWidth: 820, minHeight: 480)
+        .background(Color(nsColor: GhosttyApp.shared.defaultBackgroundColor))
         .onAppear {
             model.start()
         }
@@ -52,6 +62,12 @@ struct BreeTaskManagerView: View {
             }
 
             Spacer()
+
+            Toggle(
+                String(localized: "taskManager.groupByWorktree", defaultValue: "Group by worktree"),
+                isOn: $model.groupsByWorktree
+            )
+            .toggleStyle(.checkbox)
 
             Toggle(
                 String(localized: "taskManager.showProcesses", defaultValue: "Processes"),
@@ -107,7 +123,7 @@ struct BreeTaskManagerView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .scaledFont(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(tmPalette.textSecondary)
             Text(value)
                 .scaledFont(.body, weight: .semibold, design: .monospaced)
                 .monospacedDigit()
@@ -142,7 +158,7 @@ struct BreeTaskManagerView: View {
             )
         }
         .scaledFont(size: 11, weight: .semibold)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(tmPalette.textSecondary)
         .padding(.horizontal, 16)
         .padding(.vertical, 5)
     }
@@ -166,7 +182,7 @@ struct BreeTaskManagerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(model.sortOrder.column == column ? .primary : .secondary)
+        .foregroundStyle(model.sortOrder.column == column ? tmPalette.textPrimary : tmPalette.textSecondary)
         .frame(width: width, alignment: alignment)
         .frame(maxWidth: maxWidth, alignment: alignment)
         .accessibilityLabel(title)
@@ -246,7 +262,7 @@ struct BreeTaskManagerListView: View {
                                 onKillProcess: { actions.killProcess(row) },
                                 onActivate: {}
                             ).equatable()
-                            Divider()
+                            TaskManagerHairline()
                                 .padding(.leading, 16)
                         }
                     }
@@ -262,7 +278,7 @@ struct BreeTaskManagerListView: View {
                                 onKillProcess: { actions.killProcess(row) },
                                 onActivate: {}
                             ).equatable()
-                            Divider()
+                            TaskManagerHairline()
                                 .padding(.leading, 16)
                         }
                     }
@@ -278,7 +294,7 @@ struct BreeTaskManagerListView: View {
                                 onKillProcess: { actions.killProcess(row) },
                                 onActivate: { actions.activate(row) }
                             ).equatable()
-                            Divider()
+                            TaskManagerHairline()
                                 .padding(.leading, 16)
                         }
                     }
@@ -295,7 +311,7 @@ struct BreeTaskManagerListView: View {
                             onKillProcess: { actions.killProcess(row) },
                             onActivate: { actions.activate(row) }
                         ).equatable()
-                        Divider()
+                        TaskManagerHairline()
                             .padding(.leading, 16)
                     }
                 }
@@ -314,7 +330,7 @@ private struct BreeTaskManagerSectionHeaderView: View, Equatable {
     var body: some View {
         Text(title)
             .scaledFont(size: 11, weight: .semibold)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(tmPalette.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -330,7 +346,7 @@ private struct BreeTaskManagerLoadingView: View {
                 .accessibilityLabel(String(localized: "taskManager.loading.title", defaultValue: "Loading resource usage"))
             Text(String(localized: "taskManager.loading.title", defaultValue: "Loading resource usage"))
                 .scaledFont(.headline)
-                .foregroundStyle(.primary)
+                .foregroundStyle(tmPalette.textPrimary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(32)
@@ -347,7 +363,7 @@ private struct BreeTaskManagerMessageView: View {
                 .scaledFont(.headline)
             Text(detail)
                 .scaledFont(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(tmPalette.textSecondary)
                 .multilineTextAlignment(.center)
                 .copyOnlyTextSelection(for: detail)
         }
@@ -414,7 +430,7 @@ struct BreeTaskManagerRowView: View, Equatable {
             }
             if row.canKillProcess {
                 if row.canViewWorkspace || row.canViewTerminal {
-                    Divider()
+                    TaskManagerHairline()
                 }
                 Button {
                     onKillProcess()
@@ -435,13 +451,18 @@ struct BreeTaskManagerRowView: View, Equatable {
                     .frame(width: CGFloat(row.level) * 14)
                 rowIcon
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(row.title)
-                        .scaledFont(size: 12.5)
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text(row.title)
+                            .scaledFont(size: 12.5)
+                            .lineLimit(1)
+                        if let processClass = row.processClass {
+                            classBadge(processClass)
+                        }
+                    }
                     if !row.detail.isEmpty {
                         Text(row.detail)
                             .scaledFont(size: 11)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(tmPalette.textSecondary)
                             .lineLimit(1)
                     }
                 }
@@ -461,6 +482,21 @@ struct BreeTaskManagerRowView: View, Equatable {
         .padding(.vertical, 3)
         .opacity(row.isDimmed ? 0.68 : 1)
         .contentShape(Rectangle())
+    }
+
+    private func classBadge(_ processClass: BreeTaskManagerRow.ProcessClass) -> some View {
+        let palette = BreeChromePalette.currentSnapshot
+        let isLeaked = processClass == .leaked
+        return Text(processClass.label)
+            .scaledFont(size: 10)
+            .foregroundStyle(isLeaked ? palette.accentFill : palette.textSecondary)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .overlay(Capsule().stroke(isLeaked ? palette.accentFill : palette.textSecondary.opacity(0.5), lineWidth: 0.5))
+            .help(isLeaked ? String(
+                localized: "taskManager.leaked.hint",
+                defaultValue: "Hint: its Bree surface is gone or it was orphaned inside a worktree. Not killed automatically."
+            ) : "")
     }
 
     @ViewBuilder

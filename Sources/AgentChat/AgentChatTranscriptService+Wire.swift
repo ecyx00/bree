@@ -1,5 +1,5 @@
 import BreeAgentChat
-import BreeMobileHost
+import BreeAgentTranscriptHost
 import Foundation
 
 extension AgentChatTranscriptService {

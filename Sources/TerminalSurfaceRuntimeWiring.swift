@@ -252,6 +252,20 @@ extension TerminalSurface {
         runtimeSpawnPolicy: TerminalSurfaceRuntimeSpawnPolicy = .immediate,
         preparePaneHost: @Sendable @MainActor (any TerminalSurfacePaneHosting) -> Void = { _ in }
     ) {
+        var initialCommand = initialCommand
+        var tmuxStartCommand = tmuxStartCommand
+        if let plan = PersistentLocalShell.plan(
+            id: id,
+            workingDirectory: workingDirectory,
+            initialCommand: initialCommand,
+            tmuxStartCommand: tmuxStartCommand,
+            initialInput: initialInput,
+            isRemoteTerminal: isRemoteTerminal,
+            ioMode: ioMode
+        ) {
+            initialCommand = plan.initialCommand
+            tmuxStartCommand = plan.tmuxStart
+        }
         self.init(
             id: id,
             tabId: tabId,
@@ -274,5 +288,48 @@ extension TerminalSurface {
             preparePaneHost: preparePaneHost,
             dependencies: GhosttyApp.terminalSurfaceRuntimeDependencies
         )
+    }
+}
+
+// MARK: Persistent local shells
+
+/// Turns a new plain local shell into an `auto-<panelId>` tmux session when
+/// `terminal.keepShellsRunningAfterQuit` is on. Restore and respawn raise
+/// `suppressDepth` so existing terminals are never converted.
+enum PersistentLocalShell {
+    @MainActor static var suppressDepth = 0
+
+    static func sessionName(_ id: UUID) -> String { "auto-\(id.uuidString.lowercased())" }
+
+    @MainActor
+    static func plan(
+        id: UUID,
+        workingDirectory: String?,
+        initialCommand: String?,
+        tmuxStartCommand: String?,
+        initialInput: String?,
+        isRemoteTerminal: Bool,
+        ioMode: TerminalSurfaceIOMode
+    ) -> (initialCommand: String, tmuxStart: String)? {
+        guard suppressDepth == 0,
+              UserDefaults.standard.bool(forKey: "terminal.keepShellsRunningAfterQuit"),
+              initialCommand == nil, tmuxStartCommand == nil, initialInput == nil,
+              !isRemoteTerminal, ioMode == .exec,
+              let cli = CLIForwardingLaunchRouter.bundledCLIURL() else { return nil }
+        // The CLI creates the session inside the new PTY (`enter`), so nothing runs on the main actor.
+        let quoted = "'" + cli.path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        let command = "/usr/bin/env TMUX= \(quoted) local-tmux enter \(sessionName(id))"
+        return (command, command)
+    }
+
+    /// Kills the session of a surface the user closed. Fire and forget.
+    static func closeSession(panelId: UUID) {
+        guard let cli = CLIForwardingLaunchRouter.bundledCLIURL() else { return }
+        let process = Process()
+        process.executableURL = cli
+        process.arguments = ["local-tmux", "close", sessionName(panelId)]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
     }
 }

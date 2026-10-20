@@ -720,6 +720,7 @@ _bree_tmux_publish_bree_environment() {
 
 _bree_tmux_refresh_bree_environment() {
     [[ -n "$TMUX" ]] || return 0
+    [[ "${BREE_LOCAL_TMUX_AUTO:-}" != 1 ]] || return 0
     command -v tmux >/dev/null 2>&1 || return 0
 
     local output filtered line key value did_change=0
@@ -894,7 +895,7 @@ _bree_report_tty_payload() {
     [[ -n "$_BREE_TTY_NAME" ]] || return 0
 
     local payload="report_tty $_BREE_TTY_NAME --tab=$BREE_TAB_ID"
-    if [[ -z "$TMUX" ]]; then
+    if [[ -z "$TMUX" || "${BREE_LOCAL_TMUX_AUTO:-}" == 1 ]]; then
         [[ -n "$BREE_PANEL_ID" ]] || return 0
         payload+=" --panel=$BREE_PANEL_ID"
     fi
@@ -1371,4 +1372,30 @@ _bree_completion_bind
 
 _bree_detect_send_tool
 
+
+# Ghostty's bash hook passes the exit status to __ghostty_precmd as $1, but precmd reads
+# `$?` itself, which is already the status of `local ret=$?` (0). Every D mark then
+# carries exit 0 and failed commands get no clay badge. Make precmd honor $1.
+if declare -F __ghostty_precmd >/dev/null 2>&1; then
+    eval "$(declare -f __ghostty_precmd | sed -E 's/local ret="\$\?"/local ret="${1:-$?}"/')"
+    # Fail visibly if Ghostty's text changed and the rewrite did not apply.
+    [[ "$(declare -f __ghostty_precmd)" == *'${1:-$?}'* ]] ||
+        printf 'bree: bash exit-status patch not applied (Ghostty precmd changed)\n' >&2
+fi
+
+# Inside Bree's private tmux (BREE_LOCAL_TMUX_AUTO=1) tmux swallows OSC 133, so the
+# exit-code badges vanish. Re-wrap Ghostty's 133 marks in a tmux DCS passthrough
+# (the server sets `allow-passthrough on`).
+if [[ "${BREE_LOCAL_TMUX:-}" == 1 || "${BREE_LOCAL_TMUX_AUTO:-}" == 1 ]] && declare -F __ghostty_precmd >/dev/null 2>&1; then
+    eval "$(declare -f __ghostty_precmd __ghostty_preexec | sed -E 's/(\\+)e\]133;([^\\]*)(\\+)a/\1ePtmux;\1e\1e]133;\2\3a\1e\1\1/g')"
+fi
+
 _bree_install_prompt_command
+
+# The bootstrap is PROMPT_COMMAND's first run; Ghostty's __ghostty_hook was appended
+# during it and only runs from the next prompt on, so the first prompt had no marks
+# and PS0 had no preexec hook (the first command never produced a finish event).
+# Run it once now (executing is still empty, so no D mark is printed).
+if [[ -z "${_ghostty_executing:-}" ]] && declare -F __ghostty_hook >/dev/null 2>&1; then
+    __ghostty_hook 2>/dev/null
+fi

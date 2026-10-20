@@ -28,8 +28,7 @@ extension SSHStartupManualReconnectTests {
         let terminalPathURL: URL
     }
 
-    /// These tests cover the legacy Workspace reconnect path. The relay port
-    /// keeps this configuration there (`routesThroughSSHTui`, #14216).
+    /// These tests cover the Workspace reconnect path.
     static func makeRemoteConfiguration() -> WorkspaceRemoteConfiguration {
         WorkspaceRemoteConfiguration(
             destination: "bree-macmini",

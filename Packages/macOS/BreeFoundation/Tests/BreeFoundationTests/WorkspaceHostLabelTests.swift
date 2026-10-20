@@ -87,20 +87,20 @@ struct WorkspaceHostLabelTests {
         #expect(WorkspaceHostLabel.ssh(destination: destination) == nil)
     }
 
-    @Test("labels a Cloud machine by name, falling back to its id")
-    func cloudMachine() throws {
-        let named = try #require(WorkspaceHostLabel.cloud(machineID: "vm_123", machineName: " my-vm "))
-        #expect(named.kind == .cloud)
+    @Test("labels a remote machine by name, falling back to its id")
+    func remoteMachine() throws {
+        let named = try #require(WorkspaceHostLabel.remote(machineID: "vm_123", machineName: " my-vm "))
+        #expect(named.kind == .remote)
         #expect(named.label == "my-vm")
         #expect(named.detail == "my-vm (vm_123)")
-        #expect(named.groupingKey == "cloud:vm_123")
+        #expect(named.groupingKey == "Remote:vm_123")
 
-        let unnamed = try #require(WorkspaceHostLabel.cloud(machineID: "vm_123", machineName: ""))
+        let unnamed = try #require(WorkspaceHostLabel.remote(machineID: "vm_123", machineName: ""))
         #expect(unnamed.label == "vm_123")
         #expect(unnamed.detail == "vm_123")
         #expect(unnamed.groupingKey == named.groupingKey)
 
-        #expect(WorkspaceHostLabel.cloud(machineID: " ", machineName: "x") == nil)
+        #expect(WorkspaceHostLabel.remote(machineID: " ", machineName: "x") == nil)
     }
 
     @Test("local workspaces carry no label")

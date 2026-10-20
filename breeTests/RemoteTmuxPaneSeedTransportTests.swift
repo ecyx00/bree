@@ -1871,7 +1871,7 @@ import Testing
         rows: Int
     ) async {
         await waitForGhosttyState(surface) {
-            guard let frame = surface.mobileRenderGridFrame(
+            guard let frame = surface.renderGridFrame(
                 stateSeq: 0,
                 scrollbackLines: 0,
                 includeTheme: false
@@ -1886,7 +1886,7 @@ import Testing
         rows: Int
     ) async {
         let gridIsApplied = {
-            surface.mobileRenderGridFrame(
+            surface.renderGridFrame(
                 stateSeq: 0,
                 scrollbackLines: 0,
                 includeTheme: false

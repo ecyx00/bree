@@ -58,7 +58,6 @@ extension RemoteSessionCoordinator {
     /// handoffs) and then suspends instead of retrying indefinitely
     /// (https://github.com/ecyx00/bree/issues/5734).
     func evaluateReconnectPolicyLocked() {
-        guard configuration.transport == .ssh else { return }
         reachabilityProbeGeneration &+= 1
         let generation = reachabilityProbeGeneration
         reachabilityProbe.probe(

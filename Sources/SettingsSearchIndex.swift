@@ -146,7 +146,7 @@ enum SettingsSearchIndex {
         setting(.sidebarAppearance, "show-metadata", String(localized: "settings.app.showMetadata", defaultValue: "Show Custom Metadata in Sidebar"), "report meta status block"),
         setting(.sidebarAppearance, "compact-agent-status", String(localized: "settings.app.compactAgentStatus", defaultValue: "Compact Agent Status"), "sidebar.compactAgentStatus compact agent status running needs input glyph icon title line dense claude codex"),
         setting(.sidebarAppearance, "right-max-width", String(localized: "settings.sidebar.rightMaxWidth", defaultValue: "Dock Max Width"), "dock right sidebar max width terminal reservation cap logs lazygit"),
-        setting(.sidebarAppearance, "right-sidebar-tabs", String(localized: "settings.sidebar.rightTabs", defaultValue: "Right Sidebar Tabs"), "right sidebar tabs show hide reorder order files find vault feed dock cloud mode switcher customize"),
+        setting(.sidebarAppearance, "right-sidebar-tabs", String(localized: "settings.sidebar.rightTabs", defaultValue: "Right Sidebar Tabs"), "right sidebar tabs show hide reorder order files find vault feed dock remote mode switcher customize"),
         setting(.automation, "socket-mode", String(localized: "settings.automation.socketMode", defaultValue: "Socket Control Mode"), "unix socket api access password auth"),
         setting(.automation, "socket-password", String(localized: "settings.automation.socketPassword", defaultValue: "Socket Password"), "socket auth credential"),
         setting(.automation, "claude-code", String(localized: "settings.automation.claudeCode", defaultValue: "Claude Code Integration"), "agent hooks notifications"),

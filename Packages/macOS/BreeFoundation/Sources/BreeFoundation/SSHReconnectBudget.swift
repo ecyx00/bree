@@ -3,7 +3,7 @@
 /// `BREE_SSH_RECONNECT_LIMIT` is read by generated shell supervisors in
 /// several entrypoints. Each used to hard-code its own numbers, so one name
 /// carried a 20-attempt ceiling in the attach supervisor and an 86400 default
-/// in the freestyle supervisors. Both sides now read these constants.
+/// elsewhere. Both sides now read these constants.
 public struct SSHReconnectBudget: Sendable {
     /// Environment variable that carries an operator-chosen reconnect budget.
     public let limitEnvironmentName: String
@@ -17,9 +17,8 @@ public struct SSHReconnectBudget: Sendable {
 
     /// Largest reconnect budget an operator can ask for.
     ///
-    /// This is also what the freestyle supervisors default to, so the largest
-    /// value an operator may request matches the largest value the app itself
-    /// requests. Keeping it finite preserves the fail-closed property above;
+    /// The largest value an operator may request matches the largest value the
+    /// app itself requests. Keeping it finite preserves the fail-closed property above;
     /// at the capped 30s backoff, 86400 attempts is a supervisor that gives up
     /// only after the host has been gone for weeks.
     public let maximumLimit: Int

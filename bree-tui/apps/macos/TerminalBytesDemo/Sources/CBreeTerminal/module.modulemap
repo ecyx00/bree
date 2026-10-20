@@ -1,4 +1,0 @@
-module CBreeTerminal [system] {
-    header "../../../../../crates/bree-terminal-client/include/bree_terminal_client.h"
-    export *
-}

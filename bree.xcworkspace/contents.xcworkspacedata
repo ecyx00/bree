@@ -11,25 +11,16 @@
          location = "group:BreeAgentChat">
       </FileRef>
       <FileRef
-         location = "group:BREEAuthCore">
-      </FileRef>
-      <FileRef
-         location = "group:BreeAuthRuntime">
+         location = "group:BreeAppSupport">
       </FileRef>
       <FileRef
          location = "group:BreeGhosttyKit">
-      </FileRef>
-      <FileRef
-         location = "group:BREEMobileCore">
       </FileRef>
       <FileRef
          location = "group:BreeSyntaxHighlighting">
       </FileRef>
       <FileRef
          location = "group:BreeTerminalPrediction">
-      </FileRef>
-      <FileRef
-         location = "group:BreeTerminalSizing">
       </FileRef>
    </Group>
    <Group
@@ -45,28 +36,13 @@
          location = "group:BreeAgentSessionStore">
       </FileRef>
       <FileRef
+         location = "group:BreeAgentTranscriptHost">
+      </FileRef>
+      <FileRef
          location = "group:BreeAppKitSupportUI">
       </FileRef>
       <FileRef
          location = "group:BreeBrowser">
-      </FileRef>
-      <FileRef
-         location = "group:BreeCloud">
-      </FileRef>
-      <FileRef
-         location = "group:BreeCloudBannerCore">
-      </FileRef>
-      <FileRef
-         location = "group:BreeCloudImagePaste">
-      </FileRef>
-      <FileRef
-         location = "group:BreeCloudMachines">
-      </FileRef>
-      <FileRef
-         location = "group:BreeCloudTui">
-      </FileRef>
-      <FileRef
-         location = "group:BreeCloudTunnelCore">
       </FileRef>
       <FileRef
          location = "group:BreeCommandPalette">
@@ -97,9 +73,6 @@
       </FileRef>
       <FileRef
          location = "group:BreeLiveEval">
-      </FileRef>
-      <FileRef
-         location = "group:BreeMobileHost">
       </FileRef>
       <FileRef
          location = "group:BreeNotifications">
@@ -160,9 +133,6 @@
       </FileRef>
       <FileRef
          location = "group:BreeTerminalImport">
-      </FileRef>
-      <FileRef
-         location = "group:BreeTerminalSharing">
       </FileRef>
       <FileRef
          location = "group:BreeTestSupport">

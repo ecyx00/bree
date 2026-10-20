@@ -58,8 +58,13 @@ extension TerminalPanel: ShellEditorHost {
             breeDebugLog("shellEditor.policy panel=\(id.uuidString.prefix(8)) \(snapshot)")
         }
 #endif
+        // The clean grid (marker rows) is printed whenever the shell started with the editor
+        // setting on, so the TextBox input draws the same overlay.
+        let overlayOn = next || (policy.textBoxActive && policy.settingEnabled && policy.isLocal && !policy.rawMode)
+        hostedView.surfaceView.commandBadgeOverlayView.isEnabled = overlayOn
         guard next != shellEditorActive else { return }
         shellEditorActive = next
+        surface.cursorHidden = next
         if next {
             shellEditorWantsFocus = true
             if shellEditorIsFocusedPanelInKeyWindow { shellEditorFocusRequest &+= 1 }
@@ -149,6 +154,7 @@ extension TerminalPanel: ShellEditorHost {
         if state == .promptIdle {
             shellEditorAwaitingPrompt = false
         }
+        hostedView.surfaceView.commandBadgeOverlayView.setRunning(state == .commandRunning)
         // Every state change re-probes the foreground group.
         shellEditorAgentForeground = false
         shellEditorForegroundCache = nil
@@ -156,12 +162,37 @@ extension TerminalPanel: ShellEditorHost {
     }
 
     /// Ghostty COMMAND_FINISHED: the in-band signal that the prompt is back.
-    func shellEditorCommandFinished() {
+    func shellEditorCommandFinished(exitCode: Int16, durationNanos: UInt64) {
         shellEditorAgentForeground = false
         shellEditorForegroundCache = nil
         shellEditorRawMode = false
         shellEditorAwaitingPrompt = false
         shellEditorRecompute()
+        shellEditorUpdateRawChip()
+        if hostedView.surfaceView.commandBadgeOverlayView.isEnabled {
+            hostedView.surfaceView.commandBadgeOverlayView.record(exitCode: exitCode, durationNanos: durationNanos)
+        }
+    }
+
+    /// A dim one-line chip in the pane's bottom-right corner while raw mode is on, so the way
+    /// back is visible. An overlay: it never changes the grid size.
+    private func shellEditorUpdateRawChip() {
+        let identifier = NSUserInterfaceItemIdentifier("ShellEditorRawChip")
+        let existing = hostedView.subviews.first { $0.identifier == identifier }
+        guard shellEditorRawMode else { existing?.removeFromSuperview(); return }
+        guard existing == nil else { return }
+        let shortcut = KeyboardShortcutSettings.shortcut(for: .toggleShellEditor).displayString
+        let chip = NSTextField(labelWithString: String(
+            format: String(localized: "shellEditor.rawChip", defaultValue: "%@ for editor"), shortcut))
+        chip.identifier = identifier
+        chip.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        chip.textColor = .secondaryLabelColor
+        chip.translatesAutoresizingMaskIntoConstraints = false
+        hostedView.addSubview(chip)
+        NSLayoutConstraint.activate([
+            chip.trailingAnchor.constraint(equalTo: hostedView.trailingAnchor, constant: -14),
+            chip.bottomAnchor.constraint(equalTo: hostedView.bottomAnchor, constant: -8),
+        ])
     }
 
     /// The Toggle Shell Editor action: editor to raw terminal and back.
@@ -170,6 +201,7 @@ extension TerminalPanel: ShellEditorHost {
         guard shellActivity.state == .promptIdle || shellActivity.state == .commandRunning else { return false }
         shellEditorRawMode.toggle()
         shellEditorRecompute()
+        shellEditorUpdateRawChip()
         if shellEditorRawMode { shellEditorFocusTerminal() }
         // At the idle prompt the clean-grid shell hides the terminal cursor for
         // the editor's caret; raw mode needs it back (and hidden again on
@@ -488,4 +520,285 @@ extension GhosttyNSView {
         else { return false }
         return panel.shellEditorForwardingKey
     }
+}
+
+// MARK: Command blocks: dividers, failure rail, result badge
+
+/// Overlay for the clean-grid shell's blocks. The shell prints one marker row per
+/// block (`─<id>` or `╴<id>`, id concealed; see bree-zsh-integration.zsh). Everything
+/// here is derived from those rows at draw time, so it follows reflow and resize and
+/// never touches the grid size or the pty: a full-width divider at each `─` row, a
+/// 2 pt clay rail down a failed block, and a badge (result, or a live timer while the
+/// command runs) at the right edge of the block's last row. Results are keyed by id.
+/// Shells that print no markers (bash) fall back to row-anchored badges.
+// Each legacy badge remembers the text of its row; one whose row no longer holds
+// that text (`clear`, overwritten) is dropped, and one whose line leaves no free
+// room at the right edge is skipped (not moved).
+@MainActor
+final class CommandBadgeOverlayView: NSView {
+    private struct Result { let exitCode: Int16; let seconds: Double }
+    private struct LegacyBadge {
+        let row: UInt64
+        let revision: UInt64
+        let result: Result
+        let rowText: String
+    }
+    private struct Marker { let row: UInt64; let id: UInt64; let rule: Bool }
+    private struct BadgeItem { let text: String; let label: String; let failed: Bool; let viewportRow: Int; let rowText: String }
+    private struct Layout {
+        var rules: [Int] = []          // viewport rows
+        var rails: [ClosedRange<Int>] = []
+        var badges: [BadgeItem] = []
+        var metrics = ghostty_surface_grid_metrics_s()
+    }
+
+    private var results: [UInt64: Result] = [:]
+    /// One AX static text per badge as last drawn (kept alive: AX holds elements by reference).
+    private var drawnBadges: [NSAccessibilityElement] = []
+    private var latestID: UInt64?
+    private var legacy: [LegacyBadge] = []
+    private var runningSince: Date?
+    private var timer: Timer?
+    private weak var surfaceView: GhosttyNSView?
+    private var observer: NSObjectProtocol?
+    /// False while the shell editor is off (alt screen, raw mode, agent CLI, no integration).
+    var isEnabled = true { didSet { if isEnabled != oldValue { needsDisplay = true } } }
+
+    static let clay = NSColor(srgbRed: 0.85, green: 0.47, blue: 0.34, alpha: 1)
+
+    init(surfaceView: GhosttyNSView) {
+        self.surfaceView = surfaceView
+        super.init(frame: .zero)
+        autoresizingMask = [.width, .height]
+        observer = NotificationCenter.default.addObserver(
+            forName: .ghosttyDidUpdateScrollbar, object: surfaceView, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.needsDisplay = true }
+        }
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    deinit {
+        if let observer { NotificationCenter.default.removeObserver(observer) }
+        timer?.invalidate()
+    }
+
+    override var isOpaque: Bool { false }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    private func rowText(_ surface: ghostty_surface_t, _ row: UInt64) -> String? {
+        var out = ghostty_text_s()
+        guard row <= UInt64(UInt32.max),
+              ghostty_surface_read_screen_clipboard_text(surface, UInt32(row), UInt32(row), 4096, &out) else { return nil }
+        defer { ghostty_surface_free_text(surface, &out) }
+        guard let pointer = out.text, out.text_len > 0 else { return "" }
+        return String(decoding: Data(bytes: pointer, count: Int(out.text_len)), as: UTF8.self)
+    }
+
+    /// Marker row: `╶╴`, kind (`─` divider, `╴` first block), id in base 4 over `─╴╶╌`.
+    private static func marker(_ text: String, row: UInt64) -> Marker? {
+        let glyphs = Array(text.unicodeScalars)
+        guard glyphs.count >= 4, glyphs.count <= 36, glyphs[0] == "\u{2576}", glyphs[1] == "\u{2574}",
+              glyphs[2] == "\u{2500}" || glyphs[2] == "\u{2574}" else { return nil }
+        var id: UInt64 = 0
+        for glyph in glyphs[3...] {
+            guard let digit = ["\u{2500}", "\u{2574}", "\u{2576}", "\u{254C}"].firstIndex(of: glyph) else { return nil }
+            id = id &* 4 &+ UInt64(digit)
+        }
+        return Marker(row: row, id: id, rule: glyphs[2] == "\u{2500}")
+    }
+
+    // MARK: Running timer
+
+    /// The shell state turned to (or left) "command running": a 1 Hz timer redraws the badge slot.
+    func setRunning(_ on: Bool) {
+        if on {
+            guard runningSince == nil else { return }
+            runningSince = Date()
+            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated { self?.needsDisplay = true }
+            }
+        } else {
+            runningSince = nil
+            timer?.invalidate()
+            timer = nil
+        }
+        needsDisplay = true
+    }
+
+    private var elapsedSeconds: Int { Int(Date().timeIntervalSince(runningSince ?? Date())) }
+
+    // MARK: Text
+
+    /// Under 1 s the duration is hidden (a success keeps only the check).
+    private static func badgeText(_ result: Result) -> String {
+        let time = result.seconds < 1 ? ""
+            : result.seconds < 60 ? String(format: "%.1fs", result.seconds)
+            : String(format: "%dm%02ds", Int(result.seconds) / 60, Int(result.seconds) % 60)
+        if result.exitCode == 0 { return time.isEmpty ? "\u{2713}" : "\u{2713} \(time)" }
+        return time.isEmpty ? "\u{2717} \(result.exitCode)" : "\u{2717} \(result.exitCode) \u{00B7} \(time)"
+    }
+
+    private static func badgeLabel(_ result: Result) -> String {
+        let base = "exit \(result.exitCode)"
+        guard result.seconds >= 1 else { return base }
+        return result.seconds < 60 ? base + String(format: ", %.1f seconds", result.seconds)
+            : base + ", \(Int(result.seconds) / 60) minutes \(Int(result.seconds) % 60) seconds"
+    }
+
+    // MARK: Recording
+
+    /// COMMAND_FINISHED: key the result to the block that just ended (the last marker above
+    /// the cursor). Without markers, anchor a legacy badge to the row above the cursor.
+    func record(exitCode: Int16, durationNanos: UInt64) {
+        setRunning(false)
+        needsDisplay = true // redraw prunes legacy badges a `clear` just invalidated
+        guard exitCode >= 0, let surfaceView,
+              let surface = surfaceView.terminalSurface?.surface,
+              let geometry = surfaceView.authoritativeScrollbarGeometry() else { return }
+        var metrics = ghostty_surface_grid_metrics_s()
+        guard ghostty_surface_grid_metrics(surface, &metrics), metrics.cursor_in_viewport else { return }
+        let offset = geometry.scrollbar.offset
+        let cursorRow = offset + UInt64(metrics.cursor_row)
+        let result = Result(exitCode: exitCode, seconds: Double(durationNanos) / 1_000_000_000)
+        var found: UInt64?
+        var row = cursorRow
+        while row > offset, found == nil {
+            row -= 1
+            if let text = rowText(surface, row), let mark = Self.marker(text, row: row) { found = mark.id }
+        }
+        // ponytail: when the marker scrolled out of the viewport unseen, assume the next id after
+        // the latest one drawn; upgrade to a bounded upward scan if long outputs mis-key.
+        if found == nil, let latestID { found = results[latestID] == nil ? latestID : latestID + 1 }
+        if let found {
+            latestID = max(latestID ?? 0, found)
+            results[found] = result
+            if results.count > 300, let oldest = results.keys.min() { results[oldest] = nil }
+            return
+        }
+        // Legacy: the row above the cursor is the command's last output row (or its own line).
+        let anchor = max(cursorRow, 1) - 1
+        guard let text = rowText(surface, anchor), !text.isEmpty else { return }
+        legacy.removeAll { $0.revision != geometry.rowSpaceRevision || $0.row == anchor }
+        legacy.append(LegacyBadge(row: anchor, revision: geometry.rowSpaceRevision, result: result, rowText: text))
+        if legacy.count > 300 { legacy.removeFirst(legacy.count - 300) }
+    }
+
+    // MARK: Layout
+
+    private func layout() -> Layout? {
+        guard isEnabled, let surfaceView,
+              let surface = surfaceView.terminalSurface?.surface,
+              let geometry = surfaceView.authoritativeScrollbarGeometry() else { return nil }
+        var out = Layout()
+        guard ghostty_surface_grid_metrics(surface, &out.metrics), out.metrics.cell_height > 0 else { return nil }
+        let rows = Int(out.metrics.rows)
+        let offset = geometry.scrollbar.offset
+        let texts = (0..<rows).map { rowText(surface, offset + UInt64($0)) ?? "" }
+        let markers = texts.enumerated().compactMap { Self.marker($1, row: offset + UInt64($0)) }
+        if let last = markers.last { latestID = max(latestID ?? 0, last.id) }
+        // The block still open at the bottom ends above the cursor.
+        let bottom = out.metrics.cursor_in_viewport ? Int(out.metrics.cursor_row) - 1 : rows - 1
+        // (viewport start row, last row, id) per block; the first may have started above the viewport.
+        var blocks: [(start: Int, end: Int, id: UInt64)] = []
+        if let first = markers.first {
+            let firstRow = Int(first.row - offset)
+            if firstRow > 0, first.id > 1 { blocks.append((0, firstRow - 1, first.id - 1)) }
+        } else if let latestID {
+            blocks.append((0, bottom, latestID))
+        } else {
+            return legacyLayout(out, surface: surface, geometry: geometry, texts: texts, offset: offset)
+        }
+        for (index, mark) in markers.enumerated() {
+            let row = Int(mark.row - offset)
+            if mark.rule { out.rules.append(row) }
+            let end = index + 1 < markers.count ? Int(markers[index + 1].row - offset) - 1 : bottom
+            blocks.append((row + 1, end, mark.id))
+        }
+        for (index, block) in blocks.enumerated() where block.end >= block.start && block.end < rows {
+            let result = results[block.id]
+            if let result {
+                if result.exitCode != 0 { out.rails.append(block.start...block.end) }
+                out.badges.append(BadgeItem(text: Self.badgeText(result), label: Self.badgeLabel(result),
+                                            failed: result.exitCode != 0, viewportRow: block.end, rowText: texts[block.end]))
+            } else if runningSince != nil, index == blocks.count - 1 {
+                let s = elapsedSeconds
+                out.badges.append(BadgeItem(text: String(format: "%d:%02d", s / 60, s % 60), label: "running, \(s) seconds",
+                                            failed: false, viewportRow: block.end, rowText: texts[block.end]))
+            }
+        }
+        return out
+    }
+
+    private func legacyLayout(_ base: Layout, surface: ghostty_surface_t,
+                              geometry: NotificationScrollRestoreGeometry, texts: [String], offset: UInt64) -> Layout {
+        var out = base
+        let viewport = offset..<(offset + UInt64(out.metrics.rows))
+        // Drop badges whose visible row no longer holds the recorded text (`clear`).
+        legacy.removeAll { $0.revision == geometry.rowSpaceRevision && viewport.contains($0.row) && texts[Int($0.row - offset)] != $0.rowText }
+        for badge in legacy where badge.revision == geometry.rowSpaceRevision && viewport.contains(badge.row) {
+            out.badges.append(BadgeItem(text: Self.badgeText(badge.result), label: Self.badgeLabel(badge.result),
+                                        failed: badge.result.exitCode != 0, viewportRow: Int(badge.row - offset), rowText: badge.rowText))
+        }
+        return out
+    }
+
+    private func rowTop(_ row: Int, _ metrics: ghostty_surface_grid_metrics_s) -> Double {
+        metrics.padding_top + Double(row) * metrics.cell_height
+    }
+
+    /// Badge text origin and size, nil when the row's line reaches into the badge's span.
+    private func badgeFrame(_ item: BadgeItem, _ text: NSAttributedString, _ metrics: ghostty_surface_grid_metrics_s) -> NSRect? {
+        let size = text.size()
+        let lineCells = item.rowText.unicodeScalars.reduce(0) { $0 + ($1.value >= 0x1100 ? 2 : 1) }
+        if Double(lineCells + 1) * metrics.cell_width > bounds.width - size.width - 10 - metrics.padding_left { return nil }
+        return NSRect(x: bounds.width - size.width - 10,
+                      y: bounds.height - rowTop(item.viewportRow, metrics) - (metrics.cell_height + size.height) / 2,
+                      width: size.width, height: size.height)
+    }
+
+    private func attributed(_ item: BadgeItem, _ metrics: ghostty_surface_grid_metrics_s) -> NSAttributedString {
+        NSAttributedString(string: item.text, attributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: max(9, metrics.cell_height * 0.62), weight: .regular),
+            .foregroundColor: item.failed ? Self.clay : GhosttyApp.shared.defaultForegroundColor.withAlphaComponent(0.5),
+        ])
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        drawnBadges = []
+        guard let layout = layout() else { return }
+        let m = layout.metrics
+        GhosttyApp.shared.defaultForegroundColor.withAlphaComponent(0.2).setFill()
+        for row in layout.rules {
+            NSRect(x: 0, y: bounds.height - rowTop(row, m) - m.cell_height / 2, width: bounds.width, height: 1).fill()
+        }
+        Self.clay.setFill()
+        for range in layout.rails {
+            let top = rowTop(range.lowerBound, m)
+            let height = Double(range.count) * m.cell_height
+            NSRect(x: 0, y: bounds.height - top - height, width: 2, height: height).fill()
+        }
+        for item in layout.badges {
+            let text = attributed(item, m)
+            if let frame = badgeFrame(item, text, m) {
+                text.draw(at: frame.origin)
+                let element = NSAccessibilityElement()
+                element.setAccessibilityRole(.staticText)
+                element.setAccessibilityLabel(item.label)
+                element.setAccessibilityParent(self)
+                element.setAccessibilityFrameInParentSpace(frame)
+                drawnBadges.append(element)
+            }
+        }
+    }
+
+    // MARK: Accessibility
+
+    // A group, not a plain pass-through view: AppKit only walks accessibilityChildren of elements.
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+
+    /// One static text per drawn badge, labelled like "exit 0, 2.1 seconds".
+    override func accessibilityChildren() -> [Any]? { drawnBadges }
 }

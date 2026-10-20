@@ -1,5 +1,5 @@
 import BREEAgentLaunch
-@testable import BreeMobileHost
+@testable import BreeAgentTranscriptHost
 import Foundation
 import Testing
 

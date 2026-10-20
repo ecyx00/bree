@@ -1,4 +1,3 @@
-import BreeCloud
 import Foundation
 
 @MainActor
@@ -21,9 +20,8 @@ extension TerminalNotificationStore {
     /// notifications cannot swallow another pane's unread state.
     func markWorkspaceLevelNotificationsRead(forTabId tabId: UUID) {
         // `.surface` with a nil surface covers exactly the workspace-level
-        // records, so Cloud rows placed at the workspace level are acknowledged
+        // records, so remote rows placed at the workspace level are acknowledged
         // too, including ones that never became a local record.
-        defer { readTargetObserver?(.surface(workspaceID: tabId, surfaceID: nil)) }
         // History keeps records the active list has already dropped, so the feed
         // is marked by target while the active notifications are marked by id:
         // that is the path which also withdraws their delivered Mac banners.

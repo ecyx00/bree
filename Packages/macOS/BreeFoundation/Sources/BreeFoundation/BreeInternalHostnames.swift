@@ -1,6 +1,6 @@
 import Foundation
 
-/// The `<name>.internal` hostname bree offers for a Cloud VM's private
+/// The `<name>.internal` hostname bree offers for a remote host's private
 /// address, and the `/etc/hosts` management that makes the name resolve.
 ///
 /// The name only works from a Mac whose WireGuard tunnel is up (the address
@@ -95,8 +95,7 @@ public struct BreeInternalHostnames: Sendable {
 
     /// The URL a click on a machine's port row actually navigates to: straight
     /// to its private-network address, over the WireGuard tunnel — never
-    /// through a provider port-forwarding proxy, which Freestyle's public
-    /// platform does not offer for arbitrary ports. Deliberately the raw
+    /// through a provider port-forwarding proxy. Deliberately the raw
     /// address, not the `.internal` name `bree vpn hosts` publishes: that name
     /// only resolves once `/etc/hosts` has been synced, and a link that only
     /// sometimes works is worse than one that always does. An IPv6 literal is

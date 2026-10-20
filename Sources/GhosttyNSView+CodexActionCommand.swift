@@ -64,7 +64,7 @@ extension GhosttyNSView {
         codexActionCacheSurfaceID = surfaceID
         codexActionCacheRuntimeGeneration = runtimeGeneration
         codexActionCacheFrameSequence = frameSequence
-        codexActionCacheRows = terminalSurface.mobileRenderGridFrame(
+        codexActionCacheRows = terminalSurface.renderGridFrame(
             stateSeq: 0,
             includeTheme: false,
             anchor: .viewport

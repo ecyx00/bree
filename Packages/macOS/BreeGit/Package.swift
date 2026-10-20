@@ -16,7 +16,7 @@ let package = Package(
     dependencies: [
         .package(path: "../BreeFoundation"),
         .package(path: "../../Shared/BreeAgentChat"),
-        .package(path: "../../Shared/BREEMobileCore"),
+        .package(path: "../../Shared/BreeAppSupport"),
     ],
     targets: [
         .target(
@@ -24,7 +24,7 @@ let package = Package(
             dependencies: [
                 .product(name: "BreeFoundation", package: "BreeFoundation"),
                 .product(name: "BreeAgentChat", package: "BreeAgentChat"),
-                .product(name: "BREEMobileCore", package: "BREEMobileCore"),
+                .product(name: "BreeAppSupport", package: "BreeAppSupport"),
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v6),

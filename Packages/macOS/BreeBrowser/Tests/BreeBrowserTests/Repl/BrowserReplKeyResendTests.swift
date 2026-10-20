@@ -11,7 +11,7 @@ import WebKit
 /// user's focused terminal, and an agent's Command key would run bree menu
 /// shortcuts. Keys the REPL and `bree browser press` send carry a mark, and
 /// the app drops a marked key event that reaches it outside the web view's
-/// own delivery. The mobile browser stream's keys (a person on a phone) keep
+/// own delivery. The remote browser stream's keys (a person on a phone) keep
 /// the resend.
 @MainActor
 @Suite("Browser REPL unhandled key resend", .serialized)
@@ -69,10 +69,10 @@ struct BrowserReplKeyResendTests {
         #expect(webView.selectAllCount == 1)
     }
 
-    // The mobile browser stream replays a person's keys from their phone
+    // The remote browser stream replays a person's keys from their phone
     // through the specification entry point; WebKit's resend of a key no page
     // handled keeps reaching the Mac's menus there, as before.
-    @Test func keysTheMobileStreamReplaysKeepWebKitsResend() throws {
+    @Test func keysTheRemoteStreamReplaysKeepWebKitsResend() throws {
         let webView = RecordingWebView(frame: NSRect(x: 0, y: 0, width: 200, height: 200))
         #expect(webView.replayBrowserKeyboardSpecification(qKey, action: .press, characters: "q") == .delivered)
         let delivered = try #require(webView.keyDowns.first)

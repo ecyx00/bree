@@ -66,7 +66,7 @@ public final class PanelArtifactAuthorizationStore {
     /// - Parameters:
     ///   - workspaceID: Workspace containing the panel.
     ///   - surfaceID: Panel authorizing the request.
-    ///   - requestedPath: Absolute path requested by the mobile client.
+    ///   - requestedPath: Absolute path requested by the remote client.
     /// - Returns: The canonical requested path when it exactly matches the live
     ///   grant, otherwise `nil`.
     public func authorizedCanonicalPath(
@@ -98,7 +98,7 @@ public final class PanelArtifactAuthorizationStore {
     ///   - workspaceID: Workspace containing the panel.
     ///   - surfaceID: Panel authorizing the request.
     ///   - currentFilePath: File path the live panel reports displaying.
-    ///   - requestedPath: Absolute path requested by the mobile client.
+    ///   - requestedPath: Absolute path requested by the remote client.
     /// - Returns: The canonical requested path when the live panel and request
     ///   both exactly match the recorded grant, otherwise `nil`.
     public func authorizedCanonicalPath(

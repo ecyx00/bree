@@ -18,6 +18,8 @@ struct BreeTaskManagerSnapshot {
     let total: BreeTaskManagerResources
     let sampledAt: Date?
     let memoryDiagnostic: BreeTaskManagerMemoryDiagnostic?
+    /// Same rows regrouped under one header per git worktree (see `groupedByWorktree`).
+    private(set) var worktreeRows: [BreeTaskManagerRow] = []
 
     var hasLoadedResourceUsage: Bool {
         sampledAt != nil
@@ -78,13 +80,25 @@ struct BreeTaskManagerSnapshot {
 
         var rows: [BreeTaskManagerRow] = []
         let windows = payload["windows"] as? [[String: Any]] ?? []
-        for window in windows {
-            Self.appendWindow(window, to: &rows)
+        for (index, window) in windows.enumerated() {
+            Self.appendWindow(window, ordinal: index + 1, to: &rows)
         }
+        let leakedPayloads = payload["leaked_processes"] as? [[String: Any]] ?? []
         let agentRows = Self.agentRows(from: payload["coding_agents"] as? [[String: Any]] ?? [])
-        self.rows = Self.rowsWithAgentAssets(
+        let assetRows = Self.rowsWithAgentAssets(
             rows,
             assetNameByProcessID: Self.agentAssetNameByProcessID(from: agentRows)
+        )
+        self.rows = assetRows + leakedPayloads.compactMap { Self.leakedRow($0, level: 0) }
+        var worktreeByWorkspaceRowID: [String: [String: Any]] = [:]
+        for workspace in windows.flatMap({ $0["workspaces"] as? [[String: Any]] ?? [] }) {
+            if let id = Self.nonEmptyString(workspace["id"]),
+               let worktree = workspace["worktree"] as? [String: Any] {
+                worktreeByWorkspaceRowID["workspace:\(id)"] = worktree
+            }
+        }
+        self.worktreeRows = Self.groupedByWorktree(
+            assetRows, worktreeByWorkspaceRowID: worktreeByWorkspaceRowID, leaked: leakedPayloads
         )
         self.agentRows = agentRows
         let programTotalPayloads = payload["program_totals"] as? [[String: Any]] ?? []
@@ -94,6 +108,118 @@ struct BreeTaskManagerSnapshot {
         let memoryDiagnostic = BreeTaskManagerMemoryDiagnostic(payload["memory_diagnostic"] as? [String: Any])
         self.memoryDiagnostic = memoryDiagnostic
         self.childMemoryRows = Self.childMemoryRows(from: memoryDiagnostic)
+    }
+
+    private static func leakedRow(_ payload: [String: Any], level: Int) -> BreeTaskManagerRow? {
+        guard let pid = int(payload["pid"]) else { return nil }
+        let name = nonEmptyString(payload["name"]) ?? "Process \(pid)"
+        let resources = BreeTaskManagerResources(payload["resources"] as? [String: Any] ?? [:])
+        let detail = [
+            "PID \(pid)",
+            nonEmptyString(payload["cwd"]),
+        ].compactMap { $0 }.joined(separator: " / ")
+        return BreeTaskManagerRow(
+            id: "process:leaked:\(pid)",
+            kind: .process,
+            level: level,
+            title: name,
+            detail: detail,
+            resources: resources,
+            isDimmed: false,
+            workspaceId: nil,
+            surfaceId: nil,
+            terminalSurfaceId: nil,
+            processId: pid,
+            rootProcessIds: [pid],
+            foregroundProcessGroupIds: [],
+            agentAssetName: nil,
+            processClass: .leaked
+        )
+    }
+
+    /// Drops window rows and nests each workspace subtree under a header per git worktree
+    /// root; leaked processes join the header of their worktree.
+    private static func groupedByWorktree(
+        _ rows: [BreeTaskManagerRow],
+        worktreeByWorkspaceRowID: [String: [String: Any]],
+        leaked: [[String: Any]]
+    ) -> [BreeTaskManagerRow] {
+        struct Group {
+            var title: String
+            var detail: String
+            var children: [BreeTaskManagerRow] = []
+        }
+        var order: [String] = []
+        var groups: [String: Group] = [:]
+        func group(root: String?, repo: String? = nil, linked: Bool = false) -> String {
+            let key = root ?? ""
+            if groups[key] == nil {
+                order.append(key)
+                if let root {
+                    let detail = linked && repo != nil
+                        ? String(format: String(
+                            localized: "taskManager.worktree.linkedOf",
+                            defaultValue: "%@ / linked worktree of %@"
+                        ), root, repo ?? "")
+                        : root
+                    groups[key] = Group(title: (root as NSString).lastPathComponent, detail: detail)
+                } else {
+                    groups[key] = Group(
+                        title: String(localized: "taskManager.worktree.none", defaultValue: "No worktree"),
+                        detail: ""
+                    )
+                }
+            }
+            return key
+        }
+        var current: String?
+        for row in rows {
+            if row.level <= 1 {
+                current = nil
+                guard row.kind == .workspace else { continue }
+                let worktree = worktreeByWorkspaceRowID[row.id]
+                current = group(
+                    root: nonEmptyString(worktree?["root"]),
+                    repo: nonEmptyString(worktree?["repo"]),
+                    linked: bool(worktree?["linked"])
+                )
+            }
+            if let current { groups[current]?.children.append(row) }
+        }
+        for payload in leaked {
+            guard let row = leakedRow(payload, level: 1) else { continue }
+            let key = group(root: nonEmptyString(payload["worktree"]))
+            groups[key]?.children.append(row)
+        }
+        return order.flatMap { key -> [BreeTaskManagerRow] in
+            guard let group = groups[key] else { return [] }
+            let top = group.children.filter { $0.level == 1 }
+            var processIds: [Int] = []
+            for child in top { processIds += child.resources.processIds }
+            let header = BreeTaskManagerRow(
+                id: "worktree:\(key)",
+                kind: .worktree,
+                level: 0,
+                title: group.title,
+                detail: group.detail,
+                resources: BreeTaskManagerResources(
+                    cpuPercent: top.reduce(0) { $0 + $1.resources.cpuPercent },
+                    residentBytes: top.reduce(0) { $0 + $1.resources.residentBytes },
+                    memoryBytes: top.reduce(0) { $0 + $1.resources.memoryBytes },
+                    processCount: Set(processIds).count,
+                    processIds: processIds
+                ),
+                isDimmed: false,
+                workspaceId: nil,
+                surfaceId: nil,
+                terminalSurfaceId: nil,
+                processId: nil,
+                rootProcessIds: [],
+                foregroundProcessGroupIds: [],
+                agentAssetName: nil
+            )
+            return [header] + group.children
+        }
     }
 
     private static func childMemoryRows(from diagnostic: BreeTaskManagerMemoryDiagnostic?) -> [BreeTaskManagerRow] {
@@ -307,8 +433,8 @@ struct BreeTaskManagerSnapshot {
         ), Int64(processCount))
     }
 
-    private static func appendWindow(_ window: [String: Any], to rows: inout [BreeTaskManagerRow]) {
-        let handle = displayHandle(window)
+    private static func appendWindow(_ window: [String: Any], ordinal: Int, to rows: inout [BreeTaskManagerRow]) {
+        let handle = String(ordinal)
         var detailParts: [String] = []
         if bool(window["key"]) {
             detailParts.append(String(localized: "taskManager.row.keyWindow", defaultValue: "Key window"))
@@ -364,8 +490,8 @@ struct BreeTaskManagerSnapshot {
         }
 
         let panes = workspace["panes"] as? [[String: Any]] ?? []
-        for pane in panes {
-            appendPane(pane, workspaceId: workspaceId, to: &rows)
+        for (index, pane) in panes.enumerated() {
+            appendPane(pane, ordinal: index + 1, workspaceId: workspaceId, to: &rows)
         }
     }
 
@@ -378,7 +504,7 @@ struct BreeTaskManagerSnapshot {
         let value = nonEmptyString(tag["value"])
         let title = value.map { "\(key): \($0)" } ?? key
         let detail = int(tag["pid"]).map {
-            String(localized: "taskManager.row.pid", defaultValue: "PID \($0)")
+            "PID \($0)"
         } ?? ""
         rows.append(row(
             tag,
@@ -398,8 +524,8 @@ struct BreeTaskManagerSnapshot {
         }
     }
 
-    private static func appendPane(_ pane: [String: Any], workspaceId: UUID?, to rows: inout [BreeTaskManagerRow]) {
-        let handle = displayHandle(pane)
+    private static func appendPane(_ pane: [String: Any], ordinal: Int, workspaceId: UUID?, to rows: inout [BreeTaskManagerRow]) {
+        let handle = String(ordinal)
         rows.append(row(
             pane,
             kind: .pane,
@@ -429,6 +555,9 @@ struct BreeTaskManagerSnapshot {
         }
         if let url = nonEmptyString(surface["url"]) {
             detailParts.append(url)
+        }
+        if let seconds = (surface["last_activity_at"] as? NSNumber)?.doubleValue {
+            detailParts.append(BreeTaskManagerFormat.idle(seconds: Date().timeIntervalSince1970 - seconds))
         }
         rows.append(row(
             surface,
@@ -473,7 +602,7 @@ struct BreeTaskManagerSnapshot {
             ?? String(localized: "taskManager.row.webview", defaultValue: "WebView")
         var detailParts: [String] = []
         if let pid = int(webview["pid"]) {
-            detailParts.append(String(localized: "taskManager.row.pid", defaultValue: "PID \(pid)"))
+            detailParts.append("PID \(pid)")
         }
         if let sharedCount = int(webview["shared_process_count"]), sharedCount > 1 {
             detailParts.append(String(localized: "taskManager.row.sharedProcess", defaultValue: "Shared x\(sharedCount)"))
@@ -517,15 +646,19 @@ struct BreeTaskManagerSnapshot {
     ) {
         let pid = int(process["pid"])
         let title = nonEmptyString(process["name"])
-            ?? pid.map { String(localized: "taskManager.row.processWithPID", defaultValue: "Process \($0)") }
+            ?? pid.map { "Process \($0)" }
             ?? String(localized: "taskManager.row.process", defaultValue: "Process")
         let detail = pid.map {
-            String(localized: "taskManager.row.pid", defaultValue: "PID \($0)")
+            "PID \($0)"
         } ?? ""
         let processRootIds = pid.map { [$0] } ?? []
         let metadataSurfaceId = uuid(process["bree_surface_id"])
         let processSurfaceId = surfaceId ?? metadataSurfaceId
         let processTerminalSurfaceId = terminalSurfaceId ?? (surfaceId == nil ? metadataSurfaceId : nil)
+        let processAsset = agentAssetName(for: [
+            nonEmptyString(process["name"]),
+            nonEmptyString(process["path"]).map { URL(fileURLWithPath: $0).lastPathComponent }
+        ])
         let processRow = row(
             process,
             kind: .process,
@@ -538,10 +671,11 @@ struct BreeTaskManagerSnapshot {
             terminalSurfaceId: processTerminalSurfaceId,
             processId: pid,
             rootProcessIds: processRootIds,
-            agentAssetName: agentAssetName(for: [
-                nonEmptyString(process["name"]),
-                nonEmptyString(process["path"]).map { URL(fileURLWithPath: $0).lastPathComponent }
-            ])
+            agentAssetName: processAsset,
+            processClass: .classify(
+                processName: nonEmptyString(process["name"]) ?? "",
+                isAgent: processAsset != nil
+            )
         )
         rows.append(processRow)
 
@@ -573,7 +707,8 @@ struct BreeTaskManagerSnapshot {
         processId: Int? = nil,
         rootProcessIds: [Int]? = nil,
         foregroundProcessGroupIds: [Int]? = nil,
-        agentAssetName: String? = nil
+        agentAssetName: String? = nil,
+        processClass: BreeTaskManagerRow.ProcessClass? = nil
     ) -> BreeTaskManagerRow {
         BreeTaskManagerRow(
             id: rowID(payload, kind: kind, context: context),
@@ -589,7 +724,8 @@ struct BreeTaskManagerSnapshot {
             processId: processId,
             rootProcessIds: rootProcessIds ?? intArray(payload["top_level_pids"]),
             foregroundProcessGroupIds: foregroundProcessGroupIds ?? intArray(payload["foreground_pgids"]),
-            agentAssetName: agentAssetName
+            agentAssetName: agentAssetName,
+            processClass: processClass
         )
     }
 

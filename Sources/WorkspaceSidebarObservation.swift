@@ -32,7 +32,6 @@ extension View {
         task(id: ids) { @MainActor in
             await withTaskGroup(of: Void.self) { group in
                 for (id, workspace) in zip(ids, workspaces) {
-                    let cloudChanges = workspace.cloudBindingState.changes()
                     let immediateChanges = workspace.sidebarImmediateObservationPublisher
                         .values
                     let debouncedChanges = workspace.sidebarObservationPublisher
@@ -44,15 +43,6 @@ extension View {
                         .receive(on: DispatchQueue.main)
                         .debounce(for: debouncedInterval, scheduler: DispatchQueue.main)
                         .values
-                    group.addTask { @MainActor in
-                        var first = true
-                        for await _ in cloudChanges {
-                            if Task.isCancelled { break }
-                            if first && !deliverInitialValue { first = false; continue }
-                            first = false
-                            onChange(id)
-                        }
-                    }
                     group.addTask { @MainActor in
                         var first = true
                         for await _ in immediateChanges {

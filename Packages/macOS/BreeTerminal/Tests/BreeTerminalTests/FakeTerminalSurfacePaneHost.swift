@@ -38,7 +38,6 @@ final class FakeTerminalSurfacePaneHost: NSView, TerminalSurfacePaneHosting {
     func setVisibleInUI(_ visible: Bool) {}
     func setActive(_ active: Bool) {}
     func syncKeyStateIndicator(text: String?) {}
-    func setMobileViewportBorder(size: CGSize?, drawRight: Bool, drawBottom: Bool) {}
 
     func terminalSurfaceDidReceiveExplicitInput() {
         explicitInputCount += 1

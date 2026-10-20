@@ -75,30 +75,3 @@ struct WorkspaceRemoteDaemonManifestTests {
         ]) == nil)
     }
 }
-
-@Suite("WorkspaceRemoteWebSocketDaemonEndpoint")
-struct WorkspaceRemoteWebSocketDaemonEndpointTests {
-    @Test("proxy broker key component trims and binds url, session, and expiry")
-    func proxyBrokerKeyComponent() {
-        let endpoint = WorkspaceRemoteWebSocketDaemonEndpoint(
-            url: " wss://broker.example/ws ",
-            headers: ["Authorization": "Bearer x"],
-            token: "secret",
-            sessionId: " session-1 ",
-            expiresAtUnix: 1234
-        )
-        #expect(
-            endpoint.proxyBrokerKeyComponent
-                == "wss://broker.example/ws\u{1f}session-1\u{1f}1234"
-        )
-
-        let other = WorkspaceRemoteWebSocketDaemonEndpoint(
-            url: "wss://broker.example/ws",
-            headers: [:],
-            token: "secret",
-            sessionId: "session-2",
-            expiresAtUnix: 1234
-        )
-        #expect(endpoint.proxyBrokerKeyComponent != other.proxyBrokerKeyComponent)
-    }
-}

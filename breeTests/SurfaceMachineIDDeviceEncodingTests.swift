@@ -8,10 +8,10 @@ import Testing
 @testable import bree
 #endif
 
-/// `SurfaceMachineID.device` rides the same string wire as `local` and cloud
+/// `SurfaceMachineID.device` rides the same string wire as `local` and remote
 /// ids (`surface.catalog`, `bree vm tree --json`, persisted collapse state), so
-/// the `device:<uuid>@<tag>` form must round-trip, never be mistaken for a cloud
-/// machine, and never turn a cloud slug into a device.
+/// the `device:<uuid>@<tag>` form must round-trip, never be mistaken for a remote
+/// machine, and never turn a remote slug into a device.
 @Suite("Surface machine id: device encoding")
 struct SurfaceMachineIDDeviceEncodingTests {
     private let uuid = "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
@@ -41,7 +41,7 @@ struct SurfaceMachineIDDeviceEncodingTests {
         #expect(machine.isDevice)
         #expect(machine.deviceInstance == instance)
         #expect(!machine.isLocal)
-        #expect(machine.cloudMachineID == nil)
+        #expect(machine.remoteMachineID == nil)
     }
 
     @Test("Device UUIDs canonicalize to lowercase and an empty tag is the default tag")
@@ -64,18 +64,18 @@ struct SurfaceMachineIDDeviceEncodingTests {
         #expect(parsed.tag == "a@b")
     }
 
-    @Test("Cloud slugs and local stay what they were; malformed device values never crash")
+    @Test("Remote slugs and local stay what they were; malformed device values never crash")
     func nonDeviceValues() {
         #expect(SurfaceMachineID(rawValue: "local") == .local)
-        #expect(SurfaceMachineID(rawValue: "brave-otter") == .cloud("brave-otter"))
+        #expect(SurfaceMachineID(rawValue: "brave-otter") == .remote("brave-otter"))
         #expect(SurfaceMachineID(rawValue: "brave-otter").isDevice == false)
         #expect(SurfaceDeviceInstanceID(wireValue: "device:no-separator") == nil)
         #expect(SurfaceDeviceInstanceID(wireValue: "device:@tag") == nil)
         #expect(SurfaceDeviceInstanceID(wireValue: "device:\(uuid)@") == nil)
-        #expect(SurfaceDeviceInstanceID(wireValue: "cloud:\(uuid)@default") == nil)
-        // The prefix without a tag falls back to the cloud case: the catalog
+        #expect(SurfaceDeviceInstanceID(wireValue: "Remote:\(uuid)@default") == nil)
+        // The prefix without a tag falls back to the remote case: the catalog
         // keeps listing such a row rather than dropping it.
-        #expect(SurfaceMachineID(rawValue: "device:no-separator") == .cloud("device:no-separator"))
+        #expect(SurfaceMachineID(rawValue: "device:no-separator") == .remote("device:no-separator"))
     }
 
     @Test("Machine info with presence encodes and decodes as JSON")
@@ -92,66 +92,6 @@ struct SurfaceMachineIDDeviceEncodingTests {
         // snapshot, so its enum ID is intentionally nested. The flat wire
         // representation is owned by `surfaceMachinePayload` below.
         #expect(try JSONSerialization.jsonObject(with: data) is [String: Any])
-    }
-
-    @Test("The socket catalog payload names the machine kind and presence")
-    func socketPayload() {
-        let presence = SurfaceDevicePresence(
-            state: .offline, lastSeenAt: Date(timeIntervalSince1970: 1_700_000_000), tag: "default",
-            bundleID: "com.bree.app", accountTrust: .sameAccount
-        )
-        let device = TerminalController.surfaceMachinePayload(machineInfo(.device(studio), linkState: .offline, presence: presence))
-        #expect(device["kind"] as? String == "device")
-        #expect(device["local"] as? Bool == false)
-        #expect(device["id"] as? String == "device:\(uuid)@default")
-        let devicePresence = device["presence"] as? [String: Any]
-        #expect(devicePresence?["state"] as? String == "offline")
-        #expect(devicePresence?["account_trust"] as? String == "sameAccount")
-        #expect(devicePresence?["tag"] as? String == "default")
-        #expect(devicePresence?["bundle_id"] as? String == "com.bree.app")
-        #expect((devicePresence?["last_seen_at"] as? NSNumber)?.doubleValue == 1_700_000_000)
-
-        let cloud = TerminalController.surfaceMachinePayload(machineInfo(.cloud("brave-otter"), linkState: .connected, presence: nil))
-        #expect(cloud["kind"] as? String == "cloud")
-        #expect(cloud["presence"] is NSNull)
-        let local = TerminalController.surfaceMachinePayload(machineInfo(.local, linkState: .notApplicable, presence: nil))
-        #expect(local["kind"] as? String == "local")
-        #expect(local["local"] as? Bool == true)
-    }
-
-    @Test("Cloud tree payload carries user-facing link failure copy")
-    func cloudLinkFailureCopy() {
-        let info = machineInfo(.cloud("brave-otter"), linkState: .error, presence: nil)
-        var failed = info
-        failed.linkError = "cloud_api_unavailable"
-        let payload = TerminalController.surfaceMachinePayload(failed)
-        #expect(payload["link_error"] as? String == "cloud_api_unavailable")
-        #expect(payload["link_error_message"] as? String == "Bree cannot reach the Cloud service for this machine right now.")
-
-        let lines = BreeTuiRemoteRouting.vmTreeLines(
-            machine: [
-                "id": "brave-otter",
-                "status": "running",
-                "link_state": "error",
-                "link_error": "cloud_api_unavailable",
-                "link_error_message": "Bree cannot reach the Cloud service for this machine right now."
-            ],
-            resources: []
-        )
-        #expect(lines.contains { $0.contains("Bree cannot reach the Cloud service") })
-        #expect(!lines.contains { $0.contains("cloud_api_unavailable") })
-
-        let fallbackLines = BreeTuiRemoteRouting.vmTreeLines(
-            machine: [
-                "id": "brave-otter",
-                "status": "running",
-                "link_state": "error",
-                "link_error": "cloud_api_unavailable",
-            ],
-            resources: []
-        )
-        #expect(!fallbackLines.contains { $0.contains("cloud_api_unavailable") })
-        #expect(fallbackLines.contains { $0.contains("Link failed") })
     }
 
     @Test("Build labels qualify dev, nightly, rc, and tagged instances; stable stays bare")

@@ -1,11 +1,10 @@
-import BreeCloud
 import Bonsplit
 import BreeSurfaceCatalogModel
 import Foundation
 
 extension DockSplitStore {
     var surfaceOwnershipPolicy: SurfaceOwnershipPolicy {
-        Workspace.liveWorkspace(id: workspaceId)?.surfaceOwnershipPolicy ?? .init(cloudMachine: nil)
+        AppDelegate.shared?.workspaceFor(tabId: workspaceId)?.surfaceOwnershipPolicy ?? .init(remoteMachine: nil)
     }
 
     func acceptsUnownedBrowserURL(_ url: URL?) -> Bool {
@@ -41,9 +40,6 @@ extension DockSplitStore {
     }
 
     func acceptsRestoredDisplay(_ snapshot: SessionPanelSnapshot) -> Bool {
-        if let resource = snapshot.browser?.cloudResource {
-            return surfaceOwnershipPolicy.rejection(for: resource.machine, kind: resource.kind) == nil
-        }
         if let raw = snapshot.browser?.urlString, URL(string: raw)?.path == "/vnc.html" {
             return surfaceOwnershipPolicy.rejection(for: nil) == nil
         }
@@ -53,7 +49,6 @@ extension DockSplitStore {
     func machineOwningSurface(_ panelID: UUID) -> SurfaceMachineID? {
         guard panels[panelID] != nil else { return nil }
         if let machine = SurfaceCatalog.shared.machineOwningPanel(panelID), !machine.isLocal { return machine }
-        if let resource = (panels[panelID] as? DeferredBrowserPanel)?.sessionPanelSnapshot.browser?.cloudResource { return resource.machine }
         return panels[panelID]?.transferredSurfaceMachine
             ?? detachedSurfaceTransfersByPanelId[panelID]?.surfaceMachine
             ?? .local
@@ -61,7 +56,7 @@ extension DockSplitStore {
 }
 
 extension DockSplitStore {
-    /// A Dock hosts a remote terminal only by transfer: a Cloud or SSH
+    /// A Dock hosts a remote terminal only by transfer: a remote or SSH
     /// projection, or a remote PTY surface moved in from a remote workspace.
     func terminalRunsOnAnotherMachine(_ panelID: UUID) -> Bool {
         if detachedSurfaceTransfersByPanelId[panelID]?.isRemoteTerminal == true { return true }

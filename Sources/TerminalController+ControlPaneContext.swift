@@ -709,7 +709,7 @@ extension TerminalController: ControlPaneContext {
 
     /// Runs the legacy `v2SurfaceMove` and bridges its Foundation-shaped
     /// `V2CallResult` to the typed `ControlCallResult` (the exact pattern
-    /// `bridgeMobileResult` uses), so `pane.join` forwards the surface-move
+    /// `bridgeResult` uses), so `pane.join` forwards the surface-move
     /// outcome byte-faithfully. `v2SurfaceMove` is currently `private`; the
     /// integrator must relax it to at least `internal` (it lives in
     /// `TerminalController.swift`, which this extension cannot reach while

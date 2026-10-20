@@ -187,7 +187,10 @@ struct WikiIndex: Equatable {
             guard WikiLink.isSafeSlug(page.slug) else { return nil }
             rel = page.slug + ".md"
         }
-        return WikiPaths.confined((dir as NSString).appendingPathComponent(rel), wikiDir: wikiDir ?? base)
+        let path = (dir as NSString).appendingPathComponent(rel)
+        // A project folder that is itself a symlink inside the wiki folder resolves outside it;
+        // the folder is the owner's own link, so pages are also allowed inside its resolved target.
+        return WikiPaths.confined(path, wikiDir: wikiDir ?? base) ?? WikiPaths.confined(path, wikiDir: dir)
     }
 }
 

@@ -771,6 +771,8 @@ _bree_tmux_publish_bree_environment() {
 
 _bree_tmux_refresh_bree_environment() {
     [[ -n "$TMUX" ]] || return 0
+    # A persistent local shell owns its surface env; never replace it from the tmux server.
+    [[ "$BREE_LOCAL_TMUX_AUTO" != 1 ]] || return 0
     command -v tmux >/dev/null 2>&1 || return 0
 
     local key did_change=0
@@ -917,6 +919,24 @@ _bree_patch_ghostty_job_table_guard() {
 }
 _bree_patch_ghostty_job_table_guard
 
+# Inside Bree's private tmux (BREE_LOCAL_TMUX_AUTO=1) tmux swallows OSC 133, so the
+# exit-code badges vanish. Re-wrap every Ghostty 133 mark in a tmux DCS
+# passthrough (needs `allow-passthrough on`, set on Bree's own server). The
+# backslash run is captured so the same rewrite works in the doubled-escape
+# text inside _ghostty_deferred_init.
+_bree_patch_ghostty_tmux_passthrough() {
+    [[ "$BREE_LOCAL_TMUX" == 1 || "$BREE_LOCAL_TMUX_AUTO" == 1 ]] || return 0
+    setopt local_options extended_glob
+    local fn body
+    for fn in _ghostty_deferred_init _ghostty_precmd _ghostty_preexec _ghostty_zle_line_init; do
+        (( $+functions[$fn] )) || continue
+        body=${functions[$fn]}
+        [[ "$body" == *"ePtmux;"* ]] && continue
+        functions[$fn]=${body//(#b)(\\##)e\]133\;([^\\]#)(\\##)a/${match[1]}ePtmux;${match[1]}e${match[1]}e]133;${match[2]}${match[3]}a${match[1]}e${match[1]}${match[1]}}
+    done
+}
+_bree_patch_ghostty_tmux_passthrough
+
 # Resolve the HEAD file path without invoking git (fast; works for worktrees).
 # Sets REPLY (empty when not in a repository) so prompt hooks need no subshell.
 _bree_git_resolve_head_path_into_reply() {
@@ -1025,7 +1045,7 @@ _bree_report_tty_payload_into_reply() {
     [[ -n "$_BREE_TTY_NAME" ]] || return 0
 
     local payload="report_tty $_BREE_TTY_NAME --tab=$BREE_TAB_ID"
-    if [[ -z "$TMUX" ]]; then
+    if [[ -z "$TMUX" || "$BREE_LOCAL_TMUX_AUTO" == 1 ]]; then
         [[ -n "$BREE_PANEL_ID" ]] || return 0
         payload+=" --panel=$BREE_PANEL_ID"
     fi
@@ -1702,6 +1722,8 @@ add-zsh-hook zshexit _bree_zshexit
 # ESC[?25h / ESC[?25l to the pty on the raw-mode toggle (no shell round trip).
 
 typeset -g _BREE_CLEAN_FIRST=1 _BREE_CLEAN_BLOCKS=0 _BREE_CLEAN_HDR_SET=0 _BREE_CLEAN_ATTOP=0
+typeset -gi _BREE_CLEAN_ID=0
+typeset -g _BREE_CLEAN_LAST_HDR=''
 
 _bree_clean_accept_line() {
     if (( ! _BREE_CLEAN_HDR_SET )) && [[ -z "$PREBUFFER" && "$BUFFER" == *[^[:space:]]* ]]; then
@@ -1712,10 +1734,21 @@ _bree_clean_accept_line() {
             head="$(<"$REPLY")"
             [[ "$head" == "ref: refs/heads/"* ]] && branch="  ${head#ref: refs/heads/}"
         fi
-        local hdr=$'%{\e[2m%}'"${cwd//\%/%%}${branch//\%/%%}"$'%{\e[0m%}\n'
-        # Thin dim rule between blocks (width read now, so a resize only affects
-        # rules already printed). Inside %{ %}: zsh counts it as zero width.
-        (( _BREE_CLEAN_BLOCKS )) && hdr=$'%{\e[2m'"${(l:COLUMNS::─:)}"$'\e[0m%}\n'"$hdr"
+        # Header only when cwd/branch differ from the previous block's.
+        local hdr=""
+        if [[ "${cwd}${branch}" != "$_BREE_CLEAN_LAST_HDR" ]]; then
+            _BREE_CLEAN_LAST_HDR="${cwd}${branch}"
+            hdr=$'%{\e[2m%}'"${cwd//\%/%%}${branch//\%/%%}"$'%{\e[0m%}\n'
+        fi
+        # Block marker row, one concealed run of box-drawing glyphs: sentinel ╶╴, kind
+        # (─ divider, ╴ first block, no divider), then the block id in base 4 over ─╴╶╌
+        # (0..3, most significant first). No letters or digits, so Find never matches it.
+        # The app draws the full-width divider, failure rail and result badge from it.
+        (( ++_BREE_CLEAN_ID ))
+        local mark='─'; (( _BREE_CLEAN_BLOCKS )) || mark='╴'
+        local -a _g=('─' '╴' '╶' '╌'); local enc='' n=$_BREE_CLEAN_ID
+        while (( n > 0 )); do enc="${_g[$(( n % 4 + 1 ))]}${enc}"; n=$(( n / 4 )); done
+        hdr=$'%{\e[2;8m'"╶╴${mark}${enc}"$'\e[0m%}\n'"$hdr"
         PS1="${hdr}${PS1}%B"
         zle reset-prompt
     fi
@@ -1723,7 +1756,7 @@ _bree_clean_accept_line() {
 }
 
 _bree_clean_clear_screen() {
-    _BREE_CLEAN_BLOCKS=0
+    _BREE_CLEAN_BLOCKS=0 _BREE_CLEAN_LAST_HDR=''
     # Not `.clear-screen`: it redraws from the top, so zle would then move up
     # from the wrong row. The prompt is empty, so a plain reset-prompt is enough.
     builtin print -rn -- $'\e[H\e[2J\e[999;1H'
@@ -1768,7 +1801,7 @@ _bree_clean_preexec() {
     (( _BREE_CLEAN_BLOCKS++ ))
     local -a words=(${(z)3})
     if [[ "${words[1]}" == (clear|reset) ]]; then
-        _BREE_CLEAN_BLOCKS=0
+        _BREE_CLEAN_BLOCKS=0 _BREE_CLEAN_LAST_HDR=''
         _BREE_CLEAN_ATTOP=1
     fi
 }

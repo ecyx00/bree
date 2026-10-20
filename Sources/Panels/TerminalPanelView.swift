@@ -140,6 +140,7 @@ struct TerminalPanelView: View {
             .layoutPriority(1)
 
             if panel.isTextBoxActive {
+                PanelBranchReader(panel: panel) { branch in
                 TextBoxInputContainer(
                     text: $panel.textBoxContent,
                     attachments: $panel.textBoxAttachments,
@@ -147,6 +148,8 @@ struct TerminalPanelView: View {
                     pendingProviderLaunchAction: $textBoxState.pendingProviderLaunchAction,
                     pendingProviderLaunchStartedAt: $textBoxState.pendingProviderLaunchStartedAt,
                     surface: panel.surface,
+                    workingDirectory: panel.shellEditorWorkingDirectory,
+                    branch: branch,
                     terminalBackgroundColor: appearance.backgroundColor,
                     terminalForegroundColor: appearance.foregroundColor,
                     terminalFont: NSFont.monospacedSystemFont(
@@ -189,6 +192,7 @@ struct TerminalPanelView: View {
                     }
                 )
                 .sessionContentWidth(fillsHeight: false)
+                }
             } else if shellEditorEnabled, panel.shellEditorActive {
                 PanelBranchReader(panel: panel) { branch in
                     ShellEditorDockView(
@@ -198,7 +202,15 @@ struct TerminalPanelView: View {
                         focusRequest: panel.shellEditorFocusRequest,
                         font: ShellEditorFont.make(family: terminalFontFamily, size: terminalFontSize)
                     )
+                    .background(GeometryReader { geo in
+                        Color.clear
+                            .onAppear { panel.shellEditorDockHeight = geo.size.height }
+                            .onChange(of: geo.size.height) { panel.shellEditorDockHeight = $0 }
+                    })
                 }
+            } else if shellEditorEnabled, panel.shellEditorRawMode, panel.shellEditorDockHeight > 0 {
+                // Raw mode keeps the dock's space so the last output row stays put.
+                Color.clear.frame(height: panel.shellEditorDockHeight)
             }
         }
         .background(Color(nsColor: appearance.contentBackgroundColor))

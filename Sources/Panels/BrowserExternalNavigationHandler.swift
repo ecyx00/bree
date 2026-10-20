@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import BreeBrowser
 import BreeCore
@@ -100,13 +99,7 @@ struct BrowserExternalNavigationHandler {
 
     private static func isAppOwnedInternalURL(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased() else { return false }
-        if scheme == AuthEnvironment.callbackScheme.lowercased() {
-            return true
-        }
-        if BrowserURLAllowlistPolicy.trustedInternalSchemes.contains(scheme) {
-            return true
-        }
-        return BrowserAuthCallbackNavigationPolicy.shouldBlockExternalNavigation(url)
+        return BrowserURLAllowlistPolicy.trustedInternalSchemes.contains(scheme)
     }
 
     /// Maps the browser-only remote loopback alias back to its user-visible URL.

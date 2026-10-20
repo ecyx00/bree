@@ -1,3 +1,4 @@
+import BREEAgentLaunch
 import Foundation
 import Testing
 @testable import Bree_Dev
@@ -184,5 +185,35 @@ struct ActivityModsStreamTests {
         #expect(placed.orphans.map(\.ownerId) == ["gone", nil])
         let expired = ModAnswerRules.placeFootnotes([note(nil, at: now - 31_000)], renderedOwners: [], nowMs: now)
         #expect(expired.byOwner.isEmpty && expired.orphans.isEmpty)
+    }
+
+    /// A resumed session has a runtime id (hook payload) and a different transcript id; the status
+    /// writer may use either. Temp root only.
+    @Test func findsStatusUnderRuntimeOrTranscriptId() throws {
+        let runtime = UUID().uuidString, transcript = UUID().uuidString
+        let event = WorkstreamEvent(
+            sessionId: runtime, hookEventName: .userPromptSubmit, source: "claude",
+            workspaceId: UUID().uuidString, transcriptPath: "/p/projects/x/\(transcript).jsonl")
+        let card = try #require(AgentLensReducer.reduce(nil, event: event))
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        func write(_ id: String, at age: TimeInterval) throws {
+            let dir = root.appendingPathComponent(id)
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            let file = dir.appendingPathComponent("sections.json")
+            try Data(#"{"sections":[{"consumer":"c","key":"k","lines":[{"text":"x"}]}]}"#.utf8).write(to: file)
+            try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -age)], ofItemAtPath: file.path)
+        }
+        func found() -> Int {
+            let ids = ActivityModsStream.newestIds([card.statusSessionIDs], root: root)
+            return ActivityModsStream.load(sessionIds: ids, cwd: "", root: root).live.count
+        }
+        try write(transcript, at: 0)
+        #expect(found() == 1)
+        try write(runtime, at: 0)
+        try FileManager.default.removeItem(at: root.appendingPathComponent(transcript))
+        #expect(found() == 1)
+        try write(transcript, at: 100)
+        #expect(ActivityModsStream.newestIds([card.statusSessionIDs], root: root) == [runtime])
     }
 }

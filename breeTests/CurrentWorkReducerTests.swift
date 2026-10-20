@@ -1,4 +1,3 @@
-import BreeCloud
 import BreeSurfaceCatalogModel
 import Foundation
 import Testing
@@ -9,10 +8,10 @@ import Testing
 @testable import bree
 #endif
 
-/// Pure read-model regressions: no app launch, filesystem, process scan, or Cloud requests.
+/// Pure read-model regressions: no app launch, filesystem, process scan, or remote requests.
 @Suite
 struct CurrentWorkReducerTests {
-    @Test("Stable projection identity does not rename local or Cloud resources")
+    @Test("Stable projection identity does not rename local or remote resources")
     func identityScopesAndJSON() throws {
         var input = fixture()
         let projection = try #require(input.export.catalog.projections.first)
@@ -30,18 +29,18 @@ struct CurrentWorkReducerTests {
         let projected = try #require((row["projections"] as? [[String: Any]])?.first)
         #expect(projected["stable_workspace_id"] as? String == stableWorkspaceID.uuidString)
 
-        let remote = SurfaceResourceID(machine: .cloud("test-machine"), kind: .terminal, key: "term-1")
+        let remote = SurfaceResourceID(machine: .remote("test-machine"), kind: .terminal, key: "term-1")
         input.export.catalog.resources[0].id = remote
         var mirror = projection
         mirror.resource = remote
         mirror.remoteWorkspaceID = "remote-workspace"
         input.export.catalog.projections = [mirror]
         input.export.projectionIdentities = [mirror: .init(stableSurfaceID: stableSurfaceID, stableWorkspaceID: stableWorkspaceID)]
-        let cloudItem = try #require(CurrentWorkReducer().reduce(input).items.first)
-        #expect(cloudItem.durableSurfaceID == nil)
-        #expect(cloudItem.resourceRef == remote.rawValue)
-        #expect(cloudItem.projections.first?.stableSurfaceID == stableSurfaceID)
-        #expect(cloudItem.freshness.state == "unknown")
+        let remoteItem = try #require(CurrentWorkReducer().reduce(input).items.first)
+        #expect(remoteItem.durableSurfaceID == nil)
+        #expect(remoteItem.resourceRef == remote.rawValue)
+        #expect(remoteItem.projections.first?.stableSurfaceID == stableSurfaceID)
+        #expect(remoteItem.freshness.state == "unknown")
     }
 
     @Test("Unread and process presence do not invent human obligations")
@@ -64,24 +63,11 @@ struct CurrentWorkReducerTests {
         #expect(CurrentWorkReducer().reduce(input).items.first?.agents.isEmpty == true)
     }
 
-    @Test("A freshly captured stale Cloud observation never becomes current")
-    func staleCloudRemainsStale() throws {
-        var input = fixture(machine: .cloud("test-machine"))
-        let projection = try #require(input.export.catalog.projections.first)
-        input.agentsByPanelID[projection.panelID] = [agent(hook: true)]
-        input.export.cloudStateObservations[projection.resource.machine] = .stale(reason: "disconnected")
-        let item = try #require(CurrentWorkReducer().reduce(input).items.first)
-        #expect(item.freshness.state == "stale")
-        #expect(item.freshness.reason == "disconnected")
-        #expect(item.possibleHumanObligations.isEmpty)
-        #expect(item.agents.first?.lastActivityAt == "2026-09-20T00:00:00Z")
-    }
-
     @Test("Placement kind preserves the machine kind")
     func placementKindPreservesMachineKind() throws {
         let cases: [(SurfaceMachineID, String)] = [
             (.local, "local"),
-            (.cloud("cloud-machine"), "cloud"),
+            (.remote("Remote-machine"), "Remote"),
             (.ssh("ssh-target"), "ssh"),
             (.device(.init(deviceID: "device-1", tag: "test")), "device"),
         ]
@@ -137,7 +123,7 @@ struct CurrentWorkReducerTests {
         let resource = SurfaceResource(id: .init(machine: machine, kind: .terminal, key: "panel-1"), title: "Current work", detail: "/work/repo",
                                        lifecycle: .running, agent: nil, remoteWorkspace: nil, port: nil, url: nil)
         let projection = SurfaceProjection(resource: resource.id, workspaceID: UUID(), panelID: UUID())
-        return .init(export: .init(catalog: .init(machines: [], resources: [resource], projections: [projection]), cloudStates: []),
+        return .init(export: .init(catalog: .init(machines: [], resources: [resource], projections: [projection])),
                      observedAt: Date(timeIntervalSince1970: 1_789_862_400), workspaces: [:], agentsByPanelID: [:], unreadPanelIDs: [], agentOwnerAvailable: true)
     }
 

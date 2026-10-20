@@ -1,4 +1,3 @@
-import BreeCloud
 import Foundation
 import BreeTerminalCore
 import Combine
@@ -66,7 +65,9 @@ final class TerminalPanel: Panel, ObservableObject {
     // Shell editor state; logic in Sources/ShellEditor/TerminalPanel+ShellEditor.swift.
     @Published var shellEditorActive = false
     @Published var shellEditorFocusRequest = 0
-    var shellEditorRawMode = false
+    @Published var shellEditorRawMode = false
+    /// Last measured dock height; raw mode reserves it so the output does not move.
+    @Published var shellEditorDockHeight: CGFloat = 0
     var shellEditorAwaitingPrompt = false
     weak var shellEditorTextView: ShellEditorTextView?
     /// The editor owns keyboard focus for this prompt (cleared by raw mode or a deliberate click in the grid).
@@ -138,9 +139,6 @@ final class TerminalPanel: Panel, ObservableObject {
     /// Set by the owning workspace while `agentWakeFailure` is shown.
     var onRequestAgentWakeRetry: (() -> Void)?
     var onDismissAgentWakeFailure: (() -> Void)?
-    /// A native cloud pane's live attachment state (nil for local terminals).
-    /// Written only by the owning cloud session; the view shows it.
-    var cloudAttachment: CloudTerminalAttachmentStatus?
 
     var onRequestWorkspacePaneFlash: ((WorkspaceAttentionFlashReason) -> Void)?
     var onRequestAgentHibernationResume: ((Bool) -> Bool)?
@@ -150,7 +148,7 @@ final class TerminalPanel: Panel, ObservableObject {
     var onTerminalFocus: (() -> Void)?
     /// Optional input hook owned by a manual-mirror session. Workspace routing
     /// composes this hook into its current owner callback so a panel that moves
-    /// between workspaces keeps its Cloud input behavior.
+    /// between workspaces keeps its remote input behavior.
     var onManualMirrorExplicitInput: (() -> Void)?
 
     private var cancellables = Set<AnyCancellable>()

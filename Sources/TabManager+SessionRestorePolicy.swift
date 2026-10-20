@@ -1,22 +1,6 @@
 import Foundation
 
 extension TabManager {
-    static func isCloudVMSessionRestoreWorkspace(_ snapshot: SessionWorkspaceSnapshot) -> Bool {
-        isManagedCloudVMSessionRestoreWorkspace(snapshot)
-    }
-
-    static func isManagedCloudVMSessionRestoreWorkspace(_ snapshot: SessionWorkspaceSnapshot) -> Bool {
-        guard let managedCloudVMID = snapshot.remote?.managedCloudVMID else { return false }
-        return !managedCloudVMID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    /// Any workspace that hosts a Cloud machine through either transport: the
-    /// legacy managed remote (`managedCloudVMID`) or the bree-tui binding
-    /// (`cloudVM`). `DisableCloud` drops every one of these from restore; the
-    /// one-machine normalization above deliberately keeps bree-tui workspaces.
-    static func isCloudVMWorkspaceSnapshotForManagedPolicy(_ snapshot: SessionWorkspaceSnapshot) -> Bool {
-        isManagedCloudVMSessionRestoreWorkspace(snapshot) || snapshot.cloudVM != nil
-    }
 
     /// Reconciles task-create provenance only when the caller owns a cache.
     /// A nil cache intentionally leaves unrelated snapshot restores isolated.

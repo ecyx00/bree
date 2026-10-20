@@ -1,5 +1,5 @@
 import AppKit
-import BREEMobileCore
+import BreeAppSupport
 import Bonsplit
 import BreeTerminal
 import QuartzCore

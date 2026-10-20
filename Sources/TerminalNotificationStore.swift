@@ -1,4 +1,3 @@
-import BreeCloud
 import BreeFoundation
 import BreeNotifications
 import AppKit
@@ -83,14 +82,6 @@ final class TerminalNotificationStore: ObservableObject {
     /// `@Published`) so its updates stay independent of the store's own
     /// `objectWillChange`.
     let sidebarUnread = SidebarUnreadModel()
-    /// Observes every read or clear applied by target, so unread indicators
-    /// keyed by other identities (the Cloud tree's remote terminals) follow the
-    /// dismissal even when no local record exists for what they show.
-    var readTargetObserver: (@MainActor (NotificationReadTarget) -> Void)?
-    /// Exact feed-record reads reach the Cloud hub synchronously. Target reads
-    /// continue through `readTargetObserver`; this hook avoids waiting for the
-    /// published notification-array diff for an individual read.
-    var readNotificationObserver: (@MainActor ([TerminalNotification]) -> Void)?
     // Workspace panels own their manual unread state on Workspace. Any
     // surface-scoped state without a Workspace owner lives here beside the
     // cross-container unread projection.
@@ -938,7 +929,7 @@ final class TerminalNotificationStore: ObservableObject {
             "notification.store.add workspace=\(tabId.uuidString.prefix(8)) surface=\(surfaceId?.uuidString.prefix(8) ?? "nil") titleLen=\(title.count) subtitleLen=\(subtitle.count) bodyLen=\(body.count) cooldown=\(cooldownKey == nil ? 0 : 1) origin=\(origin.kind)"
         )
 #endif
-        // SECURITY: a remote origin (ssh relay, cloud machine) is untrusted text. It gets
+        // SECURITY: a remote origin (ssh relay, remote machine) is untrusted text. It gets
         // display, sound, badge, hooks, and phone forwarding — never a reply affordance
         // that types into a pane, a click action that opens a local path, agent context
         // that hooks treat as trusted identity, or a sound override. Clamped here so no
@@ -1580,7 +1571,6 @@ final class TerminalNotificationStore: ObservableObject {
         }
         if !activeIDs.isEmpty {
             notifications = updated
-            readNotificationObserver?(updated.filter { activeIDs.contains($0.id.uuidString) })
             removeNotificationRequestsAndReleaseSoundReferences(withIdentifiers: activeIDs)
         }
         return marked
@@ -1624,7 +1614,6 @@ final class TerminalNotificationStore: ObservableObject {
     }
 
     func markRead(forTabId tabId: UUID) {
-        defer { readTargetObserver?(.workspace(tabId)) }
         inFlightPolicyRequests.discard(forTabId: tabId, surfaceId: nil)
         notificationFeedHistory.markRead(inWorkspace: tabId)
         var updated = notifications
@@ -1650,7 +1639,6 @@ final class TerminalNotificationStore: ObservableObject {
     }
 
     func markRead(forTabId tabId: UUID, surfaceId: UUID?) {
-        defer { readTargetObserver?(.surface(workspaceID: tabId, surfaceID: surfaceId)) }
         inFlightPolicyRequests.discard(forTabId: tabId, surfaceId: surfaceId)
         notificationFeedHistory.markRead(inWorkspace: tabId, surfaceId: surfaceId)
         var updated = notifications
@@ -1760,7 +1748,6 @@ final class TerminalNotificationStore: ObservableObject {
     }
 
     func markAllRead() {
-        defer { readTargetObserver?(.all) }
         notificationFeedHistory.markAllRead()
         var updated = notifications
         var idsToClear: [String] = []
@@ -1964,7 +1951,6 @@ final class TerminalNotificationStore: ObservableObject {
 
     private func replaceNotificationsForClear(_ next: [TerminalNotification]) { suppressNotificationDiffPublishing = true; notifications = next; suppressNotificationDiffPublishing = false }
     func clearAll(discardQueuedNotifications: Bool = true, throughNotificationGeneration: UInt64? = nil) {
-        defer { readTargetObserver?(.all) }
         inFlightPolicyRequests.discardAll(through: throughNotificationGeneration)
         if discardQueuedNotifications { TerminalMutationBus.shared.discardPendingNotifications() }
         guard !notifications.isEmpty ||
@@ -1994,7 +1980,6 @@ final class TerminalNotificationStore: ObservableObject {
         surfaceId: UUID?,
         discardQueuedNotifications: Bool = true, throughNotificationGeneration: UInt64? = nil
     ) {
-        defer { readTargetObserver?(.surface(workspaceID: tabId, surfaceID: surfaceId)) }
         let liveTabId = surfaceId.flatMap { AppDelegate.shared?.agentNotificationDeliveryTarget(claimedTabId: tabId, surfaceId: $0)?.tabId } ?? tabId
         let tabIds = Set([tabId, liveTabId])
         inFlightPolicyRequests.discard(forTabId: tabId, surfaceId: surfaceId, through: throughNotificationGeneration)
@@ -2098,7 +2083,6 @@ final class TerminalNotificationStore: ObservableObject {
         }
     }
     func clearNotifications(forTabId tabId: UUID, discardQueuedNotifications: Bool = true, throughNotificationGeneration: UInt64? = nil) {
-        defer { readTargetObserver?(.workspace(tabId)) }
         inFlightPolicyRequests.discard(forTabId: tabId, surfaceId: nil, through: throughNotificationGeneration)
         if discardQueuedNotifications { TerminalMutationBus.shared.discardPendingNotificationsForClear(tabId: tabId, surfaceId: nil) }
         let hadFocusedReadIndicator = focusedReadIndicatorByTabId[tabId] != nil

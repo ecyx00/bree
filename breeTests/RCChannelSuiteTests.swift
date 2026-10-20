@@ -1,4 +1,3 @@
-import BreeCloud
 import Foundation
 import Testing
 
@@ -10,19 +9,6 @@ import Testing
 
 /// Swift Testing coverage for the `rc` release channel, kept next to the suites
 /// it extends so the RC cases run under the same traits as their nightly twins.
-extension AuthEnvironmentTests {
-    @Test("rc bundle uses the bree-rc callback scheme")
-    func rcBundleUsesRCCallbackScheme() {
-        #expect(
-            AuthEnvironment.callbackScheme(
-                environment: [:],
-                bundleIdentifier: "com.bree.app.rc",
-                isDebugBuild: false
-            ) == "bree-rc"
-        )
-    }
-}
-
 extension BREECLIErrorOutputRegressionTests {
     @Test func testThemesSetRCOverridePathIsReadableByRCAppConfigResolution() throws {
         try assertThemesSetOverridePathIsReadableByChannelApp(channel: "rc")

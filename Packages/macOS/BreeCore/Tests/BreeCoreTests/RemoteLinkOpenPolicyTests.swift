@@ -7,7 +7,7 @@ struct RemoteLinkOpenPolicyTests {
     private let policy = RemoteLinkOpenPolicy()
     private let loopbackURL = URL(string: "http://localhost:3000/callback")!
     private let sshRoute = URL(string: "http://127.0.0.1:3000/callback")!
-    private let cloudRoute = URL(string: "http://10.8.0.5:3000/callback")!
+    private let remoteRoute = URL(string: "http://10.8.0.5:3000/callback")!
 
     @Test func clickedSSHLoopbackLinkKeepsItsOwnURLOutsideBree() {
         let result = policy.destinations(for: loopbackURL, machineRoute: sshRoute, remoteInitiated: false)
@@ -21,13 +21,13 @@ struct RemoteLinkOpenPolicyTests {
         #expect(result.externalURL == nil)
     }
 
-    @Test func clickedCloudRouteStaysOnTheMachineAddress() {
-        let result = policy.destinations(for: loopbackURL, machineRoute: cloudRoute, remoteInitiated: false)
-        #expect(result == RemoteLinkDestinations(browserURL: cloudRoute, externalURL: cloudRoute))
+    @Test func clickedRemoteRouteStaysOnTheMachineAddress() {
+        let result = policy.destinations(for: loopbackURL, machineRoute: remoteRoute, remoteInitiated: false)
+        #expect(result == RemoteLinkDestinations(browserURL: remoteRoute, externalURL: remoteRoute))
     }
 
-    @Test func remoteCloudRouteFailsClosed() {
-        let result = policy.destinations(for: loopbackURL, machineRoute: cloudRoute, remoteInitiated: true)
+    @Test func remoteRemoteRouteFailsClosed() {
+        let result = policy.destinations(for: loopbackURL, machineRoute: remoteRoute, remoteInitiated: true)
         #expect(result == RemoteLinkDestinations(browserURL: nil, externalURL: nil))
     }
 

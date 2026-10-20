@@ -63,16 +63,10 @@ public struct RemotePTYRespawnPlanner: Sendable {
         configuration: WorkspaceRemoteConfiguration?
     ) -> RemotePTYRespawnRouting {
         guard isRemoteOwned else { return .local }
-        // Pre-baked Freestyle SSH workspaces use the provider's
-        // `vm-pty-attach` path. They do not expose the SSH daemon bridge that
-        // this planner builds, so keeping them unsupported here prevents a
-        // respawn from silently switching attach protocols.
         guard let configuration,
-              configuration.transport == .ssh,
               configuration.terminalTransport == .ssh,
               configuration.preserveAfterTerminalExit,
-              configuration.persistentDaemonSlot != nil,
-              !configuration.skipDaemonBootstrap else {
+              configuration.persistentDaemonSlot != nil else {
             return .unsupportedRemote
         }
         return .persistentSSH

@@ -122,7 +122,6 @@ extension BREECLI {
             messages: sourceResult.messages,
             lineCount: sourceResult.lineCount,
             sessionStore: sessionStore,
-            cloudNameContext: probe["cloud_name_context"],
             client: client,
             missingOverride: resolution.missingOverride,
             telemetryKey: "\(def.name)-hook.auto-name",
@@ -151,7 +150,6 @@ extension BREECLI {
         lines: [String],
         lineCount: Int,
         sessionStore: ClaudeHookSessionStore,
-        cloudNameContext: Any? = nil,
         client: SocketClient,
         missingOverride: String?,
         telemetryKey: String,
@@ -165,7 +163,6 @@ extension BREECLI {
             surfaceId: surfaceId,
             lineCount: lineCount,
             sessionStore: sessionStore,
-            cloudNameContext: cloudNameContext,
             client: client,
             missingOverride: missingOverride,
             telemetryKey: telemetryKey,
@@ -181,7 +178,6 @@ extension BREECLI {
         messages: [AutoNamingTranscriptMessage],
         lineCount: Int,
         sessionStore: ClaudeHookSessionStore,
-        cloudNameContext: Any? = nil,
         client: SocketClient,
         missingOverride: String?,
         telemetryKey: String,
@@ -195,7 +191,6 @@ extension BREECLI {
             surfaceId: surfaceId,
             lineCount: lineCount,
             sessionStore: sessionStore,
-            cloudNameContext: cloudNameContext,
             client: client,
             missingOverride: missingOverride,
             telemetryKey: telemetryKey,
@@ -210,7 +205,6 @@ extension BREECLI {
         surfaceId: String,
         lineCount: Int,
         sessionStore: ClaudeHookSessionStore,
-        cloudNameContext: Any? = nil,
         client: SocketClient,
         missingOverride: String?,
         telemetryKey: String,
@@ -250,7 +244,6 @@ extension BREECLI {
             workspaceId: workspaceId,
             surfaceId: surfaceId,
             previousTitle: outcome.lastTitle,
-            cloudNameContext: cloudNameContext,
             client: client,
             telemetryKey: telemetryKey,
             telemetry: telemetry
@@ -267,7 +260,6 @@ extension BREECLI {
         workspaceId: String,
         surfaceId: String,
         previousTitle: String?,
-        cloudNameContext: Any? = nil,
         client: SocketClient,
         telemetryKey: String,
         telemetry: CLISocketSentryTelemetry
@@ -277,13 +269,11 @@ extension BREECLI {
             "panel_id": surfaceId,
             "panel_only_if_multiple": true,
             "title": title,
-            "cloud_name_context": cloudNameContext ?? NSNull()
         ]) else {
             telemetry.breadcrumb("\(telemetryKey).socket-failed")
             return nil
         }
-        if payload["workspace_applied"] as? Bool == true
-            || (cloudNameContext is [String: Any] && payload["panel_applied"] as? Bool == true) {
+        if payload["workspace_applied"] as? Bool == true {
             telemetry.breadcrumb("\(telemetryKey).applied")
             return title
         }

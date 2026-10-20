@@ -66,19 +66,6 @@ public protocol TerminalSurfaceNativeViewing: NSView, TerminalSurfaceHosting {
         replay: @escaping () -> Void
     ) -> Bool
 
-    /// Positions the native pointer at the center of a mobile-selected cell.
-    func positionMobilePointer(
-        on surface: ghostty_surface_t,
-        column: Int,
-        row: Int,
-        contentScale: CGFloat
-    )
-
-    /// Sends one mobile mouse-button edge to the native surface.
-    func sendMobileMouseButton(
-        _ state: ghostty_input_mouse_state_e,
-        on surface: ghostty_surface_t
-    )
 }
 
 public extension TerminalSurfaceNativeViewing {
@@ -101,37 +88,5 @@ public extension TerminalSurfaceNativeViewing {
         replay _: @escaping () -> Void
     ) -> Bool {
         false
-    }
-
-    /// Uses Ghostty's point-space pointer API for the selected grid cell.
-    func positionMobilePointer(
-        on surface: ghostty_surface_t,
-        column: Int,
-        row: Int,
-        contentScale: CGFloat
-    ) {
-        let size = ghostty_surface_size(surface)
-        let scale = max(Double(contentScale), 1)
-        let cellWidth = Double(size.cell_width_px) / scale
-        let cellHeight = Double(size.cell_height_px) / scale
-        ghostty_surface_mouse_pos(
-            surface,
-            (Double(max(0, column)) + 0.5) * cellWidth,
-            (Double(max(0, row)) + 0.5) * cellHeight,
-            GHOSTTY_MODS_NONE
-        )
-    }
-
-    /// Sends one left-button edge through Ghostty.
-    func sendMobileMouseButton(
-        _ state: ghostty_input_mouse_state_e,
-        on surface: ghostty_surface_t
-    ) {
-        _ = ghostty_surface_mouse_button(
-            surface,
-            state,
-            GHOSTTY_MOUSE_LEFT,
-            GHOSTTY_MODS_NONE
-        )
     }
 }

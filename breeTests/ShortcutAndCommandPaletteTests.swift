@@ -1146,7 +1146,6 @@ final class RightSidebarModeShortcutHintTests: XCTestCase {
     /// customization; otherwise the test host's own settings would shift the
     /// digits.
     private let touchedTabEnvironmentKeys: [String] = [
-        RightSidebarBetaFeatureSettings.cloudMachinesEnabledKey,
         RightSidebarTabPreferences.orderKey,
         RightSidebarTabPreferences.hiddenKey,
     ]
@@ -1168,7 +1167,6 @@ final class RightSidebarModeShortcutHintTests: XCTestCase {
                 (key, UserDefaults.standard.object(forKey: key))
             }
         )
-        UserDefaults.standard.set(true, forKey: RightSidebarBetaFeatureSettings.cloudMachinesEnabledKey)
         UserDefaults.standard.removeObject(forKey: RightSidebarTabPreferences.orderKey)
         // Dock is hidden by default; an explicit empty set shows every tab.
         UserDefaults.standard.set([String](), forKey: RightSidebarTabPreferences.hiddenKey)
@@ -1218,7 +1216,6 @@ final class RightSidebarModeShortcutHintTests: XCTestCase {
     }
 
     func testModeShortcutsUsePrivateControlDigitDefaults() {
-        BreeFeatureFlags.shared.setOverride(true, for: BreeFeatureFlags.cloudMachinesFlag)
         XCTAssertEqual(
             RightSidebarMode.modeShortcut(for: makeKeyDownEvent(key: "1", modifiers: [.control], keyCode: 18)),
             .files

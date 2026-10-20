@@ -61,7 +61,7 @@ public struct WorkstreamItem: Identifiable, Codable, Sendable, Equatable {
     public var payload: WorkstreamPayload
     public var context: WorkstreamContext?
     /// The terminal response associated with this exact event, when one was
-    /// submitted from mobile or another remote surface.
+    /// submitted from remote or another remote surface.
     public var reply: WorkstreamReply?
     /// PID of the agent process that emitted the event (hook's parent
     /// pid). When non-nil, pending items get expired automatically as

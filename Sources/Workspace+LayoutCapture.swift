@@ -152,7 +152,7 @@ extension Workspace {
                     focus: nil
                 )
             }
-        case .markdown, .filePreview, .rightSidebarTool, .customSidebar, .extensionBrowser, .workspaceTodo, .notifications, .accountSignIn:
+        case .markdown, .filePreview, .rightSidebarTool, .customSidebar, .extensionBrowser, .workspaceTodo, .notifications:
             unsupportedSurfaceCount += 1
             definition = BreeSurfaceDefinition(type: .terminal)
         }

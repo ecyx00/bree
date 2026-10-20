@@ -91,7 +91,7 @@ public actor WorkstreamPersistence {
             .map { $0 }
     }
 
-    /// Returns a durable generation for the append-only log. The mobile Feed
+    /// Returns a durable generation for the append-only log. The remote Feed
     /// uses this as its cache validator, so a Mac restart cannot reset the
     /// revision below the phone's last-known snapshot and hide a reply or
     /// resolution behind a stale `feed.changed` event.

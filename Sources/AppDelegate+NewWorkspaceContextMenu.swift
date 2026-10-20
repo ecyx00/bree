@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import Foundation
 
@@ -74,15 +73,13 @@ extension AppDelegate {
 
     func makeNewWorkspaceContextMenu(
         context: MainWindowContext,
-        breeConfigStore: BreeConfigStore,
-        isAuthenticated: Bool? = nil
+        breeConfigStore: BreeConfigStore
     ) -> NSMenu? {
-        let isAuthenticated = isAuthenticated ?? (AppDelegate.shared?.auth?.accountFlow.isAuthenticated == true)
         let model = NewWorkspaceMenuModel.build(
             newWorkspaceContextMenuItems: breeConfigStore.newWorkspaceContextMenuItems.filter { item in
                 guard case .action(let menuAction) = item,
                       case .builtIn(let builtIn) = menuAction.action.action else { return true }
-                return Self.isBuiltInActionAvailableInNewWorkspaceMenu(builtIn, isAuthenticated: isAuthenticated)
+                return Self.isBuiltInActionAvailableInNewWorkspaceMenu(builtIn)
             },
             templateNames: savedLayoutNames(),
             loadedActions: breeConfigStore.loadedActions,
@@ -103,8 +100,7 @@ extension AppDelegate {
     /// opens (not at config load) so flag and setting flips apply at once.
     /// Mirrors the command palette's gates for the same actions.
     static func isBuiltInActionAvailableInNewWorkspaceMenu(
-        _ action: BreeSurfaceTabBarBuiltInAction,
-        isAuthenticated: Bool? = nil
+        _ action: BreeSurfaceTabBarBuiltInAction
     ) -> Bool {
         switch action {
         case .newBrowser:
@@ -131,10 +127,9 @@ extension AppDelegate {
         let didExecute: Bool
         if case .builtIn(.newWorkspace) = box.action.action {
             // This menu row is an explicit local override of the context-following
-            // New Workspace command. Do not inherit a Cloud-only working directory.
+            // New Workspace command. Do not inherit a remote-only working directory.
             didExecute = context.tabManager.addWorkspaceIfActive(
-                inheritWorkingDirectory: context.tabManager.selectedWorkspace?.cloudVMID == nil
-                    && context.tabManager.selectedWorkspace?.cloudVMBinding == nil
+                inheritWorkingDirectory: true
             ) != nil
         } else {
             didExecute = executeConfiguredBreeAction(box.action, context: context, preferredWindow: window)

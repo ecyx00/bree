@@ -19,10 +19,7 @@ struct RemoteDaemonRPCClientErrorMetadataTests {
             remotePath: "/fake/breed-remote",
             strings: RemoteDaemonStrings(
                 missingPersistentPTYCapability: "missing persistent PTY",
-                missingRequiredFunctionality: "missing functionality",
-                cloudNotificationClearWorkspaceInvalid: "invalid workspace",
-                cloudNotificationClearWorkspaceDenied: "workspace denied",
-                cloudNotificationClearSurfaceInvalid: "invalid surface"
+                missingRequiredFunctionality: "missing functionality"
             )
         ) { _ in }
         defer { client.stop() }

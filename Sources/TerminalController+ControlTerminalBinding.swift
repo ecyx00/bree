@@ -161,14 +161,14 @@ extension TerminalController {
 
     /// Resolves a terminal request to its structural workspace and
     /// canonical live socket target in one main-actor hop.
-    func mobileCanonicalTerminalTarget(
+    func canonicalTerminalTarget(
         params: [String: Any]
     ) -> (
         workspace: Workspace,
         surfaceID: UUID,
         target: ControlTerminalSocketTarget
     )? {
-        guard let resolved = mobileResolveWorkspaceAndSurface(
+        guard let resolved = resolveWorkspaceAndSurface(
             params: params,
             requireTerminal: true
         ), let surfaceID = resolved.surfaceId,
@@ -204,13 +204,13 @@ extension TerminalController {
         default:
             return .err(code: "invalid_params", message: "Unsupported submit_key", data: ["submit_key": submitKeyRaw])
         }
-        if let error = mobileWorkspaceIDValidationError(params: params) {
+        if let error = workspaceIDValidationError(params: params) {
             return error
         }
-        if let error = mobileTerminalAliasValidationError(params: params) {
+        if let error = terminalAliasValidationError(params: params) {
             return error
         }
-        guard let resolved = mobileCanonicalTerminalTarget(params: params) else {
+        guard let resolved = canonicalTerminalTarget(params: params) else {
             return .err(code: "not_found", message: "Terminal surface not found", data: nil)
         }
         let surfaceId = resolved.surfaceID
@@ -260,7 +260,7 @@ extension TerminalController {
             }
             // Closing/replacing a terminal during the suspension must never
             // send Enter into a different process or a newly created surface.
-            guard let current = mobileCanonicalTerminalTarget(params: params)?.target,
+            guard let current = canonicalTerminalTarget(params: params)?.target,
                   current.surface === terminalTarget.surface,
                   current.surface.runtimeSurfaceGeneration == generation else {
                 return .ok([

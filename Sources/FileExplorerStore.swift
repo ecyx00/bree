@@ -1,5 +1,4 @@
 import Bonsplit
-import BreeCloud
 import BreeFoundation
 import AppKit
 import Combine
@@ -920,7 +919,7 @@ enum FileExplorerError: LocalizedError {
         case .previewCapacity:
             return String(localized: "fileExplorer.preview.capacity", defaultValue: "Close a remote file preview and try again.")
         case .remoteFileTooLarge:
-            return String(localized: "fileExplorer.error.cloudPreviewTooLarge", defaultValue: "Remote file previews are limited to 1 MB.")
+            return String(localized: "fileExplorer.error.remotePreviewTooLarge", defaultValue: "Remote file previews are limited to 1 MB.")
         case .remoteCommandFailed:
             return String(localized: "fileExplorer.error.remoteFailed", defaultValue: "Remote command failed")
         }

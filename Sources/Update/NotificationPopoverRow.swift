@@ -121,11 +121,14 @@ struct NotificationPopoverRow: View, Equatable {
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
-                    Text(notification.createdAt.formatted(date: .omitted, time: .shortened))
-                        .breeFont(.caption)
-                        .foregroundColor(palette.textSecondary)
-                        .padding(.trailing, 34)
-                        .layoutPriority(2)
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(NotificationRow.agoLabel(since: notification.createdAt, now: context.date))
+                            .breeFont(.caption)
+                            .foregroundColor(palette.textSecondary)
+                            .monospacedDigit()
+                    }
+                    .padding(.trailing, 34)
+                    .layoutPriority(2)
                 }
 
                 if let workspaceTitle, !workspaceTitle.isEmpty {

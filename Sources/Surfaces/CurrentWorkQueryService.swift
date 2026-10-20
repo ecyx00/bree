@@ -1,6 +1,5 @@
-import BreeCloud
 import BreeAgentChat
-import BreeMobileHost
+import BreeAgentTranscriptHost
 import BreeNotifications
 import BreeSurfaceCatalogModel
 import Foundation

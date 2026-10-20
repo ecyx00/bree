@@ -389,12 +389,6 @@ extension RemoteSessionCoordinator {
     }
 
     private func removeRemoteRelayMetadataLocked(cleanupScope: RemoteRelayCleanupScope) -> Bool {
-        // VM workspaces never installed relay metadata (the reverse-relay path is gated off),
-        // and the ssh-exec the cleanup would issue hangs on Freestyle's russh gateway.
-        if configuration.skipDaemonBootstrap {
-            debugLog("remote.relay.cleanup.skipped reason=vm-baked relayPort=\(configuration.relayPort.map(String.init) ?? "nil")")
-            return true
-        }
         guard let relayPort = configuration.relayPort, relayPort > 0 else {
             guard case .persistentSlot = cleanupScope,
                   let daemonRemotePath,

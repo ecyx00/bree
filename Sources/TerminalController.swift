@@ -1,9 +1,7 @@
-import BreeCloud
 import BreeSettingsUI
 import AppKit
 import BreeRemoteSession
 import BreeCore
-import BreeAuthRuntime
 import BreeBrowser
 import BreeControlSocket
 import BreeFoundation
@@ -12,12 +10,10 @@ import BreeRemoteDaemon
 import BreeRemoteWorkspace
 import BreeSurfaceCatalogModel
 import BreeTerminal
-import BreeTerminalSharing
-import BreeTerminalSizing
 import BreeSettings
 import BreeSwiftRenderUI
 import Carbon.HIToolbox
-import BREEMobileCore
+import BreeAppSupport
 import BREEAgentLaunch
 import BreeAgentChat
 import Foundation
@@ -129,11 +125,6 @@ class TerminalController {
     var tabManager: TabManager?
     private let externalNavigationHandler = BrowserExternalNavigationHandler()
     let workspaceCreateIdempotencyCache = WorkspaceCreateIdempotencyCache(capacity: 256)
-    /// The shared auth coordinator + account flow, injected once via
-    /// `attachAuth` at app startup (AppDelegate `configure`) before the socket
-    /// listener starts. Socket auth commands read these on the main actor.
-    @MainActor private(set) var authCoordinator: AuthCoordinator?
-    @MainActor private(set) var accountFlow: HostAccountFlow?
     @MainActor private(set) var caffeineController: CaffeineController?
     @MainActor var agentChatTranscriptService: AgentChatTranscriptService?
     /// App-lifetime automation engine, attached by the composition root after
@@ -229,17 +220,8 @@ class TerminalController {
         socketMainHopSignposter.isEnabled
     }
     private nonisolated static let v2ConsumedBrowserDownloadIDLimit = 128
-    /// Surfaces whose pane a shared-sizing host currently caps to a grid.
-    var localSizingCappedSurfaceIDs: Set<UUID> = []
     /// Surfaces with a `terminal.paste` in flight (one prompt submission at a time).
     var terminalPasteInFlightSurfaceIDs: Set<UUID> = []
-    /// Shared-sizing hosts of local terminals (docs/shared-terminal-sizing.md).
-    var localSizingHostsBySurfaceID: [UUID: LocalTerminalSizingHost] = [:]
-    var localSizingControllersBySurfaceID: [UUID: LocalTerminalSharingController] = [:]
-    /// The single owner of shared-terminal size state and actions.
-    let terminalSharing = TerminalSharingStore()
-    /// The one size panel popover, anchored at a terminal's tab.
-    let terminalSizePanelPresenter = TerminalSizePanelPresenter()
 #if DEBUG
     private nonisolated static let socketCommandDebugLogEnvironmentKey = "BREE_DEBUG_SOCKET_COMMAND_LOG"
     private nonisolated static let socketCommandSlowThresholdMs: Double = 500
@@ -440,7 +422,6 @@ class TerminalController {
         let uniqueSurfaceIds = Set(surfaceIds)
         socketFastPathState.removeShellActivity(panelIds: uniqueSurfaceIds)
         for surfaceId in uniqueSurfaceIds {
-            removeLocalSizingHost(surfaceID: surfaceId)
             v2BrowserFrameSelectorBySurface.removeValue(forKey: surfaceId)
             v2BrowserDialogQueueBySurface.removeValue(forKey: surfaceId)
             v2BrowserDownloadEventsBySurface.removeValue(forKey: surfaceId)
@@ -888,7 +869,7 @@ class TerminalController {
         return directory.path.hasPrefix(temporary.path + "/")
     }
 
-    nonisolated static func normalizedMobileVTExportText(_ text: String) -> String {
+    nonisolated static func normalizedVTExportText(_ text: String) -> String {
         // Ghostty's VT formatter writes row separators as CRLF. Swift treats
         // CRLF as one Character, so split(separator: "\n") would miss rows.
         text.replacingOccurrences(of: "\r\n", with: "\n")
@@ -935,14 +916,6 @@ class TerminalController {
     /// Check if `pid` is a descendant of this process by walking the process tree.
     nonisolated func isDescendant(_ pid: pid_t) -> Bool {
         transport.isProcessDescendant(pid, of: myPid)
-    }
-
-    /// Inject the auth graph. Call once at the composition root, before the
-    /// socket listener accepts auth commands.
-    @MainActor
-    func attachAuth(coordinator: AuthCoordinator, accountFlow: HostAccountFlow) {
-        self.authCoordinator = coordinator
-        self.accountFlow = accountFlow
     }
 
     /// Injects the app-lifetime browser import coordinator before socket RPCs start.
@@ -1379,48 +1352,6 @@ class TerminalController {
             return v2Result(id: request.id, v2AgentRecoveryList(params: request.params))
         case "session.agent_recovery.restore":
             return v2Result(id: request.id, v2AgentRecoveryRestore(params: request.params))
-        case "auth.status":
-            let semaphore = DispatchSemaphore(value: 0)
-            Task { @MainActor [weak self] in
-                await self?.authCoordinator?.awaitBootstrapped()
-                semaphore.signal()
-            }
-            semaphore.wait()
-            return v2Ok(id: request.id, result: v2AuthStatusPayload(timedOut: false))
-        case "auth.sign_in_url":
-            var signInURL: String?
-            v2MainSync {
-                MainActor.assumeIsolated {
-                    signInURL = self.accountFlow?.manualSignInURL.absoluteString
-                }
-            }
-            var result: [String: Any] = [:]
-            if let signInURL {
-                result["url"] = signInURL
-            }
-            return v2Ok(id: request.id, result: result)
-        case "auth.begin_sign_in":
-            let timeoutSeconds = (request.params["timeout_seconds"] as? Double) ?? 300
-            let semaphore = DispatchSemaphore(value: 0)
-            nonisolated(unsafe) var signedIn = false
-            Task { @MainActor [weak self] in
-                signedIn = await self?.accountFlow?.signIn(
-                    timeout: timeoutSeconds
-                ) ?? false
-                semaphore.signal()
-            }
-            semaphore.wait()
-            return v2Ok(id: request.id, result: v2AuthStatusPayload(timedOut: !signedIn))
-        case "auth.sign_out":
-            let semaphore = DispatchSemaphore(value: 0)
-            Task { @MainActor [weak self] in
-                await self?.accountFlow?.signOut(timeout: 5)
-                semaphore.signal()
-            }
-            semaphore.wait()
-            return v2Ok(id: request.id, result: v2AuthStatusPayload(timedOut: false))
-        case _ where Self.authTeamSocketMethods.contains(request.method):
-            return v2AuthTeamResponse(request)
         case "feed.push":
             return v2Result(
                 id: request.id,
@@ -1588,18 +1519,6 @@ class TerminalController {
                 )
                 return outcome.socketPayload
             }
-        case "terminal.size_state":
-            return v2Result(id: request.id, v2MainSync { self.v2TerminalSizeState(params: request.params) })
-        case "terminal.size_policy.set":
-            return v2Result(id: request.id, v2MainSync { self.v2TerminalSizePolicySet(params: request.params) })
-        case "terminal.size_to_me":
-            return v2Result(id: request.id, v2MainSync { self.v2TerminalSizeToMe(params: request.params) })
-        case "terminal.size_counts.set":
-            return v2Result(id: request.id, v2MainSync { self.v2TerminalSizeCountsSet(params: request.params) })
-        case "terminal.participant.disconnect":
-            return v2Result(id: request.id, v2MainSync { self.v2TerminalParticipantDisconnect(params: request.params) })
-        case "terminal.participants.disconnect_others":
-            return v2Result(id: request.id, v2MainSync { self.v2TerminalParticipantsDisconnectOthers(params: request.params) })
         case "system.ping":
             return v2Ok(id: request.id, result: ["pong": true])
         case "system.capabilities":
@@ -1637,33 +1556,18 @@ class TerminalController {
             return v2Result(id: request.id, v2SurfaceReadText(params: request.params))
         case "surface.input_state":
             return v2Result(id: request.id, v2SurfaceInputState(params: request.params))
-        case "workspace.ssh.open":
-            return v2VmCall(id: request.id, timeoutSeconds: 190) {
-                try await self.openSSHTuiWorkspace(params: request.params)
-            }
         case "surface.ssh_session_attach.resolve":
             return v2AsyncResultCall(id: request.id, timeoutSeconds: 180) {
-                if let result = await self.tuiSSHSessionAttachResolve(params: request.params) { return result }
                 return self.v2SSHSessionAttachResolve(params: request.params)
             }
         case "workspace.env":
             return v2Result(id: request.id, v2WorkspaceEnv(params: request.params))
         case "workspace.remote.pty_sessions":
             return v2AsyncResultCall(id: request.id, timeoutSeconds: 180) {
-                if let result = await self.tuiSSHSessions(params: request.params) {
-                    guard request.params["all_workspaces"] as? Bool == true else { return result }
-                    // The legacy transport's blocking reads stay on this worker,
-                    // outside the native graph's main-actor projection path.
-                    return self.mergeRemotePTYSessionLists(
-                        tui: result,
-                        legacy: self.v2WorkspaceRemotePTYSessions(params: request.params)
-                    )
-                }
                 return self.v2WorkspaceRemotePTYSessions(params: request.params)
             }
         case "workspace.remote.pty_close":
             return v2AsyncResultCall(id: request.id, timeoutSeconds: 180) {
-                if let result = await self.closeTuiSSHSession(params: request.params) { return result }
                 return self.v2WorkspaceRemotePTYClose(params: request.params)
             }
         case "workspace.remote.pty_detach":
@@ -1730,7 +1634,7 @@ class TerminalController {
 #endif
         case "current.list":
             return socketWorkerCurrentWorkResponse(id: request.id, params: request.params)
-        case "surface.catalog", "surface.project", "surface.new_terminal":
+        case "surface.catalog", "surface.project":
             return socketWorkerSurfaceResponse(method: request.method, id: request.id, params: request.params)
         default:
 #if !DEBUG
@@ -2872,6 +2776,9 @@ class TerminalController {
         case "agent.queue.list": return v2Result(id: id, v2AgentQueue(params: params, action: "list"))
         case "agent.queue.clear": return v2Result(id: id, v2AgentQueue(params: params, action: "clear"))
         case "agent.explain": return v2Result(id: id, v2AgentExplain(params: params))
+        case "agent.state": return v2Result(id: id, v2AgentState(params: params))
+        case "snapshots.list": return v2Result(id: id, v2SnapshotsList())
+        case "snapshots.restore": return v2Result(id: id, v2SnapshotsRestore(params: params))
 
         // App focus (app.focus_override.set/app.simulate_active) handled by ControlCommandCoordinator.
 
@@ -3263,6 +3170,12 @@ class TerminalController {
         let topology = controlSystemTreeWorkspaceNode(
             workspace: workspace, index: index, selected: selected, dockStores: []
         )
+        // Agent activity per surface (agent surfaces only; plain terminals track none).
+        var agentActivityBySurface: [String: Date] = [:]
+        for record in agentChatTranscriptService?.sessionRecords(workspaceID: nil) ?? [] {
+            guard let surfaceID = record.surfaceID else { continue }
+            agentActivityBySurface[surfaceID] = max(agentActivityBySurface[surfaceID] ?? .distantPast, record.lastActivityAt)
+        }
         let panes = topology.panes.map { pane in
             return [
                 "kind": "pane",
@@ -3275,7 +3188,9 @@ class TerminalController {
                 "selected_surface_id": v2OrNull(pane.selectedSurfaceID?.uuidString),
                 "selected_surface_ref": v2Ref(kind: .surface, uuid: pane.selectedSurfaceID),
                 "surface_count": pane.surfaceIDs.count,
-                "surfaces": pane.surfaces.map { v2TopSurfaceNode($0, workspace: workspace) }
+                "surfaces": pane.surfaces.map {
+                    v2TopSurfaceNode($0, workspace: workspace, agentActivityBySurface: agentActivityBySurface)
+                }
             ]
         }
 
@@ -3289,12 +3204,13 @@ class TerminalController {
             "selected": topology.isSelected,
             "pinned": topology.isPinned,
             "host": v2TopHostNode(workspace.hostLabel),
+            "cwd": workspace.currentDirectory,
             "panes": panes,
             "tags": v2TopTagNodes(for: workspace)
         ]
     }
 
-    /// Where a `system.top` workspace runs: `kind` is `local`, `ssh` or `cloud`;
+    /// Where a `system.top` workspace runs: `kind` is `local`, `ssh` or `Remote`;
     /// `label` is the host (`big-red`) and `detail` the full target.
     private func v2TopHostNode(_ host: WorkspaceHostLabel) -> [String: Any] {
         [
@@ -3306,7 +3222,8 @@ class TerminalController {
 
     private func v2TopSurfaceNode(
         _ surface: ControlSystemTreeSurfaceNode,
-        workspace: Workspace
+        workspace: Workspace,
+        agentActivityBySurface: [String: Date]
     ) -> [String: Any] {
         var item: [String: Any] = [
             "kind": "surface",
@@ -3322,6 +3239,7 @@ class TerminalController {
             "pane_ref": v2Ref(kind: .pane, uuid: surface.paneID),
             "index_in_pane": v2OrNull(surface.indexInPane),
             "tty": v2OrNull(surface.tty),
+            "last_activity_at": v2OrNull(agentActivityBySurface[surface.surfaceID.uuidString]?.timeIntervalSince1970),
             "webviews": []
         ]
 
@@ -3399,55 +3317,6 @@ class TerminalController {
 
     // MARK: - V2 Helpers (encoding + result plumbing)
     // MARK: - V2 Helpers (encoding + result plumbing)
-
-    private nonisolated func v2AuthStatusPayload(timedOut: Bool) -> [String: Any] {
-        var result: [String: Any] = [:]
-        v2MainSync {
-            MainActor.assumeIsolated {
-                guard let coordinator = self.authCoordinator else {
-                    result = [
-                        "signed_in": false,
-                        "is_restoring_session": false,
-                        "is_loading": false,
-                        "timed_out": timedOut
-                    ]
-                    return
-                }
-                let isSigningIn = self.accountFlow?.isPresentingSignIn ?? false
-                var status: [String: Any] = [
-                    "signed_in": coordinator.isAuthenticated,
-                    "is_restoring_session": coordinator.isRestoringSession,
-                    "is_loading": coordinator.isLoading || isSigningIn,
-                    "timed_out": timedOut
-                ]
-                if let user = coordinator.currentUser {
-                    var userDict: [String: Any] = ["id": user.id]
-                    if let email = user.primaryEmail { userDict["email"] = email }
-                    if let name = user.displayName { userDict["display_name"] = name }
-                    status["user"] = userDict
-                }
-                if let teamID = coordinator.resolvedTeamID {
-                    status["selected_team_id"] = teamID
-                }
-                // A signed-in session without a team scope keeps the pairing
-                // host and Cloud down; report it so the state is diagnosable.
-                status["team_scope_ready"] = coordinator.authenticatedTeamScope != nil
-                status["team_scope_recovering"] = coordinator.hasPendingTeamScopeRecovery
-                if !coordinator.availableTeams.isEmpty {
-                    status["teams"] = coordinator.availableTeams.map { team -> [String: Any] in
-                        var dict: [String: Any] = [
-                            "id": team.id,
-                            "display_name": team.displayName
-                        ]
-                        if let slug = team.slug { dict["slug"] = slug }
-                        return dict
-                    }
-                }
-                result = status
-            }
-        }
-        return result
-    }
 
     nonisolated func v2OrNull(_ value: Any?) -> Any {
         // Avoid relying on `?? NSNull()` inference (Swift toolchains can disagree).
@@ -3585,9 +3454,6 @@ class TerminalController {
         case .success(let payload):
             return v2Ok(id: id, result: payload)
         case .failure(let error):
-            if let failure = error as? SSHTuiOpenFailure {
-                return v2Error(id: id, code: "ssh_failed", message: failure.reason)
-            }
             if let catalogError = error as? SurfaceCatalogError {
                 switch catalogError {
                 case .nothingToOpen:
@@ -4174,7 +4040,7 @@ class TerminalController {
                 guard let app = AppDelegate.shared else { return }
                 for summary in app.listMainWindowSummaries() {
                     guard let owner = app.tabManagerFor(windowId: summary.windowId) else { continue }
-                    for workspace in owner.tabs where workspace.isRemoteWorkspace && !workspace.usesSSHTui {
+                    for workspace in owner.tabs where workspace.isRemoteWorkspace {
                         targets.append(
                             RemotePTYSocketTarget(
                                 controller: workspace.remotePTYSessionControllerForSocketCommand(),
@@ -5031,7 +4897,7 @@ class TerminalController {
         includeScrollback: Bool,
         lineLimit: Int?
     ) -> Result<TerminalTextPayload, TerminalTextPayloadError> {
-        let output: String
+        let rawOutput: String
         if includeScrollback {
             var candidates: [String] = []
             if let screen = snapshot.screen {
@@ -5060,7 +4926,7 @@ class TerminalController {
             }) else {
                 return .failure(TerminalTextPayloadError(message: "Failed to read terminal text"))
             }
-            output = best
+            rawOutput = best
         } else {
             guard var viewport = snapshot.viewport else {
                 return .failure(TerminalTextPayloadError(message: "Failed to read terminal text"))
@@ -5068,11 +4934,32 @@ class TerminalController {
             if let lineLimit {
                 viewport = Self.tailTerminalLines(viewport, maxLines: lineLimit)
             }
-            output = viewport
+            rawOutput = viewport
         }
 
+        let output = Self.strippingKittyImagePlaceholders(rawOutput)
         let base64 = output.data(using: .utf8)?.base64EncodedString() ?? ""
         return .success(TerminalTextPayload(text: output, base64: base64))
+    }
+
+    /// Drops Kitty graphics placeholder cells (U+10EEEE plus the combining
+    /// diacritics that encode its row/column). Those scalars break `cut` and
+    /// `grep` under the macOS locale. Newlines and other text are untouched.
+    nonisolated static func strippingKittyImagePlaceholders(_ text: String) -> String {
+        guard text.unicodeScalars.contains(where: { $0.value == 0x10EEEE }) else { return text }
+        var out = String.UnicodeScalarView()
+        var afterPlaceholder = false
+        for scalar in text.unicodeScalars {
+            if scalar.value == 0x10EEEE {
+                afterPlaceholder = true
+            } else if afterPlaceholder, scalar.properties.generalCategory == .nonspacingMark {
+                continue
+            } else {
+                afterPlaceholder = false
+                out.append(scalar)
+            }
+        }
+        return String(out)
     }
 
     nonisolated private static func terminalTextCandidateScore(_ text: String) -> (lines: Int, bytes: Int) {
@@ -5414,7 +5301,7 @@ class TerminalController {
             return nil
         }
         var output = normalizeLineEndings
-            ? Self.normalizedMobileVTExportText(rawOutput)
+            ? Self.normalizedVTExportText(rawOutput)
             : rawOutput
         if let lineLimit {
             output = Self.tailTerminalLines(output, maxLines: lineLimit)
@@ -6461,9 +6348,6 @@ class TerminalController {
         return resolveBrowserNavigableURL(trimmed) ?? URL(string: trimmed)
     }
 
-    // Internal (not private): `CloudTreeService.openDesktop/openPort` open the same browser
-    // split the socket verb does, so the sidebar, `bree vm desktop`, and `bree vm open` share
-    // one path.
     func v2BrowserOpenSplit(
         params: [String: Any],
         diffViewerRegistration: DiffViewerSessionPreparation
@@ -14293,14 +14177,14 @@ class TerminalController {
     }
 
 
-    enum MobileTerminalAliasUUID {
+    enum TerminalAliasUUID {
         case missing
         case value(UUID)
         case invalid
         case conflict
     }
 
-    func mobileTerminalAliasUUID(params: [String: Any]) -> MobileTerminalAliasUUID {
+    func terminalAliasUUID(params: [String: Any]) -> TerminalAliasUUID {
         var selected: UUID?
         var sawAlias = false
         for key in ["surface_id", "terminal_id", "tab_id"] {
@@ -14322,8 +14206,8 @@ class TerminalController {
         return sawAlias ? .invalid : .missing
     }
 
-    func mobileTerminalAliasValidationError(params: [String: Any]) -> V2CallResult? {
-        switch mobileTerminalAliasUUID(params: params) {
+    func terminalAliasValidationError(params: [String: Any]) -> V2CallResult? {
+        switch terminalAliasUUID(params: params) {
         case .missing, .value:
             return nil
         case .invalid:
@@ -14333,7 +14217,7 @@ class TerminalController {
         }
     }
 
-    func mobileWorkspaceIDValidationError(params: [String: Any]) -> V2CallResult? {
+    func workspaceIDValidationError(params: [String: Any]) -> V2CallResult? {
         guard v2HasNonNullParam(params, "workspace_id"),
               v2UUID(params, "workspace_id") == nil else {
             return nil
@@ -14342,7 +14226,7 @@ class TerminalController {
     }
 
 
-    func mobileResolveWorkspaceAndSurface(
+    func resolveWorkspaceAndSurface(
         params: [String: Any],
         requireTerminal: Bool
     ) -> (tabManager: TabManager, workspace: Workspace, surfaceId: UUID?)? {
@@ -14371,7 +14255,7 @@ class TerminalController {
             }
         } else if requireTerminal {
             surfaceId = workspace.focusedTerminalInputTarget()?.surfaceID
-                ?? mobileTerminalPanels(in: workspace).first?.id
+                ?? terminalPanels(in: workspace).first?.id
         } else {
             surfaceId = nil
         }
@@ -14390,7 +14274,7 @@ class TerminalController {
     }
 
 
-    func mobileTerminalPanels(in workspace: Workspace) -> [TerminalPanel] {
+    func terminalPanels(in workspace: Workspace) -> [TerminalPanel] {
         // Spatial (left-to-right, top-to-bottom) panel order, matching the
         // on-screen bonsplit layout rather than focused-first/UUID order.
         orderedPanels(in: workspace).flatMap {

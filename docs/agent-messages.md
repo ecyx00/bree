@@ -61,8 +61,7 @@ Per-agent and per-workspace settings are kept with the messages, so they survive
 - Sender names are one line of at most 64 characters. The name is chosen by the sender. The sender surface is recorded separately from the sending CLI's environment.
 - Messages are kept per bree install, retaining all queued and delivered messages plus the newest 2,000 read messages.
 - Remote workspaces (`bree ssh`) can send and receive within their own session.
-  A remote agent cannot message a local agent yet. Cloud VMs can't send or
-  receive yet.
+  A remote agent cannot message a local agent yet.
 
 ## Socket API
 

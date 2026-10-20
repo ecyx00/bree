@@ -3,7 +3,7 @@ import Foundation
 /// Turns one bree transcript message into one ACP `session/update`.
 ///
 /// The input is a `ChatMessage` as it appears on the v2 socket
-/// (`mobile.chat.history`), read as a dictionary rather than a decoded type:
+/// (`chat.history`), read as a dictionary rather than a decoded type:
 /// the CLI does not link the chat package, and a mapper that works on the wire
 /// shape is also the mapper that catches a field rename in a test.
 ///
@@ -46,7 +46,7 @@ public struct ACPSessionUpdateMapper {
 
     /// Maps a whole history page, oldest first.
     ///
-    /// Ordering is the page's, not re-derived here: `mobile.chat.history`
+    /// Ordering is the page's, not re-derived here: `chat.history`
     /// serves ascending `seq`, and a replay that re-sorted would disagree with
     /// the live tail that follows it.
     public func replay(messages: [[String: Any]]) -> Replay {

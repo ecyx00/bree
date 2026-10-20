@@ -1,4 +1,3 @@
-import BreeCloud
 import BreeBrowser
 import BreeCore
 import BreeRemoteWorkspace
@@ -21,7 +20,6 @@ struct ManagedCapabilityPolicyGateTests {
     }
     private func remoteConfiguration() -> WorkspaceRemoteConfiguration {
         WorkspaceRemoteConfiguration(
-            transport: .websocket,
             destination: "vm:managed-policy-test",
             port: nil,
             identityFile: nil,
@@ -31,8 +29,7 @@ struct ManagedCapabilityPolicyGateTests {
             relayID: nil,
             relayToken: nil,
             localSocketPath: nil,
-            terminalStartupCommand: "bree vm-pty-attach --id managed-policy-test",
-            skipDaemonBootstrap: true
+            terminalStartupCommand: "bree vm-pty-attach --id managed-policy-test"
         )
     }
 
@@ -114,7 +111,6 @@ struct ManagedCapabilityPolicyGateTests {
         let observer = ManagedPolicyEnforcementObserver(
             notificationCenter: center,
             isBrowserDisabledByPolicy: { false },
-            isCloudDisabledByPolicy: { false },
             socketControlPolicy: { socketPolicy },
             capabilityPolicy: resolver,
             enforceBrowserPolicy: {},
@@ -152,7 +148,6 @@ struct ManagedCapabilityPolicyGateTests {
         let observer = ManagedPolicyEnforcementObserver(
             notificationCenter: NotificationCenter(),
             isBrowserDisabledByPolicy: { false },
-            isCloudDisabledByPolicy: { false },
             capabilityPolicy: policy(.disableRemoteConnections, disabled: true),
             enforceBrowserPolicy: {},
             enforceBrowserURLAllowlistPolicy: {},
@@ -218,18 +213,6 @@ struct ManagedCapabilityPolicyGateTests {
             cleanup: { _ in },
             completion: { _ in }
         ))
-    }
-
-    @Test func closedHistoryPurgeRecognizesBothCloudTransports() {
-        let local = Workspace()
-        let localSnapshot = local.sessionSnapshot(includeScrollback: false)
-        #expect(!ClosedItemHistoryStore.workspaceSnapshotHostsCloudVM(localSnapshot))
-
-        var tuiBound = localSnapshot
-        tuiBound.cloudVM = SessionCloudVMBindingSnapshot(vmID: "policy-purge", isBase: true)
-        #expect(ClosedItemHistoryStore.workspaceSnapshotHostsCloudVM(tuiBound))
-        // The same predicate session restore uses under `DisableCloud`.
-        #expect(TabManager.isCloudVMWorkspaceSnapshotForManagedPolicy(tuiBound))
     }
 
     @Test func tlsTrustBypassIsNeitherOfferedNorHonoredUnderThePolicy() throws {
@@ -321,7 +304,6 @@ struct ManagedCapabilityPolicyGateTests {
         let observer = ManagedPolicyEnforcementObserver(
             notificationCenter: center,
             isBrowserDisabledByPolicy: { false },
-            isCloudDisabledByPolicy: { false },
             capabilityPolicy: resolver,
             enforceBrowserPolicy: {},
             enforceBrowserURLAllowlistPolicy: {}
@@ -341,21 +323,6 @@ struct ManagedCapabilityPolicyGateTests {
         observer.reevaluate()
         #expect(recorder.changeSignals == 3)
         withExtendedLifetime(observer) {}
-    }
-
-    @Test func closedCloudWorkspaceCannotBeRestoredUnderPolicy() {
-        let manager = TabManager(createInitialWorkspace: false, managedDevicePolicy: policy(.disableCloud, disabled: true))
-        let workspace = Workspace()
-        var snapshot = workspace.sessionSnapshot(includeScrollback: false)
-        snapshot.cloudVM = SessionCloudVMBindingSnapshot(vmID: "policy-blocked", isBase: true)
-        let entry = ClosedWorkspaceHistoryEntry(
-            workspaceId: workspace.id,
-            windowId: nil,
-            workspaceIndex: 0,
-            snapshot: snapshot
-        )
-        #expect(!manager.restoreClosedWorkspace(entry))
-        #expect(manager.tabs.isEmpty)
     }
 
     @Test func remoteDropUploadFailsClosedUnderThePolicy() throws {

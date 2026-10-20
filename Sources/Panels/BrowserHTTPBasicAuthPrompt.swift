@@ -1,6 +1,6 @@
 import AppKit
 import BreeBrowser
-import BREEMobileCore
+import BreeAppSupport
 import Foundation
 import WebKit
 

@@ -5,14 +5,16 @@ enum SettingsSearchAliasIndex {
         switch target {
         case .app:
             return localized("settings.search.alias.section.app", defaultValue: "general preferences prefs behavior chrome dock menubar menu bar status notifications telemetry")
+        case .notifications:
+            return "notification sound dock badge unread ring flash agent alert desktop"
+        case .editorViewers:
+            return "markdown viewer file editor drops open files preview"
         case .themes:
             return localized("settings.search.alias.section.themes", defaultValue: "theme themes color scheme colors palette ghostty light dark mode accent")
         case .terminal:
             return localized("settings.search.alias.section.terminal", defaultValue: "shell scrollback scrollbar scroll bar ghostty tty pty")
         case .textBox:
             return localized("settings.search.alias.section.textBox", defaultValue: "textbox text box rich input prompt focus composer compose attachments")
-        case .cloudMachines:
-            return localized("settings.search.alias.section.cloudMachines", defaultValue: "cloud machines vm virtual machine persistent computer sandbox plan upgrade fleet freestyle")
         case .sidebarAppearance:
             return localized("settings.search.alias.section.sidebarAppearance", defaultValue: "sidebar left rail navigation details branches badges material terminal background")
         case .automation:

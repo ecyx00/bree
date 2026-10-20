@@ -267,13 +267,9 @@ struct RemoteSessionInheritedMasterReapTests {
                 buildInfo: SSHOverrideStubBuildInfo(),
                 daemonStrings: RemoteDaemonStrings(
                     missingPersistentPTYCapability: "",
-                    missingRequiredFunctionality: "",
-                    cloudNotificationClearWorkspaceInvalid: "",
-                    cloudNotificationClearWorkspaceDenied: "",
-                    cloudNotificationClearSurfaceInvalid: ""
+                    missingRequiredFunctionality: ""
                 ),
                 strings: RemoteSessionStrings(
-                    connectedVMNoProxyFormat: "%@",
                     suspendedDetailFormat: "%@",
                     reverseRelayUnavailableRetrying:
                         "test relay unavailable",

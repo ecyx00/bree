@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import Bonsplit
 import Foundation
@@ -11,7 +10,7 @@ import Foundation
 protocol PaneDropContainer: AnyObject {
     var surfaceOwnershipPolicy: SurfaceOwnershipPolicy { get }
     /// Whether this container accepts pane-transfer payloads (surfaces, Vault
-    /// sessions, Cloud rows, sidebar tools). File drops are routed separately.
+    /// sessions, remote rows, sidebar tools). File drops are routed separately.
     var acceptsPaneTransfers: Bool { get }
     func surfaceDropRejection(
         _ transfer: PaneDragTransfer,
@@ -47,7 +46,7 @@ protocol PaneDropContainer: AnyObject {
         destination: BonsplitController.ExternalTabDropRequest.Destination
     ) -> Bool
 
-    /// Projects a Cloud tree row (one resource, or a workspace's collection) at this destination.
+    /// Projects a remote tree row (one resource, or a workspace's collection) at this destination.
     func performPortalSurfaceResourceDrop(
         group: SurfaceResourceGroup,
         destination: BonsplitController.ExternalTabDropRequest.Destination
@@ -73,7 +72,7 @@ protocol PaneDropContainer: AnyObject {
 }
 
 extension PaneDropContainer {
-    var surfaceOwnershipPolicy: SurfaceOwnershipPolicy { .init(cloudMachine: nil) }
+    var surfaceOwnershipPolicy: SurfaceOwnershipPolicy { .init(remoteMachine: nil) }
     var acceptsPaneTransfers: Bool { true }
     func surfaceDropRejection(
         _ transfer: PaneDragTransfer,
@@ -193,7 +192,7 @@ extension PaneDropContainer {
         }
     }
 
-    /// Declines Cloud rows for containers that cannot host a projected surface (the Dock).
+    /// Declines remote rows for containers that cannot host a projected surface (the Dock).
     func performPortalSurfaceResourceDrop(
         group _: SurfaceResourceGroup,
         destination _: BonsplitController.ExternalTabDropRequest.Destination
@@ -239,7 +238,7 @@ extension PaneDropContainer {
             return .editor
         case .browser, .markdown, .rightSidebarTool, .customSidebar,
              .project, .extensionBrowser, .workspaceTodo,
-             .notifications, .accountSignIn:
+             .notifications:
             return nil
         }
     }
@@ -313,7 +312,7 @@ extension Workspace: PaneDropContainer {
         handleSessionDrop(entry: entry, destination: destination)
     }
 
-    /// Projects a dragged Cloud row through the surface catalog.
+    /// Projects a dragged remote row through the surface catalog.
     func performPortalSurfaceResourceDrop(
         group: SurfaceResourceGroup,
         destination: BonsplitController.ExternalTabDropRequest.Destination

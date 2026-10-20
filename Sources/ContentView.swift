@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import BreeAppKitSupportUI
 import BreeCommandPalette
@@ -1119,8 +1118,17 @@ struct ContentView: View {
     private static let maximumRightSidebarWidth: CGFloat = CGFloat(RightSidebarWidthSettings.builtInMaximumWidth)
     private static let minimumTerminalWidthWithRightSidebar: CGFloat = 360
 
+    /// Below this window width the left sidebar narrows to `narrowSidebarWidth`.
+    static let narrowSidebarWindowWidth: CGFloat = 1000
+    static let narrowSidebarWidth: CGFloat = 200
+
     private var minimumSidebarWidth: CGFloat {
-        CGFloat(SessionPersistencePolicy.sanitizedMinimumSidebarWidth(sidebarMinimumWidthSetting))
+        let configured = CGFloat(SessionPersistencePolicy.sanitizedMinimumSidebarWidth(sidebarMinimumWidthSetting))
+        return isNarrowSidebarWindow() ? min(configured, Self.narrowSidebarWidth) : configured
+    }
+
+    private func isNarrowSidebarWindow(availableWidth: CGFloat? = nil) -> Bool {
+        resolvedWindowContentWidth(availableWidth) < Self.narrowSidebarWindowWidth
     }
 
     private enum SidebarResizerHandle: Hashable {
@@ -1236,8 +1244,16 @@ struct ContentView: View {
     }
 
     private func clampSidebarWidthIfNeeded(availableWidth: CGFloat? = nil) {
+        var candidate = sidebarWidth
+        if isNarrowSidebarWindow(availableWidth: availableWidth) {
+            if sidebarLayout.widthBeforeNarrow == nil { sidebarLayout.widthBeforeNarrow = sidebarWidth }
+            candidate = Self.narrowSidebarWidth
+        } else if let saved = sidebarLayout.widthBeforeNarrow {
+            candidate = saved
+            sidebarLayout.widthBeforeNarrow = nil
+        }
         let nextWidth = Self.clampedSidebarWidth(
-            sidebarWidth,
+            candidate,
             maximumWidth: maxSidebarWidth(availableWidth: availableWidth),
             minimumWidth: minimumSidebarWidth
         )
@@ -1797,6 +1813,12 @@ struct ContentView: View {
         let mountedWorkspaces = tabManager.tabs.filter { mountedWorkspaceIdSet.contains($0.id) }
 
         return ZStack {
+            if tabManager.tabs.isEmpty {
+                EmptyWindowStateView(
+                    onNewTerminal: { tabManager.newSurface() },
+                    onOpenFolder: { AppDelegate.shared?.showOpenFolderPanel(tabManager: tabManager) }
+                )
+            }
             ZStack {
                 ForEach(mountedWorkspaces) { tab in
                     let isSelectedWorkspace = selectedWorkspaceId == tab.id
@@ -2023,6 +2045,28 @@ struct ContentView: View {
     private func fakeTitlebarTextColor(appearance: WindowAppearanceSnapshot) -> Color {
         Color(nsColor: BreeChromePalette.currentSnapshot.ns.textPrimary)
     }
+    private func minimalModeSidebarTitlebarControlsOverlay() -> some View {
+        MinimalModeSidebarTitlebarControlsOverlay(
+            unreadModel: sidebarUnread,
+            layoutModel: titlebarControlsLayoutModel,
+            leadingInset: CGFloat(titlebarDebugChromeSnapshot.leftControlsLeadingInset),
+            topPadding: observedWindow.map { minimalModeSidebarTitlebarControlsTopInset(in: $0) }
+                ?? MinimalModeSidebarTitlebarControlsMetrics.topInset,
+            onToggleSidebar: { sidebarState.toggle() },
+            onToggleNotifications: { anchorView in
+                AppDelegate.shared?.toggleNotificationsPopover(animated: true, anchorView: anchorView)
+            },
+            onNewTab: {
+                AppDelegate.shared?.performNewWorkspaceAction(
+                    tabManager: tabManager,
+                    debugSource: "titlebar.collapsedNewWorkspace"
+                )
+            },
+            onFocusHistoryBack: { if !tabManager.navigateBack() { NSSound.beep() } },
+            onFocusHistoryForward: { if !tabManager.navigateForward() { NSSound.beep() } }
+        )
+    }
+
     private var fullscreenControls: some View {
         TitlebarControlsView(
             unreadModel: sidebarUnread,
@@ -2059,6 +2103,13 @@ struct ContentView: View {
     /// Intrinsic width of ``fullscreenControls`` for the current controls style.
     /// Used to reserve space in the title row so the title flows to the right of
     /// the controls, which are themselves mounted once in the band overlay.
+    /// Right edge of the last visible button in the collapsed-sidebar titlebar controls.
+    private var collapsedControlsWidth: CGFloat {
+        TitlebarControlsHitRegions.buttonXRanges(
+            config: titlebarControlsLayoutModel.snapshot.style.config
+        ).last?.upperBound ?? 0
+    }
+
     private var fullscreenControlsWidth: CGFloat {
         titlebarControlsLayoutModel.snapshot.contentSize.width
     }
@@ -2202,7 +2253,11 @@ struct ContentView: View {
     private func syncTrafficLightInset(isMinimalMode: Bool? = nil) {
         let resolvedIsMinimalMode = isMinimalMode ?? currentIsMinimalMode
         let inset: CGFloat = (resolvedIsMinimalMode && !sidebarState.isVisible && !isFullScreen)
-            ? CGFloat(titlebarDebugChromeSnapshot.trafficLightTabBarLeadingInset)
+            // The first tab starts right of the toggle and + that sit after the traffic lights.
+            ? max(
+                CGFloat(titlebarDebugChromeSnapshot.trafficLightTabBarLeadingInset),
+                CGFloat(titlebarDebugChromeSnapshot.leftControlsLeadingInset) + collapsedControlsWidth + 8
+            )
             : 0
         tabManager.syncWorkspaceTabBarLeadingInset(inset)
     }
@@ -2294,7 +2349,7 @@ struct ContentView: View {
             }
             return
         }
-        // SSH and Cloud workspaces show their host after the title (`title · host`).
+        // SSH and remote workspaces show their host after the title (`title · host`).
         let title = tabManager.resolvedWorkspaceWindowTitle(for: tab)
         if titlebarText != title {
             titlebarText = title
@@ -2370,6 +2425,15 @@ struct ContentView: View {
     }
 
     private func openFilePreviewFromSidebar(filePath: String) {
+        if tabManager.tabs.isEmpty {
+            // Empty window: the preview needs a host workspace, so create one in the
+            // closed directory and open the file there (local files only).
+            guard let workspace = tabManager.addWorkspaceIfActive(
+                workingDirectory: Self.emptyWindowFilesDirectory(tabManager)
+            ) else { return }
+            QuickViewResource.file(path: filePath).open(from: workspace)
+            return
+        }
         guard let workspace = tabManager.selectedWorkspace else { return }
         guard let paneId = workspace.bonsplitController.focusedPaneId ?? workspace.bonsplitController.allPaneIds.first else {
             return
@@ -2380,13 +2444,27 @@ struct ContentView: View {
             pane: paneId, isCurrent: { tabManager.selectedTabId == workspace.id })
     }
 
+    private static let emptyWindowFilesRootId = UUID(uuidString: "00000000-0000-0000-0000-00000000E111")!
+
+    private static func emptyWindowFilesDirectory(_ tabManager: TabManager) -> String {
+        tabManager.closedWorkspaceDirectory ?? NSHomeDirectory()
+    }
+
     private func syncFileExplorerDirectory() {
         guard let selectedId = tabManager.selectedTabId,
               let tab = tabManager.tabs.first(where: { $0.id == selectedId }) else {
             // No selection means we have no local cwd to scope by; clear so the
             // sessions panel doesn't keep filtering by a stale previous tab.
             sessionIndexStore.setCurrentDirectoryIfChanged(nil)
-            fileExplorerStore.applyWorkspaceRoot(.none)
+            if tabManager.tabs.isEmpty, shouldSyncFileExplorerStore {
+                // Empty window: keep Files rooted at the closed workspace's directory.
+                fileExplorerStore.applyWorkspaceRoot(.local(
+                    workspaceId: Self.emptyWindowFilesRootId,
+                    path: Self.emptyWindowFilesDirectory(tabManager)
+                ))
+            } else {
+                fileExplorerStore.applyWorkspaceRoot(.none)
+            }
             return
         }
 
@@ -2574,6 +2652,13 @@ struct ContentView: View {
 
                 WorkspaceTitlebarModeLayer {
                     workspaceTitlebarBand(appearance: appearance)
+                        .zIndex(100)
+                }
+
+                // Collapsed sidebar (minimal mode): the sidebar's own header controls are
+                // gone, so the titlebar shows the same toggle and + after the traffic lights.
+                if !sidebarState.isVisible && !isFullScreen {
+                    minimalModeSidebarTitlebarControlsOverlay()
                         .zIndex(100)
                 }
             }
@@ -3302,6 +3387,10 @@ struct ContentView: View {
             updateSidebarResizerBandState()
         })
 
+        view = AnyView(view.onChange(of: collapsedControlsWidth) { _, _ in
+            syncTrafficLightInset()
+        })
+
         view = AnyView(view.onChange(of: sidebarState.isVisible) { _, isVisible in
             if isVisible {
                 makeRoomForShownSidePanel(.left)
@@ -3907,6 +3996,16 @@ struct ContentView: View {
                     onUnhandledNavigationKey: forwardCommandPaletteUnhandledNavigationKeyToFocusedTerminal
                 )
                 .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    // The commands scope keeps a literal ">" in the field, which hides the native placeholder.
+                    if commandPaletteQuery == ">" {
+                        Text(String(localized: "commandPalette.search.commandsHint", defaultValue: "Search commands"))
+                            .font(Font(BreeType.nsFont(.body)))
+                            .foregroundColor(.secondary)
+                            .padding(.leading, Self.commandPaletteHintInset)
+                            .allowsHitTesting(false)
+                    }
+                }
             }
             .padding(.horizontal, 9)
             .padding(.vertical, 7)
@@ -5068,6 +5167,11 @@ struct ContentView: View {
             searchAllSurfaces: commandPaletteSearchAllSurfaces,
             query: commandPaletteQuery
         )
+    }
+
+    /// Width of the ">" glyph plus the field's text inset.
+    private static var commandPaletteHintInset: CGFloat {
+        ceil((">" as NSString).size(withAttributes: [.font: BreeType.nsFont(.body)]).width) + 2
     }
 
     private var commandPaletteSearchPlaceholder: String {
@@ -8181,33 +8285,6 @@ struct ContentView: View {
         )
         contributions.append(
             CommandPaletteCommandContribution(
-                commandId: "palette.terminalSizeToMyWindow",
-                title: constant(String(localized: "command.terminalSizeToMyWindow.title", defaultValue: "Size Terminal to My Window")),
-                subtitle: terminalPanelSubtitle,
-                keywords: ["terminal", "size", "resize", "window", "grid", "shared", "phone", "iphone", "fit", "mine"],
-                when: { $0.bool(CommandPaletteContextKeys.panelIsTerminal) }
-            )
-        )
-        contributions.append(
-            CommandPaletteCommandContribution(
-                commandId: "palette.terminalShowSizePanel",
-                title: constant(String(localized: "command.terminalShowSizePanel.title", defaultValue: "Show Terminal Size Panel")),
-                subtitle: terminalPanelSubtitle,
-                keywords: ["terminal", "size", "participants", "shared", "clients", "policy", "latest", "smallest", "priority", "fixed"],
-                when: { $0.bool(CommandPaletteContextKeys.panelIsTerminal) }
-            )
-        )
-        contributions.append(
-            CommandPaletteCommandContribution(
-                commandId: "palette.terminalDisconnectOtherClients",
-                title: constant(String(localized: "command.terminalDisconnectOtherClients.title", defaultValue: "Disconnect Other Terminal Clients…")),
-                subtitle: terminalPanelSubtitle,
-                keywords: ["terminal", "disconnect", "detach", "clients", "phone", "iphone", "shared", "kick"],
-                when: { $0.bool(CommandPaletteContextKeys.panelIsTerminal) }
-            )
-        )
-        contributions.append(
-            CommandPaletteCommandContribution(
                 commandId: "palette.terminalPasteLastScreenshot",
                 title: constant(String(localized: "command.terminalPasteLastScreenshot.title", defaultValue: "Paste Last Screenshot")),
                 subtitle: terminalPanelSubtitle,
@@ -9114,21 +9191,6 @@ struct ContentView: View {
         }
         registry.register(commandId: "palette.terminalSendCtrlF") {
             if !tabManager.sendCtrlFToFocusedTerminal() {
-                NSSound.beep()
-            }
-        }
-        registry.register(commandId: "palette.terminalSizeToMyWindow") {
-            if !tabManager.sizeFocusedTerminalToMyWindow() {
-                NSSound.beep()
-            }
-        }
-        registry.register(commandId: "palette.terminalShowSizePanel") {
-            if !tabManager.showFocusedTerminalSizePanel(confirmDisconnectOthers: false) {
-                NSSound.beep()
-            }
-        }
-        registry.register(commandId: "palette.terminalDisconnectOtherClients") {
-            if !tabManager.showFocusedTerminalSizePanel(confirmDisconnectOthers: true) {
                 NSSound.beep()
             }
         }
@@ -11338,18 +11400,8 @@ struct VerticalTabsSidebar: View, Equatable {
         // snapshot from the current model before the controller applies again.
         let tabs = isPresented ? tabManager.tabs : []
         let workspaceCount = tabs.count
-        // Every row is closable, except a lone fresh terminal: closing it only swaps in an
-        // identical one, so its X would look dead.
-        let canCloseWorkspace: Bool = {
-            guard tabs.count == 1, let only = tabs.first else { return true }
-            let isFreshTerminal = only.customTitle == nil
-                && only.customDescription == nil
-                && !only.isPinned
-                && only.panels.count == 1
-                && only.panels.values.allSatisfy { $0 is TerminalPanel }
-                && !tabManager.workspaceNeedsConfirmClose(only)
-            return !isFreshTerminal
-        }()
+        // Every row is closable: closing the last workspace closes the window.
+        let canCloseWorkspace = true
         let workspaceNumberShortcut = self.workspaceNumberShortcut
         let tabItemSettings = tabItemSettingsStore.snapshot
         let tabIds = tabs.map(\.id)
@@ -11666,6 +11718,7 @@ struct VerticalTabsSidebar: View, Equatable {
             .mask(
                 SidebarWorkspaceScrollEdgeFadeMask(
                     topHeight: sidebarTopScrimHeight,
+                    topClearHeight: SidebarWorkspaceListMetrics.topClearHeight,
                     bottomHeight: sidebarBottomScrimHeight
                 )
             )
@@ -11867,6 +11920,7 @@ struct VerticalTabsSidebar: View, Equatable {
             .mask(
                 SidebarWorkspaceScrollEdgeFadeMask(
                     topHeight: sidebarTopScrimHeight,
+                    topClearHeight: SidebarWorkspaceListMetrics.topClearHeight,
                     bottomHeight: sidebarBottomScrimHeight
                 )
             )
@@ -12492,6 +12546,7 @@ struct VerticalTabsSidebar: View, Equatable {
             .mask(
                 SidebarWorkspaceScrollEdgeFadeMask(
                     topHeight: sidebarTopScrimHeight,
+                    topClearHeight: SidebarWorkspaceListMetrics.topClearHeight,
                     bottomHeight: sidebarBottomScrimHeight
                 )
             )
@@ -12580,6 +12635,7 @@ struct VerticalTabsSidebar: View, Equatable {
             .mask(
                 SidebarWorkspaceScrollEdgeFadeMask(
                     topHeight: sidebarTopScrimHeight,
+                    topClearHeight: SidebarWorkspaceListMetrics.topClearHeight,
                     bottomHeight: sidebarBottomScrimHeight
                 )
             )
@@ -17191,4 +17247,48 @@ extension ContentView {
     static let commandPaletteWorkspaceIsRemoteKey = CommandPaletteContextKeys(
         rawValue: "workspace.isRemote"
     )
+}
+
+
+/// Calm empty state for a window with no workspaces: one line and two actions.
+private struct EmptyWindowStateView: View {
+    let onNewTerminal: () -> Void
+    let onOpenFolder: () -> Void
+    private var palette: BreeChromePalette { BreeChromePalette.currentSnapshot }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text(String(localized: "emptyWindow.title", defaultValue: "No sessions open"))
+                .font(.title3)
+                .foregroundStyle(palette.textSecondary)
+            HStack(spacing: 10) {
+                Button(action: onNewTerminal) {
+                    HStack(spacing: 8) {
+                        Text(String(localized: "emptyWindow.newTerminal", defaultValue: "New Terminal"))
+                        Text(KeyboardShortcutSettings.shortcut(for: .newSurface).displayString)
+                            .opacity(0.75)
+                    }
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color(red: 31 / 255, green: 30 / 255, blue: 29 / 255))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: CommandBadgeOverlayView.clay))) // same clay as the command-block failure rail
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("emptyWindow.newTerminal")
+                Button(action: onOpenFolder) {
+                    Text(String(localized: "emptyWindow.openFolder", defaultValue: "Open Folder…"))
+                        .font(.body)
+                        .foregroundStyle(palette.textPrimary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(RoundedRectangle(cornerRadius: 8).stroke(palette.borderStrong, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("emptyWindow.openFolder")
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("emptyWindow.state")
+    }
 }

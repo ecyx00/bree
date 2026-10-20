@@ -11,7 +11,6 @@ struct NativeSSHConnectionKey: Hashable, Sendable {
         configuration: WorkspaceRemoteConfiguration,
         sharingOptions: SSHConnectionSharingOptions
     ) {
-        guard configuration.transport == .ssh else { return nil }
         if let controlPath = sharingOptions.breeOwnedControlPath(in: configuration.sshOptions),
            !controlPath.contains("%") {
             self.destination = "control-path:\(controlPath)"

@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 struct LocalTmuxSettingsCard: View {
     @State private var model: LocalTmuxSettingsModel
+    @AppStorage("terminal.keepShellsRunningAfterQuit") private var keepShells = false
 
     init(hostActions: SettingsHostActions) {
         _model = State(initialValue: LocalTmuxSettingsModel(hostActions: hostActions))
@@ -14,6 +15,22 @@ struct LocalTmuxSettingsCard: View {
         @Bindable var model = model
 
         return SettingsCard {
+            SettingsCardRow(
+                configurationReview: .action,
+                String(localized: "settings.terminal.localTmux.keepShells", defaultValue: "Keep Shells Running After Quit", bundle: .module),
+                subtitle: String(
+                    localized: "settings.terminal.localTmux.keepShells.subtitle",
+                    defaultValue: "New plain local terminals run inside a hidden tmux session that survives Bree quit and reattaches on relaunch. Needs tmux. Applies to terminals created after you turn it on.",
+                    bundle: .module
+                )
+            ) {
+                Toggle("", isOn: $keepShells)
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityIdentifier("SettingsTerminalKeepShellsToggle")
+            }
+
+            SettingsCardDivider()
             SettingsCardRow(
                 configurationReview: .action,
                 searchAnchorID: "setting:terminal:session-persistence",

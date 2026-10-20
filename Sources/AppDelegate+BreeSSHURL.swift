@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import BreeFoundation
 import BreeSettings
@@ -427,7 +426,7 @@ extension AppDelegate {
         )
     }
 
-    func claimAuthCallbackURLSchemes() {
+    func claimURLScheme() {
         // Pin the current build's callback scheme so auth, SSH, and navigation deeplinks
         // route back to this app instead of an unrelated LaunchServices entry.
         let bundleURL = Bundle.main.bundleURL

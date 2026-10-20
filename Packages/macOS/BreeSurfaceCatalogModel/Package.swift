@@ -8,12 +8,12 @@ let package = Package(
     dependencies: [
         .package(path: "../BREEDebugLog"),
         .package(path: "../BreeCore"),
-        .package(path: "../../Shared/BREEMobileCore")
+        .package(path: "../../Shared/BreeAppSupport")
     ],
     targets: [
         .target(
             name: "BreeSurfaceCatalogModel",
-            dependencies: ["BREEDebugLog", "BreeCore", "BREEMobileCore"],
+            dependencies: ["BREEDebugLog", "BreeCore", "BreeAppSupport"],
             // The files moved out of the app target unchanged; keep its language mode.
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),

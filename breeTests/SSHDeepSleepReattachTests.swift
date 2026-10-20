@@ -254,68 +254,6 @@ struct SSHDeepSleepReattachTests {
         #expect(workspace.remoteConnectionState != .connected)
     }
 
-    @MainActor
-    @Test func confirmedCloudPTYExitRestartsWithInheritedCustomIdentity() throws {
-        let workspace = Workspace()
-        let initialPanel = try #require(workspace.focusedTerminalPanel)
-        let customSessionID = "cloud-custom-session"
-        // Once the workspace is Cloud-owned, a split carrying a launch override
-        // such as a custom PTY identity fails closed instead of spawning a
-        // local PTY (#13098). Create the custom-identity pane first; what this
-        // test pins is that identity surviving the confirmed exit and restart.
-        let panel = try #require(workspace.newTerminalSplit(
-            from: initialPanel.id,
-            orientation: .horizontal,
-            focus: false,
-            remotePTYSessionID: customSessionID
-        ))
-        workspace.configureRemoteConnection(Self.persistentCloudConfiguration(), autoConnect: false)
-        #expect(panel.surface.respawnAdditionalEnvironment["BREE_REMOTE_PTY_SESSION_ID"] == customSessionID)
-        #expect(workspace.remotePTYSessionIDsByPanelId[panel.id] == customSessionID)
-
-        let ended = workspace.markRemotePTYAttachEnded(
-            surfaceId: panel.id,
-            sessionID: customSessionID
-        )
-        #expect(ended.clearedRemotePTYSession)
-        #expect(workspace.remotePTYSessionIDsByPanelId[panel.id] == nil)
-        #expect(panel.surface.respawnAdditionalEnvironment["BREE_REMOTE_PTY_SESSION_ID"] == customSessionID)
-        workspace.markPersistentRemotePTYAttachFailed(surfaceId: panel.id)
-
-        let endedSnapshot = try #require(
-            workspace.sessionSnapshot(includeScrollback: false).panels
-                .first { $0.id == panel.id }?.terminal
-        )
-        #expect(endedSnapshot.isRemoteTerminal == false)
-        #expect(endedSnapshot.remotePTYSessionID == nil)
-
-        workspace.applyRemoteConnectionStateUpdate(
-            .connected,
-            detail: "Connected to Cloud VM",
-            target: "cloud-vm"
-        )
-        // The public reconnect command is correctly gated when Cloud is disabled
-        // on a CI runner. Exercise the persistent reattach operation directly.
-        #expect(workspace.reattachPersistentRemotePTYPanels(
-            requestedSurfaceId: panel.id,
-            restartEndedSessions: true
-        ).contains(panel.id))
-
-        let restarted = try #require(workspace.terminalPanel(for: panel.id))
-        #expect(restarted.surface !== panel.surface)
-        let command = try #require(restarted.surface.initialCommand)
-        #expect(command.contains("vm-pty-attach"))
-        #expect(command.contains("--default-freestyle-sshd"))
-        #expect(restarted.surface.respawnAdditionalEnvironment["BREE_REMOTE_PTY_SESSION_ID"] == customSessionID)
-        #expect(workspace.remotePTYSessionIDsByPanelId[panel.id] == customSessionID)
-        let restartedSnapshot = try #require(
-            workspace.sessionSnapshot(includeScrollback: false).panels
-                .first { $0.id == panel.id }?.terminal
-        )
-        #expect(restartedSnapshot.isRemoteTerminal == true)
-        #expect(restartedSnapshot.remotePTYSessionID == customSessionID)
-    }
-
     /// The attach wrapper resolves its retry budget before the loop starts, so
     /// the fallback, a well-formed operator budget, and the ceiling are all
     /// provable without paying for a full budget of attach attempts.
@@ -563,25 +501,6 @@ struct SSHDeepSleepReattachTests {
             configuredRemoteCommand: configuredRemoteCommand,
             foregroundAuthToken: foregroundAuthToken,
             preserveAfterTerminalExit: true, persistentDaemonSlot: "ssh-test"
-        )
-    }
-
-    private static func persistentCloudConfiguration() -> WorkspaceRemoteConfiguration {
-        WorkspaceRemoteConfiguration(
-            destination: "71smiccrg35sw9pydt8k+bree@vm-ssh.freestyle.sh",
-            port: 22,
-            identityFile: nil,
-            sshOptions: [],
-            localProxyPort: nil,
-            relayPort: nil,
-            relayID: nil,
-            relayToken: nil,
-            localSocketPath: nil,
-            managedCloudVMID: "71smiccrg35sw9pydt8k",
-            terminalStartupCommand: "ssh -p 22 -tt 71smiccrg35sw9pydt8k+bree@vm-ssh.freestyle.sh",
-            preserveAfterTerminalExit: true,
-            persistentDaemonSlot: "bree-default-freestyle-sshd-v1",
-            skipDaemonBootstrap: true
         )
     }
 

@@ -9,7 +9,7 @@ import Testing
 @testable import bree
 #endif
 
-/// Measures the real sidebar owner, including offscreen workspaces. The Cloud
+/// Measures the real sidebar owner, including offscreen workspaces. The remote
 /// outline fixture separately counts AppKit row configuration and persistence.
 @MainActor
 @Suite("Sidebar derived state scale", .serialized)

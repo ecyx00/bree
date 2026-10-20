@@ -823,7 +823,6 @@ struct RemoteResumeBindingTests {
         persistentDaemonSlot: String? = "ssh-issue-7989"
     ) -> WorkspaceRemoteConfiguration {
         WorkspaceRemoteConfiguration(
-            transport: .ssh,
             terminalTransport: .ssh,
             destination: "dev@example.com",
             port: 22,
@@ -836,8 +835,7 @@ struct RemoteResumeBindingTests {
             localSocketPath: "/tmp/bree-issue-7989.sock",
             terminalStartupCommand: SSHPTYAttachStartupCommandBuilder.command(requireExisting: false),
             preserveAfterTerminalExit: preserveAfterTerminalExit,
-            persistentDaemonSlot: persistentDaemonSlot,
-            skipDaemonBootstrap: false
+            persistentDaemonSlot: persistentDaemonSlot
         )
     }
 

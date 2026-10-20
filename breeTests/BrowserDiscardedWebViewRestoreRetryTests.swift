@@ -155,7 +155,6 @@ private func makeDiscardRestoreRetryBlockerSnapshot() -> BrowserHiddenWebViewDis
         isElementFullscreenActive: false,
         isReactGrabActive: false,
         isVisualAutomationCaptureActive: false,
-        isMobileBrowserStreamActive: false,
         hasPopups: false,
         isCapturingMedia: false,
         isPlayingMedia: false

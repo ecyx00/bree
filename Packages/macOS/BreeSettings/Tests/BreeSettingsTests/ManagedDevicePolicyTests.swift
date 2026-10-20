@@ -59,22 +59,6 @@ struct ManagedDevicePolicyTests {
         #expect(policy.isKeyForcedInAppDomain(ManagedDevicePolicyKey.disableRemoteControl.rawValue))
     }
 
-    @Test func forcedCloudDisableIsEnforcedAndLocksTheKey() throws {
-        let (defaults, cleanup) = try makeSuite("cloud")
-        defer { cleanup() }
-
-        defaults.set(false, forKey: ManagedDevicePolicyKey.disableCloud.rawValue)
-        defaults.set(true, forKey: Self.forcedMirrorPrefix + ManagedDevicePolicyKey.disableCloud.rawValue)
-        let policy = ManagedDevicePolicy(
-            defaults: defaults,
-            releaseDomainDefaults: nil,
-            forcedObject: Self.probe
-        )
-
-        #expect(policy.isEnforced(.disableCloud))
-        #expect(policy.isKeyForcedInAppDomain(ManagedDevicePolicyKey.disableCloud.rawValue))
-    }
-
     @Test func allowStyleKeysAreOnlyOffWhenForcedFalse() throws {
         let (defaults, cleanup) = try makeSuite("allowStyle")
         defer { cleanup() }
@@ -196,7 +180,6 @@ struct ManagedDevicePolicyTests {
         #expect(ManagedDevicePolicyKey.disableRemoteControl.rawValue == "DisableRemoteControl")
         #expect(ManagedDevicePolicyKey.disableDeviceDiscovery.rawValue == "DisableDeviceDiscovery")
         #expect(ManagedDevicePolicyKey.disableIncomingDeviceAccess.rawValue == "DisableIncomingDeviceAccess")
-        #expect(ManagedDevicePolicyKey.disableCloud.rawValue == "DisableCloud")
         #expect(ManagedDevicePolicyKey.disableRemoteConnections.rawValue == "DisableRemoteConnections")
         #expect(ManagedDevicePolicyKey.disableFileTransfer.rawValue == "DisableFileTransfer")
         #expect(ManagedDevicePolicyKey.disableIrohNetworking.rawValue == "DisableIrohNetworking")

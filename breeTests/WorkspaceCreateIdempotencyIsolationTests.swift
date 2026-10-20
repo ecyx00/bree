@@ -12,7 +12,7 @@ import Testing
 /// synchronously on the main thread, so its asynchronous accept must not touch
 /// that state until the main actor is free. When the async methods ran on the
 /// global executor instead, they raced those mutations and crashed the app host
-/// in `concurrentMobileRequestsWithSameOperationCreateExactlyOnce`.
+/// in `concurrentRemoteRequestsWithSameOperationCreateExactlyOnce`.
 @MainActor
 @Suite struct WorkspaceCreateIdempotencyIsolationTests {
     @available(macOS 15.0, *)

@@ -193,6 +193,18 @@ enum ActivityModsStream {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/status", isDirectory: true)
     }
 
+    /// Per session, the candidate id whose status folder was written most recently (falls back to
+    /// the first candidate). Bree does not know which id a status writer used.
+    nonisolated static func newestIds(_ candidates: [[String]], root: URL = defaultRoot) -> [String] {
+        candidates.compactMap { ids in
+            func stamp(_ id: String) -> Date {
+                let file = root.appendingPathComponent(id, isDirectory: true).appendingPathComponent("sections.json")
+                return (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            }
+            return ids.max { stamp($0) < stamp($1) }
+        }
+    }
+
     /// Blocking file reads; call off the main thread. With no known session ids, falls back to
     /// session folders touched in the last day whose `cwd` equals `cwd`.
     nonisolated static func load(

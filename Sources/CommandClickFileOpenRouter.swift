@@ -18,11 +18,13 @@ enum CommandClickFileOpenRouter {
         sourcePanelId: UUID,
         filePath: String,
         defaults: UserDefaults = .standard,
-        inQuickView: Bool = true
+        inQuickView: Bool = true,
+        line: Int? = nil,
+        column: Int? = nil
     ) -> Bool {
         let store = FileRouteSettingsStore(defaults: defaults)
         func showInQuickView() -> Bool {
-            QuickViewResource.file(path: filePath).open(from: workspace)
+            QuickViewResource.file(path: filePath, line: line, column: column).open(from: workspace)
             return true
         }
         if store.shouldRouteMarkdown(path: filePath) {

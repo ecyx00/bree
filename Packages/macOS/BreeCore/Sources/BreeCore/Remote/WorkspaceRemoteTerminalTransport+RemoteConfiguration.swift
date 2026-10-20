@@ -21,20 +21,4 @@ extension WorkspaceRemoteTerminalTransport {
             self.init(rawValue: normalized ?? "")
         }
     }
-
-    /// Whether this terminal transport is available for the supplied management configuration.
-    ///
-    /// Mosh currently requires normal SSH daemon bootstrap; WebSocket and pre-baked
-    /// cloud-daemon workspaces retain their existing terminal implementations.
-    ///
-    /// - Parameters:
-    ///   - managementTransport: The daemon/control transport.
-    ///   - skipDaemonBootstrap: Whether the remote daemon is pre-baked rather than SSH-bootstrapped.
-    /// - Returns: `true` when the terminal/management transport pairing is supported.
-    public func isSupportedForRemoteConfiguration(
-        managementTransport: WorkspaceRemoteTransport,
-        skipDaemonBootstrap: Bool
-    ) -> Bool {
-        self == .ssh || (managementTransport == .ssh && !skipDaemonBootstrap)
-    }
 }

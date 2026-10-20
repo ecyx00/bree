@@ -88,7 +88,7 @@ extension TerminalController: ControlNotificationContext {
         // workspace moves, so resolve the surface's CURRENT owner before
         // rejecting a claim the routing selectors no longer satisfy — whether
         // the surface left the claimed workspace or that workspace was closed.
-        // `notification.create_for_surface` is NOT relay-reachable. The cloud
+        // `notification.create_for_surface` is NOT relay-reachable. The remote
         // tunnel rewrites scoped `notification.create` calls to the confined
         // `create_for_target` path before they reach this trusted local path.
         guard let ws = resolveWorkspace(routing: routing, tabManager: tabManager) else {
@@ -183,7 +183,7 @@ extension TerminalController: ControlNotificationContext {
             return .tabManagerUnavailable
         }
         // SECURITY: no live re-homing here. `notification.create_for_target`
-        // is reachable through the cloud relay (`RemoteDaemonProxyTunnel`),
+        // is reachable through the remote relay (`RemoteDaemonProxyTunnel`),
         // whose authorization only checks that the supplied workspace_id
         // equals the relay's owner workspace — this membership guard is what
         // actually confines a VM's deliveries to its authorized workspace. A

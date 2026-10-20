@@ -21,7 +21,7 @@ for name in ("Reasons", "Request", "Scheduler"):
     (sources / path.name).symlink_to(path)
 path = root / "breeTests/TerminalPortalReconciliationReentrancyTests.swift"
 (tests / path.name).symlink_to(path)
-dependency = json.dumps(str(root / "Packages/Shared/BREEMobileCore"))
+dependency = json.dumps(str(root / "Packages/Shared/BreeAppSupport"))
 (fixture / "Package.swift").write_text(f'''// swift-tools-version: 6.0
 import PackageDescription
 let package = Package(
@@ -29,8 +29,8 @@ let package = Package(
     platforms: [.macOS(.v14)],
     dependencies: [.package(path: {dependency})],
     targets: [
-        .target(name: "bree", dependencies: ["BREEMobileCore"], path: "Sources"),
-        .testTarget(name: "ReconciliationTests", dependencies: ["bree", "BREEMobileCore"], path: "Tests")
+        .target(name: "bree", dependencies: ["BreeAppSupport"], path: "Sources"),
+        .testTarget(name: "ReconciliationTests", dependencies: ["bree", "BreeAppSupport"], path: "Tests")
     ]
 )
 ''')

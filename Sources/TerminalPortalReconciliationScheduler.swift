@@ -1,5 +1,5 @@
 import Foundation
-import BREEMobileCore
+import BreeAppSupport
 
 /// Owns the boundary between SwiftUI/AppKit callbacks and terminal portal mutations.
 ///

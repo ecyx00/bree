@@ -1,5 +1,5 @@
 import Foundation
-import BREEMobileCore
+import BreeAppSupport
 import Testing
 
 #if canImport(Bree_Dev)

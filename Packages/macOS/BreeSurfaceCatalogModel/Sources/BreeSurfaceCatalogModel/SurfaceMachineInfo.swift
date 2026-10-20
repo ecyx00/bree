@@ -4,7 +4,7 @@ import Foundation
 public struct SurfaceMachineInfo: Hashable, Codable, Sendable {
     public var id: SurfaceMachineID
     public var name: String
-    /// `running`, `standby`, … for cloud machines; `running` for the local Mac.
+    /// `running`, `standby`, … for remote machines; `running` for the local Mac.
     public var status: String
     public var image: String?
     public var hasDesktop: Bool
@@ -20,10 +20,9 @@ public struct SurfaceMachineInfo: Hashable, Codable, Sendable {
     public var remoteWorkspaces: [SurfaceRemoteWorkspace]? = nil
     /// The machine's address on its owner's private network (v4 preferred), reachable through WireGuard; nil for local or legacy machines.
     public var privateAddress: String? = nil
-    /// Account presence for another Mac's app instance; nil for local and cloud machines.
+    /// Account presence for another Mac's app instance; nil for local and remote machines.
     public var presence: SurfaceDevicePresence? = nil
-    public var portDiscoveryState: CloudPortDiscoveryState = .notRequested
-    /// vCPUs the cloud machine reports; nil for the local Mac and when unknown.
+    /// vCPUs the remote machine reports; nil for the local Mac and when unknown.
     public var cpus: Int? = nil
 
     public init(
@@ -42,7 +41,6 @@ public struct SurfaceMachineInfo: Hashable, Codable, Sendable {
         remoteWorkspaces: [SurfaceRemoteWorkspace]? = nil,
         privateAddress: String? = nil,
         presence: SurfaceDevicePresence? = nil,
-        portDiscoveryState: CloudPortDiscoveryState = .notRequested,
         cpus: Int? = nil
     ) {
         self.id = id
@@ -60,14 +58,13 @@ public struct SurfaceMachineInfo: Hashable, Codable, Sendable {
         self.remoteWorkspaces = remoteWorkspaces
         self.privateAddress = privateAddress
         self.presence = presence
-        self.portDiscoveryState = portDiscoveryState
         self.cpus = cpus
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, status, image, hasDesktop, memoryMb, diskMb, linkState, linkError
         case cpuPercent, memoryUsedMb, diskUsedMb, remoteWorkspaces, privateAddress, presence
-        case portDiscoveryState, cpus
+        case cpus
     }
 
     public init(from decoder: any Decoder) throws {
@@ -87,7 +84,6 @@ public struct SurfaceMachineInfo: Hashable, Codable, Sendable {
         remoteWorkspaces = try values.decodeIfPresent([SurfaceRemoteWorkspace].self, forKey: .remoteWorkspaces)
         privateAddress = try values.decodeIfPresent(String.self, forKey: .privateAddress)
         presence = try values.decodeIfPresent(SurfaceDevicePresence.self, forKey: .presence)
-        portDiscoveryState = try values.decodeIfPresent(CloudPortDiscoveryState.self, forKey: .portDiscoveryState) ?? .notRequested
         cpus = try values.decodeIfPresent(Int.self, forKey: .cpus)
     }
 
@@ -108,7 +104,6 @@ public struct SurfaceMachineInfo: Hashable, Codable, Sendable {
         try values.encodeIfPresent(remoteWorkspaces, forKey: .remoteWorkspaces)
         try values.encodeIfPresent(privateAddress, forKey: .privateAddress)
         try values.encodeIfPresent(presence, forKey: .presence)
-        try values.encode(portDiscoveryState, forKey: .portDiscoveryState)
         try values.encodeIfPresent(cpus, forKey: .cpus)
     }
 }

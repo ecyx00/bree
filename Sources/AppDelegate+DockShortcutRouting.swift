@@ -91,7 +91,6 @@ extension KeyboardShortcutSettings.Action {
              .newWorkspaceGroup, .groupSelectedWorkspaces,
              .toggleFocusedWorkspaceGroupCollapsed,
              .reopenClosedWorkspace,
-             .sizeTerminalToMyWindow,
              .toggleShellEditor,
              .increaseWorkspaceTerminalFontSize,
              .decreaseWorkspaceTerminalFontSize,

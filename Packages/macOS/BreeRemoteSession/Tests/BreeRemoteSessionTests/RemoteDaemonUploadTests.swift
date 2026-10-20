@@ -461,13 +461,9 @@ struct RemoteDaemonUploadTests {
             buildInfo: ManifestBuildInfo(version: "test-version", manifest: manifest),
             daemonStrings: RemoteDaemonStrings(
                 missingPersistentPTYCapability: "",
-                missingRequiredFunctionality: "",
-                cloudNotificationClearWorkspaceInvalid: "",
-                cloudNotificationClearWorkspaceDenied: "",
-                cloudNotificationClearSurfaceInvalid: ""
+                missingRequiredFunctionality: ""
             ),
             strings: RemoteSessionStrings(
-                connectedVMNoProxyFormat: "%@",
                 suspendedDetailFormat: "%@",
                 reverseRelayUnavailableRetrying: "",
                 reverseRelayPortUnavailableRetrying: "",
@@ -645,13 +641,9 @@ struct RemoteDaemonUploadTests {
             buildInfo: SSHOverrideStubBuildInfo(),
             daemonStrings: RemoteDaemonStrings(
                 missingPersistentPTYCapability: "",
-                missingRequiredFunctionality: "",
-                cloudNotificationClearWorkspaceInvalid: "",
-                cloudNotificationClearWorkspaceDenied: "",
-                cloudNotificationClearSurfaceInvalid: ""
+                missingRequiredFunctionality: ""
             ),
             strings: RemoteSessionStrings(
-                connectedVMNoProxyFormat: "%@",
                 suspendedDetailFormat: "%@",
                 reverseRelayUnavailableRetrying: "",
                 reverseRelayPortUnavailableRetrying: "",

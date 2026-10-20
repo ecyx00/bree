@@ -1,4 +1,3 @@
-import BreeCloud
 import BreeCommandPalette
 import BreeSurfaceCatalogModel
 import Foundation
@@ -26,7 +25,7 @@ struct CurrentWorkCommandPaletteTests {
         let item = fixture()
         let observed = item.projections[0]
         let rebound = SurfaceProjection(
-            resource: SurfaceResourceID(machine: .cloud("other-machine"), kind: .terminal, key: "term_other"),
+            resource: SurfaceResourceID(machine: .remote("other-machine"), kind: .terminal, key: "term_other"),
             workspaceID: observed.workspaceID, panelID: observed.panelID
         )
         #expect(!(CurrentWorkPalettePresentation(item: item).matches(projection: observed, current: rebound)))
@@ -37,7 +36,7 @@ struct CurrentWorkCommandPaletteTests {
         let item = fixture()
         let observed = item.projections[0]
         let current = SurfaceProjection(
-            resource: SurfaceResourceID(machine: .cloud("test-machine"), kind: .terminal, key: "term_test"),
+            resource: SurfaceResourceID(machine: .remote("test-machine"), kind: .terminal, key: "term_test"),
             workspaceID: UUID(), panelID: observed.panelID
         )
         #expect(CurrentWorkPalettePresentation(item: item).matches(projection: observed, current: current))
@@ -50,7 +49,7 @@ struct CurrentWorkCommandPaletteTests {
     }
 
     @Test
-    func testUnprojectedAndStaleCloudWorkIsHonestInTheReadOnlyRow() {
+    func testUnprojectedAndStaleRemoteWorkIsHonestInTheReadOnlyRow() {
         var item = fixture()
         item.projections = []
         item.freshness.state = "stale"
@@ -64,7 +63,7 @@ struct CurrentWorkCommandPaletteTests {
     func testPlacementSubtitlePreservesEveryRemoteMachineIdentity() {
         let placements = [
             (kind: "local", machine: "local", showsMachine: false),
-            (kind: "cloud", machine: "cloud-host", showsMachine: true),
+            (kind: "Remote", machine: "Remote-host", showsMachine: true),
             (kind: "ssh", machine: "ssh:build-host", showsMachine: true),
             (kind: "device", machine: "device:other-mac@test", showsMachine: true),
         ]
@@ -84,15 +83,15 @@ struct CurrentWorkCommandPaletteTests {
     }
 
     private func fixture() -> CurrentWorkSnapshot.Item {
-        let resource = SurfaceResourceID(machine: .cloud("test-machine"), kind: .terminal, key: "term_test").rawValue
+        let resource = SurfaceResourceID(machine: .remote("test-machine"), kind: .terminal, key: "term_test").rawValue
         return .init(
             resourceRef: resource, durableSurfaceID: nil, label: "Review", kind: "terminal", lifecycle: "running",
-            placement: .init(kind: "cloud", machine: "test-machine"),
+            placement: .init(kind: "Remote", machine: "test-machine"),
             projections: [.init(resourceRef: resource, workspaceID: UUID(), panelID: UUID(), stableSurfaceID: nil,
                                 stableWorkspaceID: nil, remoteWorkspaceID: "ws_test", remoteTabID: "tab_test")],
             cwd: "/project", projectHints: [], repositoryHints: [], agents: [], attention: [],
             freshness: .init(state: "current", reason: nil, observedAt: "2026-09-20T00:00:00Z"),
-            cursor: nil, receiptRefs: [], possibleHumanObligations: [], evidence: [], omitted: [:]
+            possibleHumanObligations: [], evidence: [], omitted: [:]
         )
     }
 

@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import BreeSurfaceCatalogModel
 import Foundation
@@ -10,7 +9,7 @@ import Testing
 #endif
 
 /// The socket face of the surface catalog, driven the way the CLI drives it: JSON-RPC
-/// lines into `handleSocketLine` from a socket-worker thread, against a fake cloud
+/// lines into `handleSocketLine` from a socket-worker thread, against a fake remote
 /// provider registered on the shared catalog. These pin behavior — what
 /// `surface.catalog` / `surface.project` / `surface.new_terminal` / `vm.workspace_*` /
 /// `vm.terminal_*` answer and what they ask the provider to do — not source shape.
@@ -28,8 +27,8 @@ struct SurfaceSocketCommandTests {
         #expect(error["code"] as? String == "not_ready")
     }
 
-    /// A cloud provider whose daemon is a notebook: every verb records what it was asked.
-    private final class FakeCloudProvider: SurfaceProvider {
+    /// A Remote provider whose daemon is a notebook: every verb records what it was asked.
+    private final class FakeRemoteProvider: SurfaceProvider {
         let machine: SurfaceMachineID
         var info: SurfaceMachineInfo
         unowned let catalog: SurfaceCatalog
@@ -55,19 +54,6 @@ struct SurfaceSocketCommandTests {
             return SurfaceProjection(resource: resource.id, workspaceID: destination.workspaceID, panelID: UUID())
         }
 
-        func createTerminal(command: [String]?, cwd: String?, name: String?, remoteWorkspaceID: String?) async throws -> SurfaceResource {
-            createdTerminals.append((command, cwd, name, remoteWorkspaceID))
-            let workspace = (info.remoteWorkspaces ?? []).first { $0.id == remoteWorkspaceID } ?? info.remoteWorkspaces?.first
-            let resource = SurfaceResource(
-                id: SurfaceResourceID(machine: machine, kind: .terminal, key: "term_new_\(createdTerminals.count)"),
-                title: name ?? "", detail: cwd, lifecycle: .launching, agent: nil,
-                remoteWorkspace: workspace, port: nil, url: nil
-            )
-            // Like the real provider: the terminal exists in the catalog before it is projected.
-            catalog.upsert(resource)
-            return resource
-        }
-
         func projectionDidEnd(_ projection: SurfaceProjection) {}
 
         func closeTerminal(_ id: SurfaceResourceID) async throws {
@@ -79,7 +65,6 @@ struct SurfaceSocketCommandTests {
             mutations.append("workspace create \(name ?? "-")")
             let workspace = SurfaceRemoteWorkspace(id: "ws_created", name: name ?? "main", index: info.remoteWorkspaces?.count ?? 0, focused: false)
             info.remoteWorkspaces = (info.remoteWorkspaces ?? []) + [workspace]
-            catalog.updateMachine(info, from: self)
             return workspace
         }
 
@@ -105,7 +90,7 @@ struct SurfaceSocketCommandTests {
     private struct Fixture {
         let machineID: String
         let machine: SurfaceMachineID
-        let provider: FakeCloudProvider
+        let provider: FakeRemoteProvider
         let manager: TabManager
         let workspaceID: UUID
         static let wsA = SurfaceRemoteWorkspace(id: "ws_a", name: "alpha", index: 0, focused: true)
@@ -122,9 +107,9 @@ struct SurfaceSocketCommandTests {
             // Locals first: a nested helper must not capture `self` before every stored
             // property is initialized.
             let machineID = "sock-" + UUID().uuidString.lowercased().prefix(8)
-            let machine = device ? SurfaceMachineID.device(SurfaceDeviceInstanceID(deviceID: UUID().uuidString, tag: "default")) : .cloud(machineID)
+            let machine = device ? SurfaceMachineID.device(SurfaceDeviceInstanceID(deviceID: UUID().uuidString, tag: "default")) : .remote(machineID)
             let catalog = SurfaceCatalog.shared
-            let provider = FakeCloudProvider(machine: machine, catalog: catalog, workspaces: [Self.wsA, Self.wsB, Self.wsEmpty])
+            let provider = FakeRemoteProvider(machine: machine, catalog: catalog, workspaces: [Self.wsA, Self.wsB, Self.wsEmpty])
             catalog.register(provider)
             let terminal: (String, SurfaceRemoteWorkspace) -> SurfaceResource = { key, workspace in
                 var resource = SurfaceResource(
@@ -174,10 +159,6 @@ struct SurfaceSocketCommandTests {
     private static func withFixture(device: Bool = false, _ body: (Fixture) async throws -> Void) async throws {
         try await AppContextSerialGate.withExclusiveAppContext {
             let previousManager = TerminalController.shared.activeTabManagerForCallerNotification()
-            let flag = BreeFeatureFlags.cloudMachinesFlag
-            let previousOverride = BreeFeatureFlags.shared.overrideValue(for: flag)
-            let betaKey = RightSidebarBetaFeatureSettings.cloudMachinesEnabledKey
-            let previousBeta = UserDefaults.standard.object(forKey: betaKey)
             let app = try VaultPaneAppFixture()
             // `vm.workspace_new` admits its optimistic local workspace through the
             // active main window before it asks the provider for anything; a
@@ -190,11 +171,7 @@ struct SurfaceSocketCommandTests {
             defer {
                 app.tearDown()
                 TerminalController.shared.setActiveTabManager(previousManager)
-                UserDefaults.standard.set(previousBeta, forKey: betaKey)
-                BreeFeatureFlags.shared.setOverride(previousOverride, for: flag)
             }
-            UserDefaults.standard.set(true, forKey: betaKey)
-            BreeFeatureFlags.shared.setOverride(true, for: flag)
             let fixture = Fixture(manager: app.manager, device: device)
             defer { fixture.tearDown() }
             try await body(fixture)

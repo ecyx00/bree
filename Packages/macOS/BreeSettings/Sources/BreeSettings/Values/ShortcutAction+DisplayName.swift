@@ -106,8 +106,6 @@ extension ShortcutAction {
             return String(localized: "shortcut.sendCtrlFToTerminal.label", defaultValue: "Send Ctrl-F to Terminal")
         case .pasteLastScreenshot:
             return String(localized: "shortcut.pasteLastScreenshot.label", defaultValue: "Paste Last Screenshot")
-        case .sizeTerminalToMyWindow:
-            return String(localized: "shortcut.sizeTerminalToMyWindow.label", defaultValue: "Size Terminal to My Window")
         case .clearScreenKeepScrollback:
             return String(localized: "shortcut.clearScreenKeepScrollback.label", defaultValue: "Clear Screen (Keep Scrollback)")
         case .toggleShellEditor:

@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import BreeSettings
 import Foundation

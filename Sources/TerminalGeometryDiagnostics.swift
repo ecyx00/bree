@@ -1,9 +1,9 @@
 import AppKit
-import BREEMobileCore
+import BreeAppSupport
 import BreeTerminal
 
 /// App-owned diagnostics log. Readable off the main actor when a stalled UI
-/// needs diagnostics (replaces the removed mobile-host log).
+/// needs diagnostics (replaces the removed remote-host log).
 enum AppDiagnostics {
     nonisolated static let log = DiagnosticLog(
         buildStamp: DiagnosticReport.buildStamp(infoDictionary: Bundle.main.infoDictionary),

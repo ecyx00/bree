@@ -113,6 +113,31 @@ struct LocalTmuxCommandBuilder {
         return arguments
     }
 
+    /// Invisible-tmux profile for "Keep shells running after quit". The pane
+    /// starts as a placeholder; `local-tmux enter` injects the surface
+    /// environment and respawns it as the user's shell. Server-wide options
+    /// apply to every session on this private server.
+    func autoSessionArguments(sessionName: String, workingDirectory: String) -> [String] {
+        let target = exactTarget(sessionName) + ":"
+        return [
+            "-S", socketPath,
+            "set-option", "-s", "exit-unattached", "off", ";",
+            "set-option", "-s", "escape-time", "0", ";",
+            "set-option", "-g", "history-limit", "10000", ";",
+            "set-option", "-g", "default-terminal", "xterm-256color", ";",
+            "set-option", "-g", "allow-passthrough", "on", ";",
+            // Without smcup/rmcup tmux stays out of the alternate screen, so
+            // Ghostty keeps native scrollback and mouse selection.
+            "set-option", "-sa", "terminal-overrides", ",*:smcup@:rmcup@", ";",
+            "new-session", "-d", "-s", sessionName, "-c", workingDirectory,
+            "/bin/sh", "-c", "exec cat", ";",
+            "set-option", "-t", target, "status", "off", ";",
+            "set-option", "-t", target, "prefix", "None", ";",
+            "set-option", "-t", target, "prefix2", "None", ";",
+            "set-option", "-t", target, "mouse", "off",
+        ]
+    }
+
     func attachArguments(binding: LocalTmuxSessionBinding) -> [String] {
         guardedArguments(
             binding: binding,

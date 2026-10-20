@@ -94,7 +94,7 @@ extension BREECLI {
         // Surface UUIDs are valid across a relay (unlike pids, which stay
         // host-local — that restriction lives in liveAgentPidDeliveryTarget),
         // so the surface-only re-home probe runs for relay-backed hooks too.
-        // Over the restricted cloud CLI bridge the resolver method is denied
+        // Over the restricted relay CLI bridge the resolver method is denied
         // (`remote_cli_method_denied`), which surfaces here as `.failed` and
         // stays fail-closed exactly as before.
         if !routing.allowsPidProbe, rehomeAllowed {
@@ -207,7 +207,7 @@ extension BREECLI {
         client: SocketClient
     ) -> LiveAgentDeliveryTargetProbeResult {
         // A relay-backed connection means this hook is not running in the
-        // app's process namespace (SSH/cloud host): its BREE_CLAUDE_PID is a
+        // app's process namespace (SSH/Remote host): its BREE_CLAUDE_PID is a
         // REMOTE pid, and resolving that number against the Mac's local
         // process table could match an unrelated local process attached to
         // some other pane. Surface/workspace UUIDs are machine-independent,

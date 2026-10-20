@@ -33,13 +33,13 @@ struct CodexForkMonitorArgumentTests {
         for parent in [String?.none, ""] {
             var environment = ["BREE_AGENT_FORK_LAUNCH_ID": "launch-id", "BREE_CODEX_PID": "1234"]
             environment["BREE_AGENT_FORK_PARENT_SESSION_ID"] = parent
-            #expect(BreeTuiRemoteRouting.codexForkMonitorArguments(environment: environment).isEmpty)
+            #expect(CodexForkMonitorArguments().make(environment: environment).isEmpty)
         }
     }
 
     @Test
     func omitsEmptyOptionalForkMetadata() {
-        #expect(BreeTuiRemoteRouting.codexForkMonitorArguments(environment: [
+        #expect(CodexForkMonitorArguments().make(environment: [
             "BREE_AGENT_FORK_PARENT_SESSION_ID": "parent-session",
             "BREE_AGENT_FORK_LAUNCH_ID": "",
             "BREE_CODEX_PID": "",

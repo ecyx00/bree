@@ -155,7 +155,6 @@ final class TabObservationScopeTests: XCTestCase {
                 _ = tab.kind
                 _ = tab.isAudioMuted
                 _ = tab.showsNotificationBadge
-                _ = tab.presence
             }
         } onChange: {
             projectionInvalidated = true

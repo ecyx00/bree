@@ -17,7 +17,6 @@ extension Workspace {
             from: snapshot,
             inPane: paneId,
             snapshotWorkspaceId: snapshotWorkspaceId,
-            shouldRestoreSingleDefaultCloudTerminal: false,
             restorableAgentIndex: restorableAgentIndex
         ) else {
             return nil

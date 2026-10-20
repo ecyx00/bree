@@ -58,12 +58,12 @@ public struct ThemesSection: View {
     @ViewBuilder
     private var appCard: some View {
         SettingsCard {
-            // Also under App. Both rows bind the same key and update each
-            // other; search lands on the App row, so this one has no anchor.
+            // App Icon lives only here; search keeps the id setting:app:app-icon.
             AppIconPickerRow(
                 selectedMode: appIcon.current,
                 onSelect: { appIcon.set($0) }
             )
+            .settingsSearchAnchors(["setting:app:app-icon"])
         }
     }
 

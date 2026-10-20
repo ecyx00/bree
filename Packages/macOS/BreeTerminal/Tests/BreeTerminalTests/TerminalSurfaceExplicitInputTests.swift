@@ -28,8 +28,6 @@ struct TerminalSurfaceExplicitInputTests {
         case namedKey
         case parsedInput
         case bindingAction
-        case mobileScroll
-        case mobileClick
 
         var expectedExplicitInputCount: Int {
             self == .bindingAction ? 0 : 1
@@ -48,10 +46,6 @@ struct TerminalSurfaceExplicitInputTests {
                 _ = surface.sendInputResult("hello")
             case .bindingAction:
                 _ = surface.performBindingAction("scroll_to_bottom")
-            case .mobileScroll:
-                surface.mobileScroll(deltaLines: 1, col: 0, row: 0)
-            case .mobileClick:
-                surface.mobileClick(col: 0, row: 0)
             }
         }
     }
@@ -273,44 +267,6 @@ struct TerminalSurfaceExplicitInputTests {
 
         #expect(fixture.nativeView.keyboardCopyModeCancellationCount == 1)
         #expect(!fixture.nativeView.isKeyboardCopyModeActive)
-    }
-
-    @Test func mobileGesturesNotifyPaneHost() {
-        let fixture = makeFixture()
-        defer { fixture.surface.releaseSurfaceForTesting() }
-
-        fixture.surface.mobileScroll(deltaLines: 1, col: 0, row: 0)
-        fixture.surface.mobileClick(col: 0, row: 0)
-
-        #expect(fixture.paneHost.explicitInputCount == 2)
-    }
-
-    @Test func mobileMousePressAndReleaseStayAtomicWhenPressStartsPaste() {
-        let runtimeSurface = allocatedRuntimeSurface()
-        let fixture = makeFixture(runtimeSurface: runtimeSurface)
-        defer {
-            fixture.surface.releaseSurfaceForTesting()
-            runtimeSurface.deallocate()
-        }
-        fixture.nativeView.runtimeInputDeferralResponses = [false, true]
-
-        fixture.surface.mobileClick(col: 4, row: 7)
-
-        #expect(
-            fixture.nativeView.mobileMouseButtonEvents == ["press", "release"]
-        )
-        #expect(fixture.nativeView.runtimeInputDeferralCallCount == 1)
-        #expect(fixture.nativeView.deferredRuntimeInputs.isEmpty)
-        #expect(fixture.paneHost.explicitInputCount == 1)
-    }
-
-    @Test func emptyMobileScrollDoesNotNotifyPaneHost() {
-        let fixture = makeFixture()
-        defer { fixture.surface.releaseSurfaceForTesting() }
-
-        fixture.surface.mobileScroll(deltaLines: 0, col: 0, row: 0)
-
-        #expect(fixture.paneHost.explicitInputCount == 0)
     }
 
     @Test func emptyInputDoesNotNotifyThePaneHost() {

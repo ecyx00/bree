@@ -71,47 +71,6 @@ bree notify --clear
 bree clear-notifications --window window:1 --workspace workspace:1 --surface surface:1
 ```
 
-## Notifications from bree Cloud machines
-
-`bree notify` also works inside a bree Cloud machine, so agent hooks configured there reach
-your Mac. The in-machine `bree` posts the notification into the machine's own bree-tui
-session (`notification create`, tagged with the terminal it ran in); the Mac reads it off the
-machine's event stream it already follows and shows it on the pane that displays that
-terminal — or, when no pane shows the terminal (a detached `bree vm agent` run, a pane you
-closed), as a workspace-level notification wherever you are looking at that machine. Nothing
-of the machine is on screen: it is dropped.
-
-Inside a machine:
-
-- `--title`, `--body`, and `--level info|warning|error` are honored; `--subtitle` is folded
-  into the body (bree-tui has no subtitle field) and the machine's name becomes the subtitle
-  on the Mac.
-- `--workspace`, `--surface`, `--window`, `--tab`, `--panel`, and `--reply` are ignored, and
-  `--desktop` is validated as `true|false` (except with `--clear`) but otherwise ignored: the
-  Mac decides where a machine's notification lands and how it is delivered, and a machine
-  never sees a Mac workspace, surface, or socket.
-- Text is treated as untrusted: escape sequences, control characters, and bidi/invisible
-  characters are stripped, titles are capped at 128 bytes and bodies at 1 KiB, and each
-  machine gets a burst of 5 notifications refilling at 1 per second (identical text within
-  5 seconds is collapsed).
-- A machine's notification shows a banner, sound, sidebar unread marker, and phone
-  forwarding, and runs your **global** `~/.config/bree/bree.json` hooks and
-  `notifications.command` with `BREE_NOTIFICATION_ORIGIN=cloud-vm:<machine>`. It never gets a
-  reply affordance, a click action, agent context, or project `bree.json` hooks from a local
-  directory.
-
-## Notifications from your other Macs
-
-`bree notify` in a terminal on another Mac under **My Devices** also reaches this Mac while
-the link to that Mac is up. This Mac reads the other Mac's notification feed and shows each
-unread notification on the pane that mirrors that terminal, or on the local workspace that
-shows the terminal's remote workspace. A notification whose terminal and remote workspace are
-both not shown here gets no local notification. Reading or dismissing the notification here marks it read on the other Mac.
-
-The same untrusted-text clamps and admission budget as Cloud machines apply, and hooks see
-`BREE_NOTIFICATION_ORIGIN=device-mac:<device>`. Notifications that the other Mac itself got
-from a Cloud machine or a third Mac are not relayed, so nothing shows twice or loops.
-
 ## Navigation
 
 Use `Cmd+Shift+U` to jump to the latest unread notification. Use `Ctrl+Cmd+U` to mark the current item as oldest unread and jump to the next latest unread. Both shortcuts are configurable in Settings > Keyboard Shortcuts and in `~/.config/bree/bree.json`.
@@ -201,9 +160,8 @@ Hook input and output use this shape:
     "isSubagent": true
   },
   "origin": {
-    "kind": "cloud-vm",
-    "value": "cloud-vm:vivid-newt",
-    "machine": "vivid-newt"
+    "kind": "ssh-relay",
+    "value": "ssh-relay:6f1c2a7e-0000-4000-8000-000000000000"
   },
   "effects": {
     "record": true,
@@ -234,11 +192,11 @@ The `agent` object is omitted entirely for non-agent notifications (plain `bree 
 
 ### Origin
 
-The `origin` object is present only for notifications whose text came from somewhere other than this Mac: `kind` is `ssh-relay` (a `bree ssh` host), `cloud-vm` (a bree Cloud machine, with `machine` set to its id), or `device-mac` (another Mac under My Devices, with `machine` set to its device id), and `value` is the same string the hook process sees in `BREE_NOTIFICATION_ORIGIN` — `local`, `ssh-relay:<workspace uuid>`, `cloud-vm:<machine>`, or `device-mac:<device>`. Hooks cannot modify it. `notifications.command` receives the same `BREE_NOTIFICATION_ORIGIN` variable. Treat remote-origin `title`, `subtitle`, and `body` as untrusted text: use them as data (`"$BREE_NOTIFICATION_BODY"` in quotes), never interpolate them into a command, an `osascript` source string, or an `eval`. A hook that wants to stay quiet for machines can gate on it:
+The `origin` object is present only for notifications whose text came from somewhere other than this Mac: `kind` is `ssh-relay` (a `bree ssh` host), and `value` is the same string the hook process sees in `BREE_NOTIFICATION_ORIGIN` — `local` or `ssh-relay:<workspace uuid>`. Hooks cannot modify it. `notifications.command` receives the same `BREE_NOTIFICATION_ORIGIN` variable. Treat remote-origin `title`, `subtitle`, and `body` as untrusted text: use them as data (`"$BREE_NOTIFICATION_BODY"` in quotes), never interpolate them into a command, an `osascript` source string, or an `eval`. A hook that wants to stay quiet for SSH hosts can gate on it:
 
 ```sh
 case "$BREE_NOTIFICATION_ORIGIN" in
-  cloud-vm:*) printf '{"effects":{"sound":false}}' ;;
+  ssh-relay:*) printf '{"effects":{"sound":false}}' ;;
 esac
 ```
 
@@ -360,34 +318,6 @@ export const BreeNotificationPlugin = async ({ $, }) => {
   };
 };
 ```
-
-## Cloud machines
-
-Notifications from a bree Cloud machine are owned by the machine. The
-bree-tui daemon inside it posts a durable notification when an agent finishes
-a turn, needs approval, asks a question, requests plan review, or reports an
-error, and for `bree-tui notify`. Every attached Mac receives those rows on the
-same state feed the Cloud tree uses, so a notification posted while the link
-was down arrives on reconnect, and a daemon restart does not lose it.
-
-Inside a machine, `bree notify` takes the same flags as the local command
-(`--title`, `--subtitle`, `--body`, `--clear`, `--surface`, `--workspace`,
-`--desktop`, `--json`) and posts to the machine's own ledger, so scripts and hooks written
-for a local terminal work unchanged. `--reply` is not available there.
-
-Read state is per client. Each row carries `read_by`, the client ids that
-acknowledged it. Reading the notification on this Mac (focusing the pane,
-marking it read, dismissing it) sends `notification.ack` under this Mac's
-client id. A second Mac attached to the same machine keeps its own unread
-state, and the machine's own TUI keeps its shared console marker.
-
-Locally these notifications behave like any other: they light the workspace
-and tab, appear in the notifications list and `bree list-notifications`, post
-a system notification when bree is in the background, and the Cloud tree
-shows a dot on the terminal until this Mac reads it. When no pane on this Mac
-shows the terminal, the notification lands on the local workspace bound to
-the machine; when no local workspace is bound, only the Cloud tree dot shows
-and delivery waits for a placement.
 
 ## Environment Variables
 

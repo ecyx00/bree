@@ -4,7 +4,7 @@ import Foundation
 /// a tool run, a diff, an actionable request, or a lifecycle transition.
 ///
 /// `ChatMessage` is a pure value shared across platforms and across the
-/// wire: the Mac-side transcript service produces it, the mobile RPC layer
+/// wire: the Mac-side transcript service produces it, the remote RPC layer
 /// transports it, and both the iOS and (future) macOS chat surfaces render
 /// it. Rendering decisions are keyed off ``kind``.
 public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {

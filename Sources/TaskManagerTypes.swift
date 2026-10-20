@@ -5,8 +5,43 @@ import BreeFoundation
 import SwiftUI
 
 struct BreeTaskManagerRow: Identifiable, Equatable {
+    /// Coarse class of a process row, derived from the process name only.
+    enum ProcessClass: String, Equatable {
+        case agent, devServer, build, shell, leaked
+
+        var label: String {
+            switch self {
+            case .agent: return String(localized: "taskManager.class.agent", defaultValue: "agent")
+            case .devServer: return String(localized: "taskManager.class.devServer", defaultValue: "dev server")
+            case .build: return String(localized: "taskManager.class.build", defaultValue: "build")
+            case .shell: return String(localized: "taskManager.class.shell", defaultValue: "shell")
+            case .leaked: return String(localized: "taskManager.class.leaked", defaultValue: "leaked")
+            }
+        }
+
+        private static let devServers: Set<String> = [
+            "node", "npm", "pnpm", "yarn", "bun", "deno", "vite", "next", "uvicorn", "gunicorn",
+            "flask", "rails", "php",
+        ]
+        private static let builds: Set<String> = [
+            "make", "cmake", "ninja", "xcodebuild", "cargo", "rustc", "swiftc", "swift-build",
+            "clang", "gcc", "tsc", "esbuild", "gradle", "mvn", "go",
+        ]
+        private static let shells: Set<String> = ["zsh", "bash", "fish", "sh", "tmux", "login"]
+
+        static func classify(processName: String, isAgent: Bool) -> ProcessClass? {
+            if isAgent { return .agent }
+            let name = (processName as NSString).lastPathComponent.lowercased()
+            if devServers.contains(name) { return .devServer }
+            if builds.contains(name) { return .build }
+            if shells.contains(name) { return .shell }
+            return nil
+        }
+    }
+
     enum Kind: String, Equatable {
         case window
+        case worktree
         case workspace
         case tag
         case pane
@@ -21,6 +56,7 @@ struct BreeTaskManagerRow: Identifiable, Equatable {
         var systemImage: String {
             switch self {
             case .window: return "macwindow"
+            case .worktree: return "arrow.triangle.branch"
             case .workspace: return "rectangle.stack"
             case .tag: return "tag"
             case .pane: return "square.split.2x1"
@@ -37,6 +73,7 @@ struct BreeTaskManagerRow: Identifiable, Equatable {
         var tint: Color {
             switch self {
             case .window: return .secondary
+            case .worktree: return BreeChromePalette.currentSnapshot.accentFill
             case .workspace: return BreeChromePalette.currentSnapshot.accentFill
             case .tag: return BreeChromePalette.currentSnapshot.textSecondary
             case .pane: return .secondary
@@ -65,6 +102,7 @@ struct BreeTaskManagerRow: Identifiable, Equatable {
     let rootProcessIds: [Int]
     let foregroundProcessGroupIds: [Int]
     let agentAssetName: String?
+    let processClass: ProcessClass?
 
     /// Replaces the synthesized memberwise init so the PID arrays are
     /// stored in a canonical (deduped + ascending) order. The snapshot
@@ -86,7 +124,8 @@ struct BreeTaskManagerRow: Identifiable, Equatable {
         processId: Int?,
         rootProcessIds: [Int],
         foregroundProcessGroupIds: [Int],
-        agentAssetName: String?
+        agentAssetName: String?,
+        processClass: ProcessClass? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -102,6 +141,7 @@ struct BreeTaskManagerRow: Identifiable, Equatable {
         self.rootProcessIds = Self.canonicalIds(rootProcessIds)
         self.foregroundProcessGroupIds = Self.canonicalIds(foregroundProcessGroupIds)
         self.agentAssetName = agentAssetName
+        self.processClass = processClass
     }
 
     private static func canonicalIds(_ ids: [Int]) -> [Int] {
@@ -173,7 +213,8 @@ struct BreeTaskManagerRow: Identifiable, Equatable {
             processId: processId,
             rootProcessIds: rootProcessIds,
             foregroundProcessGroupIds: foregroundProcessGroupIds,
-            agentAssetName: assetName
+            agentAssetName: assetName,
+            processClass: processClass ?? (kind == .process && assetName != nil ? .agent : nil)
         )
     }
 }
@@ -460,6 +501,12 @@ enum BreeTaskManagerFormat {
     static func iso8601Date(_ raw: String?) -> Date? {
         guard let raw else { return nil }
         return isoFormatter.date(from: raw)
+    }
+
+    static func idle(seconds: TimeInterval) -> String {
+        let minutes = Int(max(0, seconds) / 60)
+        let age = minutes >= 60 ? "\(minutes / 60)h" : "\(minutes)m"
+        return String(format: String(localized: "taskManager.idle", defaultValue: "Idle %@"), age)
     }
 
     static func time(_ date: Date) -> String {

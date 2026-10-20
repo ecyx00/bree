@@ -1,4 +1,4 @@
-import BreeMobileHost
+import BreeAgentTranscriptHost
 extension AgentChatTranscriptService {
     /// Resolves the live or most recently active session bound to a terminal surface.
     ///

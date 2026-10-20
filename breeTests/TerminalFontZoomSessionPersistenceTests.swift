@@ -709,33 +709,6 @@ struct TerminalFontZoomSessionPersistenceTests {
 #endif
     }
 
-    @Test("temporary mobile fit does not replace remembered durable lineage")
-    func rememberedSourceMasksTemporaryMobileFitLineage() throws {
-        let workspace = Workspace()
-        let panelID = try #require(workspace.focusedPanelId)
-        let sourcePanel = try #require(workspace.panels[panelID] as? TerminalPanel)
-        let durableLineage = TerminalFontSizeLineage(
-            basePoints: 12,
-            isExplicitOverride: false
-        )
-        sourcePanel.surface.recordCurrentFontSizeLineage(durableLineage)
-        sourcePanel.surface.mobileViewportFontFitState = MobileViewportFontFitState(
-            baseRuntimePointSize: 12,
-            fittedRuntimePointSize: 6
-        )
-
-        _ = sourcePanel.surface.recordObservedFontSizeLineage(
-            runtimePoints: 6,
-            isExplicitOverride: true,
-            globalFontMagnificationPercent: 100
-        )
-
-        #expect(
-            TabManager().inheritedTerminalConfigForNewWorkspace(workspace: workspace)?
-                .fontSizeLineage == durableLineage
-        )
-    }
-
     @Test("removed remembered source cannot publish stale lineage")
     func removedRememberedSourceCannotRefreshNewWorkspaceCache() throws {
         let workspace = Workspace()
@@ -803,53 +776,6 @@ struct TerminalFontZoomSessionPersistenceTests {
             surface.runtimeCreationConfigTemplate().fontSizeLineage
                 == inheritedTemplate.fontSizeLineage
         )
-    }
-
-    @Test("mobile viewport fitting does not claim durable zoom ownership")
-    func mobileViewportFitPreservesDurableOwnership() {
-        let surface = TerminalSurface(
-            tabId: UUID(),
-            context: GHOSTTY_SURFACE_CONTEXT_SPLIT,
-            configTemplate: nil,
-            runtimeSpawnPolicy: .pacedSessionRestore
-        )
-        let configLineage = TerminalFontSizeLineage(
-            basePoints: 12,
-            isExplicitOverride: false
-        )
-        surface.recordCurrentFontSizeLineage(configLineage)
-        surface.mobileViewportFontFitState = MobileViewportFontFitState(
-            baseRuntimePointSize: 12,
-            fittedRuntimePointSize: 6
-        )
-
-        let fittedLineage = surface.recordObservedFontSizeLineage(
-            runtimePoints: 6,
-            isExplicitOverride: true,
-            globalFontMagnificationPercent: 100
-        )
-
-        #expect(fittedLineage == configLineage)
-        #expect(surface.sessionFontSizeOverrideBasePoints() == nil)
-
-        let resetLineage = surface.recordObservedFontSizeLineage(
-            runtimePoints: 6,
-            isExplicitOverride: false,
-            globalFontMagnificationPercent: 100
-        )
-
-        #expect(resetLineage == TerminalFontSizeLineage(basePoints: 6, isExplicitOverride: false))
-        #expect(surface.mobileViewportFontFitState?.baseRuntimePointSize == 6)
-
-        let userLineage = surface.recordObservedFontSizeLineage(
-            runtimePoints: 7,
-            isExplicitOverride: true,
-            globalFontMagnificationPercent: 100
-        )
-
-        #expect(userLineage == TerminalFontSizeLineage(basePoints: 7, isExplicitOverride: true))
-        #expect(surface.mobileViewportFontFitState?.baseRuntimePointSize == 7)
-        #expect(surface.sessionFontSizeOverrideBasePoints() == 7)
     }
 
     @Test("unzoomed session restore clears inherited explicit zoom")

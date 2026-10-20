@@ -32,10 +32,7 @@ struct RemoteDaemonCapabilityTests {
 struct RemoteDaemonStringsTests {
     private let strings = RemoteDaemonStrings(
         missingPersistentPTYCapability: "persistent-pty-message",
-        missingRequiredFunctionality: "generic-message",
-        cloudNotificationClearWorkspaceInvalid: "invalid workspace",
-        cloudNotificationClearWorkspaceDenied: "workspace denied",
-        cloudNotificationClearSurfaceInvalid: "invalid surface"
+        missingRequiredFunctionality: "generic-message"
     )
 
     @Test("any missing persistent-PTY capability selects the persistent PTY message")

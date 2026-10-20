@@ -45,7 +45,7 @@ struct WorkspaceActivityView: View {
     var body: some View {
         let activity = workspaceId.map(store.activity(for:)) ?? WorkspaceActivity()
         let root = workspace?.currentDirectory ?? ""
-        let sessionIds = workspaceId.map { id in lens.cards.filter { $0.workspaceID == id }.map { $0.claudeSessionID ?? $0.id } } ?? []
+        let sessionIds = workspaceId.map { id in lens.cards.filter { $0.workspaceID == id }.map(\.statusSessionIDs) } ?? []
         let artifacts = workspaceId.map {
             WorkspaceActivityRules.claudeEditedFiles(cards: lens.cards, ended: lens.endedSessions[$0] ?? [], workspaceId: $0, dismissed: activity.dismissed)
         } ?? []
@@ -90,7 +90,7 @@ struct WorkspaceActivityView: View {
             let source = ModsSource(sessionIds: sessionIds, cwd: root)
             while !Task.isCancelled {
                 let snapshot = await Task.detached(priority: .utility) {
-                    ActivityModsStream.load(sessionIds: source.sessionIds, cwd: source.cwd)
+                    ActivityModsStream.load(sessionIds: ActivityModsStream.newestIds(source.sessionIds), cwd: source.cwd)
                 }.value
                 if snapshot != mods { mods = snapshot }
                 nowMs = Date().timeIntervalSince1970 * 1000
@@ -156,7 +156,7 @@ struct WorkspaceActivityView: View {
     }
 
     private struct ModsSource: Hashable {
-        let sessionIds: [String]
+        let sessionIds: [[String]]
         let cwd: String
     }
 

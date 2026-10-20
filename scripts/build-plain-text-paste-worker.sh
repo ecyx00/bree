@@ -20,6 +20,7 @@ done
 xcrun --sdk macosx clang \
   -fobjc-arc \
   -fmodules \
+  ${BREE_PATH_MAP_CFLAGS:-} \
   -O2 -Wall -Wextra -Werror \
   -mmacosx-version-min="${MACOSX_DEPLOYMENT_TARGET:-14.0}" \
   "${arch_flags[@]+"${arch_flags[@]}"}" \

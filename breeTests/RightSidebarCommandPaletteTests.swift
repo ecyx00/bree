@@ -31,13 +31,6 @@ final class RightSidebarCommandPaletteTests: XCTestCase {
         try withSavedBetaFeatureDefaults {
             let defaults = UserDefaults.standard
             defaults.removeObject(forKey: "rightSidebar.beta.dock.enabled")
-            // Cloud Machines defaults on in dev builds (d6584c07e0); pin the toggle off so
-            // the default-mode contract below is the same on every build.
-            defaults.set(false, forKey: RightSidebarBetaFeatureSettings.cloudMachinesEnabledKey)
-            let cloudFlag = BreeFeatureFlags.cloudMachinesFlag
-            let previousCloudOverride = BreeFeatureFlags.shared.overrideValue(for: cloudFlag)
-            BreeFeatureFlags.shared.setOverride(true, for: cloudFlag)
-            defer { BreeFeatureFlags.shared.setOverride(previousCloudOverride, for: cloudFlag) }
             let contributions = ContentView.commandPaletteRightSidebarModeCommandContributions()
             let contributionsByID = Dictionary(uniqueKeysWithValues: contributions.map { ($0.commandId, $0) })
             let context = CommandPaletteContextSnapshot()
@@ -70,12 +63,7 @@ final class RightSidebarCommandPaletteTests: XCTestCase {
     @MainActor
     func testCommandPaletteRightSidebarActionsUseModeShortcutActions() {
         withSavedBetaFeatureDefaults {
-            let definition = BreeFeatureFlags.cloudMachinesFlag
-            let previousOverride = BreeFeatureFlags.shared.overrideValue(for: definition)
-            BreeFeatureFlags.shared.setOverride(true, for: definition)
-            defer { BreeFeatureFlags.shared.setOverride(previousOverride, for: definition) }
             let defaults = UserDefaults.standard
-            defaults.set(true, forKey: RightSidebarBetaFeatureSettings.cloudMachinesEnabledKey)
 
             for mode in RightSidebarMode.allCases {
                 XCTAssertEqual(
@@ -222,10 +210,8 @@ final class RightSidebarCommandPaletteTests: XCTestCase {
     private func withSavedBetaFeatureDefaults(_ body: () throws -> Void) rethrows {
         let defaults = UserDefaults.standard
         let previousLegacyDockBeta = defaults.object(forKey: "rightSidebar.beta.dock.enabled")
-        let previousCloudMachines = defaults.object(forKey: RightSidebarBetaFeatureSettings.cloudMachinesEnabledKey)
         defer {
             restore(previousLegacyDockBeta, forKey: "rightSidebar.beta.dock.enabled")
-            restore(previousCloudMachines, forKey: RightSidebarBetaFeatureSettings.cloudMachinesEnabledKey)
         }
         try body()
     }

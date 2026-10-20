@@ -238,31 +238,6 @@ final class LocalSurfaceProvider: SurfaceProvider {
         return SurfaceProjection(resource: resource.id, workspaceID: target.id, panelID: panelID)
     }
 
-    func createTerminal(command: [String]?, cwd: String?, name: String?, remoteWorkspaceID: String?) async throws -> SurfaceResource {
-        let all = workspaces()
-        guard let workspace = all.first(where: { $0.owningTabManager?.selectedTabId == $0.id }) ?? all.first else {
-            throw SurfaceCatalogError.destinationNotFound("a workspace")
-        }
-        let initialCommand = command.map { $0.map(Self.shellQuote).joined(separator: " ") }
-        let made = try SurfacePaneFactory.makeTerminalPane(
-            initialCommand: initialCommand,
-            workingDirectory: cwd,
-            at: .workspace(id: workspace.id, placement: .split),
-            // The pane is a staging spot: `surface.new_terminal` then projects it to its
-            // destination with the request's focus, so creating it must not take focus.
-            focus: false
-        )
-        let id = Self.resourceID(forTerminalPanel: made.panelID)
-        if var resource = catalog.resources[id] {
-            if let name, !name.isEmpty { resource.title = name; catalog.upsert(resource) }
-            return resource
-        }
-        let resource = SurfaceResource(id: id, title: name ?? "shell", detail: cwd, lifecycle: .running, agent: nil, remoteWorkspace: nil, port: nil, url: nil)
-        catalog.upsert(resource)
-        catalog.record(SurfaceProjection(resource: id, workspaceID: made.workspaceID, panelID: made.panelID))
-        return resource
-    }
-
     static func shellQuote(_ value: String) -> String {
         if value.isEmpty { return "''" }
         if value.isPOSIXShellBareWord(punctuation: "_./:=@%+-") { return value }

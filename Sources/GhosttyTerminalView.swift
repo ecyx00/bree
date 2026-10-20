@@ -1,8 +1,6 @@
-import BreeCloud
 import Foundation
 import BreeAppKitSupportUI
 import BreeTerminal
-import BreeTerminalSharing
 import BreeFoundation
 import BreePanes
 import BreeTerminalCore
@@ -20,7 +18,7 @@ import Carbon.HIToolbox
 import os
 import Bonsplit
 import BREEAgentLaunch
-import BREEMobileCore
+import BreeAppSupport
 import IOSurface
 import UniformTypeIdentifiers
 enum GhosttyStartupAppearancePreviewState {
@@ -838,7 +836,7 @@ class GhosttyApp {
             }
         }
         runtimeConfig.write_clipboard_cb = { userdata, location, content, len, _ in
-            // Manual-I/O surfaces are remote terminal projections (SSH/tmux/Cloud).
+            // Manual-I/O surfaces are remote terminal projections (SSH/tmux/Remote).
             // OSC 52 from them is remote-origin input and must never overwrite this
             // Mac's clipboard without a user gesture or confirmation.
             guard let callbackContext = GhosttyApp.callbackContext(from: userdata),
@@ -1926,7 +1924,7 @@ class GhosttyApp {
                 self.configurationReloadCoordinator
                     .finishReload()
             // Keep the long-standing reload notification as a post-fanout
-            // boundary. Mobile render-grid observers treat it as permission
+            // boundary. Remote render-grid observers treat it as permission
             // to invalidate every cached theme; publishing it while the
             // bounded scheduler is still applying surfaces can emit a newer
             // revision for a surface that still has the previous native theme.
@@ -3451,9 +3449,10 @@ class GhosttyApp {
             // In-band "prompt is back" signal for the shell editor.
             if let tabId = callbackTabId ?? surfaceView.tabId,
                let surfaceId = callbackSurfaceId ?? surfaceView.terminalSurface?.id {
+                let finished = action.action.command_finished
                 DispatchQueue.main.async {
                     (AppDelegate.shared?.workspaceFor(tabId: tabId)?.panels[surfaceId] as? TerminalPanel)?
-                        .shellEditorCommandFinished()
+                        .shellEditorCommandFinished(exitCode: finished.exit_code, durationNanos: finished.duration)
                 }
             }
             return true
@@ -3869,6 +3868,20 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
     private var terminalPointerGesture = TerminalPointerGestureState()
     var codexActionCommandHovering = false
     private var pressedCodexActionCommand: CodexActionCommand?
+
+    /// A plain left press on an existing file path. The press is held back from
+    /// the program until the gesture is known: a click opens the file in Bree, a
+    /// drag replays the press so selection and the program's own drag still work.
+    private struct PendingPlainPathClick {
+        let reference: TerminalFileReference
+        let localPoint: NSPoint
+        let surfacePoint: NSPoint
+        let mods: ghostty_input_mods_e
+        let windowNumber: Int
+        let timestamp: TimeInterval
+        let flagsRawValue: UInt
+    }
+    private var pendingPlainPathClick: PendingPlainPathClick?
     var codexActionCacheSurfaceID: UUID?
     var codexActionCacheRuntimeGeneration: UInt64 = .max
     var codexActionCacheFrameSequence: UInt64 = .max
@@ -4147,6 +4160,7 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
     private var keyboardCopyModeVisualLineActive: Bool { keyboardCopyModeSelectionKind == .line }
     let keyboardCopyModeCursorOverlayView: NSView = GhosttyFlashOverlayView(frame: .zero)
     let predictionOverlayView = TerminalPredictionOverlayView(frame: .zero)
+    lazy var commandBadgeOverlayView = CommandBadgeOverlayView(surfaceView: self)
     /// Tab completion popup for this surface; see `Sources/TerminalCompletion`.
     private(set) lazy var terminalCompletion = TerminalCompletionController(view: self)
     /// Held only while a prediction is on screen, so an idle surface does not
@@ -4316,6 +4330,8 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         layer?.masksToBounds = true
         setupKeyboardCopyModeCursorOverlay()
         addSubview(predictionOverlayView, positioned: .above, relativeTo: nil)
+        commandBadgeOverlayView.frame = bounds
+        addSubview(commandBadgeOverlayView, positioned: .above, relativeTo: nil)
         installEventMonitor()
         updateTrackingAreas()
         registerForDraggedTypes(Array(Self.dropTypes))
@@ -8363,6 +8379,23 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         breeDebugLog("terminal.mouseDown surface=\(terminalSurface?.id.uuidString.prefix(5) ?? "nil") mods=[\(debugModifierString(event.modifierFlags))] clickCount=\(event.clickCount) point=(\(String(format: "%.0f", debugPoint.x)),\(String(format: "%.0f", debugPoint.y)))")
         #endif
         let eventPoint = mouseState.localPoint
+        pendingPlainPathClick = nil
+        if event.clickCount == 1,
+           event.modifierFlags.intersection([.command, .option, .shift, .control]).isEmpty,
+           !ghostty_surface_has_selection(surface),
+           let reference = plainClickFileReference(at: eventPoint, mods: mouseState.mods) {
+            pendingPlainPathClick = PendingPlainPathClick(
+                reference: reference,
+                localPoint: eventPoint,
+                surfacePoint: mouseState.surfacePoint,
+                mods: mouseState.mods,
+                windowNumber: event.windowNumber,
+                timestamp: event.timestamp,
+                flagsRawValue: event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue
+            )
+            trackMousePointIfUsable(eventPoint)
+            return
+        }
         pressedCodexActionCommand = event.clickCount == 1
             && !ghostty_surface_has_selection(surface)
             ? codexActionCommand(at: eventPoint, surface: surface)
@@ -8393,6 +8426,14 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
     }
 
     override func mouseUp(with event: NSEvent) {
+        if let pending = pendingPlainPathClick {
+            pendingPlainPathClick = nil
+            let point = convert(event.locationInWindow, from: nil)
+            if hypot(point.x - pending.localPoint.x, point.y - pending.localPoint.y) <= 3 {
+                openPlainClickFile(pending.reference)
+            }
+            return
+        }
         #if DEBUG
         breeDebugLog("terminal.mouseUp surface=\(terminalSurface?.id.uuidString.prefix(5) ?? "nil") mods=[\(debugModifierString(event.modifierFlags))]")
         #endif
@@ -8527,6 +8568,53 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
             runtimeOutcome: runtimeOutcome
         ) : nil
         return (consumed, runtimeOutcome, resolution)
+    }
+
+    /// The existing local file (not directory) whose path text sits under `point`,
+    /// resolved by the Cmd+click token rules against the surface's directory.
+    private func plainClickFileReference(at point: NSPoint, mods: ghostty_input_mods_e) -> TerminalFileReference? {
+        guard pointIsUsableForWordResolution(point),
+              let surface,
+              let termSurface = terminalSurface,
+              let workspace = termSurface.owningWorkspace(),
+              workspace.canResolveTerminalPathsAgainstLocalFilesystem(surfaceID: termSurface.id),
+              let cwd = resolvedWordPathWorkingDirectory(workspace: workspace, terminalSurface: termSurface) else { return nil }
+        // Let Ghostty hit-test the word under the pointer (the snapshot rows can be offset when
+        // the shell editor is active), like the Cmd+click quicklook path. The word stops at ':',
+        // so a `path:12` suffix is not carried over.
+        ghostty_surface_mouse_pos(surface, point.x, bounds.height - point.y, mods)
+        var text = ghostty_text_s()
+        guard ghostty_surface_quicklook_word(surface, &text) else { return nil }
+        defer { ghostty_surface_free_text(surface, &text) }
+        guard text.text_len > 0, let ptr = text.text,
+              let word = String(bytes: Data(bytes: ptr, count: Int(text.text_len)), encoding: .utf8),
+              let reference = TerminalPathResolver().resolveOpenURLFileReference(word, cwd: cwd) else { return nil }
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: reference.path, isDirectory: &isDirectory),
+              !isDirectory.boolValue else { return nil }
+        return reference
+    }
+
+    private func openPlainClickFile(_ reference: TerminalFileReference) {
+        #if DEBUG
+        breeDebugLog("terminal.plainClick.open path=\(reference.path) line=\(reference.line ?? -1)")
+        #endif
+        if let termSurface = terminalSurface,
+           let workspace = termSurface.owningWorkspace(),
+           CommandClickFileOpenRouter.openInBree(
+               workspace: workspace,
+               sourcePanelId: termSurface.id,
+               filePath: reference.path,
+               line: reference.line,
+               column: reference.column
+           ) {
+            return
+        }
+        PreferredEditorService(defaults: .standard).open(
+            URL(fileURLWithPath: reference.path),
+            line: reference.line,
+            column: reference.column
+        )
     }
 
     /// Attempt to open the word under the mouse cursor as a file path, resolved
@@ -8911,7 +8999,7 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         if runtimeOutcome != .openURL,
            let resolvedPoint, let terminalSurface,
            let workspace = terminalSurface.owningWorkspace(),
-           workspace.remoteConfiguration?.transport == .ssh,
+           workspace.remoteConfiguration != nil,
            workspace.terminalLinkIsRemoteTerminal(terminalSurface.id),
            let panel = workspace.terminalPanel(for: terminalSurface.id),
            let snapshot = visibleWordPathSnapshot(at: resolvedPoint, panel: panel) {
@@ -9576,6 +9664,26 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
         pressedCodexActionCommand = nil
         synchronizeGhosttyMouseSurfaceIdentity()
         guard let surface = surface else { return }
+        if let pending = pendingPlainPathClick {
+            let point = convert(event.locationInWindow, from: nil)
+            guard hypot(point.x - pending.localPoint.x, point.y - pending.localPoint.y) > 3 else { return }
+            // A drag, not a click: replay the held press at its original point.
+            pendingPlainPathClick = nil
+            terminalPointerGesture.begin(
+                windowNumber: pending.windowNumber,
+                timestamp: pending.timestamp,
+                modifierFlagsRawValue: pending.flagsRawValue,
+                permitsLinkActivation: false
+            )
+            ghostty_surface_mouse_pos(surface, pending.surfacePoint.x, pending.surfacePoint.y, pending.mods)
+            _ = sendGhosttyMouseButton(
+                surface,
+                state: GHOSTTY_MOUSE_PRESS,
+                button: GHOSTTY_MOUSE_LEFT,
+                mods: pending.mods
+            )
+            _ = markGhosttyMouseButtonPressed(.left)
+        }
         let mouseState = rememberGhosttyMouseState(from: event)
         copySelectionMayBeRectangular = event.modifierFlags.contains(.option)
         let eventPoint = mouseState.localPoint
@@ -10126,66 +10234,6 @@ extension Notification.Name {
     )
 }
 
-private final class TerminalViewportBorderOverlayView: NSView {
-    var effectiveSize: CGSize? {
-        didSet { needsDisplay = true }
-    }
-
-    var drawsVisibleAreaBorder = false {
-        didSet { needsDisplay = true }
-    }
-    var drawsVisibleAreaRightBorder = false {
-        didSet { needsDisplay = true }
-    }
-    var drawsVisibleAreaBottomBorder = false {
-        didSet { needsDisplay = true }
-    }
-
-    override var acceptsFirstResponder: Bool { false }
-    override var isFlipped: Bool { true }
-
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        nil
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        guard drawsVisibleAreaBorder,
-              let effectiveSize,
-              effectiveSize.width > 1,
-              effectiveSize.height > 1 else {
-            return
-        }
-
-        let scale = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
-        let lineWidth = 1 / max(1, scale)
-        let width = min(effectiveSize.width, bounds.width)
-        let height = min(effectiveSize.height, bounds.height)
-        guard width > lineWidth, height > lineWidth else { return }
-
-        let path = NSBezierPath()
-        path.lineWidth = lineWidth
-        let x = width - lineWidth / 2
-        let y = height - lineWidth / 2
-        if drawsVisibleAreaRightBorder {
-            path.move(to: NSPoint(x: x, y: 0))
-            path.line(to: NSPoint(x: x, y: y))
-        }
-        if drawsVisibleAreaBottomBorder {
-            path.move(to: NSPoint(x: 0, y: y))
-            path.line(to: NSPoint(x: x, y: y))
-        }
-        // Stroke the exact window-chrome separator color used by the pane outline,
-        // sidebar trailing edge, and tab-bar separators (one source of truth), so the
-        // iOS-connected viewport border is pixel-identical to every other border in the
-        // app instead of the previous hardcoded near-white separator stroke.
-        WindowChromeColorResolver()
-            .separatorColor(forChromeBackground: GhosttyBackgroundTheme.currentColor())
-            .setStroke()
-        path.stroke()
-    }
-}
-
 final class GhosttySurfaceScrollView: NSView {
     enum FlashStyle {
         case navigation
@@ -10288,10 +10336,6 @@ final class GhosttySurfaceScrollView: NSView {
     private let scrollView: GhosttyScrollView
     private let documentView: NSView
     let surfaceView: GhosttyNSView
-    private let mobileViewportBorderOverlayView = TerminalViewportBorderOverlayView(frame: .zero)
-    /// Shared-terminal bounds (docs/shared-terminal-sizing.md); supersedes the
-    /// legacy phone border while a snapshot is shown.
-    let terminalSizeBoundsOverlayView = TerminalSizeBoundsOverlayView()
     private let inactiveOverlayView: GhosttyFlashOverlayView
     private var inactiveOverlayColor: NSColor = .clear
     private var inactiveOverlayOpacity: CGFloat = 0
@@ -10623,9 +10667,6 @@ final class GhosttySurfaceScrollView: NSView {
         backgroundView.terminalScrollView = scrollView
         addSubview(backgroundView)
         addSubview(scrollView)
-        mobileViewportBorderOverlayView.isHidden = true
-        addSubview(mobileViewportBorderOverlayView, positioned: .above, relativeTo: scrollView)
-        addSubview(terminalSizeBoundsOverlayView, positioned: .above, relativeTo: mobileViewportBorderOverlayView)
         paneDropTargetView.hostedView = self
         addSubview(paneDropTargetView, positioned: .above, relativeTo: nil)
         synchronizeScrollbarAppearance()
@@ -11091,10 +11132,6 @@ final class GhosttySurfaceScrollView: NSView {
             size: CGSize(width: targetSize.width, height: documentView.frame.height)
         )
         _ = setFrameIfNeeded(documentView, to: targetDocumentFrame)
-        _ = setFrameIfNeeded(mobileViewportBorderOverlayView, to: contentFrame)
-        if setFrameIfNeeded(terminalSizeBoundsOverlayView, to: contentFrame) {
-            terminalSizeBoundsOverlayView.refreshGeometry()
-        }
         _ = setFrameIfNeeded(inactiveOverlayView, to: bounds)
         _ = setFrameIfNeeded(paneDropTargetView, to: bounds)
         if let zone = activeDropZone {
@@ -11143,35 +11180,6 @@ final class GhosttySurfaceScrollView: NSView {
 
     private var sessionContentFrame: CGRect {
         sessionContentWidthPresentation.contentFrame(in: bounds)
-    }
-
-    func setMobileViewportBorder(size: CGSize?, drawRight: Bool, drawBottom: Bool) {
-        let isVisible = drawRight || drawBottom
-        mobileViewportBorderOverlayView.effectiveSize = size
-        mobileViewportBorderOverlayView.drawsVisibleAreaBorder = isVisible
-        mobileViewportBorderOverlayView.drawsVisibleAreaRightBorder = drawRight
-        mobileViewportBorderOverlayView.drawsVisibleAreaBottomBorder = drawBottom
-        mobileViewportBorderOverlayView.isHidden = !isVisible || terminalSizeBoundsOverlayView.isPresentingSharing
-        terminalSizeBoundsOverlayView.refreshGeometry()
-    }
-
-    /// Shows (or clears) a shared terminal's size state over this pane.
-    func setTerminalSharingSnapshot(
-        _ snapshot: TerminalSharingSnapshot?,
-        surface: TerminalSurface?,
-        onShowSizePanel: @escaping () -> Void,
-        onReattach: @escaping (Bool) -> Void
-    ) {
-        let overlay = terminalSizeBoundsOverlayView
-        overlay.terminalSurface = surface
-        overlay.onShowSizePanel = onShowSizePanel
-        overlay.onReattach = onReattach
-        overlay.update(snapshot: snapshot)
-        if overlay.isPresentingSharing {
-            mobileViewportBorderOverlayView.isHidden = true
-        } else if mobileViewportBorderOverlayView.drawsVisibleAreaBorder {
-            mobileViewportBorderOverlayView.isHidden = false
-        }
     }
 
     @discardableResult
@@ -11397,12 +11405,6 @@ final class GhosttySurfaceScrollView: NSView {
         layer.backgroundColor = color.cgColor
         layer.isOpaque = color.alphaComponent >= 1.0
         CATransaction.commit()
-        // The viewport border strokes the window-chrome separator color, which tracks the
-        // terminal background/theme. Repaint it when the background changes (e.g. theme
-        // switch) so a connected iOS device's visible-area border stays in sync.
-        if !mobileViewportBorderOverlayView.isHidden {
-            mobileViewportBorderOverlayView.needsDisplay = true
-        }
     }
 
     /// Keeps the shared-backdrop cutout view present only while a pane-local fill needs it.

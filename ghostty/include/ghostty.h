@@ -1441,6 +1441,8 @@ GHOSTTY_API bool ghostty_surface_request_render_with_token(ghostty_surface_t,
                                                            uint64_t token);
 GHOSTTY_API void ghostty_surface_set_content_scale(ghostty_surface_t, double, double);
 GHOSTTY_API void ghostty_surface_set_focus(ghostty_surface_t, bool);
+// cmux fork: renderer-only cursor hide (no pty bytes, program state intact).
+GHOSTTY_API void ghostty_surface_set_cursor_hidden(ghostty_surface_t, bool);
 GHOSTTY_API void ghostty_surface_set_occlusion(ghostty_surface_t, bool);
 GHOSTTY_API void ghostty_surface_set_size(ghostty_surface_t, uint32_t, uint32_t);
 // cmux fork: reserve extra drawable pixels above and below the padded grid

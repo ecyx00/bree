@@ -11,7 +11,7 @@ extension BREECLI {
         telemetry: CLISocketSentryTelemetry
     ) -> String? {
         let policy = AutoNamingEnvironmentPolicy()
-        // Generic agents (grok/opencode/pi/omp) need their OWN provider/cloud
+        // Generic agents (grok/opencode/pi/omp) need their OWN provider/Remote
         // credentials to authenticate, so — unlike Codex's tight allowlist — we
         // use the broad scrubbed env here. Exposure is bounded by running the
         // summarizer with tools and network disabled (see the per-agent argv:

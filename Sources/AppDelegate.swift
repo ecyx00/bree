@@ -1,8 +1,5 @@
-import BreeCloud
-import BreeCloudTui
 import AppKit
 import BreeAppKitSupportUI
-import BreeAuthRuntime
 import BreeBrowser
 import BreeCommandPalette
 import BreePanes
@@ -432,9 +429,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     var aboutTitlebarDebugStore: AboutTitlebarDebugStore { debugWindowsCoordinator.aboutTitlebarStore }
     /// Coordinates remote tmux (`ssh … tmux -CC`) mirroring; composition-root owned.
     let remoteTmuxController = RemoteTmuxController()
-    lazy var sshTuiWorkspaceCoordinator = SSHTuiWorkspaceCoordinator(
-        catalog: SurfaceCatalog.shared, clientURL: { CloudTuiClientPaths.clientURL() }, paths: CloudTuiClientPaths()
-    )
     /// Owns every main-window registration, recovery, and close phase.
     let mainWindowLifecycleCoordinator = MainWindowLifecycleCoordinator()
     /// Owns the process-scoped idle-sleep assertion shared by every entrypoint.
@@ -689,8 +683,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     // left unwired (wiring it would double-record). The recorder-FREE members of the open/click
     // cluster did move into the package this wave: the reveal-in-Finder side effect now lives in `NotificationClickPerformer` (behind `FinderRevealing`), and the entire focused-mark state
     // machine lives in `FocusedNotificationMarker` (behind `FocusedNotificationResolving`).
-    /// The auth graph, injected once via `configure(...)` at app startup.
-    private(set) var auth: MacAuthComposition?
     private let agentChatTranscriptService = AgentChatTranscriptService()
     var settingsRuntime: SettingsRuntime?
     private(set) var browserDataImportCoordinator: BrowserDataImportCoordinator?
@@ -711,9 +703,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     /// Applies MDM managed-policy transitions (browser/remote-control) while
     /// the app runs. Installed once from `installManagedPolicyEnforcement()`.
     var managedPolicyEnforcementObserver: ManagedPolicyEnforcementObserver?
-    /// Suspends already-open Cloud attachments when the remote Cloud flag
-    /// changes, while retaining their configurations for a later re-enable.
-    var cloudFeatureFlagObserver: CloudFeatureAvailabilityObserver?
     private var reloadConfigurationMenuItemRefreshScheduled = false
     /// Orchestrates per-window bree config-store reloads + window-title refresh.
     /// Holds `self` weakly through the environment seam to avoid a retain cycle.
@@ -1352,56 +1341,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // audit recoverable route lifecycle after a surface unregisters.
         GhosttyApp.terminalSurfaceRegistry.attachRouteRetirer(self)
     }
-    /// Shared native auth callback entrypoint for LaunchServices and embedded
-    /// browser handoffs. `delivery` must be `.trustedEmbeddedBrowser` only for
-    /// the embedded browser's policy-checked handoff; LaunchServices callbacks
-    /// are `.external`, so unsolicited stateless ones need user approval.
-    /// The returned value reflects completed sign-in.
-    @MainActor
-    func handleAuthCallbackURLInProcess(
-        _ url: URL,
-        delivery: AuthCallbackDelivery = .external
-    ) async -> Bool {
-        let callbackRouter = auth?.callbackRouter ?? AuthCallbackRouter()
-        guard callbackRouter.isAuthCallbackURL(url) else {
-            AuthDebugLog().log("auth.callback rejected: URL is not an accepted callback")
-            return false
-        }
-        guard let accountFlow = auth?.accountFlow else {
-            AuthDebugLog().log("auth.callback dropped: auth graph not configured yet")
-            return false
-        }
-        let signedIn = await accountFlow.handleCallbackURL(url, delivery: delivery)
-        guard signedIn else {
-            AuthDebugLog().log("auth.callback did not complete sign-in")
-            return false
-        }
-        return true
-    }
-
     func application(_ application: NSApplication, open urls: [URL]) {
-        #if DEBUG
-        AuthDebugLog().log("auth.openURLs.received count=\(urls.count) summaries=\(urls.map(Self.authURLDebugSummary).joined(separator: "|"))")
-        #endif
         if handleBreeExternalURLs(from: urls) {
-            #if DEBUG
-            AuthDebugLog().log("auth.openURLs.handledByExternalRoutes count=\(urls.count)")
-            #endif
             return
         }
 
-        // Before the auth graph is configured, fall back to a default router
-        // (built-in bree schemes) so dropped callbacks are still detected.
-        let callbackRouter = auth?.callbackRouter ?? AuthCallbackRouter()
-        let authCallbacks = urls.filter(callbackRouter.isAuthCallbackURL)
-        #if DEBUG
-        AuthDebugLog().log("auth.openURLs.authCallbacks count=\(authCallbacks.count)")
-        #endif
-        for url in authCallbacks {
-            Task { @MainActor in
-                _ = await handleAuthCallbackURLInProcess(url, delivery: .external)
-            }
-        }
         let externalFileURLs = externalOpenFileURLs(from: urls)
         let terminalFileRequests = TerminalDefaultFileOpenRequest.requests(from: externalFileURLs)
         let terminalFilePaths = Set(terminalFileRequests.map { $0.fileURL.path(percentEncoded: false) })
@@ -1419,6 +1363,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             )
         }
         for fileURL in fileURLs {
+            // Supported files (markdown, source, text, ...) open in Quick View like the Files sidebar.
+            let path = fileURL.path(percentEncoded: false)
+            if CommandClickFileOpenRouter.shouldRouteInBree(path: path),
+               let workspace = preferredRegisteredMainWindowContext(preferredWindow: nil)?.tabManager.selectedWorkspace {
+                QuickViewResource.file(path: path).open(from: workspace)
+                continue
+            }
             _ = openFilePreviewInPreferredMainWindow(
                 filePath: fileURL.path(percentEncoded: false),
                 debugSource: "application.openURLs"
@@ -1430,6 +1381,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 debugSource: "application.openURLs"
             )
         }
+    }
+
+    /// Closing the last window keeps Bree running (Dock icon and menu bar stay,
+    /// Dock click or Cmd+N reopens). Only an explicit Quit terminates.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -1463,7 +1420,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         SurfaceCatalog.shared.focusProjection = { projection in
             SurfacePaneFactory.focus(panelID: projection.panelID, in: projection.workspaceID)
         }
-        BreeTuiSurfaceProviderRegistry.shared.start(catalog: .shared)
         let env = ProcessInfo.processInfo.environment
         let isRunningUnderXCTest = TestProcessEnvironment.isRunningUnderXCTest(environment: env)
         StartupBreadcrumbLog.append(
@@ -1495,8 +1451,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             AgentMessageCenter.warmStoreOffMain()
         }
 
-        claimAuthCallbackURLSchemes()
-        StartupBreadcrumbLog.append("appDelegate.didFinish.authSchemes.claimed")
+        claimURLScheme()
+        StartupBreadcrumbLog.append("appDelegate.didFinish.urlScheme.claimed")
 
         // Install the Feed (workstream) store. Separate from the transport
         // wiring: the store is a plain singleton here, and the socket
@@ -2113,7 +2069,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         remoteTmuxController.detachAll()
         closeAllWebInspectorsBeforeAppTeardown()
         sessionAutosaveCoordinator.stop()
-        BreeTuiSurfaceProviderRegistry.shared.terminateWireGuardHubForAppQuit()
         BreeSSHURLProcessLauncher.shared.terminateAll()
         caffeineController.setEnabled(false)
         TerminalController.shared.stopAutomationEngine()
@@ -2152,7 +2107,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         notificationStore: TerminalNotificationStore,
         sidebarState: SidebarState,
         settingsRuntime: SettingsRuntime,
-        auth: MacAuthComposition,
         automationEngine: AutomationEngine,
         browserDataImportCoordinator: BrowserDataImportCoordinator
     ) {
@@ -2168,13 +2122,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         self.settingsRuntime = settingsRuntime
         self.notificationStore = notificationStore
         self.sidebarState = sidebarState
-        self.auth = auth
         self.browserDataImportCoordinator = browserDataImportCoordinator
-        TeamsClient.bootstrap(auth: auth.coordinator)
         caffeineController.onStateChange = { [weak self] enabled in
             self?.menuBarExtraController?.refreshForDebugControls()
         }
-        TerminalController.shared.attachAuth(coordinator: auth.coordinator, accountFlow: auth.accountFlow)
         TerminalController.shared.attachBrowserDataImportCoordinator(browserDataImportCoordinator)
         TerminalController.shared.attachCaffeineController(caffeineController)
         TerminalController.shared.agentChatTranscriptService = agentChatTranscriptService
@@ -4178,12 +4129,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             surfaceResumeBindingIndex: surfaceResumeBindingIndex
         )
         guard let snapshot = snapshotBuildResult.snapshot else {
+            // Every live window was emptied by closing its last workspace: drop the stale
+            // autosave so the closed sessions do not come back. A window close (finalized
+            // manager) keeps today's behaviour.
+            let hasOnlyEmptyLiveWindows = !mainWindowContexts.isEmpty
+                && mainWindowContexts.values.allSatisfy {
+                    $0.tabManager.tabs.isEmpty && !$0.tabManager.isFinalizedForWindowClose
+                }
             let preserveManualRestoreBackup =
                 preserveManualRestoreBackupOnMissingPrimary ||
                 snapshotBuildResult.didRemoveCrashDiagnosticData
             persistSessionSnapshot(
                 nil,
-                removeWhenEmpty: removeWhenEmpty || snapshotBuildResult.didRemoveCrashDiagnosticData,
+                removeWhenEmpty: removeWhenEmpty || snapshotBuildResult.didRemoveCrashDiagnosticData
+                    || hasOnlyEmptyLiveWindows,
                 persistedGeometryData: nil,
                 synchronously: writeSynchronously,
                 preserveManualRestoreBackupOnMissingPrimary: preserveManualRestoreBackup
@@ -5813,7 +5772,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
         terminalPanel.hostedView.ensureFocus(for: workspace.id, surfaceId: panelId)
 
-        // The selected Cloud pane owns input before SwiftUI mounts its portal.
+        // The selected remote pane owns input before SwiftUI mounts its portal.
         // AppKit cannot make that view first responder yet; dispatch to the
         // same view's normal key path (including its bounded cold-runtime
         // queue) instead of losing the key at the window responder. Keep
@@ -5822,7 +5781,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
            terminalPanel.surface.ioMode == .manualMirror,
            terminalPanel.hostedView.surfaceView.window !== window,
            case .surface = terminalPanel.hostedView.preferredPanelFocusIntentForActivation() {
-            captureCloudMountKeyRelease(window: window, event: event, view: terminalPanel.hostedView.surfaceView)
+            captureMountKeyRelease(window: window, event: event, view: terminalPanel.hostedView.surfaceView)
             terminalPanel.hostedView.surfaceView.keyDown(with: event)
             return true
         }
@@ -7603,10 +7562,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     @objc func openNewMainWindow(_ sender: Any?) {
-        _ = createMainWindow(sourceWindow: preferredSourceWindowForNewMainWindow(sender: sender))
+        openNewMainWindow(preferredWindow: preferredSourceWindowForNewMainWindow(sender: sender))
     }
 
     func openNewMainWindow(preferredWindow: NSWindow?) {
+        // A window with no workspaces gets its new workspace instead of a second window.
+        if let preferredWindow,
+           let manager = contextForMainTerminalWindow(preferredWindow)?.tabManager,
+           manager.tabs.isEmpty {
+            _ = manager.addWorkspaceIfActive()
+            return
+        }
         _ = createMainWindow(sourceWindow: preferredWindow)
     }
 
@@ -8952,6 +8918,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         reserveInitialSocketPathIfNeeded()
         let requestedWindowId = preferredWindowId ?? sessionWindowSnapshot?.windowId
         let windowId = availableWindowIdForNewMainWindow(preferredWindowId: requestedWindowId) ?? UUID()
+        // A restored snapshot replaces the initial workspace; do not give its terminal an auto session.
+        if sessionWindowSnapshot != nil { PersistentLocalShell.suppressDepth += 1 }
         let tabManager = TabManager(
             initialWorkspaceTitle: initialWorkspaceTitle,
             initialWorkingDirectory: initialWorkingDirectory,
@@ -8963,6 +8931,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             nativeSSHConnectionBroker: TerminalController.shared.nativeSSHConnectionBroker,
             fileContentChangeCoordinator: self.tabManager?.fileContentChangeCoordinator
         )
+        if sessionWindowSnapshot != nil { PersistentLocalShell.suppressDepth -= 1 }
         tabManager.windowId = windowId
         if let sessionWindowSnapshot {
             let restoredPanelIdsByWorkspaceIndex = tabManager.restoreSessionSnapshot(
@@ -14022,14 +13991,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             return handled
         }
 
-        if matchConfiguredShortcut(event: event, action: .sizeTerminalToMyWindow) {
-            let routedManager = preferredMainWindowContextForShortcutRouting(event: event)?.tabManager ?? tabManager
-            if routedManager?.sizeFocusedTerminalToMyWindow() != true {
-                NSSound.beep()
-            }
-            return true
-        }
-
         if matchConfiguredShortcut(event: event, action: .pasteLastScreenshot) {
             if performFocusedDockShortcut(
                 .pasteLastScreenshot,
@@ -16999,35 +16960,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 #if DEBUG
         mainWindowShouldCloseObserverForTesting?(candidateWindow, closeAlreadyConfirmed)
 #endif
-        // XCTest has no UI for the warn-before-quit dialog and would either block
-        // on runModal or have NSApp.terminate kill the test process.
-        if isRunningUnderXCTest(ProcessInfo.processInfo.environment) { return true }
-        guard !isTerminatingApp else { return true }
-
-        // AppKit may deliver windowShouldClose again after the close has already
-        // committed and the exact window has relinquished its route. Never let
-        // that stale callback stand in for the surviving owner.
-        guard !hasCommittedMainWindowClose(candidateWindow) else { return true }
-
-        let authoritativeRoutes = mainWindowSessionPersistenceRoutes()
-        guard authoritativeRoutes.count == 1,
-              authoritativeRoutes[0].window === candidateWindow else {
-            return true
-        }
-
-        // The user already accepted a close dialog for this window, so that
-        // answer covers the quit it turns into. Asking again would show two
-        // dialogs for one action.
-        if closeAlreadyConfirmed {
-            isQuitWarningConfirmed = true
-            Self.requestApplicationTermination()
-            return false
-        }
-
-        // Use the same quit policy as Cmd+Q and app termination. When the
-        // policy shows the dialog, Cancel still restores the exited shell.
-        _ = handleQuitShortcutWarning(onCancel: onCancel)
-        return false
+        // Closing the last main window never turns into a quit: the app stays
+        // in the Dock and `applicationShouldHandleReopen` / Cmd+N open a new
+        // window. Only an explicit Quit terminates.
+        return true
     }
 
     private func handleMainTerminalWindowCloseRequest(
@@ -17929,9 +17865,9 @@ private extension NSWindow {
     }
 
     @objc func bree_sendEvent(_ event: NSEvent) {
-        let cloudMountKeyEventForwarded =
-            AppDelegate.shared?.forwardCloudMountKeyEvent(window: self, event: event) == true
-        if cloudMountKeyEventForwarded {
+        let remoteMountKeyEventForwarded =
+            AppDelegate.shared?.forwardMountKeyEvent(window: self, event: event) == true
+        if remoteMountKeyEventForwarded {
             if event.type == .keyDown {
                 AppDelegate.shared?.recordTypingActivity()
             }

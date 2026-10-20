@@ -138,44 +138,6 @@ struct SSHRemoteCommandCLIIntegrationTests {
         }
     }
 
-    @Test
-    func testSSHLeadingTTYSequenceEndingInTTYOpensThroughBreeTui() throws {
-        // OpenSSH applies -T then -tt in order, so the effective request is a
-        // forced TTY and the session belongs to bree-tui.
-        let run = try Self.runRemoteCommandMockedSSH(arguments: [
-            "--ssh-option", "RequestTTY=yes",
-            "-T", "-tt",
-            "printf", "ready",
-        ])
-        let openParams = try #require(
-            Self.params(for: "workspace.ssh.open", in: run.requests)
-        )
-
-        #expect(Self.params(for: "workspace.remote.configure", in: run.requests) == nil)
-        #expect(openParams["initial_command"] as? String == "printf ready")
-    }
-
-    @Test
-    func testSSHRawRemoteCommandWithLeadingTTYFlagOpensThroughBreeTui() throws {
-        // A TTY remote command runs inside the bree-tui terminal, which is
-        // always a PTY, so the leading OpenSSH -t is not forwarded.
-        let run = try Self.runRemoteCommandMockedSSH(arguments: [
-            "-t",
-            "docker", "exec", "-it",
-            "-w", "/workspaces/demo",
-            "vsc-demo", "/bin/bash",
-        ])
-        let openParams = try #require(
-            Self.params(for: "workspace.ssh.open", in: run.requests)
-        )
-
-        #expect(Self.params(for: "workspace.create", in: run.requests) == nil)
-        #expect(
-            openParams["initial_command"] as? String
-                == "docker exec -it -w /workspaces/demo vsc-demo /bin/bash"
-        )
-    }
-
     private static func runRemoteCommandMockedSSH(
         arguments sshArguments: [String]
     ) throws -> RemoteCommandMockedSSHRun {
@@ -242,16 +204,6 @@ struct SSHRemoteCommandCLIIntegrationTests {
                             ok: true,
                             result: ["remote": ["state": "connected"]]
                         )
-                    case "workspace.ssh.open":
-                        return Harness.v2Response(
-                            id: id,
-                            ok: true,
-                            result: [
-                                "workspace_id": workspaceID,
-                                "window_id": windowID,
-                                "surface_id": surfaceID,
-                            ]
-                        )
                     default:
                         return Harness.v2Response(
                             id: id,
@@ -285,15 +237,12 @@ struct SSHRemoteCommandCLIIntegrationTests {
             environment: environment,
             timeout: 5
         )
-        // TTY sessions open through bree-tui; non-TTY sessions keep the
-        // legacy workspace.remote.configure flow.
         let sawTerminalRequest = waitForRemoteCommandMockSocketCommand(in: state) { line in
             line.contains(#""method":"workspace.remote.configure""#)
-                || line.contains(#""method":"workspace.ssh.open""#)
         }
         #expect(
             sawTerminalRequest,
-            "Expected workspace.remote.configure or workspace.ssh.open, saw \(state.snapshot())"
+            "Expected workspace.remote.configure, saw \(state.snapshot())"
         )
         #expect(!result.timedOut, Comment(rawValue: result.stderr))
         #expect(result.status == 0, Comment(rawValue: result.stderr))

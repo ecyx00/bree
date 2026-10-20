@@ -1501,9 +1501,8 @@ struct HiddenTitlebarSidebarControlsView: View {
     @State private var isHoveringHost = false
     @State private var isHoveringWindowChrome = false
     @State private var hostWindowNumber: Int?
-    private var shouldPinControls: Bool {
-        isHoveringHost || isHoveringWindowChrome || popoverVisibilityState.isShown(in: hostWindowNumber)
-    }
+    /// The sidebar header buttons stay visible; hover only highlights a single button.
+    private var shouldPinControls: Bool { true }
 
     @AppStorage(TitlebarControlsVisibility.focusHistoryKey) private var showFocusHistoryButtons = false
 

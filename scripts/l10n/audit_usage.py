@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Classify Resources/Localizable.xcstrings keys as used or unused.
 
-A key is USED when its exact text appears as a token in Sources/, CLI/, Packages/,
-TunnelExtension/ or bree-tui/ (build dirs excluded), or when a string literal in code
+A key is USED when its exact text appears as a token in Sources/, CLI/, Packages/
+(build dirs excluded), or when a string literal in code
 builds a key family (interpolation with a static part, or a trailing-dot prefix).
 Conservative by design: comments and docs count as usage.
 
@@ -12,7 +12,7 @@ import argparse, json, os, re, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SCAN_DIRS = ["Sources", "CLI", "Packages", "TunnelExtension", "bree-tui"]
+SCAN_DIRS = ["Sources", "CLI", "Packages"]
 EXTS = {".swift", ".m", ".mm", ".h", ".json", ".py", ".rs", ".ts", ".tsx", ".js", ".md",
         ".plist", ".sh", ".toml", ".yml", ".yaml", ".txt", ".kt", ".java"}
 SKIP_DIRS = {".build", "target", "node_modules", ".git", "DerivedData", "build", "__pycache__"}

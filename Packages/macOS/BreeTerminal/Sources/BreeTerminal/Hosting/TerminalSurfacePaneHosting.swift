@@ -41,12 +41,4 @@ public protocol TerminalSurfacePaneHosting: NSView {
     /// runtime actions (such as the password input badge) must reset here;
     /// a replacement runtime starts with that state cleared.
     func terminalSurfaceRuntimeDidRelease()
-
-    /// Draws or clears the mobile-viewport cap border.
-    ///
-    /// - Parameters:
-    ///   - size: The capped content size in points, or nil to clear.
-    ///   - drawRight: Whether the cap shrinks the width (right border).
-    ///   - drawBottom: Whether the cap shrinks the height (bottom border).
-    func setMobileViewportBorder(size: CGSize?, drawRight: Bool, drawBottom: Bool)
 }

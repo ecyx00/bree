@@ -21,7 +21,7 @@ public struct RightSidebarWidthSettings: Sendable {
     public static let noOverrideValue = -1.0
 
     /// The smallest allowed right sidebar width, in points, and the width a
-    /// new window opens with: room for a Cloud machine's Ports, Terminals,
+    /// new window opens with: room for a remote machine's Ports, Terminals,
     /// Displays and Resources tabs with their counts, in their compact
     /// spacing. Any wider and both sidebars no longer fit a half-screen
     /// window on a 1470 pt display (`SidePanelWidthFit`).

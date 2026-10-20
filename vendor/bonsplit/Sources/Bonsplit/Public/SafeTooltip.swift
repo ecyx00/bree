@@ -9,6 +9,8 @@ private struct SafeTooltipModifier: ViewModifier {
             SafeTooltipViewRepresentable(text: text)
                 .allowsHitTesting(false)
         }
+        // NSView tooltip rects are invisible to Accessibility; mirror the text as AXHelp.
+        .accessibilityHint(text ?? "")
     }
 }
 

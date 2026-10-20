@@ -94,6 +94,11 @@ extension BreeSettingsFileStore {
         } else if section.keys.contains("enabled") {
             logInvalid("agentMessages.enabled", sourcePath: sourcePath)
         }
+        if let value = jsonBool(section["fileOverlapNotice"]) {
+            snapshot.managedUserDefaults[AgentMessagesCatalogSection().fileOverlapNotice.userDefaultsKey] = .bool(value)
+        } else if section.keys.contains("fileOverlapNotice") {
+            logInvalid("agentMessages.fileOverlapNotice", sourcePath: sourcePath)
+        }
     }
 
     func parseSidebarWorkspaceTodosBeta(

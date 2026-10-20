@@ -113,8 +113,10 @@ struct AttentionCenterView: View {
         let projection = store.projection(
             lastOutputByPanel: lastOutputByPanel,
             pendingToolByPanel: pendingToolByPanel,
-            showSnoozed: showSnoozed
+            showSnoozed: showSnoozed,
+            hideFinished: true
         )
+        // The tab lists what needs the owner; finished and running agents live in the sidebar.
         for item in projection.items {
             rows.append(.item(item))
             if expandedWorkspaceIds.contains(item.workspaceId), item.changedCount > 0 {
@@ -176,20 +178,11 @@ struct AttentionCenterView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            BreeSystemSymbolImage(
-                systemName: "checkmark.circle",
-                pointSize: 30,
-                weight: .light,
-                tint: palette.textSecondary
-            )
-            Text(String(localized: "attention.empty", defaultValue: "Nothing needs you."))
-                .breeFont(.body, weight: .medium)
-                .foregroundColor(palette.textPrimary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(24)
-        .accessibilityElement(children: .combine)
+        Text(String(localized: "attention.empty", defaultValue: "Nothing needs you."))
+            .breeFont(.secondary)
+            .foregroundColor(palette.textSecondary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(24)
     }
 
     // MARK: - Actions
@@ -420,12 +413,6 @@ private struct AttentionRowView: View {
                         .foregroundColor(primaryText)
                         .lineLimit(1)
                 }
-                if let prompt = item.lastPrompt {
-                    Text(prompt)
-                        .breeFont(.secondary)
-                        .foregroundColor(secondaryText)
-                        .lineLimit(1)
-                }
                 if let command = item.pendingCommand {
                     Text(command)
                         .font(.system(size: 11, design: .monospaced))
@@ -499,9 +486,10 @@ private struct AttentionRowView: View {
         .accessibilityAction(.default, onActivate)
     }
 
-    /// Agent and pane, e.g. "Claude Code · zsh".
+    /// Agent and session title, e.g. "Claude Code · Fix login redirect". The title is the
+    /// first line of the last prompt, else the pane title.
     private var detailText: String? {
-        let parts = [item.agentName, item.paneTitle].compactMap { $0 }.filter { !$0.isEmpty }
+        let parts = [item.agentName, item.lastPrompt ?? item.paneTitle].compactMap { $0 }.filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -518,7 +506,7 @@ private struct AttentionRowView: View {
     }
 
     private var accessibilityText: String {
-        [item.workspaceTitle, detailText, stateText, item.lastPrompt, item.pendingCommand, item.riskNote, item.lastOutput]
+        [item.workspaceTitle, detailText, stateText, item.pendingCommand, item.riskNote, item.lastOutput]
             .compactMap { $0 }
             .joined(separator: ", ")
     }

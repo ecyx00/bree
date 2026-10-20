@@ -198,13 +198,29 @@ enum TabBarStyling {
         splitButtonsBackdropWidth(buttonCount: BonsplitConfiguration.SplitActionButton.defaults.count)
     }
 
-    static func splitButtonsBackdropWidth(buttonCount: Int) -> CGFloat {
+    static func splitButtonsBackdropWidth(buttonCount: Int, compact: Bool = false) -> CGFloat {
         guard buttonCount > 0 else { return 0 }
-        return splitButtonsLeadingPadding
-            + splitButtonsTrailingPadding
-            + (CGFloat(buttonCount) * splitActionButtonReservedWidth)
-            + (CGFloat(max(0, buttonCount - 1)) * splitButtonsSpacing)
+        return (compact ? compactLeadingPadding : splitButtonsLeadingPadding)
+            + (compact ? compactTrailingPadding : splitButtonsTrailingPadding)
+            + (CGFloat(buttonCount) * (compact ? compactButtonWidth : splitActionButtonReservedWidth))
+            + (CGFloat(max(0, buttonCount - 1)) * (compact ? 0 : splitButtonsSpacing))
     }
+
+    /// Narrow panes (the four-way split of a 1200 pt window is about 165 pt per pane) shrink every
+    /// button instead of folding them into "...": 18 pt slots, no gaps, tight padding.
+    static let compactBarThreshold: CGFloat = 300
+    /// Below this the tabs drop their titles and show only the icon.
+    static let iconOnlyTabsBarThreshold: CGFloat = 240
+    static let compactButtonWidth: CGFloat = 18
+    static let compactLeadingPadding: CGFloat = 3
+    static let compactTrailingPadding: CGFloat = 2
+    static let compactMinimumTabAreaWidth: CGFloat = 56
+    static let compactDividerSlack: CGFloat = 6
+
+    static func isCompactBar(width: CGFloat) -> Bool { width > 0 && width < compactBarThreshold }
+    static func tabsAreIconOnly(barWidth: CGFloat) -> Bool { barWidth > 0 && barWidth < iconOnlyTabsBarThreshold }
+    static func buttonWidth(compact: Bool) -> CGFloat { compact ? compactButtonWidth : splitActionButtonReservedWidth }
+    static func minimumTabArea(compact: Bool) -> CGFloat { compact ? compactMinimumTabAreaWidth : minimumTabAreaWidth }
 
     /// "+" and globe live in the tab strip, right after the last tab.
     static let newTabButtonSize: CGFloat = 24
@@ -212,15 +228,16 @@ enum TabBarStyling {
     static let newTabClusterLeadingGap: CGFloat = 4
 
     /// Width the new-tab cluster takes after the last tab, gap included.
-    static func newTabClusterWidth(buttonCount: Int) -> CGFloat {
+    static func newTabClusterWidth(buttonCount: Int, compact: Bool = false) -> CGFloat {
         guard buttonCount > 0 else { return 0 }
+        if compact { return 2 + CGFloat(buttonCount) * compactButtonWidth }
         return newTabClusterLeadingGap
             + CGFloat(buttonCount) * newTabButtonSize
             + CGFloat(buttonCount - 1) * newTabButtonSpacing
     }
 
-    /// Tab strip width kept readable (one tab title) before any action button is hidden.
-    static let minimumTabAreaWidth: CGFloat = 150
+    /// Tab strip width kept (new-tab cluster plus one truncated tab) before any action button is hidden.
+    static let minimumTabAreaWidth: CGFloat = 100
     /// Extra width per lane for the group dividers, which `splitButtonsBackdropWidth` does not count.
     static let splitButtonDividerSlack: CGFloat = 12
 
@@ -230,9 +247,10 @@ enum TabBarStyling {
     /// actions such as Wiki/Architecture, then split right, then split down; "+" and globe
     /// belong to the tab strip and never overflow). Returns how many slots stay
     /// visible: `slotCount` when everything fits, otherwise the prefix that fits next to one "..." slot.
-    static func splitButtonSlotsThatFit(slotCount: Int, availableLaneWidth: CGFloat) -> Int {
+    static func splitButtonSlotsThatFit(slotCount: Int, availableLaneWidth: CGFloat, compact: Bool = false) -> Int {
         guard slotCount > 0 else { return 0 }
-        func width(_ n: Int) -> CGFloat { splitButtonsBackdropWidth(buttonCount: n) + splitButtonDividerSlack }
+        let slack = compact ? compactDividerSlack : splitButtonDividerSlack
+        func width(_ n: Int) -> CGFloat { splitButtonsBackdropWidth(buttonCount: n, compact: compact) + slack }
         if width(slotCount) <= availableLaneWidth { return slotCount }
         for shown in stride(from: slotCount - 1, to: 0, by: -1) where width(shown + 1) <= availableLaneWidth {
             return shown
@@ -252,9 +270,10 @@ enum TabBarStyling {
         isNarrowPane && shouldShowSplitButtons ? 1 : max(0, visibleButtonCount)
     }
 
-    static func minimumVisibleSplitButtonLaneWidth(buttonCount: Int) -> CGFloat {
+    static func minimumVisibleSplitButtonLaneWidth(buttonCount: Int, compact: Bool = false) -> CGFloat {
         splitButtonsBackdropWidth(
-            buttonCount: min(max(0, buttonCount), minimumFullyVisibleSplitButtonCount)
+            buttonCount: min(max(0, buttonCount), minimumFullyVisibleSplitButtonCount),
+            compact: compact
         )
     }
 
@@ -403,6 +422,7 @@ struct TabBarLayout: Equatable {
     /// False when the caller already fitted the buttons to the bar (`splitButtonSlotsThatFit`),
     /// so the 25% cap must not scroll them.
     let capsLaneWidth: Bool
+    let compact: Bool
 
     init(
         tabBarHeight: CGFloat,
@@ -412,8 +432,10 @@ struct TabBarLayout: Equatable {
         splitButtonLaneVisible: Bool,
         reservesSplitButtonLane: Bool,
         measuredSplitButtonLaneWidth: CGFloat = 0,
-        capsLaneWidth: Bool = true
+        capsLaneWidth: Bool = true,
+        compact: Bool = false
     ) {
+        self.compact = compact
         self.capsLaneWidth = capsLaneWidth
         self.barHeight = max(1, tabBarHeight)
         self.availableWidth = max(0, availableWidth)
@@ -427,7 +449,7 @@ struct TabBarLayout: Equatable {
     }
 
     var minimumSplitButtonLaneWidth: CGFloat {
-        TabBarStyling.splitButtonsBackdropWidth(buttonCount: splitButtonCount)
+        TabBarStyling.splitButtonsBackdropWidth(buttonCount: splitButtonCount, compact: compact)
     }
 
     var fullSplitButtonLaneWidth: CGFloat {
@@ -441,7 +463,7 @@ struct TabBarLayout: Equatable {
         return max(
             fractionLimit,
             trailingWhitespaceBeforeSplitButtonLane,
-            TabBarStyling.minimumVisibleSplitButtonLaneWidth(buttonCount: splitButtonCount)
+            TabBarStyling.minimumVisibleSplitButtonLaneWidth(buttonCount: splitButtonCount, compact: compact)
         )
     }
 
@@ -828,8 +850,6 @@ struct TabContextMenuState {
     let hasSplits: Bool
     let shortcuts: [TabContextAction: KeyboardShortcut]
     var canDisconnectRemote: Bool = false
-    /// Shared-terminal presence; non-nil adds the terminal-size menu section.
-    var presence: TabPresence?
 
     var canMarkAsUnread: Bool {
         !isUnread
@@ -858,8 +878,7 @@ struct TabContextMenuState {
         isFullWidthTabMode: Bool = false,
         hasSplits: Bool,
         shortcuts: [TabContextAction: KeyboardShortcut],
-        canDisconnectRemote: Bool = false,
-        presence: TabPresence? = nil
+        canDisconnectRemote: Bool = false
     ) {
         self.isPinned = isPinned
         self.canCloseTab = canCloseTab
@@ -880,7 +899,6 @@ struct TabContextMenuState {
         self.hasSplits = hasSplits
         self.shortcuts = shortcuts
         self.canDisconnectRemote = canDisconnectRemote
-        self.presence = presence
     }
 
     @MainActor
@@ -923,8 +941,7 @@ struct TabContextMenuState {
             isFullWidthTabMode: pane.isFullWidthTabMode,
             hasSplits: splitViewController.rootNode.allPaneIds.count > 1,
             shortcuts: controller.contextMenuShortcuts,
-            canDisconnectRemote: controller.tabContextDisconnectRemoteAvailabilityProvider?(TabID(id: tab.id), pane.id) ?? false,
-            presence: tab.presence
+            canDisconnectRemote: controller.tabContextDisconnectRemoteAvailabilityProvider?(TabID(id: tab.id), pane.id) ?? false
         )
     }
 }
@@ -965,10 +982,12 @@ struct TabBarView: View {
     /// Leading accessory (branch label) width after budgeting: it gets only what is left once the
     /// action lane and the minimum tab area are reserved, so it truncates, then hides, before any
     /// action button moves into the overflow menu.
+    private var isCompactBar: Bool { TabBarStyling.isCompactBar(width: barWidth) }
+
     private var accessoryLeadingWidth: CGFloat {
         guard barWidth > 0 else { return accessoryLeadingNaturalWidth }
-        let budget = barWidth - TabBarStyling.minimumTabAreaWidth - accessoryTrailingWidth
-            - TabBarStyling.splitButtonsBackdropWidth(buttonCount: laidOutSplitSlotCount)
+        let budget = barWidth - TabBarStyling.minimumTabArea(compact: isCompactBar) - accessoryTrailingWidth
+            - TabBarStyling.splitButtonsBackdropWidth(buttonCount: laidOutSplitSlotCount, compact: isCompactBar)
         let width = min(accessoryLeadingNaturalWidth, max(0, budget))
         return width < 28 ? 0 : width
     }
@@ -1029,7 +1048,8 @@ struct TabBarView: View {
             splitButtonLaneVisible: shouldShowSplitButtons,
             reservesSplitButtonLane: splitButtonLane.reservesLane,
             measuredSplitButtonLaneWidth: measuredSplitButtonLaneWidth,
-            capsLaneWidth: false
+            capsLaneWidth: false,
+            compact: isCompactBar
         )
     }
 
@@ -1071,8 +1091,8 @@ struct TabBarView: View {
     private var shownSplitSlotCount: Int {
         let slots = prioritizedSplitSlots.count
         guard barWidth > 0 else { return slots }
-        let lane = barWidth - TabBarStyling.minimumTabAreaWidth - (paneAccessory == nil ? 0 : accessoryTrailingWidth)
-        return TabBarStyling.splitButtonSlotsThatFit(slotCount: slots, availableLaneWidth: lane)
+        let lane = barWidth - TabBarStyling.minimumTabArea(compact: isCompactBar) - (paneAccessory == nil ? 0 : accessoryTrailingWidth)
+        return TabBarStyling.splitButtonSlotsThatFit(slotCount: slots, availableLaneWidth: lane, compact: isCompactBar)
     }
 
     private var hiddenSplitButtons: [BonsplitConfiguration.SplitActionButton] {
@@ -1123,7 +1143,7 @@ struct TabBarView: View {
             shouldShowSplitButtons: true,
             visibleButtonCount: laidOutSplitSlotCount
         )
-        return TabBarStyling.splitButtonsBackdropWidth(buttonCount: count)
+        return TabBarStyling.splitButtonsBackdropWidth(buttonCount: count, compact: isCompactBar)
     }
 
     /// Viewport width taken from the tab strip by the accessories. When the split lane is
@@ -1140,6 +1160,12 @@ struct TabBarView: View {
 
     private var isMinimalMode: Bool {
         presentationMode == "minimal"
+    }
+
+    /// Strip width the action lane covers. While the cluster is pinned the viewport is already padded by
+    /// the lane inset, so nothing is obscured: counting it again scrolled the selected tab out of sight.
+    private var trailingObscuredWidth: CGFloat {
+        newTabClusterWidth > 0 && newTabClusterIsPinned ? 0 : trailingTabContentInset
     }
 
     private var trailingTabContentInset: CGFloat {
@@ -1437,7 +1463,7 @@ struct TabBarView: View {
                 .coordinateSpace(name: "tabScroll")
                 .onAppear {
                     containerWidth = containerGeo.size.width
-                    tabItemGeometryRegistry.setTrailingObscuredWidth(trailingTabContentInset)
+                    tabItemGeometryRegistry.setTrailingObscuredWidth(trailingObscuredWidth)
                     tabItemGeometryRegistry.revealSelection(pane.selectedTabId)
                 }
                 .onChange(of: containerGeo.size.width) { _, newWidth in
@@ -1447,7 +1473,7 @@ struct TabBarView: View {
                 .onChange(of: pane.selectedTabId) { _, newTabId in
                     tabItemGeometryRegistry.revealSelection(newTabId)
                 }
-                .onChange(of: trailingTabContentInset) { _, newWidth in
+                .onChange(of: trailingObscuredWidth) { _, newWidth in
                     tabItemGeometryRegistry.setTrailingObscuredWidth(newWidth)
                 }
                 .frame(height: tabBarHeight)
@@ -1579,6 +1605,7 @@ struct TabBarView: View {
             showsZoomIndicator: showsZoomIndicator,
             appearance: appearance,
             fillsWidth: tabFillsWidth,
+            iconOnly: TabBarStyling.tabsAreIconOnly(barWidth: barWidth),
             saturation: tabBarSaturation,
             trailingSeparatorBottomInset: isImmediatelyBeforeSelected
                 ? TabBarMetrics.selectedTabLeftSeparatorBottomInset
@@ -1744,12 +1771,12 @@ struct TabBarView: View {
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 13, weight: .regular))
-                .frame(width: TabBarStyling.splitActionButtonReservedWidth, height: tabBarHeight)
+                .frame(width: TabBarStyling.buttonWidth(compact: isCompactBar), height: tabBarHeight)
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
-        .frame(minWidth: TabBarStyling.splitActionButtonReservedWidth, minHeight: TabBarStyling.splitActionButtonReservedWidth)
+        .frame(minWidth: TabBarStyling.buttonWidth(compact: isCompactBar), minHeight: TabBarStyling.splitActionButtonReservedWidth)
         .contentShape(Rectangle())
         .accessibilityLabel(String(localized: "tabBar.moreActions", defaultValue: "More Tab Actions"))
         .accessibilityHint(String(localized: "tabBar.moreActions", defaultValue: "More Tab Actions"))
@@ -1813,8 +1840,10 @@ struct TabBarView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 splitButtonRow
                     .fixedSize(horizontal: true, vertical: false)
-                    .frame(minWidth: laneWidth, alignment: .trailing)
+                    // Measure the intrinsic row, before the minWidth floor: measuring after it ratchets the
+                    // lane at its widest width (a wide first layout kept every narrow pane's lane at 169 pt).
                     .background(SplitButtonLaneWidthReader())
+                    .frame(minWidth: laneWidth, alignment: .trailing)
                     .background(
                         GeometryReader { contentGeo in
                             Color.clear
@@ -1889,7 +1918,7 @@ struct TabBarView: View {
         let buttons = laneSplitButtons.filter { !hidden.contains($0) }
         let splitButtons = buttons.filter { $0.action == .splitRight || $0.action == .splitDown }
         let otherButtons = buttons.filter { !splitButtons.contains($0) }
-        HStack(spacing: TabBarStyling.splitButtonsSpacing) {
+        HStack(spacing: isCompactBar ? 0 : TabBarStyling.splitButtonsSpacing) {
             ForEach(splitButtons) { button in
                 splitActionButton(button, tooltips: tooltips)
                     .accessibilityIdentifier(splitActionButtonAccessibilityIdentifier(button))
@@ -1903,21 +1932,21 @@ struct TabBarView: View {
             }
             if !hidden.isEmpty { overflowSplitButtonMenu(hidden) }
         }
-        .padding(.leading, TabBarStyling.splitButtonsLeadingPadding)
-        .padding(.trailing, TabBarStyling.splitButtonsTrailingPadding)
+        .padding(.leading, isCompactBar ? TabBarStyling.compactLeadingPadding : TabBarStyling.splitButtonsLeadingPadding)
+        .padding(.trailing, isCompactBar ? TabBarStyling.compactTrailingPadding : TabBarStyling.splitButtonsTrailingPadding)
         .frame(height: tabBarHeight, alignment: .center)
     }
 
     private var splitButtonDivider: some View {
         Rectangle()
-            .fill(TabBarColors.splitActionIcon(for: appearance, isPressed: false).opacity(0.25))
-            .frame(width: 1, height: 14)
+            .fill(TabBarColors.splitActionIcon(for: appearance, isPressed: false).opacity(0.5))
+            .frame(width: 1, height: 16)
             .padding(.horizontal, 2)
             .accessibilityHidden(true)
     }
 
     private var newTabClusterWidth: CGFloat {
-        TabBarStyling.newTabClusterWidth(buttonCount: newTabButtons.count)
+        TabBarStyling.newTabClusterWidth(buttonCount: newTabButtons.count, compact: isCompactBar)
     }
 
     /// The cluster is pinned over the strip's end when tabs scroll (or one full-width tab fills the row).
@@ -1943,7 +1972,7 @@ struct TabBarView: View {
         let tooltips = controller.configuration.appearance.splitButtonTooltips
         let terminal = newTabButtons.first { $0.action == .newTerminal }
         let browser = newTabButtons.first { $0.action == .newBrowser }
-        HStack(spacing: TabBarStyling.newTabButtonSpacing) {
+        HStack(spacing: isCompactBar ? 0 : TabBarStyling.newTabButtonSpacing) {
             if let terminal {
                 Menu {
                     newTabMenuItems(tooltips: tooltips)
@@ -1956,7 +1985,7 @@ struct TabBarView: View {
                 .menuIndicator(.hidden)
                 .buttonStyle(.plain)
                 .fixedSize()
-                .modifier(NewTabButtonChrome(appearance: appearance))
+                .modifier(NewTabButtonChrome(appearance: appearance, compact: isCompactBar))
                 .contextMenu { newTabMenuItems(tooltips: tooltips) }
                 .safeHelp(splitActionButtonTooltip(terminal, tooltips: tooltips))
                 .accessibilityLabel(String(localized: "tabBar.newTerminalTab", defaultValue: "New Terminal Tab"))
@@ -1969,13 +1998,13 @@ struct TabBarView: View {
                     splitActionButtonIcon(.systemImage("globe"))
                 }
                 .buttonStyle(.plain)
-                .modifier(NewTabButtonChrome(appearance: appearance))
+                .modifier(NewTabButtonChrome(appearance: appearance, compact: isCompactBar))
                 .safeHelp(splitActionButtonTooltip(browser, tooltips: tooltips))
                 .accessibilityLabel(String(localized: "tabBar.newBrowserTab", defaultValue: "New Browser Tab"))
                 .accessibilityIdentifier("paneTabBarControl.newBrowser")
             }
         }
-        .padding(.leading, TabBarStyling.newTabClusterLeadingGap)
+        .padding(.leading, isCompactBar ? 2 : TabBarStyling.newTabClusterLeadingGap)
         .frame(height: tabBarHeight)
         .saturation(tabBarSaturation)
         .tabBarButtonAnimationsDisabled()
@@ -1988,7 +2017,7 @@ struct TabBarView: View {
     ) -> some View {
         if button.activatesOnMouseDown {
             splitActionButtonIcon(button.icon)
-                .frame(minWidth: TabBarStyling.splitActionButtonReservedWidth, minHeight: TabBarStyling.splitActionButtonReservedWidth)
+                .frame(minWidth: TabBarStyling.buttonWidth(compact: isCompactBar), minHeight: TabBarStyling.splitActionButtonReservedWidth)
                 .frame(height: tabBarLayout.splitActionButtonHeight)
                 .contentShape(Rectangle())
                 .foregroundStyle(TabBarColors.splitActionIcon(for: appearance, isPressed: button.isActive))
@@ -2320,7 +2349,7 @@ private struct SplitActionButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .frame(minWidth: TabBarStyling.splitActionButtonReservedWidth, minHeight: TabBarStyling.splitActionButtonReservedWidth)
+            .frame(minWidth: TabBarStyling.buttonWidth(compact: layout.compact), minHeight: TabBarStyling.splitActionButtonReservedWidth)
             .frame(height: layout.splitActionButtonHeight)
             .contentShape(Rectangle())
             .foregroundStyle(TabBarColors.splitActionIcon(for: appearance, isPressed: configuration.isPressed || isActive))
@@ -2367,12 +2396,14 @@ private struct SplitActionChromeModifier: ViewModifier {
 /// 24 pt hit area, hover fill and secondary glyph shared by "+" and globe.
 private struct NewTabButtonChrome: ViewModifier {
     let appearance: BonsplitConfiguration.Appearance
+    var compact = false
     @State private var isHovering = false
 
     func body(content: Content) -> some View {
+        let size = compact ? TabBarStyling.compactButtonWidth : TabBarStyling.newTabButtonSize
         content
             .foregroundStyle(TabBarColors.splitActionIcon(for: appearance, isPressed: false))
-            .frame(width: TabBarStyling.newTabButtonSize, height: TabBarStyling.newTabButtonSize)
+            .frame(width: size, height: size)
             .background(
                 RoundedRectangle(cornerRadius: 4)
                     .fill(TabBarColors.splitActionFill(for: appearance, isActive: false, isHovering: isHovering))

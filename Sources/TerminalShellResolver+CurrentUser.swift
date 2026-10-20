@@ -11,10 +11,21 @@ extension TerminalShellResolver {
             FileManager.default.isExecutableFile(atPath: path)
         })
             .resolve(
-                loginShell: currentUserDatabaseShell(),
+                loginShell: debugLoginShellOverride() ?? currentUserDatabaseShell(),
                 environmentShell: environment["SHELL"],
                 declaredShells: declaredShells(at: shellsFileURL)
             )
+    }
+
+    /// Debug builds only: `defaults write <bundle> debug.loginShellOverride /path/to/shell`
+    /// makes the app treat that shell as the login shell, so every shell family can be
+    /// exercised through the normal bootstrap without `chsh`.
+    private static func debugLoginShellOverride() -> String? {
+        #if DEBUG
+        return UserDefaults.standard.string(forKey: "debug.loginShellOverride")
+        #else
+        return nil
+        #endif
     }
 
     private static func currentUserDatabaseShell() -> String? {

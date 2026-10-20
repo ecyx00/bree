@@ -168,12 +168,9 @@ struct TerminalLinkOpenCoordinator {
             )
         }
 
-        let cloudURL = request.sourcePanelId.flatMap {
-            container?.cloudTerminalLinkTarget(url: target.url, sourcePanelId: $0)?.url
-        }
         let destinations = RemoteLinkOpenPolicy().destinations(
             for: target.url,
-            machineRoute: cloudURL,
+            machineRoute: nil,
             remoteInitiated: request.isRemoteInitiated
         )
         guard let browserURL = destinations.browserURL else {

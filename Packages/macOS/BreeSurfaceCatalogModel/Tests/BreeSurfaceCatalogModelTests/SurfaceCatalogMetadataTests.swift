@@ -4,7 +4,7 @@ import Testing
 
 @Suite struct SurfaceCatalogMetadataTests {
     @Test func pendingWorkspaceMetadataRoundTrips() throws {
-        let machine = SurfaceMachineID.cloud("vm-1")
+        let machine = SurfaceMachineID.remote("vm-1")
         let nativeWorkspaceID = UUID()
         let snapshot = SurfaceCatalogSnapshot(
             pendingWorkspaceCreations: [machine: ["workspace-1": nativeWorkspaceID]],
@@ -32,7 +32,7 @@ import Testing
 
     @Test func exportKeepsStableOwnersSeparateFromRuntimeSelectors() {
         let projection = SurfaceProjection(
-            resource: SurfaceResourceID(machine: .cloud("vm-1"), kind: .terminal, key: "term-1"),
+            resource: SurfaceResourceID(machine: .remote("vm-1"), kind: .terminal, key: "term-1"),
             workspaceID: UUID(),
             panelID: UUID()
         )
@@ -40,13 +40,12 @@ import Testing
         let snapshot = SurfaceCatalogSnapshot(machines: [], resources: [], projections: [projection])
         let export = SurfaceCatalogExport(
             catalog: snapshot,
-            cloudStates: [],
             projectionIdentities: [projection: identity]
         )
         #expect(export.catalog.projections == [projection])
         #expect(export.projectionIdentities[projection] == identity)
         #expect(export.projectionIdentities[projection]?.stableSurfaceID != projection.panelID)
         #expect(export.projectionIdentities[projection]?.stableWorkspaceID != projection.workspaceID)
-        #expect(SurfaceCatalogExport(catalog: snapshot, cloudStates: []).projectionIdentities.isEmpty)
+        #expect(SurfaceCatalogExport(catalog: snapshot).projectionIdentities.isEmpty)
     }
 }

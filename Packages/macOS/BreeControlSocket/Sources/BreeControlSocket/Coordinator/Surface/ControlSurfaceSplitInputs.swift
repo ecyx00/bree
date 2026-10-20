@@ -26,7 +26,7 @@ public struct ControlSurfaceSplitInputs: Sendable, Equatable {
     public let tmuxStartCommand: String?
     /// The trimmed-non-empty `remote_pty_session_id`, or `nil`.
     public let remotePTYSessionID: String?
-    /// The raw `remote_context` token (`inherit`/`local`/`cloud`), or `nil`.
+    /// The raw `remote_context` token (`inherit`/`local`/`Remote`), or `nil`.
     public let remoteContextRaw: String?
     /// The startup environment (`startup_environment`/`initial_env`), `[:]` if none.
     public let startupEnvironment: [String: String]

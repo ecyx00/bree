@@ -127,11 +127,6 @@ public enum ControlCommandExecutionPolicy: Sendable, Equatable {
         // Prompt submission suspends between paste and Enter while agent
         // editors commit the paste. The socket worker awaits the final result.
         "terminal.paste",
-        // Shared terminal sizing verbs are dispatched by the worker switch and
-        // hop to MainActor for the one store mutation (TerminalSharingStore).
-        "terminal.size_state", "terminal.size_policy.set", "terminal.size_to_me",
-        "terminal.size_counts.set", "terminal.participant.disconnect",
-        "terminal.participants.disconnect_others",
         "system.top",
         "system.memory",
         // vault.* scans agent transcript stores on disk (~/.claude/projects,
@@ -167,7 +162,6 @@ public enum ControlCommandExecutionPolicy: Sendable, Equatable {
         // Current-work captures owners once, then reduces/encodes off-main without refresh.
         "current.list",
         "surface.project",
-        "surface.new_terminal",
         // SSH-session attach resolves ownership and reads the remote PTY
         // registry before any surface mutation; keep the bounded remote query
         // off the main actor.
@@ -176,7 +170,7 @@ public enum ControlCommandExecutionPolicy: Sendable, Equatable {
         // env dictionary behind a `v2MainSync` hop, so it runs on the worker
         // lane like the other workspace reads below.
         "workspace.env",
-        "workspace.ssh.open", "workspace.remote.pty_sessions",
+        "workspace.remote.pty_sessions",
         "workspace.remote.pty_close",
         "workspace.remote.pty_detach",
         "workspace.remote.pty_bridge",

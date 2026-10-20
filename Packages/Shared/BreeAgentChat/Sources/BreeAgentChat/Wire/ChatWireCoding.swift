@@ -3,7 +3,7 @@ import Foundation
 /// The single source of truth for how chat wire payloads are JSON-encoded:
 /// ISO 8601 dates on both ends of the connection.
 ///
-/// Both the Mac host (producing) and mobile clients (consuming) go through
+/// Both the Mac host (producing) and remote clients (consuming) go through
 /// this type so the date strategy can never drift between the two.
 public struct ChatWireCoding: Sendable {
     /// Creates a coder.

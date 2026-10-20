@@ -8,7 +8,6 @@ struct SessionRemoteWorkspaceSnapshotTests {
     @Test("codable round trip preserves every field")
     func codableRoundTrip() throws {
         let snapshot = SessionRemoteWorkspaceSnapshot(
-            transport: .ssh,
             terminalTransport: .mosh,
             terminalProfile: .defaultTmux,
             configuredRemoteCommand: "exec fish",
@@ -19,19 +18,19 @@ struct SessionRemoteWorkspaceSnapshotTests {
             preserveAfterTerminalExit: true,
             skipDaemonBootstrap: true,
             relayPort: 7000,
-            persistentDaemonSlot: "slot",
-            managedCloudVMID: "vm-123"
+            persistentDaemonSlot: "slot"
         )
         let data = try JSONEncoder().encode(snapshot)
         let decoded = try JSONDecoder().decode(SessionRemoteWorkspaceSnapshot.self, from: data)
         #expect(decoded == snapshot)
     }
 
-    @Test("decodes the persisted wire keys, optional fields absent")
+    @Test("decodes the persisted wire keys, ignoring removed keys, optional fields absent")
     func decodesLegacyWireShape() throws {
         let json = """
         {
-          "transport": "ssh",
+          "transport": "websocket",
+          "managedHostID": "vm-1",
           "destination": "user@host",
           "sshOptions": []
         }
@@ -40,7 +39,6 @@ struct SessionRemoteWorkspaceSnapshotTests {
             SessionRemoteWorkspaceSnapshot.self,
             from: Data(json.utf8)
         )
-        #expect(decoded.transport == .ssh)
         #expect(decoded.terminalTransport == nil)
         #expect(decoded.terminalProfile == nil)
         #expect(decoded.configuredRemoteCommand == nil)
@@ -51,13 +49,10 @@ struct SessionRemoteWorkspaceSnapshotTests {
         #expect(decoded.skipDaemonBootstrap == nil)
         #expect(decoded.relayPort == nil)
         #expect(decoded.persistentDaemonSlot == nil)
-        #expect(decoded.managedCloudVMID == nil)
     }
 
     @Test("transport raw values are the persisted wire strings")
     func transportRawValues() {
-        #expect(WorkspaceRemoteTransport.ssh.rawValue == "ssh")
-        #expect(WorkspaceRemoteTransport.websocket.rawValue == "websocket")
         #expect(WorkspaceRemoteTerminalTransport.ssh.rawValue == "ssh")
         #expect(WorkspaceRemoteTerminalTransport.mosh.rawValue == "mosh")
         #expect(WorkspaceRemoteTerminalProfile.Kind.tmux.rawValue == "tmux")

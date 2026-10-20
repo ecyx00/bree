@@ -261,7 +261,7 @@ extension RemoteTmuxSessionMirror {
         paneId: Int,
         target: (columns: Int, rows: Int)
     ) -> Bool {
-        guard let frame = terminalSurface(forPane: paneId)?.mobileRenderGridFrame(
+        guard let frame = terminalSurface(forPane: paneId)?.renderGridFrame(
             stateSeq: 0,
             scrollbackLines: 0,
             includeTheme: false

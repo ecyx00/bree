@@ -1,4 +1,3 @@
-import BreeCloud
 import Foundation
 import BreeTerminalCore
 
@@ -10,7 +9,7 @@ extension Workspace {
     // MARK: - Title Management
 
     /// Who set a custom title. Auto-naming must not overwrite a user or remote
-    /// title. A remote daemon observation is authoritative for a cloud-bound
+    /// title. A remote daemon observation is authoritative for a remote-bound
     /// projection and may replace a local title after another client changes the
     /// daemon name. The separate source lets reconciliation avoid a write loop.
     enum CustomTitleSource: String, Codable, Sendable {
@@ -98,7 +97,13 @@ extension Workspace {
     /// name with the serialized command that launched a resumed agent.
     @discardableResult
     func applyFocusedPanelTitle(panelId: UUID, requiresFocus: Bool = true) -> Bool {
+        // A terminal that has not reported a title yet only has the generic
+        // placeholder ("Terminal", TerminalPanel.displayTitle); adopting it would make the row jump when
+        // tabs open, close or take focus. Keep the last real title instead.
+        let hasOnlyGenericTerminalName = panels[panelId]?.panelType == .terminal
+            && panelTitles[panelId] == "Terminal" && panelCustomTitles[panelId] == nil
         guard !isRemoteTmuxMirror,
+              !hasOnlyGenericTerminalName,
               !requiresFocus || focusedPanelId == panelId,
               let resolvedTitle = panelTitle(panelId: panelId)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !resolvedTitle.isEmpty else {
@@ -142,21 +147,15 @@ extension Workspace {
     /// tab label was reconciled, matching the pre-spinner-split contract.
     @discardableResult
     func updatePanelTitle(panelId: UUID, title: String, stableTitle: String? = nil) -> Bool {
-        let remote = cloudProjectedResource(forPanel: panelId).flatMap { $0.kind == .terminal ? $0 : nil }
-        let candidate = remote?.cloudProcessDisplayTitle ?? title
         let admitted = panels[panelId]?.panelType == .terminal
-            ? AutomaticTerminalTitle(candidate)?.value : candidate
+            ? AutomaticTerminalTitle(title)?.value : title
         guard let admitted else { return false }
         let trimmed = admitted.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, panels[panelId] != nil else { return false }
-        guard remote != nil || shouldApplyRestoredPanelTitle(panelId: panelId, rawTitle: trimmed) else {
+        guard shouldApplyRestoredPanelTitle(panelId: panelId, rawTitle: trimmed) else {
             return false
         }
-        // A cloud-projected terminal displays the cloud process title, so the
-        // local PTY's stable title must not leak into panelTitles or the
-        // workspace title there.
-        let trimmedStable = remote == nil
-            ? stableTitle?.trimmingCharacters(in: .whitespacesAndNewlines) : nil
+        let trimmedStable = stableTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
         let stable = trimmedStable.flatMap { $0.isEmpty ? nil : $0 } ?? trimmed
 
         // Runs on every frame, which is what keeps the animation. It still
@@ -233,7 +232,7 @@ extension Workspace {
     /// Sets, replaces, or clears (empty/nil `title`) the workspace custom title.
     ///
     /// `.auto` writes are rejected when a user or remote title exists, and
-    /// `.auto` never clears. `.remote` is the cloud daemon's canonical value and
+    /// `.auto` never clears. `.remote` is the remote daemon's canonical value and
     /// may replace a local title. Returns whether the write landed.
     @discardableResult
     func setCustomTitle(_ title: String?, source: CustomTitleSource = .user) -> Bool {

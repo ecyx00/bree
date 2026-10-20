@@ -6763,7 +6763,6 @@ final class WorkspacePanelGitBranchTests: XCTestCase {
     }
 
     func testForkAgentWorkspaceLaunchFromPersistentSSHPTYDoesNotReuseParentRelayOrDaemonSlot() throws {
-        try XCTSkipIf(true, "Preserved SSH snapshots restore through tuiSSHConfiguration since 5f0d2227241; rewrite against bree-tui.")
         // The forked configuration only mints a fresh relay namespace when the
         // control listener can name the socket the new session will reconnect
         // through (`SessionRemoteWorkspaceSnapshot.workspaceConfiguration`
@@ -6926,8 +6925,7 @@ final class WorkspacePanelGitBranchTests: XCTestCase {
         let workspace = Workspace()
         workspace.configureRemoteConnection(
             WorkspaceRemoteConfiguration(
-                transport: .websocket,
-                destination: "cloud-vm",
+                destination: "managed-host",
                 port: nil,
                 identityFile: nil,
                 sshOptions: [],

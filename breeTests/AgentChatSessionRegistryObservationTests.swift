@@ -9,7 +9,7 @@ import BREEAgentLaunch
 #endif
 
 struct AgentChatSessionRegistryObservationTests {
-    @Test func mobileChatObserverDetectsNodeHostedClaudeFromProcessDetails() throws {
+    @Test func chatObserverDetectsNodeHostedClaudeFromProcessDetails() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -56,7 +56,7 @@ struct AgentChatSessionRegistryObservationTests {
         #expect(session.workingDirectory == "/Users/example/project")
     }
 
-    @Test func mobileChatObserverCreatesPendingClaudeSessionWithoutSessionIdentity() throws {
+    @Test func chatObserverCreatesPendingClaudeSessionWithoutSessionIdentity() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let snapshot = BreeTopProcessSnapshot(
@@ -248,7 +248,7 @@ struct AgentChatSessionRegistryObservationTests {
         #expect(registry.liveSession(surfaceID: surfaceID)?.sessionID == realSessionID)
     }
 
-    @Test func mobileChatObserverStillDetectsDirectCodexFromRolloutFile() throws {
+    @Test func chatObserverStillDetectsDirectCodexFromRolloutFile() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "018ff5fe-3f91-79d0-99aa-a6a2d7c17b22"
@@ -292,7 +292,7 @@ struct AgentChatSessionRegistryObservationTests {
         #expect(session.transcriptPath == rolloutPath)
     }
 
-    @Test func mobileChatObserverIgnoresClaudeChildProcessWithInheritedEnvironment() {
+    @Test func chatObserverIgnoresClaudeChildProcessWithInheritedEnvironment() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -327,7 +327,7 @@ struct AgentChatSessionRegistryObservationTests {
         #expect(observed.isEmpty)
     }
 
-    @Test func mobileChatLivenessRecognizesNodeHostedClaudeFromProcessDetails() {
+    @Test func chatLivenessRecognizesNodeHostedClaudeFromProcessDetails() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let snapshot = BreeTopProcessSnapshot(
@@ -366,7 +366,7 @@ struct AgentChatSessionRegistryObservationTests {
         #expect(livePID == 505)
     }
 
-    @Test func mobileChatLivenessIgnoresClaudeChildProcessWithInheritedEnvironment() {
+    @Test func chatLivenessIgnoresClaudeChildProcessWithInheritedEnvironment() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let snapshot = BreeTopProcessSnapshot(
@@ -401,7 +401,7 @@ struct AgentChatSessionRegistryObservationTests {
         #expect(livePID == nil)
     }
 
-    @Test func mobileChatLivenessFallsBackToUnidentifiedClaudeProcess() {
+    @Test func chatLivenessFallsBackToUnidentifiedClaudeProcess() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let snapshot = BreeTopProcessSnapshot(
@@ -442,7 +442,7 @@ struct AgentChatSessionRegistryObservationTests {
         #expect(AgentChatSessionRegistry.nextState(previous: .ended, event: restart) == .idle)
     }
 
-    @Test func mobileChatObserverSkipsUnambiguousNonAgentWithoutReadingDetails() {
+    @Test func chatObserverSkipsUnambiguousNonAgentWithoutReadingDetails() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let snapshot = BreeTopProcessSnapshot(

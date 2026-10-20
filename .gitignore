@@ -90,3 +90,6 @@ Packages/Shared/BreeTerminalClient/BreeTerminalClient.xcframework/
 
 # Release packages from scripts/build-bree.sh --package
 /dist/
+
+# Locally built breed-remote binary
+/daemon/remote/cmd/breed-remote/breed-remote

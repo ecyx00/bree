@@ -113,10 +113,10 @@ final class CommandPaletteNucleoFFITests: XCTestCase {
         let library = try NucleoLibrary()
         let entries = [
             FixtureEntry(
-                id: "workspace.iosMobileTerminal",
+                id: "workspace.iosTerminal",
                 rank: 0,
-                title: "iOS Mobile Terminal",
-                searchableTexts: ["iOS Mobile Terminal", "Workspace", "workspace", "switch", "go"]
+                title: "iOS Terminal",
+                searchableTexts: ["iOS Terminal", "Workspace", "workspace", "switch", "go"]
             ),
             FixtureEntry(
                 id: "workspace.forkSessionNotFound",
@@ -134,7 +134,7 @@ final class CommandPaletteNucleoFFITests: XCTestCase {
 
         let resultIDs = try index.search(query: "ios", limit: 5).map(\.id)
 
-        XCTAssertEqual(resultIDs.first, "workspace.iosMobileTerminal")
+        XCTAssertEqual(resultIDs.first, "workspace.iosTerminal")
         XCTAssertTrue(resultIDs.contains("workspace.forkSessionNotFound"))
     }
 

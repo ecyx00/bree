@@ -16,7 +16,9 @@ Shots (optional): each board at 560x720 and 1400x900 fit-to-view, and one at 2x 
 import json, os, re, sys
 from playwright.sync_api import sync_playwright
 
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from check_svg import browser_or_exit
+CHROME = browser_or_exit("zoom_check.py")
 ACCENT_RGB = "rgb(240, 138, 89)"
 BOARDS = []  # every board of the page, read from its data in main(): a board added later is checked without editing this file
 fails = []

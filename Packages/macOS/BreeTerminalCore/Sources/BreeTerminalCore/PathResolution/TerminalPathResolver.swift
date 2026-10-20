@@ -90,6 +90,22 @@ public struct TerminalPathResolver: Sendable {
         return nil
     }
 
+    /// Resolves the file reference (path plus optional `:line[:column]`) under a
+    /// column of a visible terminal line, using the same token candidates as
+    /// ``resolveVisibleLinePath(_:column:cwd:)``.
+    public func resolveVisibleLineReference(
+        _ line: String,
+        column: Int,
+        cwd: String
+    ) -> TerminalFileReference? {
+        for rawToken in line.pathTokenCandidates(containingColumn: column) {
+            if let reference = resolveOpenURLFileReference(rawToken, cwd: cwd) {
+                return reference
+            }
+        }
+        return nil
+    }
+
     /// Resolves an open-URL request payload to an existing local file.
     ///
     /// The resolver tries the literal file spelling before interpreting a

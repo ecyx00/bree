@@ -5,21 +5,6 @@ import Testing
 
 @Suite("Remote relay authorization policy")
 struct RemoteRelayAuthorizationPolicyTests {
-    @Test("An SSH peer cannot start another local SSH workspace", arguments: [false, true])
-    func sshWorkspaceCreationRemainsLocalOnly(withCommand: Bool) {
-        let owner = UUID()
-        var parameters: [String: Any] = ["workspace_id": owner.uuidString, "destination": "another-host"]
-        if withCommand { parameters["initial_command"] = "echo remote-command" }
-        let decision = RemoteRelayAuthorizationPolicy().validate(
-            method: "workspace.ssh.open", parameters: parameters,
-            ownerWorkspaceID: owner, surfaceIDs: []
-        )
-        guard case .denied = decision else {
-            Issue.record("workspace.ssh.open must remain unavailable to remote relay callers")
-            return
-        }
-    }
-
     @Test("terminal paste is scoped to one exact remote surface")
     func terminalPasteScope() {
         let policy = RemoteRelayAuthorizationPolicy()
@@ -309,25 +294,5 @@ struct RemoteRelayAuthorizationPolicyTests {
         #expect(plan?.remoteCommand == "cd '/data00/it'\\''s here' && claude --agent-id teammate")
         #expect(plan?.previousSessionID == "old-session")
         #expect(planner.routing(isRemoteOwned: false, configuration: nil) == .local)
-
-        let bakedSSH = WorkspaceRemoteConfiguration(
-            transport: .ssh,
-            terminalTransport: .ssh,
-            destination: "vm+bree@vm-ssh.freestyle.sh",
-            port: 22,
-            identityFile: nil,
-            sshOptions: [],
-            localProxyPort: nil,
-            relayPort: nil,
-            relayID: nil,
-            relayToken: nil,
-            localSocketPath: nil,
-            managedCloudVMID: "vm-base",
-            terminalStartupCommand: nil,
-            preserveAfterTerminalExit: true,
-            persistentDaemonSlot: "bree-default-freestyle-sshd-v1",
-            skipDaemonBootstrap: true
-        )
-        #expect(planner.routing(isRemoteOwned: true, configuration: bakedSSH) == .unsupportedRemote)
     }
 }

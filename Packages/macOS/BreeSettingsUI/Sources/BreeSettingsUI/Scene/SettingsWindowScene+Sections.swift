@@ -5,13 +5,6 @@ import SwiftUI
 /// (https://github.com/ecyx00/bree/issues/12134): the one the window
 /// opens on in the first layout pass, the rest one per run-loop turn.
 extension SettingsWindowRoot {
-    /// Sections a window opening now mounts progressively. Cloud stays
-    /// eager while unavailable: it renders nothing, so a placeholder would
-    /// only advertise a section the sidebar hides.
-    static func mountOrder(cloudAvailable: Bool) -> [SettingsSectionID] {
-        SettingsSectionMountModel.displayOrder.filter { $0 != .cloudMachines || cloudAvailable }
-    }
-
     func anchorID(for section: SettingsSectionID) -> String {
         "section:\(section.rawValue)"
     }
@@ -38,6 +31,26 @@ extension SettingsWindowRoot {
             )
         }
 
+        slot(.notifications, proxy: proxy) {
+            AppSection(
+                defaultsStore: defaultsStore,
+                catalog: catalog,
+                hostActions: hostActions,
+                soundAgentCache: soundAgentCache,
+                page: .notifications
+            )
+        }
+
+        slot(.editorViewers, proxy: proxy) {
+            AppSection(
+                defaultsStore: defaultsStore,
+                catalog: catalog,
+                hostActions: hostActions,
+                soundAgentCache: soundAgentCache,
+                page: .editorViewers
+            )
+        }
+
         slot(.themes, proxy: proxy) {
             ThemesSection(
                 defaultsStore: defaultsStore,
@@ -56,15 +69,6 @@ extension SettingsWindowRoot {
                 hostActions: hostActions
             )
             TextBoxSection(defaultsStore: defaultsStore, catalog: catalog)
-        }
-
-        slot(.cloudMachines, proxy: proxy) {
-            // `DisableCloud` (MDM) and the rollout gate: no Cloud pane at all
-            // while unavailable, not just no placeholder.
-            if isCloudSectionAvailable {
-                CloudMachinesSection(hostActions: hostActions)
-                    .id(cloudSectionIdentity)
-            }
         }
 
         slot(.sidebarAppearance, proxy: proxy) {
@@ -133,7 +137,7 @@ extension SettingsWindowRoot {
             section: section,
             isActive: section == SettingsSectionMountModel.hostSection(for: activeSection),
             isMounted: mountModel.isMounted(section),
-            showsPlaceholder: section != .cloudMachines || isCloudSectionAvailable,
+            showsPlaceholder: true,
             onMountedAppear: { sectionContentDidAppear(section, proxy: proxy) },
             content: content
         )

@@ -242,7 +242,6 @@ extension DockSplitStore {
         if panel is BrowserPanel {
             removeBrowserOpenTabSuggestion(panelId: panelId)
         }
-        appLinkHandoffCoordinator.cancel(sourcePanelID: panelId)
         panelCancellables[panelId]?.cancel()
         panelCancellables.removeValue(forKey: panelId)
         (panel as? FilePreviewPanel)?.unbindTabMetadata()

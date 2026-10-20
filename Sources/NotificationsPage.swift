@@ -227,6 +227,21 @@ struct NotificationRow: View, Equatable {
             lhs.isFocused == rhs.isFocused
     }
 
+    /// "47s ago", "5m ago", "3h ago", "2d ago".
+    static func agoLabel(since: Date, now: Date) -> String {
+        let seconds = max(0, Int(now.timeIntervalSince(since)))
+        if seconds < 60 {
+            return String(localized: "notifications.time.seconds", defaultValue: "\(seconds)s ago")
+        }
+        if seconds < 3600 {
+            return String(localized: "notifications.time.minutes", defaultValue: "\(seconds / 60)m ago")
+        }
+        if seconds < 86400 {
+            return String(localized: "notifications.time.hours", defaultValue: "\(seconds / 3600)h ago")
+        }
+        return String(localized: "notifications.time.days", defaultValue: "\(seconds / 86400)d ago")
+    }
+
     let notification: TerminalNotification
     let tabTitle: String?
     let isFocused: Bool
@@ -253,9 +268,12 @@ struct NotificationRow: View, Equatable {
                                 .scaledFont(.headline)
                                 .foregroundColor(.primary)
                             Spacer()
-                            Text(notification.createdAt.formatted(date: .omitted, time: .shortened))
-                                .scaledFont(.caption)
-                                .foregroundColor(.secondary)
+                            TimelineView(.periodic(from: .now, by: 1)) { context in
+                                Text(Self.agoLabel(since: notification.createdAt, now: context.date))
+                                    .scaledFont(.caption)
+                                    .foregroundColor(.secondary)
+                                    .monospacedDigit()
+                            }
                         }
 
                         if !notification.body.isEmpty {

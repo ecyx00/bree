@@ -18,7 +18,7 @@ enum SettingsTaxonomyGroup: String, CaseIterable, Identifiable, Sendable {
 
     /// Existing navigation leaves shown under this presentation category.
     var sections: [SettingsSectionID] {
-        [.app, .themes, .terminal, .automation, .sidebarAppearance, .browser, .keyboardShortcuts, .wiki, .advanced, .cloudMachines]
+        [.app, .notifications, .editorViewers, .themes, .terminal, .automation, .sidebarAppearance, .browser, .keyboardShortcuts, .wiki, .advanced]
     }
 
     /// All existing navigation leaves in the order used by grouped browsing.

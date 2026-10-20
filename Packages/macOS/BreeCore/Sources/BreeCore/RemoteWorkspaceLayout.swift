@@ -1,4 +1,4 @@
-/// The shared pane projection used by the Cloud sidebar and CLI.
+/// The shared pane projection used by the remote sidebar and CLI.
 ///
 /// Panes follow screen/layout order, tabs follow tab order, and the active tab
 /// owns the row. Missing coordinates retain arrival order. Pane-less placements

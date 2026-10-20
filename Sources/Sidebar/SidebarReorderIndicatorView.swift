@@ -1,7 +1,7 @@
 import AppKit
 import BreeFoundation
 
-/// The insertion line shared by local workspace rows and the Cloud outline.
+/// The insertion line shared by local workspace rows and the remote outline.
 @MainActor
 final class SidebarReorderIndicatorView: NSView {
     nonisolated static let thickness: CGFloat = 2

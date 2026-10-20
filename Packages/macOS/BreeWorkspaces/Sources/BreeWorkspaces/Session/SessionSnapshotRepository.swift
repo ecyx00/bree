@@ -4,6 +4,17 @@ public import BreeFoundation
 internal import BREEDebugLog
 #endif
 
+/// Process-wide switch set by a layout restore: the current snapshot file is
+/// then read-only for this process until it quits.
+private final class RestoredSnapshotFreeze: @unchecked Sendable {
+    private let lock = NSLock()
+    private var frozen = false
+    var isFrozen: Bool { lock.lock(); defer { lock.unlock() }; return frozen }
+    func freeze() { lock.lock(); frozen = true; lock.unlock() }
+}
+
+private let restoredSnapshotFreeze = RestoredSnapshotFreeze()
+
 /// File-backed store for the app session snapshot.
 ///
 /// Faithful lift of the legacy `SessionPersistenceStore` namespace enum from
@@ -329,6 +340,7 @@ public struct SessionSnapshotRepository<SnapshotValue: SessionSnapshotRepresenti
     @discardableResult
     public func save(_ snapshot: SnapshotValue, fileURL: URL? = nil) -> Bool {
         guard let fileURL = fileURL ?? defaultSnapshotFileURL() else { return false }
+        if isPrimarySnapshot(fileURL), restoredSnapshotFreeze.isFrozen { return false }
         let directory = fileURL.deletingLastPathComponent()
         do {
             try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: nil)
@@ -337,10 +349,90 @@ public struct SessionSnapshotRepository<SnapshotValue: SessionSnapshotRepresenti
                 return true
             }
             try data.write(to: fileURL, options: .atomic)
+            if isPrimarySnapshot(fileURL) {
+                recordLayoutHistory(data, besideCurrentFile: fileURL, at: Date())
+            }
             return true
         } catch {
             return false
         }
+    }
+
+    // MARK: - Rolling layout history
+
+    /// Most layout snapshots kept in `snapshots/`.
+    static var layoutHistoryLimit: Int { 24 }
+    /// Minimum gap between two history entries.
+    static var layoutHistoryInterval: TimeInterval { 300 }
+
+    private func isPrimarySnapshot(_ fileURL: URL) -> Bool {
+        guard let primary = defaultSnapshotFileURL() else { return false }
+        return Self.sameFile(primary, fileURL)
+    }
+
+    /// Writes `data` to `snapshots/` next to the current file unless it equals
+    /// the newest entry or that entry is under five minutes old, then prunes
+    /// the oldest entries beyond the limit. Best effort: failures are ignored.
+    private func recordLayoutHistory(_ data: Data, besideCurrentFile fileURL: URL, at now: Date) {
+        let directory = fileURL.deletingLastPathComponent().appendingPathComponent("snapshots", isDirectory: true)
+        let existing = layoutHistoryEntries(in: directory)
+        if let newest = existing.first {
+            if now.timeIntervalSince(newest.date) < Self.layoutHistoryInterval { return }
+            if let newestData = try? Data(contentsOf: newest.fileURL), newestData == data { return }
+        }
+        let name = "\(layoutHistoryPrefix())\(Int64((now.timeIntervalSince1970 * 1000).rounded())).json"
+        do {
+            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true, attributes: nil)
+            try data.write(to: directory.appendingPathComponent(name, isDirectory: false), options: .atomic)
+        } catch {
+            return
+        }
+        for stale in existing.dropFirst(Self.layoutHistoryLimit - 1) {
+            try? fileManager.removeItem(at: stale.fileURL)
+        }
+    }
+
+    private func layoutHistoryPrefix() -> String { "session-\(safeBundleIdentifier())-" }
+
+    private func layoutHistoryEntries(in directory: URL) -> [(fileURL: URL, date: Date)] {
+        let prefix = layoutHistoryPrefix()
+        let names = (try? fileManager.contentsOfDirectory(atPath: directory.path)) ?? []
+        return names.compactMap { name in
+            guard name.hasPrefix(prefix), name.hasSuffix(".json"),
+                  let millis = Int64(name.dropFirst(prefix.count).dropLast(".json".count)) else { return nil }
+            return (directory.appendingPathComponent(name, isDirectory: false),
+                    Date(timeIntervalSince1970: TimeInterval(millis) / 1000))
+        }
+        .sorted { $0.date > $1.date }
+    }
+
+    /// Rolling layout snapshots, newest first (`snapshots/` beside the current file).
+    public func layoutHistory() -> [(fileURL: URL, date: Date)] {
+        guard let primary = defaultSnapshotFileURL() else { return [] }
+        return layoutHistoryEntries(
+            in: primary.deletingLastPathComponent().appendingPathComponent("snapshots", isDirectory: true)
+        )
+    }
+
+    /// Makes a history entry the current snapshot (atomic write). It is picked
+    /// up on the next launch. Every later write to the current file by this
+    /// process is refused, because the running app would otherwise overwrite the
+    /// restored layout with its live one on the next autosave or at quit. The
+    /// live layout it replaces is first kept as a new history entry.
+    @discardableResult
+    public func restoreLayoutHistoryEntry(_ entry: URL) -> Bool {
+        guard let primary = defaultSnapshotFileURL(),
+              case .loaded = loadOutcome(fileURL: entry),
+              let data = try? Data(contentsOf: entry) else { return false }
+        if let live = try? Data(contentsOf: primary), live != data {
+            let directory = entry.deletingLastPathComponent()
+            let millis = Int64(Date().timeIntervalSince1970 * 1000)
+            let name = "\(layoutHistoryPrefix())\(millis).json"
+            try? live.write(to: directory.appendingPathComponent(name, isDirectory: false), options: .atomic)
+        }
+        guard (try? data.write(to: primary, options: .atomic)) != nil else { return false }
+        restoredSnapshotFreeze.freeze()
+        return true
     }
 
     private func encodedSnapshotData(_ snapshot: SnapshotValue) throws -> Data {
@@ -351,14 +443,22 @@ public struct SessionSnapshotRepository<SnapshotValue: SessionSnapshotRepresenti
 
     public func removeSnapshot(fileURL: URL? = nil) {
         guard let fileURL = fileURL ?? defaultSnapshotFileURL() else { return }
+        if isPrimarySnapshot(fileURL), restoredSnapshotFreeze.isFrozen { return }
         try? fileManager.removeItem(at: fileURL)
     }
 
     public func loadReopenSessionSnapshot(fileURL: URL? = nil) -> SnapshotValue? {
+        let fileURLWasExplicit = fileURL != nil
         guard let fileURL = fileURL ?? manualRestoreSnapshotFileURL() else {
             return nil
         }
-        return load(fileURL: fileURL)
+        if let snapshot = load(fileURL: fileURL) { return snapshot }
+        // Default `-previous` lookup only: fall back to the newest valid history entry.
+        guard !fileURLWasExplicit else { return nil }
+        for entry in layoutHistory() {
+            if let snapshot = load(fileURL: entry.fileURL) { return snapshot }
+        }
+        return nil
     }
 
     public func syncManualRestoreSnapshotCache() {

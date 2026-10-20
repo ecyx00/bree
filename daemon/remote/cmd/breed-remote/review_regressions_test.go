@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net"
@@ -13,8 +12,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"nhooyr.io/websocket"
 )
 
 func TestOmoShadowConfigKeepsCredentialsPrivate(t *testing.T) {
@@ -193,34 +190,5 @@ func TestScrollbackDoesNotReserveFullHistoryForQuietSessions(t *testing.T) {
 	hub.recordAndBroadcast(session, []byte("prompt"))
 	if cap(session.scrollback) > 4096 {
 		t.Fatalf("a quiet terminal reserved %d bytes of history", cap(session.scrollback))
-	}
-}
-
-func TestScrollbackReplayRetainsNewestOutputInOrder(t *testing.T) {
-	hub, session, _, readFile, writeFile, done := newTestPTYInputSession(t, "replay-ring", "first", false)
-	defer close(done)
-	defer readFile.Close()
-	defer writeFile.Close()
-	hub.scrollbackLimit = 64
-	var output []byte
-	for i := 1; i <= 20; i++ {
-		chunk := bytes.Repeat([]byte{byte(i)}, i*7)
-		output = append(output, chunk...)
-		hub.recordAndBroadcast(session, chunk)
-	}
-	attachment, _, _, err := hub.prepareAttachment(context.Background(), nil, session.id, "second", 80, 24, true, "", "token", true, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer attachment.cancel()
-	var replay []byte
-	for len(replay) < attachment.replayBytes {
-		frame := <-attachment.send
-		if frame.messageType == websocket.MessageBinary {
-			replay = append(replay, frame.payload...)
-		}
-	}
-	if !bytes.Equal(replay, output[len(output)-64:]) {
-		t.Fatalf("replay did not preserve the newest output: %x", replay)
 	}
 }

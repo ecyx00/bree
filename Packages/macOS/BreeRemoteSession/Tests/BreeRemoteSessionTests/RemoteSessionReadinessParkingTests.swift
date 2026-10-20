@@ -386,25 +386,4 @@ struct RemoteSessionReadinessParkingTests {
         _ = await coordinator.stopAndWait(cleanupScope: .transport)
     }
 
-    @Test("A managed Cloud VM session, whose broker redials while the machine wakes, carries no deadline")
-    func cloudVMSessionsAreNotDeadlined() async throws {
-        let fixture = try await Self.makeCoordinator(
-            host: ReadinessRecordingHost(),
-            runner: ReadinessScriptedProcessRunner(daemon: .missing),
-            relayPort: nil,
-            skipDaemonBootstrap: true,
-            clock: ManualBrokerClock()
-        )
-        let coordinator = fixture.coordinator
-        defer { fixture.cleanUp() }
-
-        let token = coordinator.queue.sync { () -> UUID? in
-            coordinator.proxyConnectionDesired = true
-            coordinator.armReadinessDeadlineLocked()
-            return coordinator.readinessDeadlineToken
-        }
-        #expect(token == nil)
-
-        _ = await coordinator.stopAndWait(cleanupScope: .transport)
-    }
 }

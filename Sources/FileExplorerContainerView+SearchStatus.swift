@@ -1,6 +1,6 @@
 import Foundation
 
-// Search state copy shared by local and Cloud results.
+// Search state copy shared by local and remote results.
 extension FileExplorerContainerView {
     func statusText(for snapshot: FileSearchSnapshot) -> String {
         switch snapshot.status {

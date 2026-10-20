@@ -12,7 +12,7 @@ import Testing
 /// The terminal grid must not depend on the terminal's own content.
 ///
 /// A legacy scroller reserves a gutter. When its presence followed scrollback,
-/// a Cloud mirror whose replay reset empties history reported a new grid after
+/// a remote mirror whose replay reset empties history reported a new grid after
 /// every remote `resized` replay, the remote PTY resized again and replayed
 /// again, and Codex received a SIGWINCH storm that garbled and flickered its
 /// frame (https://github.com/ecyx00/bree/issues/12885). The same

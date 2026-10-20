@@ -14,6 +14,8 @@ import SwiftUI
 @MainActor
 final class SidebarLayoutModel: ObservableObject {
     @Published var width: CGFloat
+    /// Width to restore when the window grows past `ContentView.narrowSidebarWindowWidth`.
+    var widthBeforeNarrow: CGFloat?
 
     init(width: CGFloat) {
         self.width = width

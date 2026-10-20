@@ -17,6 +17,13 @@ import SwiftUI
 enum BreeMain {
     /// Raises inherited descriptor limits before receipt writing or worker routing.
     static func main() {
+        // Every number the UI formats (PID 94618, 1.00x, 100%) uses en_US
+        // whatever the macOS region is. The argument domain is process-local and
+        // is read by Foundation's current locale, so this must run before any
+        // Locale.current read.
+        var arguments = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+        arguments["AppleLocale"] = "en_US"
+        UserDefaults.standard.setVolatileDomain(arguments, forName: UserDefaults.argumentDomain)
         // First: nothing may read preferences before an app-host test process
         // switches to its own domain.
         TestProcessDefaults.installIfHostingTests()

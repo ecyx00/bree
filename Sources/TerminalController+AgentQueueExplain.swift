@@ -1,4 +1,5 @@
 import BreeAgentJournal
+import BreeWorkspaces
 import Foundation
 
 /// Socket v2 surface for `bree queue` and `bree agent explain`:
@@ -153,5 +154,124 @@ extension TerminalController {
             payload["set_by"] = last
         }
         return .ok(payload)
+    }
+}
+
+/// Per-surface record behind `bree agent wait`: the last aggregate lifecycle
+/// and how many times the agent entered `idle` and `needsInput`. A waiter that
+/// subscribes after a quick running -> idle -> running round trip still sees
+/// the counter move, so a finished turn is never lost.
+@MainActor
+final class AgentWaitLedger {
+    static let shared = AgentWaitLedger()
+
+    struct Entry {
+        var lifecycle = AgentHibernationLifecycleState.unknown
+        var hasAgent = false
+        var idleSeq = 0
+        var needsInputSeq = 0
+    }
+
+    private var entries: [UUID: Entry] = [:]
+
+    func entry(for panelId: UUID) -> Entry { entries[panelId] ?? Entry() }
+
+    /// Records the surface's new aggregate state and publishes
+    /// `agent.lifecycle.changed` when the state or the agent's presence moved.
+    func note(workspaceId: UUID, panelId: UUID, lifecycle: AgentHibernationLifecycleState, hasAgent: Bool) {
+        var entry = entries[panelId] ?? Entry()
+        guard entry.lifecycle != lifecycle || entry.hasAgent != hasAgent else { return }
+        if hasAgent, entry.lifecycle != lifecycle {
+            if lifecycle == .idle { entry.idleSeq += 1 }
+            if lifecycle == .needsInput { entry.needsInputSeq += 1 }
+        }
+        entry.lifecycle = lifecycle
+        entry.hasAgent = hasAgent
+        entries[panelId] = entry
+        BreeEventBus.shared.publish(
+            name: "agent.lifecycle.changed",
+            category: "agent",
+            source: "workspace",
+            workspaceId: workspaceId.uuidString,
+            surfaceId: panelId.uuidString,
+            payload: [
+                "lifecycle": lifecycle.rawValue,
+                "agent": hasAgent,
+                "idle_seq": entry.idleSeq,
+                "needs_input_seq": entry.needsInputSeq,
+            ]
+        )
+    }
+}
+
+extension TerminalController {
+    /// `agent.state`: the lean read behind `bree agent wait`. Returns the
+    /// surface's aggregate lifecycle, the idle / needs-input entry counters and
+    /// `event_seq`, the event-bus cursor read BEFORE the state. Streaming
+    /// `agent.lifecycle.changed` with `after_seq: event_seq` therefore replays
+    /// every transition that the returned state might not include.
+    /// Read-only; not allowlisted for the remote relay.
+    nonisolated func v2AgentState(params: [String: Any]) -> V2CallResult {
+        let eventSeq = BreeEventBus.shared.latestSequence
+        let live: [String: Any]? = v2MainSync {
+            guard let (workspace, surfaceId) = self.v2QueueResolveSurface(params: params) else { return nil }
+            let entry = AgentWaitLedger.shared.entry(for: surfaceId)
+            return [
+                "surface_id": surfaceId.uuidString,
+                "workspace_id": workspace.id.uuidString,
+                "agent": workspace.agentLifecycleStatesByPanelId[surfaceId]?.isEmpty == false,
+                "lifecycle": workspace.agentHibernationLifecycleState(panelId: surfaceId, fallback: nil).rawValue,
+                "idle_seq": entry.idleSeq,
+                "needs_input_seq": entry.needsInputSeq,
+            ]
+        }
+        guard var payload = live else { return v2QueueSurfaceNotFound() }
+        payload["event_seq"] = NSNumber(value: eventSeq)
+        return .ok(payload)
+    }
+}
+
+/// `snapshots.list` and `snapshots.restore` behind `bree snapshots`. Neither is
+/// allowlisted in `RemoteRelayCommandPolicy`: restore rewrites the owner's
+/// session file. Restore also freezes the current snapshot file for this
+/// process (see `restoreLayoutHistoryEntry`), so the layout applies on the
+/// next launch and the running app cannot overwrite it before then.
+extension TerminalController {
+    private nonisolated func v2SnapshotRepository() -> SessionSnapshotRepository<AppSessionSnapshot>? {
+        v2MainSync { AppDelegate.shared?.sessionSnapshotStore as? SessionSnapshotRepository<AppSessionSnapshot> }
+    }
+
+    private nonisolated func v2SnapshotEntries(
+        _ repository: SessionSnapshotRepository<AppSessionSnapshot>
+    ) -> [(id: Int64, fileURL: URL, date: Date)] {
+        repository.layoutHistory().map { (Int64($0.date.timeIntervalSince1970 * 1000), $0.fileURL, $0.date) }
+    }
+
+    nonisolated func v2SnapshotsList() -> V2CallResult {
+        guard let repository = v2SnapshotRepository() else {
+            return .err(code: "unavailable", message: "Session snapshots are unavailable.", data: nil)
+        }
+        let formatter = ISO8601DateFormatter()
+        let entries: [[String: Any]] = v2SnapshotEntries(repository).map { entry in
+            let size = (try? entry.fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+            return ["id": String(entry.id), "date": formatter.string(from: entry.date), "bytes": size]
+        }
+        return .ok(["snapshots": entries])
+    }
+
+    nonisolated func v2SnapshotsRestore(params: [String: Any]) -> V2CallResult {
+        guard let repository = v2SnapshotRepository() else {
+            return .err(code: "unavailable", message: "Session snapshots are unavailable.", data: nil)
+        }
+        guard let id = params["id"] as? String, !id.isEmpty else {
+            return .err(code: "invalid_params", message: "snapshots.restore requires id.", data: nil)
+        }
+        guard let entry = v2SnapshotEntries(repository).first(where: { String($0.id) == id }) else {
+            return .err(code: "not_found", message: "No snapshot with id \(id).", data: nil)
+        }
+        guard repository.restoreLayoutHistoryEntry(entry.fileURL) else {
+            return .err(code: "restore_failed", message: "Snapshot \(id) could not be restored.", data: nil)
+        }
+        return .ok(["id": id, "applies": "next_launch"])
     }
 }

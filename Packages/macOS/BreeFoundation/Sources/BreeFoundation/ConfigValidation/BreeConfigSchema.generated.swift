@@ -758,7 +758,7 @@ enum BreeEmbeddedConfigSchema {
         "predictiveLocalEcho": {
           "type": "boolean",
           "default": true,
-          "description": "Draw typed characters immediately in a terminal whose shell runs on another machine (bree ssh, Cloud, remote tmux) when the link is slow, underlined until the remote echo confirms them, and withdraw them if the remote disagrees. Local terminals, password prompts and full-screen apps are excluded."
+          "description": "Draw typed characters immediately in a terminal whose shell runs on another machine (bree ssh, remote tmux) when the link is slow, underlined until the remote echo confirms them, and withdraw them if the remote disagrees. Local terminals, password prompts and full-screen apps are excluded."
         },
         "autoResumeAgentSessions": {
           "type": "boolean",
@@ -1644,6 +1644,11 @@ enum BreeEmbeddedConfigSchema {
           "type": "boolean",
           "default": true,
           "description": "Allow agents to message each other through Bree. When false, bree agent message fails, nothing is stored, and messages already queued are marked failed instead of being delivered."
+        },
+        "fileOverlapNotice": {
+          "type": "boolean",
+          "default": true,
+          "description": "Tell an agent when another agent in the same checkout changed a file it read or edited in the last 30 minutes. The note arrives as an agent message at the agent's next hook."
         }
       }
     },
@@ -1784,33 +1789,6 @@ enum BreeEmbeddedConfigSchema {
           "type": "boolean",
           "default": true,
           "description": "Show the browser import hint on blank tabs."
-        }
-      }
-    },
-    "mobile": {
-      "x-bree-scopes": ["global"],
-      "title": "mobile",
-      "description": "Mac-side settings for Bree on iOS.",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "artifactFolderAccess": {
-          "type": "string",
-          "enum": ["subtree", "oneLevel"],
-          "default": "subtree",
-          "description": "Controls whether a referenced or terminal-visible directory authorizes its full canonical subtree or only immediate children."
-        },
-        "browserTunnel": {
-          "type": "object",
-          "additionalProperties": false,
-          "description": "The iOS \"On iPhone\" browser for this Mac's workspaces, which loads pages on the phone through this Mac.",
-          "properties": {
-            "allowOtherHosts": {
-              "type": "boolean",
-              "default": false,
-              "description": "Allow the iOS browser to reach hosts other than this Mac's own localhost through this Mac (LAN, VPN, and internet hosts, resolved on this Mac). When off, only this Mac's localhost is reachable and the phone loads other sites over its own network. Link-local and cloud metadata addresses are always refused."
-            }
-          }
         }
       }
     },
@@ -2032,7 +2010,6 @@ enum BreeEmbeddedConfigSchema {
               "attachTextBoxFile",
               "sendCtrlFToTerminal",
               "pasteLastScreenshot",
-              "sizeTerminalToMyWindow",
               "clearScreenKeepScrollback",
               "toggleShellEditor",
               "focusLeft",

@@ -525,6 +525,15 @@ final class ArchitectureViewModel: NSObject, ObservableObject, WKNavigationDeleg
 
     // MARK: Links
 
+    /// The popup is narrower than most boards: aspect-fit the board (legend included), but never below 60% of its natural size: past that it keeps 60% and scrolls (wheel/drag pan).
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        guard isPoppedOut else { return }
+        // The picker label truncates in a narrow popup: keep its full name as a tooltip.
+        webView.evaluateJavaScript("""
+        try{fitView();if(st.s<0.6){const r=stage.getBoundingClientRect(),[l,t,rr]=contentBox(),s=0.6,cw=(rr-l)*s;st={s,tx:(cw+2*PAD<r.width?(r.width-cw)/2:PAD)-l*s,ty:PAD-t*s,fit:false};clampPan();apply();}const t=document.getElementById('ttl'),b=document.getElementById('toc'),f=()=>{b.title=t.textContent};f();new MutationObserver(f).observe(t,{childList:true,characterData:true,subtree:true})}catch(e){}
+        """)
+    }
+
     func webView(
         _ webView: WKWebView,
         decidePolicyFor navigationAction: WKNavigationAction

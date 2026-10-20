@@ -73,7 +73,7 @@ struct DeviceWorkspaceLayoutTests {
         #expect(try JSONDecoder().decode(DeviceWorkspaceLayoutSnapshot.self, from: encoded) == snapshot)
     }
 
-    @Test func decodesMacWireFormatWithoutMobileState() throws {
+    @Test func decodesMacWireFormatWithoutRemoteState() throws {
         let data = Data(#"{"workspace_id":"w1","layout":{"type":"pane","pane_id":"p1","surface_ids":["t2","t1"],"selected_surface_id":"t1"}}"#.utf8)
         let snapshot = try JSONDecoder().decode(DeviceWorkspaceLayoutSnapshot.self, from: data)
         #expect(snapshot.workspaceID == "w1")

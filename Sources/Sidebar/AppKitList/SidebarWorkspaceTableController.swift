@@ -236,7 +236,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         table.allowsMultipleSelection = false
         table.allowsTypeSelect = false
         // Gap between workspace cards.
-        table.intercellSpacing = NSSize(width: 0, height: 6)
+        table.intercellSpacing = NSSize(width: 0, height: 3)
         table.usesAutomaticRowHeights = false
         table.rowHeight = SidebarWorkspaceTableRowHeightCalculator().defaultWorkspaceHeight
         table.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
@@ -439,6 +439,7 @@ final class SidebarWorkspaceTableController: NSObject, NSTableViewDataSource, NS
         installAgeTimer()
         agentLineObservation = AgentLensStore.shared.$cards.dropFirst().map { _ in () }
             .merge(with: AgentQueueStore.shared.$counts.dropFirst().map { _ in () })
+            .merge(with: AttentionStore.shared.$revision.dropFirst().map { _ in () })
             .receive(on: DispatchQueue.main)
             .map { _ in MainActor.assumeIsolated { SidebarRowAgentLine.lines() } }
             .removeDuplicates()

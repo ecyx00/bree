@@ -479,15 +479,7 @@ enum AgentHibernationTrackingGate {
 }
 
 enum RightSidebarBetaFeatureSettings {
-    static let cloudMachinesEnabledKey = "cloud.beta.machines.enabled"
-
-    static let defaultCloudMachinesEnabled = BetaFeaturesCatalogSection().cloudMachines.defaultValue
     static let didChangeNotification = Notification.Name("rightSidebarBetaFeatureDidChange")
-
-    nonisolated static func isCloudMachinesEnabled(defaults: UserDefaults = .standard) -> Bool {
-        guard defaults.object(forKey: cloudMachinesEnabledKey) != nil else { return defaultCloudMachinesEnabled }
-        return defaults.bool(forKey: cloudMachinesEnabledKey)
-    }
 }
 
 enum UITestLaunchManifest {

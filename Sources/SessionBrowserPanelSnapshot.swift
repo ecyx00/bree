@@ -21,8 +21,6 @@ struct SessionBrowserPanelSnapshot: Codable, Sendable {
     /// and navigating via the custom scheme, independent of the (possibly-dead) local HTTP server.
     var diffViewerToken: String? = nil
     var diffViewerRequestPath: String? = nil
-    /// Per-panel provenance also survives Dock and closed-panel snapshots.
-    var cloudResource: SurfaceResourceID? = nil
     /// WebKit session state (back/forward list and scroll positions), so the
     /// first load after relaunch restores the page instead of reloading it.
     /// Omitted for private profiles, form submissions and oversized state.
@@ -30,9 +28,6 @@ struct SessionBrowserPanelSnapshot: Codable, Sendable {
     /// Whether the user pinned the page to stay active while hidden. Omitted
     /// when not pinned.
     var keepsPageActive: Bool? = nil
-    /// The team that owns ``cloudResource``'s machine. Absent in snapshots
-    /// written before multi-team Cloud; restore then adopts the selected team.
-    var cloudTeamID: String? = nil
 
     init(
         urlString: String?,
@@ -48,10 +43,8 @@ struct SessionBrowserPanelSnapshot: Codable, Sendable {
         transparentBackground: Bool? = nil,
         diffViewerToken: String? = nil,
         diffViewerRequestPath: String? = nil,
-        cloudResource: SurfaceResourceID? = nil,
         interactionState: Data? = nil,
-        keepsPageActive: Bool? = nil,
-        cloudTeamID: String? = nil
+        keepsPageActive: Bool? = nil
     ) {
         self.urlString = urlString
         self.profileID = profileID
@@ -66,10 +59,8 @@ struct SessionBrowserPanelSnapshot: Codable, Sendable {
         self.transparentBackground = transparentBackground
         self.diffViewerToken = diffViewerToken
         self.diffViewerRequestPath = diffViewerRequestPath
-        self.cloudResource = cloudResource
         self.interactionState = interactionState
         self.keepsPageActive = keepsPageActive
-        self.cloudTeamID = cloudResource == nil ? nil : cloudTeamID
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -86,10 +77,8 @@ struct SessionBrowserPanelSnapshot: Codable, Sendable {
         case transparentBackground
         case diffViewerToken
         case diffViewerRequestPath
-        case cloudResource
         case interactionState
         case keepsPageActive
-        case cloudTeamID
     }
 
     init(from decoder: Decoder) throws {
@@ -107,9 +96,7 @@ struct SessionBrowserPanelSnapshot: Codable, Sendable {
         transparentBackground = try container.decodeIfPresent(Bool.self, forKey: .transparentBackground)
         diffViewerToken = try container.decodeIfPresent(String.self, forKey: .diffViewerToken)
         diffViewerRequestPath = try container.decodeIfPresent(String.self, forKey: .diffViewerRequestPath)
-        cloudResource = try container.decodeIfPresent(SurfaceResourceID.self, forKey: .cloudResource)
         interactionState = try container.decodeIfPresent(Data.self, forKey: .interactionState)
         keepsPageActive = try container.decodeIfPresent(Bool.self, forKey: .keepsPageActive)
-        cloudTeamID = try container.decodeIfPresent(String.self, forKey: .cloudTeamID)
     }
 }

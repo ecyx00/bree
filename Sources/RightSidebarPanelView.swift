@@ -65,6 +65,7 @@ struct RightSidebarPanelView: View {
     @ObservedObject var fileExplorerStore: FileExplorerStore
     @ObservedObject var fileExplorerState: FileExplorerState
     @ObservedObject var sessionIndexStore: SessionIndexStore
+    @ObservedObject private var attention = AttentionStore.shared
     let titlebarHeight: CGFloat
     let windowAppearance: WindowAppearanceSnapshot
     let workspaceId: UUID?
@@ -245,6 +246,7 @@ struct RightSidebarPanelView: View {
                 .layoutPriority(1)
                 // Close stays apart from the tabs. "Open as pane" lives in the palette.
                 Spacer(minLength: 12)
+                TitlebarNotificationsBell()
                 closeButton
             }
         }
@@ -392,6 +394,7 @@ struct RightSidebarPanelView: View {
                     onResume: onResumeSession,
                     onOpen: onOpenSession,
                     activeSessionKeys: SessionEntryResumeCoordinator.inPaneSessionKeys(tabManager: tabManager),
+                    agentStates: SessionEntryResumeCoordinator.agentStates(tabManager: tabManager),
                     onFocus: { entry in
                         _ = SessionEntryResumeCoordinator.focusIfActive(entry, tabManager: tabManager)
                     }

@@ -1,6 +1,6 @@
 /// A reasoning/thinking block the agent produced before responding.
 ///
-/// Renders as a compact "Thought" marker in the mobile transcript. Sourced
+/// Renders as a compact "Thought" marker in the remote transcript. Sourced
 /// from claude `thinking` content blocks and codex `reasoning` items.
 public struct ChatThought: Sendable, Equatable, Codable {
     /// The reasoning text, possibly summarized by the agent runtime.

@@ -1,5 +1,5 @@
 import BreeAgentChat
-import BreeMobileHost
+import BreeAgentTranscriptHost
 import Foundation
 
 /// Resolves the transcript JSONL path for an agent session.
@@ -76,7 +76,7 @@ struct AgentChatTranscriptResolver: Sendable {
         }
     }
 
-    /// Resolves only paths that are cheap to check from the main-actor mobile
+    /// Resolves only paths that are cheap to check from the main-actor remote
     /// session list path. Codex's fallback scans the full sessions tree, so it is
     /// intentionally excluded here and remains available only when opening a
     /// transcript.

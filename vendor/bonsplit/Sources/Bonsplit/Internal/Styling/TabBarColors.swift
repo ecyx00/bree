@@ -297,56 +297,6 @@ enum TabBarColors {
         return tone.withAlphaComponent(alpha)
     }
 
-    /// Colors of the shared-terminal presence accessory on a tab.
-    struct PresenceColors {
-        /// The surface under the accessory (tab fill or bar).
-        let surface: NSColor
-        let fill: NSColor
-        let glyph: NSColor
-        let text: NSColor
-        let line: NSColor
-    }
-
-    /// The accessory draws on the tab's own fill when selected (unless the
-    /// host shares one backdrop), else on the bar, in the tab bar's text
-    /// color. Every color is dynamic, so system fallbacks resolve in the
-    /// appearance that draws them.
-    static func presenceColors(
-        for appearance: BonsplitConfiguration.Appearance,
-        isSelected: Bool
-    ) -> PresenceColors {
-        let surface = nsColorPresenceSurface(for: appearance, isSelected: isSelected)
-        let foreground = nsColorActiveText(for: appearance)
-        func color(_ role: BonsplitContrastPalette.Role) -> NSColor {
-            BonsplitContrastPalette.dynamicColor(role, background: surface, foreground: foreground)
-        }
-        return PresenceColors(
-            surface: surface,
-            fill: color(.fill),
-            glyph: color(.glyph),
-            text: color(.text),
-            line: color(.line)
-        )
-    }
-
-    private static func nsColorPresenceSurface(
-        for appearance: BonsplitConfiguration.Appearance,
-        isSelected: Bool
-    ) -> NSColor {
-        guard isSelected, !appearance.usesSharedBackdrop else {
-            return nsColorBarBackground(for: appearance)
-        }
-        if let palette = appearance.palette {
-            return paletteSurface(palette.surfaceBase, for: appearance)
-        }
-        guard let custom = tabBarBackgroundColor(for: appearance) else {
-            return .controlBackgroundColor
-        }
-        return custom.isBonsplitLightColor
-            ? custom.bonsplitDarken(by: 0.065)
-            : custom.bonsplitLighten(by: 0.12)
-    }
-
     /// The divider between split panes: `dividerHex` when set, otherwise the chrome separator.
     static func nsColorSplitDivider(for appearance: BonsplitConfiguration.Appearance) -> NSColor {
         if let value = appearance.chromeColors.dividerHex,

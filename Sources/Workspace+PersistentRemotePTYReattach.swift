@@ -55,8 +55,7 @@ extension Workspace {
             let sessionEnded = endedPersistentRemotePTYAttachSurfaceIds.contains(panelId)
             guard restartEndedSessions || !sessionEnded else { continue }
             let command: String
-            let usesPersistentSSHPTY = configuration.transport == .ssh &&
-                !configuration.skipDaemonBootstrap && configuration.persistentDaemonSlot != nil
+            let usesPersistentSSHPTY = configuration.persistentDaemonSlot != nil
             if usesPersistentSSHPTY {
                 let restartedShellCommand = sessionEnded
                     ? configuration.relayPort.map {

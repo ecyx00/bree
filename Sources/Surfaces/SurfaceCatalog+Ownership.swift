@@ -1,4 +1,3 @@
-import BreeCloud
 import BreeSurfaceCatalogModel
 import Foundation
 
@@ -9,7 +8,7 @@ extension SurfaceCatalog {
         pendingRestoredProjections.projection(forPanel: panelID) ?? projection(forPanel: panelID)
     }
 
-    /// Captures the authoritative identity, including Cloud resources still awaiting a provider.
+    /// Captures the authoritative identity, including remote resources still awaiting a provider.
     /// Pending remote identity takes precedence over a live local placeholder.
     func projectionRecord(forPanel panelID: UUID) -> SurfaceProjectionRecord? {
         guard let projection = projectionIncludingPendingRestore(forPanel: panelID) else { return nil }
@@ -21,7 +20,7 @@ extension SurfaceCatalog {
         )
     }
 
-    /// Only a provider's remote materialization supersedes a pending Cloud identity.
+    /// Only a provider's remote materialization supersedes a pending remote identity.
     /// The local shell/browser registered during restore is still its placeholder.
     func consumePendingProjectionIfMaterialized(_ projection: SurfaceProjection) {
         if !projection.resource.machine.isLocal {
@@ -39,9 +38,12 @@ extension SurfaceCatalog {
         projectionIncludingPendingRestore(forPanel: panelID)?.resource.machine
     }
 
+    func liveWorkspace(id: UUID) -> Workspace? {
+        workspaceLookup?(id) ?? AppDelegate.shared?.workspaceFor(tabId: id)
+    }
+
     func validateOwnership(of resources: [SurfaceResourceID], at destination: SurfaceDestination) throws {
-        guard let workspace = cloudWorkspaceRenameService.environment.workspace(destination.workspaceID)
-                ?? Workspace.liveWorkspace(id: destination.workspaceID) else {
+        guard let workspace = liveWorkspace(id: destination.workspaceID) else {
             throw SurfaceCatalogError.destinationNotFound(destination.workspaceID.uuidString)
         }
         if let rejection = ownershipRejection(for: resources, policy: workspace.surfaceOwnershipPolicy) {
@@ -70,21 +72,20 @@ extension SurfaceCatalog {
     }
 
     func ownershipRejection(for resources: [SurfaceResourceID], policy: SurfaceOwnershipPolicy) -> SurfaceTransferRejection? {
-        guard policy.cloudMachine != nil else { return nil }
+        guard policy.remoteMachine != nil else { return nil }
         guard !resources.isEmpty else { return policy.rejection(for: nil) }
         return resources.compactMap { policy.rejection(for: machineOwningResource($0), kind: $0.kind) }.first
     }
 
     /// A legacy SSH projection is catalogued by its local PTY, while the live
-    /// panel retains the stable Cloud machine that actually executes its shell.
+    /// panel retains the stable remote machine that actually executes its shell.
     private func machineOwningResource(_ resource: SurfaceResourceID) -> SurfaceMachineID {
         guard resource.machine.isLocal, let panelID = UUID(uuidString: resource.key) else { return resource.machine }
         if let dock = DockSplitStore.liveStore(containingPanel: panelID) {
             return dock.machineOwningSurface(panelID) ?? resource.machine
         }
         if let projection = projection(forPanel: panelID),
-           let workspace = cloudWorkspaceRenameService.environment.workspace(projection.workspaceID)
-                ?? Workspace.liveWorkspace(id: projection.workspaceID),
+           let workspace = liveWorkspace(id: projection.workspaceID),
            let machine = workspace.machineOwningSurface(panelID, catalog: self) {
             return machine
         }

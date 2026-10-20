@@ -340,7 +340,7 @@ struct SessionSnapshotImportTrustTests {
         #expect(SessionSnapshotImportTrust.strippingTerminalControlStrings(text) == text)
     }
 
-    // MARK: - Browser, drafts, docks, cloud
+    // MARK: - Browser, drafts, docks, remote
 
     @Test("imported browser panels keep only http(s) pages and lose profile and provenance")
     func browserPanelsAreSanitized() throws {
@@ -408,7 +408,6 @@ struct SessionSnapshotImportTrustTests {
         let (restored, report) = SessionSnapshotImportTrust.snapshotForRestore(snapshot, source: Self.fileImport)
 
         let workspace = try #require(restored.windows.first?.tabManager.workspaces.first)
-        #expect(workspace.cloudVM == nil)
         #expect(workspace.environment == nil)
         #expect(workspace.surfaceProjections == nil)
         let terminal = try #require(workspace.panels.first?.terminal)
@@ -523,7 +522,6 @@ struct SessionSnapshotImportTrustTests {
     ) -> AppSessionSnapshot {
         if workspaceHasRemote {
             workspace.remote = SessionRemoteWorkspaceSnapshot(
-                transport: .ssh,
                 destination: "dev@example.com",
                 port: nil,
                 identityFile: nil,

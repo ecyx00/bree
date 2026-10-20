@@ -147,7 +147,14 @@ final class FileExplorerHeaderView: NSView {
             } else if items.count > 1 {
                 items[0].title = "/"
             }
+            // Deep folders: "… › parent › folder" (the full path stays in the tooltip).
+            if items.count > 3 {
+                let ellipsis = NSPathControlItem()
+                ellipsis.title = "…"
+                items = [ellipsis] + items.suffix(2)
+            }
             pathControl.pathItems = items
+            pathControl.toolTip = localRootPath
             pathLabel.isHidden = true
             pathControl.isHidden = false
         } else if quickSearchQuery == nil {

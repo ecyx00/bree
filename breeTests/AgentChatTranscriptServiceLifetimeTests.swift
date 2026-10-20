@@ -1,6 +1,6 @@
 import BREEAgentLaunch
 import BreeAgentChat
-@testable import BreeMobileHost
+@testable import BreeAgentTranscriptHost
 import BreeTerminal
 import BreeTerminalCore
 import Foundation

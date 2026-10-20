@@ -24,13 +24,6 @@ extension BREECLI {
             let format = BREEDiffViewerLocalization.string("cli.architecture.error.manifest", defaultValue: "No diagrams found: %@ is missing. Run `bree guide architecture`.")
             throw CLIError(message: String(format: format, manifest), exitCode: 1)
         }
-        if action == "check" {
-            let chrome = Self.architectureChromePath
-            guard FileManager.default.isExecutableFile(atPath: chrome) else {
-                let format = BREEDiffViewerLocalization.string("cli.architecture.error.chrome", defaultValue: "Google Chrome not found at %@. `architecture check` needs it for the layout check.")
-                throw CLIError(message: String(format: format, chrome), exitCode: 1)
-            }
-        }
         let script = action == "check" ? "validate_agent.py" : "render_agent.py"
         let arguments = ["-I", scripts.appendingPathComponent(script).path, root.path] + (action == "check" ? ["--check"] : [])
         let process = Process()
@@ -42,16 +35,13 @@ extension BREECLI {
         return true
     }
 
-    /// The layout check drives this Chrome (same fixed path as scripts/architecture/check_svg.py).
-    static let architectureChromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-
     static var architectureUsage: String {
         let usageLabel = BREEDiffViewerLocalization.string("cli.guide.usage", defaultValue: "Usage:")
         let description = BREEDiffViewerLocalization.string(
             "cli.architecture.description",
-            defaultValue: "Check or build the Architecture page from the diagrams your agent wrote in .architecture/agent/. Needs python3; check also needs Google Chrome. No running app is needed."
+            defaultValue: "Check or build the Architecture page from the diagrams your agent wrote in .architecture/agent/. Needs python3; check also needs a Chromium-family browser (set BREE_ARCHITECTURE_BROWSER to pick one). No running app is needed."
         )
-        let check = BREEDiffViewerLocalization.string("cli.architecture.check.summary", defaultValue: "Validate the diagrams (code anchors, SVG safety, layout in Chrome). Exit 1 on any FAIL.")
+        let check = BREEDiffViewerLocalization.string("cli.architecture.check.summary", defaultValue: "Validate the diagrams (code anchors, SVG safety, layout in a browser). Exit 1 on any FAIL.")
         let render = BREEDiffViewerLocalization.string("cli.architecture.render.summary", defaultValue: "Build .architecture/current.html from .architecture/agent/.")
         let rootHelp = BREEDiffViewerLocalization.string("cli.architecture.root.summary", defaultValue: "root defaults to the nearest folder above the current directory that holds .architecture or .git.")
         return """

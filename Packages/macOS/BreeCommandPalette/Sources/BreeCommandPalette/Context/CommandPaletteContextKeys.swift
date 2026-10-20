@@ -84,9 +84,6 @@ public struct CommandPaletteContextKeys: Hashable, Sendable {
     /// Whether an MDM configuration profile disables the browser (locked:
     /// the enable/disable commands are hidden because they cannot take effect).
     public static let browserManagedByPolicy = CommandPaletteContextKeys(rawValue: "browser.managedByPolicy")
-    /// Whether an MDM configuration profile disables iOS remote control
-    /// (hides pairing commands that cannot take effect).
-    public static let mobileRemoteControlManagedByPolicy = CommandPaletteContextKeys(rawValue: "mobile.remoteControlManagedByPolicy")
 
     /// Key for one terminal open-target's availability; `rawValue` is the
     /// target's raw identifier (the app layers a typed overload on top).

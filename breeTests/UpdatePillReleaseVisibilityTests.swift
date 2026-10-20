@@ -618,7 +618,7 @@ struct TitlebarControlsHoverPolicyTests {
         checkLessThan(
             titlebarControlPassiveHoverBackgroundOpacity(isHovering: true, isPressed: false, isEnabled: true),
             titlebarControlBackgroundOpacity(config: compactConfig, isHovering: true, isPressed: false),
-            "The inactive half of the compound plus/cloud control should be lighter than a normal hovered titlebar icon."
+            "The inactive half of the compound plus/Remote control should be lighter than a normal hovered titlebar icon."
         )
         checkEqual(
             titlebarControlActiveHoverBackgroundOpacity(isHovering: false, isPressed: false, isEnabled: true),

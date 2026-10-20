@@ -1726,21 +1726,6 @@ typealias SessionSplitLayoutSnapshot = BreePanes.SessionSplitLayoutSnapshot
 typealias SessionWorkspaceLayoutSnapshot = BreePanes.SessionWorkspaceLayoutSnapshot
 typealias SessionSplitContainerLayoutCodec = BreePanes.SessionSplitContainerLayoutCodec
 
-/// A cloud machine bound to a workspace through the bree-tui remote daemon, persisted so a
-/// restored `vm:<id>` workspace stays that machine's workspace (`workspace(forCloudVMID:)`,
-/// the sidebar cloud button's Base reuse, `vm.terminal_open` targeting). Only the binding is
-/// persisted: the pane's link is a process and is not replayed on restore.
-struct SessionCloudVMBindingSnapshot: Codable, Sendable, Equatable {
-    var vmID: String
-    var isBase: Bool
-    /// The machine's bree-tui workspace this local workspace stands for; absent in
-    /// legacy snapshots and for machine-only bindings (`vm shell`).
-    var remoteWorkspaceID: String? = nil
-    /// The team that owns the machine. Absent in snapshots written before
-    /// multi-team Cloud; restore then adopts the selected team.
-    var teamID: String? = nil
-}
-
 struct SessionWorkspaceSnapshot: Codable, Sendable {
     /// Original workspace ID captured when the snapshot comes from a live workspace.
     /// Restore reuses this identity when it is present and non-colliding; legacy,
@@ -1781,16 +1766,9 @@ struct SessionWorkspaceSnapshot: Codable, Sendable {
     var progress: SessionProgressSnapshot?
     var gitBranch: SessionGitBranchSnapshot?
     var remote: SessionRemoteWorkspaceSnapshot?
-    /// bree-tui cloud machine binding; absent in manifests written before the Cloud tree and for
-    /// workspaces that are not cloud machines.
-    var cloudVM: SessionCloudVMBindingSnapshot? = nil
     /// Remote surfaces this workspace's panes projected (`SurfaceCatalog`); absent for
     /// workspaces that only ever showed local panes, so older manifests decode unchanged.
     var surfaceProjections: [SurfaceProjectionRecord]? = nil
-    /// The team that owns each Cloud machine this workspace shows, by machine
-    /// id. Restore reconnects those panes with that team even when another
-    /// team is selected. Absent in manifests written before multi-team Cloud.
-    var cloudMachineTeams: [String: String]? = nil
     /// Optional so manifests written before this field decode cleanly.
     var environment: [String: String]? = nil
     /// Manual task-status override raw values and the persisted checklist. Optional-with-nil-default

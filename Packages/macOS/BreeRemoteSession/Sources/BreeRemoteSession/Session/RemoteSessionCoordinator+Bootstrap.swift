@@ -652,7 +652,14 @@ extension RemoteSessionCoordinator {
         var candidates: [URL] = []
         // Compile-time path of this package source; the marker walk below
         // still lands on the checkout root (dev-only fallback path).
-        let compileTimeRoot = URL(fileURLWithPath: #filePath)
+        let compileTimeRoot = URL(fileURLWithPath: {
+            // Release binaries must not embed the build machine's source path.
+            #if DEBUG
+            return #filePath
+            #else
+            return "/bree/a/b/c/d/e/f/g/h/dev-source-unavailable.swift"
+            #endif
+        }())
             .deletingLastPathComponent() // Session
             .deletingLastPathComponent() // BreeRemoteSession
         candidates.append(compileTimeRoot)

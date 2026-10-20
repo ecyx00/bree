@@ -133,7 +133,6 @@ public final class NativeSSHConnectionBroker {
     @discardableResult
     public func retainWorkspace(_ configuration: WorkspaceRemoteConfiguration) -> WorkspaceRemoteConfiguration {
         guard let ownerWorkspaceID = configuration.ownerWorkspaceID else { return configuration }
-        guard configuration.transport == .ssh else { return configuration }
         let effectiveOptions = sharingOptions.mergingDefaults(
             into: configuration.sshOptions,
             routeSensitiveOptions: configuration.identityFile.map { ["IdentityFile=\($0)"] } ?? []

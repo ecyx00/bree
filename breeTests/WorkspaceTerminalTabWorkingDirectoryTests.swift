@@ -63,7 +63,6 @@ struct WorkspaceTerminalTabWorkingDirectoryTests {
             progress: nil,
             gitBranch: nil,
             remote: SessionRemoteWorkspaceSnapshot(
-                transport: .ssh,
                 destination: "dev@example.com",
                 port: 2222,
                 identityFile: nil,

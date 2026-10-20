@@ -8,7 +8,7 @@ struct RemoteTmuxInputCommandCaptureTests {
 
     @Test func silentPipeHasDeadline() async throws {
         let pipe = Pipe()
-        let clock = CloudCommandDeadlineClock()
+        let clock = TestDeadlineClock()
         defer { try? pipe.fileHandleForWriting.close(); try? pipe.fileHandleForReading.close() }
         let task = Task {
             try await capture.capture(from: pipe.fileHandleForReading, expectedCount: 1, clock: clock) {}
@@ -22,7 +22,7 @@ struct RemoteTmuxInputCommandCaptureTests {
 
     @Test func incompleteOutputHasDeadline() async throws {
         let pipe = Pipe()
-        let clock = CloudCommandDeadlineClock()
+        let clock = TestDeadlineClock()
         let (received, continuation) = AsyncStream<Void>.makeStream()
         defer { try? pipe.fileHandleForWriting.close(); try? pipe.fileHandleForReading.close() }
         let task = Task {

@@ -168,8 +168,8 @@ extension TerminalSurface {
             surfaceCallbackContext = nil
             let manualIOContext = self.manualIOContext
             self.manualIOContext = nil
-            let teeLease = mobileByteTeeLease
-            mobileByteTeeLease = nil
+            let teeLease = byteTeeLease
+            byteTeeLease = nil
             let retiredRemoteOutputLane = retireRemoteOutputLane()
             let staleRuntimeResources = TerminalSurfaceStaleRuntimeResources(
                 callbackContext: callbackContext,
@@ -308,6 +308,7 @@ extension TerminalSurface {
     @MainActor
     public func teardownSurface() {
         recordTeardownRequest(reason: "surface.teardown")
+        TerminalClosedSessionLedger.record(surfaceID: id, ttyDevice: runtimeControllingTTYDeviceIdentifier)
         markPortalLifecycleClosed(reason: "teardown")
         // A close during the agent-hibernation signal/wait window leaves the
         // reservation unconsumed; give the bounded slot back (#15652).
@@ -323,8 +324,8 @@ extension TerminalSurface {
         surfaceCallbackContext = nil
         let manualIOContext = manualIOContext
         self.manualIOContext = nil
-        let teeLease = mobileByteTeeLease
-        mobileByteTeeLease = nil
+        let teeLease = byteTeeLease
+        byteTeeLease = nil
         byteTee.dropSurface(surfaceID: id)
         if let surfaceToFree {
             registry.unregisterRuntimeSurface(surfaceToFree, ownerId: id)
@@ -400,7 +401,6 @@ extension TerminalSurface {
         }
         agentHibernationRuntimeTeardownReservation = nil
         _ = fontSizeLineageSnapshot()
-        mobileViewportFontFitState = nil
         if !runtimeSurfaceSuspendedForAgentHibernation {
             // End the child-process generation at the successful suspension
             // boundary. The registry advances first, synchronously rejecting
@@ -420,8 +420,8 @@ extension TerminalSurface {
         surfaceCallbackContext = nil
         let manualIOContext = manualIOContext
         self.manualIOContext = nil
-        let teeLease = mobileByteTeeLease
-        mobileByteTeeLease = nil
+        let teeLease = byteTeeLease
+        byteTeeLease = nil
         byteTee.dropSurface(surfaceID: id)
 
         if let surfaceToFree {
@@ -817,6 +817,7 @@ extension TerminalSurface {
             return
         }
         guard let createdSurface = surface else { return }
+        if cursorHidden { ghostty_surface_set_cursor_hidden(createdSurface, true) }
         guard let surfaceCallbackContext else {
             preconditionFailure(
                 "A native terminal surface requires callback userdata"
@@ -844,8 +845,8 @@ extension TerminalSurface {
         // and feed them into their own libghostty surface, guaranteeing
         // grid parity by construction. The lease is released alongside
         // `surfaceCallbackContext` when the surface tears down.
-        mobileByteTeeLease?.release()
-        mobileByteTeeLease = byteTee.installTee(on: createdSurface, workspaceID: tabId, surfaceID: id)
+        byteTeeLease?.release()
+        byteTeeLease = byteTee.installTee(on: createdSurface, workspaceID: tabId, surfaceID: id)
         if runtimeInitialInput != nil {
             nextRuntimeInitialInput = nil
         }

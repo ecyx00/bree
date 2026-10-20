@@ -1,4 +1,3 @@
-import BreeCloud
 import Foundation
 
 /// Reduces an immutable owner capture. It performs no I/O and owns no mutable graph.
@@ -7,15 +6,12 @@ struct CurrentWorkReducer {
         let observedAt = input.observedAt.ISO8601Format()
         let catalog = input.export.catalog
         let projections = Dictionary(grouping: catalog.projections, by: \.resource)
-        let states = Dictionary(input.export.cloudStates.map { ($0.machine, $0) }, uniquingKeysWith: { first, _ in first })
         let selected = catalog.resources.sorted { $0.id.rawValue < $1.id.rawValue }.prefix(min(200, max(1, limit)))
         let items = selected.map { resource -> CurrentWorkSnapshot.Item in
             let local = resource.machine.isLocal
-            let state = states[resource.machine]
-            let observation = input.export.cloudStateObservations[resource.machine]
             let fresh = CurrentWorkSnapshot.Freshness(
-                state: local ? "current" : observation?.freshness.rawValue ?? "unknown",
-                reason: local ? nil : observation?.reason ?? (observation == nil ? "no_cloud_observation" : nil),
+                state: local ? "current" : "unknown",
+                reason: nil,
                 observedAt: observedAt
             )
             let allProjections = (projections[resource.id] ?? []).sorted { $0.panelID.uuidString < $1.panelID.uuidString }
@@ -71,28 +67,23 @@ struct CurrentWorkReducer {
             for agent in boundedAgents where agent.state == "needs_input" {
                 attention.append(.init(kind: "needs_input", scope: "agent", evidence: agent.evidence))
             }
-            let pending = (observation?.pendingWrites ?? []).filter { $0.resource == resource.id }
-            let receipts = pending.prefix(8).map { mutation in
-                CurrentWorkSnapshot.Receipt(kind: mutation.kind.rawValue, cursor: mutation.receipt,
-                                            evidence: .init(owner: "SurfaceCatalog", reference: resource.id.rawValue, observedAt: observedAt))
-            }
             return CurrentWorkSnapshot.Item(
                 resourceRef: resource.id.rawValue, durableSurfaceID: local && stableIDs.count == 1 ? stableIDs.first : nil,
                 label: bounded(resource.title), kind: resource.kind.rawValue, lifecycle: resource.lifecycle.rawValue,
                 placement: .init(kind: resource.machine.kind, machine: resource.machine.rawValue), projections: projected,
                 cwd: resource.kind == .terminal ? resource.detail.map { bounded($0) } : nil,
                 projectHints: Array(projects.prefix(8)), repositoryHints: Array(repositories.prefix(8)), agents: boundedAgents, attention: Array(attention.prefix(24)),
-                freshness: fresh, cursor: state?.cursor, receiptRefs: receipts,
+                freshness: fresh,
                 possibleHumanObligations: obligations, evidence: evidence,
                 omitted: ["projections": max(0, allProjections.count - 16), "agents": max(0, agents.count - 8),
                           "attention": max(0, attention.count - 24),
-                          "project_hints": max(0, projects.count - 8), "repository_hints": max(0, repositories.count - 8), "receipt_refs": max(0, pending.count - 8)]
+                          "project_hints": max(0, projects.count - 8), "repository_hints": max(0, repositories.count - 8)]
             )
         }
         return CurrentWorkSnapshot(observedAt: observedAt, totalObserved: catalog.resources.count,
                                    truncated: items.count < catalog.resources.count,
                                    ownerAvailability: ["agent_sessions": input.agentOwnerAvailable ? "available" : "unavailable",
-                                                       "cloud_state": "cached_only", "pull_requests": "workspace_summary_only"], items: items)
+                                                       "pull_requests": "workspace_summary_only"], items: items)
     }
 
     private func bounded(_ value: String) -> String { String(value.prefix(2048)) }

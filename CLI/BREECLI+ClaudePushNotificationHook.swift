@@ -116,7 +116,7 @@ extension BREECLI {
     /// sentAt?}`. Skip ONLY on an explicit user-facing skip reason:
     /// `user_present` (Claude judged the user active) or `config_off` (the
     /// user disabled proactive pushes). Everything else bridges — including
-    /// `localSent: false` with no reason (mobile-only delivery, or a client
+    /// `localSent: false` with no reason (remote-only delivery, or a client
     /// whose local terminal channel is suppressed) and `no_transport`, where
     /// the bree store is the only Mac-visible surface left. Deliberately not
     /// keyed on `localSent`: bree swallows the tool's raw OSC delivery either

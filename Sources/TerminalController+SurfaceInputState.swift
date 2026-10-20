@@ -1,6 +1,6 @@
 import BREEAgentLaunch
 import BreeTerminal
-import BREEMobileCore
+import BreeAppSupport
 import Foundation
 
 extension TerminalController {
@@ -82,7 +82,7 @@ extension TerminalController {
     static func agentPromptInputState(of surface: TerminalSurface) -> AgentPromptInputState {
         // The active screen, not the viewport: a human scrolled up in the
         // pane still has their draft at the bottom.
-        guard let frame = surface.mobileRenderGridFrame(
+        guard let frame = surface.renderGridFrame(
             stateSeq: 0,
             includeTheme: false,
             anchor: .screen

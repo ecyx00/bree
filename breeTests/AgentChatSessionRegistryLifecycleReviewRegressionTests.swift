@@ -1,6 +1,6 @@
 import BREEAgentLaunch
 import BreeAgentChat
-@testable import BreeMobileHost
+@testable import BreeAgentTranscriptHost
 import Foundation
 @preconcurrency import Network
 import Testing

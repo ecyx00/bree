@@ -1,4 +1,3 @@
-import BreeCloud
 import AppKit
 import BreeSettings
 import Foundation
@@ -8,10 +7,7 @@ import Foundation
 /// When the embedded-browser policy activates it runs the injected browser
 /// enforcement (closing live browser panes) and posts
 /// `BrowserAvailabilitySettings.didChangeNotification` so gated UI refreshes;
-/// when the Cloud policy flips either way it runs
-/// the injected Cloud enforcement (teardown of Cloud workspaces, providers,
-/// and the managed VPN on activation; discovery restart on lift), and also at
-/// construction when the policy is already forced; when the remote-connections
+/// when the remote-connections
 /// policy activates it runs the injected remote-connections enforcement
 /// (disconnecting live remote workspaces and remote tmux mirrors), also at
 /// construction. Every transition also posts
@@ -33,12 +29,10 @@ final class ManagedPolicyEnforcementObserver {
     private let notificationCenter: NotificationCenter
     private let isBrowserDisabledByPolicy: () -> Bool
     private let browserURLAllowlistPolicy: () -> BrowserURLAllowlistPolicy
-    private let isCloudDisabledByPolicy: () -> Bool
     private let socketControlPolicy: () -> SocketControlPolicyResolution
     private let capabilityPolicy: ManagedDevicePolicy
     private let enforceBrowserPolicy: () -> Void
     private let enforceBrowserURLAllowlistPolicy: () -> Void
-    private let enforceCloudPolicy: () -> Void
     private let enforceRemoteConnectionsPolicy: () -> Void
     private let enforceSocketControlPolicy: () -> Void
     /// Keys whose runtime effect is a per-call read, a launch-time read, or a
@@ -51,7 +45,6 @@ final class ManagedPolicyEnforcementObserver {
     private var settingsVisiblePolicyStates: [ManagedDevicePolicyKey: Bool]
     private var browserPolicyActive: Bool
     private var observedBrowserURLAllowlistPolicy: BrowserURLAllowlistPolicy
-    private var cloudPolicyActive: Bool
     private var remoteConnectionsPolicyActive: Bool
     private var fileTransferPolicyActive: Bool
     private var socketControlPolicyState: SocketControlPolicyResolution
@@ -65,42 +58,30 @@ final class ManagedPolicyEnforcementObserver {
         browserURLAllowlistPolicy: @escaping () -> BrowserURLAllowlistPolicy = {
             BrowserURLAllowlistPolicy(defaults: .standard)
         },
-        isCloudDisabledByPolicy: @escaping () -> Bool = {
-            ManagedDevicePolicy().isEnforced(.disableCloud)
-        },
         socketControlPolicy: @escaping () -> SocketControlPolicyResolution = {
             SocketControlPolicyResolver().resolve()
         },
         capabilityPolicy: ManagedDevicePolicy = ManagedDevicePolicy(),
         enforceBrowserPolicy: @escaping () -> Void,
         enforceBrowserURLAllowlistPolicy: @escaping () -> Void,
-        enforceCloudPolicy: @escaping () -> Void = {},
         enforceRemoteConnectionsPolicy: @escaping () -> Void = {},
         enforceSocketControlPolicy: @escaping () -> Void = {}
     ) {
         self.notificationCenter = notificationCenter
         self.isBrowserDisabledByPolicy = isBrowserDisabledByPolicy
         self.browserURLAllowlistPolicy = browserURLAllowlistPolicy
-        self.isCloudDisabledByPolicy = isCloudDisabledByPolicy
         self.socketControlPolicy = socketControlPolicy
         self.capabilityPolicy = capabilityPolicy
         self.enforceBrowserPolicy = enforceBrowserPolicy
         self.enforceBrowserURLAllowlistPolicy = enforceBrowserURLAllowlistPolicy
-        self.enforceCloudPolicy = enforceCloudPolicy
         self.enforceRemoteConnectionsPolicy = enforceRemoteConnectionsPolicy
         self.enforceSocketControlPolicy = enforceSocketControlPolicy
         settingsVisiblePolicyStates = Self.settingsVisibleStates(capabilityPolicy)
         browserPolicyActive = isBrowserDisabledByPolicy()
         observedBrowserURLAllowlistPolicy = browserURLAllowlistPolicy()
-        cloudPolicyActive = isCloudDisabledByPolicy()
         remoteConnectionsPolicyActive = capabilityPolicy.isEnforced(.disableRemoteConnections)
         fileTransferPolicyActive = capabilityPolicy.isEnforced(.disableFileTransfer)
         socketControlPolicyState = socketControlPolicy()
-        if cloudPolicyActive {
-            // A profile may already be installed before launch. Enforce it at
-            // startup so restored Cloud workspaces and providers are removed.
-            enforceCloudPolicy()
-        }
         if remoteConnectionsPolicyActive {
             // Same for remote connections: nothing bree created may stay dialed.
             enforceRemoteConnectionsPolicy()
@@ -161,12 +142,6 @@ final class ManagedPolicyEnforcementObserver {
             observedBrowserURLAllowlistPolicy = browserURLAllowlistNow
             anyTransition = true
             enforceBrowserURLAllowlistPolicy()
-        }
-        let cloudNow = isCloudDisabledByPolicy()
-        if cloudNow != cloudPolicyActive {
-            cloudPolicyActive = cloudNow
-            anyTransition = true
-            enforceCloudPolicy()
         }
         let remoteConnectionsNow = capabilityPolicy.isEnforced(.disableRemoteConnections)
         if remoteConnectionsNow != remoteConnectionsPolicyActive {

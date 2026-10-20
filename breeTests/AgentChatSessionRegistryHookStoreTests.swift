@@ -1,4 +1,4 @@
-@testable import BreeMobileHost
+@testable import BreeAgentTranscriptHost
 import Foundation
 import Testing
 import Darwin
@@ -11,7 +11,7 @@ import BREEAgentLaunch
 #endif
 
 struct AgentChatSessionRegistryHookStoreTests {
-    @Test func mobileChatObserverDetectsBreeLaunchedOpaqueClaudeWrapper() throws {
+    @Test func chatObserverDetectsBreeLaunchedOpaqueClaudeWrapper() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -96,7 +96,7 @@ struct AgentChatSessionRegistryHookStoreTests {
         #expect(!AgentChatSessionRegistry.allowsUnidentifiedClaudeLivenessFallback(for: real))
     }
 
-    @Test func mobileChatObserverRejectsArgvOnlyClaudeNeedleWithoutLaunchKind() {
+    @Test func chatObserverRejectsArgvOnlyClaudeNeedleWithoutLaunchKind() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"

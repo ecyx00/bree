@@ -1,6 +1,6 @@
 import BREEAgentLaunch
 import BreeAgentChat
-import BreeMobileHost
+import BreeAgentTranscriptHost
 import Foundation
 
 extension AgentChatSessionRegistry {

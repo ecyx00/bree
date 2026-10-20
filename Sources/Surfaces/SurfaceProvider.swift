@@ -1,4 +1,3 @@
-import BreeCloud
 import BreeSurfaceCatalogModel
 import Foundation
 
@@ -16,8 +15,7 @@ protocol SurfaceProvider: AnyObject {
     /// Re-sync from the source of truth (machine list, link snapshot, local panels).
     func refresh() async
     /// Re-sync this provider, optionally bypassing provider-side caches. The
-    /// default preserves the legacy provider contract; cloud providers use the
-    /// force bit for an explicit `--refresh` request.
+    /// default preserves the legacy provider contract.
     func refresh(force: Bool) async
     /// Create the pane that shows `resource` at `destination` and return the panel it created
     /// (or reused). The catalog records the projection.
@@ -25,15 +23,6 @@ protocol SurfaceProvider: AnyObject {
     /// Same operation with an exact remote placement. A terminal can appear in several
     /// daemon tabs, so callers that came from a workspace pointer pass that tab here.
     func materialize(_ resource: SurfaceResource, remoteView: SurfaceRemoteView?, at destination: SurfaceDestination, focus: Bool) async throws -> SurfaceProjection
-    /// Same operation into a pane the workspace already reserved for this resource
-    /// (optimistic creation). A provider that cannot adopt materializes a fresh pane;
-    /// the caller then closes the reservation when the returned panel differs.
-    func materialize(_ resource: SurfaceResource, remoteView: SurfaceRemoteView?, at destination: SurfaceDestination, focus: Bool, adopting reservation: CloudTerminalPaneReservation?) async throws -> SurfaceProjection
-    /// Create a new terminal on this machine (remote providers create it in the bree-tui
-    /// session; the local provider spawns a shell) and return its resource.
-    func createTerminal(command: [String]?, cwd: String?, name: String?, remoteWorkspaceID: String?) async throws -> SurfaceResource
-    /// Retries of one UI intent carry the same id so a remote mutation can replay its receipt.
-    func createTerminal(command: [String]?, cwd: String?, name: String?, remoteWorkspaceID: String?, request: CloudTerminalCreationRequest) async throws -> SurfaceResource
     /// Read the live working directory of a terminal's foreground process. Remote
     /// providers use this when a shortcut creates a sibling terminal; providers that
     /// cannot inspect a process return nil and preserve their normal daemon fallback.
@@ -41,8 +30,6 @@ protocol SurfaceProvider: AnyObject {
     /// Called when a pane projecting one of this provider's resources goes away. Remote
     /// providers do nothing (the resource lives on); the local provider drops the resource.
     func projectionDidEnd(_ projection: SurfaceProjection)
-    /// Carries the user/lifecycle distinction to providers that synchronize native layouts.
-    func projectionDidEnd(_ projection: SurfaceProjection, reason: SurfaceProjectionEndReason)
     /// Called after a restore recorded projections of resources this provider has
     /// already published. Their panes are placeholders until the provider
     /// materializes them, and no later publish is guaranteed to follow.
@@ -61,22 +48,10 @@ protocol SurfaceProvider: AnyObject {
     /// Create a new, empty workspace on this machine, directly (not as a side effect of
     /// creating a terminal). Providers without remote workspaces refuse.
     func createRemoteWorkspace(name: String?) async throws -> SurfaceRemoteWorkspace
-    /// Returns the committed identity and starter without waiting for a graph refresh.
-    func createRemoteWorkspaceReceipt(name: String?) async throws -> SurfaceWorkspaceCreationReceipt
     /// Close a workspace view on this machine. Its terminals detach into the pool
     /// (`spec/cli.md`: only `terminal close` kills); callers wanting a full delete
     /// close each terminal first.
     func closeRemoteWorkspace(id: String) async throws
-    /// Rename a remote workspace.
-    func renameRemoteWorkspace(id: String, name: String) async throws
-    /// Rename one remote tab placement. Tab names are placement-local even when several
-    /// tabs point at the same terminal.
-    func renameRemoteTab(id: String, name: String) async throws
-    /// Agent writes must not replace a label that changed while obtaining the current graph.
-    func renameRemoteTab(id: String, name: String, expectedName: String) async throws
-    /// Compatibility operation that explicitly renames every tab placement of a terminal.
-    /// New UI paths must use `renameRemoteTab` when they have a placement reference.
-    func renameTerminal(_ id: SurfaceResourceID, name: String) async throws
     /// Close a projection's pane: a materialization that lost a race with an existing
     /// projection, or a URL-backed pane whose machine was unregistered. The default
     /// implementation handles providers that use the shared pane factory; providers may
@@ -87,14 +62,6 @@ protocol SurfaceProvider: AnyObject {
 }
 
 extension SurfaceProvider {
-    func projectionDidEnd(_ projection: SurfaceProjection, reason: SurfaceProjectionEndReason) {
-        projectionDidEnd(projection)
-    }
-
-    func createTerminal(command: [String]?, cwd: String?, name: String?, remoteWorkspaceID: String?, request: CloudTerminalCreationRequest) async throws -> SurfaceResource {
-        try await createTerminal(command: command, cwd: cwd, name: name, remoteWorkspaceID: remoteWorkspaceID)
-    }
-
     /// Legacy providers predate the capability bit and are assumed to support
     /// previews until their concrete implementation says otherwise.
     var supportsPortPreviews: Bool { true }
@@ -115,10 +82,6 @@ extension SurfaceProvider {
         try await materialize(resource, at: destination, focus: focus)
     }
 
-    func materialize(_ resource: SurfaceResource, remoteView: SurfaceRemoteView?, at destination: SurfaceDestination, focus: Bool, adopting reservation: CloudTerminalPaneReservation?) async throws -> SurfaceProjection {
-        try await materialize(resource, remoteView: remoteView, at: destination, focus: focus)
-    }
-
     func closeTerminal(_ id: SurfaceResourceID) async throws {
         throw SurfaceCatalogError.unsupported("closing terminals on \(machine)")
     }
@@ -128,24 +91,8 @@ extension SurfaceProvider {
     func createRemoteWorkspace(name: String?) async throws -> SurfaceRemoteWorkspace {
         throw SurfaceCatalogError.unsupported("workspaces on \(machine)")
     }
-    func createRemoteWorkspaceReceipt(name: String?) async throws -> SurfaceWorkspaceCreationReceipt {
-        SurfaceWorkspaceCreationReceipt(workspace: try await createRemoteWorkspace(name: name), terminal: nil, cursor: nil)
-    }
     func closeRemoteWorkspace(id: String) async throws {
         throw SurfaceCatalogError.unsupported("closing workspaces on \(machine)")
-    }
-    func renameRemoteWorkspace(id: String, name: String) async throws {
-        throw SurfaceCatalogError.unsupported("workspaces on \(machine)")
-    }
-    func renameRemoteTab(id: String, name: String, expectedName: String) async throws {
-        try await renameRemoteTab(id: id, name: name)
-    }
-
-    func renameRemoteTab(id: String, name: String) async throws {
-        throw SurfaceCatalogError.unsupported("renaming tabs on \(machine)")
-    }
-    func renameTerminal(_ id: SurfaceResourceID, name: String) async throws {
-        throw SurfaceCatalogError.unsupported("renaming terminals on \(machine)")
     }
     @discardableResult
     func discardMaterialization(_ projection: SurfaceProjection) -> Bool {

@@ -74,11 +74,11 @@ struct BrowserDiscardRestoreStrategyTests {
     }
 
     @Test(
-        "Reload, remote proxy, cloud routing, crash recovery and insecure HTTP replay the URL",
+        "Reload, remote proxy, remote routing, crash recovery and insecure HTTP replay the URL",
         arguments: [
             BrowserDiscardRestoreStrategy.Conditions(isExplicitReload: true),
             BrowserDiscardRestoreStrategy.Conditions(usesRemoteWorkspaceProxy: true),
-            BrowserDiscardRestoreStrategy.Conditions(usesCloudAccessRouting: true),
+            BrowserDiscardRestoreStrategy.Conditions(usesRemoteAccessRouting: true),
             BrowserDiscardRestoreStrategy.Conditions(hasRecoverableWebContentTermination: true),
             BrowserDiscardRestoreStrategy.Conditions(requiresInsecureHTTPConsent: true)
         ]

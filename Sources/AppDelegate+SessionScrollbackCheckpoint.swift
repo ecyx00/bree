@@ -292,7 +292,7 @@ enum TerminalScrollbackCheckpointExport {
             return nil
         }
         return TerminalController.tailTerminalLines(
-            TerminalController.normalizedMobileVTExportText(raw),
+            TerminalController.normalizedVTExportText(raw),
             maxLines: lineLimit
         )
     }

@@ -35,7 +35,7 @@ public protocol TerminalImagePasteWriting: AnyObject, Sendable {
     /// materializes the first image and returns its shell-escaped path.
     func saveClipboardImageIfNeeded(from pasteboard: NSPasteboard, assumeNoText: Bool) -> String?
 
-    /// Writes raw image bytes (e.g. forwarded from a paired mobile client) to
+    /// Writes raw image bytes (e.g. forwarded from a paired remote client) to
     /// an owned temporary file and returns its shell-escaped path.
     func saveImageData(_ data: Data, fileExtension: String) -> String?
 

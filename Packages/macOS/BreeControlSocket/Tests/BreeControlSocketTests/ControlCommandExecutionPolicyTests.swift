@@ -25,9 +25,6 @@ struct ControlCommandExecutionPolicyTests {
             "sidebar.custom.open",
             "debug.sidebar.simulate_drag",
             "debug.window.screenshot",
-            "terminal.size_state", "terminal.size_policy.set", "terminal.size_to_me",
-            "terminal.size_counts.set", "terminal.participant.disconnect",
-            "terminal.participants.disconnect_others",
             // Vault session-index verbs scan transcript stores on disk and
             // must never hold the main actor (see socketWorkerMethods).
             "vault.sessions", "vault.search",
@@ -372,7 +369,7 @@ struct ControlCommandExecutionPolicyTests {
         )
         let expectedWorker = telemetry.union(notification).union(agentJournal)
             .union(terminalRead)
-            .union(diagnosticRead).union(resolutionReads).union(sends)
+            .union(resolutionReads).union(sends)
             .union(configurationMutations).union(windowCapture).union(["ping"])
         #expect(ControlCommandExecutionPolicy.socketWorkerV1Commands == expectedWorker)
         // Every member except terminal and diagnostic reads, the journal
@@ -384,7 +381,6 @@ struct ControlCommandExecutionPolicyTests {
             ControlCommandExecutionPolicy.mainThreadCallableSocketWorkerV1Commands
                 == expectedWorker
                     .subtracting(terminalRead)
-                    .subtracting(diagnosticRead)
                     .subtracting(agentJournal)
                     .subtracting(configurationMutations)
                     .subtracting(windowCapture)

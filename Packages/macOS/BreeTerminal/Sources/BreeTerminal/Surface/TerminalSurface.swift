@@ -217,17 +217,17 @@ public final class TerminalSurface: Identifiable, ObservableObject {
 
     /// Identifies who owns the process, PTY, and terminal protocol.
     public let ioMode: TerminalSurfaceIOMode
-    /// Whether the process or PTY is supplied by a remote SSH/Cloud transport.
+    /// Whether the process or PTY is supplied by a remote SSH/Remote transport.
     /// Remote exec terminals still use ``ioMode`` ``.exec`` because Ghostty
     /// owns their local PTY, so protocol callbacks need this origin bit too.
     public let isRemoteTerminal: Bool
     /// Whether OSC 52 may publish into the local clipboard without a gesture.
-    /// Manual mirrors and remote exec PTYs are untrusted unless the Cloud
+    /// Manual mirrors and remote exec PTYs are untrusted unless the remote
     /// provider grants its write-only clipboard path.
     public var allowsAutomaticClipboardWrite: Bool {
         (!ioMode.usesManualIO && !isRemoteTerminal) || allowsRemoteClipboardWrites
     }
-    /// Cloud-only permission for guest clipboard writer shims. Clipboard reads
+    /// Remote-only permission for guest clipboard writer shims. Clipboard reads
     /// remain denied by the runtime policy regardless of this flag.
     public let allowsRemoteClipboardWrites: Bool
     /// Ordered input from the manual transport (literal bytes or named keys).
@@ -265,6 +265,14 @@ public final class TerminalSurface: Identifiable, ObservableObject {
     }
     /// Routes accepted explicit user input to the surface's current panel owner.
     @MainActor public var onExplicitInput: (@MainActor () -> Void)?
+    /// Renderer-only cursor hide (the shell editor owns input). Nothing is
+    /// written to the pty; it is re-applied when the runtime surface is rebuilt.
+    @MainActor public var cursorHidden = false {
+        didSet {
+            guard oldValue != cursorHidden, let surface else { return }
+            ghostty_surface_set_cursor_hidden(surface, cursorHidden)
+        }
+    }
     /// Fires right after `ghostty_surface_new` succeeds, i.e. when the PTY child spawns.
     @MainActor public var onRuntimeSurfaceCreated: (@MainActor () -> Void)?
     /// Set while another participant disconnected this pane's view of a
@@ -321,7 +329,6 @@ public final class TerminalSurface: Identifiable, ObservableObject {
     var lastUncappedPixelHeight: UInt32 = 0
     var lastXScale: CGFloat = 0
     var lastYScale: CGFloat = 0
-    var mobileViewportCellLimit: (columns: Int, rows: Int)?
     /// tmux-assigned cell grid for manual-IO mirror panes. A mirror's grid
     /// must EQUAL tmux's assignment, not merely fit it: a wider grid never
     /// sets wrap flags where tmux wrapped (unwrapped reads split one tmux
@@ -337,8 +344,6 @@ public final class TerminalSurface: Identifiable, ObservableObject {
     /// A runtime creation that waits for the first committed pane geometry so
     /// the PTY's initial window size is the pane's real size.
     var pendingRuntimeSurfaceCreationSource: RuntimeSurfaceCreationSource?
-    /// Temporary runtime font-size ownership while a mobile viewport is fitted.
-    var mobileViewportFontFitState: MobileViewportFontFitState?
     // Debug metadata is read from debug/CLI paths off the main thread; the
     // lock is the sanctioned carve-out for tiny values shared with
     // synchronous off-isolation readers.
@@ -388,7 +393,7 @@ public final class TerminalSurface: Identifiable, ObservableObject {
     /// (inline in the free task, or transported through the teardown
     /// coordinator's request). Releasing earlier is a use-after-free on the
     /// io-reader thread.
-    var mobileByteTeeLease: (any TerminalByteTeeLease)?
+    var byteTeeLease: (any TerminalByteTeeLease)?
     /// The desired focus state for the Ghostty C surface. May be set before the
     /// C surface exists (e.g. during layout restoration); `createSurface`
     /// reapplies this value once the runtime surface exists, then keeps using it
@@ -763,9 +768,9 @@ public final class TerminalSurface: Identifiable, ObservableObject {
         // userdata and drop the per-surface tee state keyed by this surface id,
         // BEFORE freeing the surface. A terminal closed via deinit (not explicit
         // teardown) would otherwise leak the tee userdata. If teardown already ran, it nil'd
-        // mobileByteTeeLease, so teeLease is nil here and ?.release() no-ops.
-        let teeLease = mobileByteTeeLease
-        mobileByteTeeLease = nil
+        // byteTeeLease, so teeLease is nil here and ?.release() no-ops.
+        let teeLease = byteTeeLease
+        byteTeeLease = nil
         // `dropSurface` is @MainActor but `deinit` is nonisolated, so hop to the
         // main actor with the surface id captured by value (no self capture).
         // Dropping by id only clears the registry/replay state; releasing

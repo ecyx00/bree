@@ -4249,6 +4249,13 @@ pub fn setFontSize(self: *Surface, size: font.face.DesiredSize) !void {
     self.queueRender() catch unreachable;
 }
 
+/// cmux fork: hide or show the terminal cursor without touching the pty or
+/// the program's own cursor state (the shell editor owns input).
+pub fn setCursorHidden(self: *Surface, hidden: bool) void {
+    if (self.renderer.cursor_hidden.swap(hidden, .acq_rel) == hidden) return;
+    self.queueRender() catch {};
+}
+
 /// This queues a render operation with the renderer thread. The render
 /// isn't guaranteed to happen immediately but it will happen as soon as
 /// practical.

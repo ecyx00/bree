@@ -11,7 +11,7 @@ public struct SyntheticKeySpecification {
     public let charactersIgnoringModifiers: String
 }
 
-/// Builds synthetic AppKit key events for socket automation, the mobile
+/// Builds synthetic AppKit key events for socket automation, the remote
 /// browser stream, and browser keyboard replay.
 // TRANSITIONAL: moved verbatim from the app target. Scope these onto
 // `SyntheticKeySpecification` and `NSEvent` once the app callers move too.
@@ -58,7 +58,7 @@ public enum SyntheticKeyEventFactory {
     ///
     /// Browser automation keys are expressed with W3C/Playwright names,
     /// whereas the CGEvent factory uses macOS virtual-key names. Keeping this
-    /// conversion beside the existing factory makes mobile replay and socket
+    /// conversion beside the existing factory makes remote replay and socket
     /// automation share one native mapping instead of maintaining two event
     /// pipelines.
     public static func specification(forBrowserEvent event: BrowserKeyboardEvent) -> SyntheticKeySpecification? {

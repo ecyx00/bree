@@ -1,4 +1,4 @@
-import BREEMobileCore
+import BreeAppSupport
 import Foundation
 
 /// The catalog identity of one tagged bree app instance on another Mac signed
@@ -9,9 +9,9 @@ import Foundation
 /// name one thing.
 ///
 /// Wire form: `device:<uuid>@<tag>`. The prefix keeps the value distinct from
-/// `"local"` and from every cloud machine id (slugs and provider ids never carry a
+/// `"local"` and from every remote machine id (slugs and provider ids never carry a
 /// `device:` prefix), so ``SurfaceMachineID/init(rawValue:)`` stays backward
-/// compatible with persisted sessions, `cloudTree.collapsedMachineIDs`, and the
+/// compatible with persisted sessions, `remoteTree.collapsedMachineIDs`, and the
 /// `surface.catalog` JSON older CLIs already read. The UUID contains no `@`, so the
 /// first `@` after the prefix splits identity from tag even for tags that contain one.
 public struct SurfaceDeviceInstanceID: Hashable, Codable, Sendable, CustomStringConvertible {

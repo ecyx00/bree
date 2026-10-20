@@ -16,33 +16,23 @@ import XCTest
 final class RightSidebarTabCustomizationTests: XCTestCase {
     private var defaults: UserDefaults!
     private var suiteName: String!
-    private var savedCloudRemoteOverride: Bool?
 
     override func setUp() {
         super.setUp()
         suiteName = "RightSidebarTabCustomizationTests-\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)
         defaults.removePersistentDomain(forName: suiteName)
-        let flag = BreeFeatureFlags.cloudMachinesFlag
-        savedCloudRemoteOverride = BreeFeatureFlags.shared.overrideValue(for: flag)
     }
 
     override func tearDown() {
         defaults.removePersistentDomain(forName: suiteName)
-        BreeFeatureFlags.shared.setOverride(savedCloudRemoteOverride, for: BreeFeatureFlags.cloudMachinesFlag)
-        savedCloudRemoteOverride = nil
         defaults = nil
         super.tearDown()
     }
 
     private func enableAllModeGates() {
-        defaults.set(true, forKey: RightSidebarBetaFeatureSettings.cloudMachinesEnabledKey)
         // An explicit empty hidden set shows every tab.
         defaults.set([String](), forKey: RightSidebarTabPreferences.hiddenKey)
-    }
-
-    private func enableMachinesGate() {
-        defaults.set(true, forKey: RightSidebarBetaFeatureSettings.cloudMachinesEnabledKey)
     }
 
     // MARK: - Ordering and visibility
@@ -68,7 +58,6 @@ final class RightSidebarTabCustomizationTests: XCTestCase {
     }
 
     func testVisibleModesDropUserHiddenTabs() {
-        BreeFeatureFlags.shared.setOverride(true, for: BreeFeatureFlags.cloudMachinesFlag)
         enableAllModeGates()
         XCTAssertTrue(RightSidebarTabPreferences.setHidden(true, mode: .sessions, defaults: defaults))
         XCTAssertEqual(
@@ -208,7 +197,6 @@ final class RightSidebarTabCustomizationTests: XCTestCase {
     }
 
     func testAllTabsVisibleKeepsHistoricDigits() {
-        BreeFeatureFlags.shared.setOverride(true, for: BreeFeatureFlags.cloudMachinesFlag)
         enableAllModeGates()
         let expected: [(RightSidebarMode, String)] = [
             (.files, "1"), (.sessions, "2"), (.activity, "3"),
@@ -223,7 +211,6 @@ final class RightSidebarTabCustomizationTests: XCTestCase {
     }
 
     func testHiddenTabDefaultsToUnboundAndLaterDigitsShift() {
-        BreeFeatureFlags.shared.setOverride(true, for: BreeFeatureFlags.cloudMachinesFlag)
         enableAllModeGates()
         RightSidebarTabPreferences.setHidden(true, mode: .sessions, defaults: defaults)
         XCTAssertEqual(
@@ -237,7 +224,6 @@ final class RightSidebarTabCustomizationTests: XCTestCase {
     }
 
     func testReorderMovesDigitsWithTheTabs() {
-        BreeFeatureFlags.shared.setOverride(true, for: BreeFeatureFlags.cloudMachinesFlag)
         enableAllModeGates()
         RightSidebarTabPreferences.move(.activity, offset: -5, defaults: defaults)
         XCTAssertEqual(

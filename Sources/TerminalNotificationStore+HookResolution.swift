@@ -48,7 +48,7 @@ extension TerminalNotificationStore {
                 abortDesktopNotificationHookResolution(policyRequestId)
             }
         }
-        // A remote emitter (ssh relay, cloud machine) never resolves project hooks from a
+        // A remote emitter (ssh relay, remote machine) never resolves project hooks from a
         // local directory: only the global config the user wrote on this Mac applies.
         let hooks = await notificationHookCache.hooks(
             startingFrom: origin.isRemote ? nil : hookDirectory,

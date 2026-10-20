@@ -80,7 +80,7 @@ fails closed instead of attaching to an unrelated replacement. Recreating the
 commands after login would be a separate resurrection feature and cannot
 restore process memory, an SSH connection, or exact scrollback. For continuity
 while this Mac is offline, run the owner on a remote host with `bree ssh-tmux`,
-`bree mosh-tmux`, or a persistent cloud VM.
+or `bree mosh-tmux`.
 
 ## Discovery, cleanup, and safety
 

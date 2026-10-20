@@ -46,7 +46,7 @@ public final class SettingsSectionMountModel {
     /// (see ``hostSection(for:)``) render inside their host's slot and never
     /// appear here.
     public static let displayOrder: [SettingsSectionID] = [
-        .app, .themes, .terminal, .sidebarAppearance, .cloudMachines,
+        .app, .notifications, .editorViewers, .themes, .terminal, .sidebarAppearance,
         .automation, .browser, .keyboardShortcuts, .wiki, .advanced,
     ]
 

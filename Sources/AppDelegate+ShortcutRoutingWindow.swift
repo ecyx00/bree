@@ -5,7 +5,7 @@ import ObjectiveC
 /// A key routed before portal mount retains its pane as the release owner.
 /// Weak identities prevent a close or surface replacement from retargeting it.
 @MainActor
-private final class CloudMountKeyOwners {
+private final class MountKeyOwners {
     static var associationKey: UInt8 = 0
     @MainActor
     final class Owner {
@@ -17,20 +17,20 @@ private final class CloudMountKeyOwners {
 }
 
 extension AppDelegate {
-    func captureCloudMountKeyRelease(window: NSWindow, event: NSEvent, view: GhosttyNSView) {
-        let owners: CloudMountKeyOwners
-        if let existing = objc_getAssociatedObject(window, &CloudMountKeyOwners.associationKey) as? CloudMountKeyOwners {
+    func captureMountKeyRelease(window: NSWindow, event: NSEvent, view: GhosttyNSView) {
+        let owners: MountKeyOwners
+        if let existing = objc_getAssociatedObject(window, &MountKeyOwners.associationKey) as? MountKeyOwners {
             owners = existing
         } else {
-            owners = CloudMountKeyOwners()
-            objc_setAssociatedObject(window, &CloudMountKeyOwners.associationKey, owners, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            owners = MountKeyOwners()
+            objc_setAssociatedObject(window, &MountKeyOwners.associationKey, owners, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
-        owners.keys[event.keyCode] = CloudMountKeyOwners.Owner(view)
+        owners.keys[event.keyCode] = MountKeyOwners.Owner(view)
     }
 
-    func forwardCloudMountKeyEvent(window: NSWindow, event: NSEvent) -> Bool {
+    func forwardMountKeyEvent(window: NSWindow, event: NSEvent) -> Bool {
         guard event.type == .keyUp || event.type == .keyDown,
-              let owners = objc_getAssociatedObject(window, &CloudMountKeyOwners.associationKey) as? CloudMountKeyOwners,
+              let owners = objc_getAssociatedObject(window, &MountKeyOwners.associationKey) as? MountKeyOwners,
               let owner = owners.keys[event.keyCode] else { return false }
         if event.type == .keyDown, !event.isARepeat {
             // A release may have gone to another application after focus left.

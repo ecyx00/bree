@@ -2,7 +2,7 @@
 """Count UI text that still says "bree" (xcstrings en/tr values and Swift defaultValue literals).
 
 Allowed leftovers are real paths/identifiers (bree.json, ~/.config/bree, .bree/, .bree,
-BREE_* env vars, bree_port, bree-tui, github.com/ecyx00/bree URLs, camel-case setting keys). Everything
+BREE_* env vars, bree_port, github.com/ecyx00/bree URLs, camel-case setting keys). Everything
 else counts as "app name" text. cli.* keys belong to the CLI coder and are counted separately.
 Usage: scripts/count-bree-ui-text.py [--list]
 """
@@ -12,7 +12,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ALLOWED = re.compile(
     r'https?://[A-Za-z0-9._~:/?&=%#@+-]*bree[A-Za-z0-9._~:/?&=%#@+-]*|~?/?\.config/bree/dock\.json'
     r'|~?/?\.bree/dock\.json|bree\.sock|BREE_\w+|\$BREE\w*'
-    r'|bree_port\w*|bree-tui|breed-remote|\w*Bree\w*|\.bree\b|bree\.com|co\.manaflow\.[\w.]+')
+    r'|bree_port\w*|breed-remote|\w*Bree\w*|\.bree\b|bree\.com|co\.manaflow\.[\w.]+')
 # Swift files owned by the CLI/binary coder; not counted here.
 OTHER_CODER = {'BreeCLIPathInstaller.swift', 'breeApp.swift', 'SocketCleanup.swift', 'CLIForwardingLaunchRouter.swift',
                'RemoteInteractiveShellBootstrapBuilder.swift', 'BreeRemoteSession', 'AutomationSection.swift', 'BREEAgentLaunch'}
@@ -38,7 +38,7 @@ def walk(*roots):
 def main():
     show = '--list' in sys.argv
     cat = {'en': 0, 'tr': 0}; cli = 0; allowed = 0; rows = []
-    for p in walk('Resources', 'Packages', 'Examples', 'TunnelExtension'):
+    for p in walk('Resources', 'Packages', 'Examples'):
         if not p.endswith('.xcstrings'): continue
         d = json.load(open(p))
         for k, v in d['strings'].items():

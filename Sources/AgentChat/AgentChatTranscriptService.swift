@@ -1,13 +1,13 @@
 import BREEAgentLaunch
 import BreeAgentChat
-import BreeMobileHost
+import BreeAgentTranscriptHost
 import BreeTerminal
 import BreeTerminalCore
 import Foundation
 
 /// Mac-side facade for the agent chat surface: tracks sessions from hook
 /// events, tails their transcripts, serves history pages, and pushes
-/// `chat.message` events to subscribed mobile clients.
+/// `chat.message` events to subscribed remote clients.
 @MainActor
 final class AgentChatTranscriptService {
     /// The push topic chat clients subscribe to.
@@ -174,7 +174,7 @@ final class AgentChatTranscriptService {
 
     /// Rendered screen rows (top to bottom) for a surface, the source the prose
     /// streamer scrapes. This intentionally reads the plain viewport text
-    /// instead of the mobile render-grid JSON path: live prose streaming only
+    /// instead of the remote render-grid JSON path: live prose streaming only
     /// needs text rows, and grid decoding is owned by the terminal renderer.
     @MainActor
     private static func screenRows(surfaceID: UUID) async -> [String]? {

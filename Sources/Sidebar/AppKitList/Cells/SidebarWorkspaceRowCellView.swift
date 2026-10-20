@@ -253,12 +253,12 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
                 markerColor = ns.signalAttention
                 // The state word leads and wears the signal colour, so a row that
                 // needs the user stands out from calm rows by text, not only a dot.
-                segments = [(String(localized: "sidebar.card.state.needsApproval", defaultValue: "Needs approval"), false, ns.signalAttention)]
+                segments = [(AttentionStyle.word(for: .needsInput, needsApproval: true) ?? "", false, ns.signalAttention)]
                 if let detail { segments.append((detail, detailIsMachine, nil)) }
             case .needsInput:
                 marker = .attention
                 markerColor = ns.signalAttention
-                segments = [(String(localized: "sidebar.card.state.needsInput", defaultValue: "Needs input"), false, ns.signalAttention)]
+                segments = [(AttentionStyle.word(for: .needsInput) ?? "", false, ns.signalAttention)]
                 if let detail { segments.append((detail, detailIsMachine, nil)) }
             case .working:
                 marker = .activity
@@ -275,7 +275,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
             case .agentError:
                 marker = .error
                 markerColor = ns.signalError
-                segments = [(String(localized: "sidebar.card.state.error", defaultValue: "Error"), false, ns.signalError)]
+                segments = [(AttentionStyle.word(for: .failed) ?? "", false, ns.signalError)]
                 if let detail { segments.append((detail, detailIsMachine, nil)) }
             case .commandRunning:
                 marker = .activity
@@ -1384,8 +1384,10 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
         let leading = outerPad + contentPad + (model.isGrouped ? SidebarWorkspaceGroupingMetrics.memberIndent : 0)
         let trailing = width - outerPad - contentPad
         let contentWidth = max(10, trailing - leading)
-        var y: CGFloat = 8
-        let spacing: CGFloat = 4
+        // Row height ~40 pt (46 pt pitch with the table's 3 pt gap): title line, 2 pt, second line.
+        let rowVerticalPad: CGFloat = 5
+        var y: CGFloat = rowVerticalPad
+        let spacing: CGFloat = 2
 
         // Title line
         let titleRowSpacing: CGFloat = 8
@@ -1493,6 +1495,7 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
             }
         }
         y += max(titleHeight, leadingSlotActive ? badgeSide : 0)
+        let afterTitleY = y
 
         func placeBlock(_ view: SidebarRowTextView, inset: CGFloat = 0) {
             guard !view.isHidden else { return }
@@ -1637,7 +1640,9 @@ final class SidebarWorkspaceRowTableCellView: NSTableCellView {
             }
         }
 
-        y = max(y + 8, BreeMetrics.rowHeight)
+        // Every row keeps the two-line height, also one with no second line (the `~` row).
+        y = max(y, afterTitleY + spacing + ceil(NSLayoutManager().defaultLineHeight(for: model.font(.secondary))))
+        y = max(y + rowVerticalPad, BreeMetrics.rowHeight)
 
         if apply {
             contentContainer.frame = NSRect(x: 0, y: 0, width: width, height: y)

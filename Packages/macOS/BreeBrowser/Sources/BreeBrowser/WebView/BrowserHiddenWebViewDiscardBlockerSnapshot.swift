@@ -34,7 +34,6 @@ extension BrowserHiddenWebViewDiscardManager {
         public let isReactGrabActive: Bool
         public var isDesignModeActive = false
         public let isVisualAutomationCaptureActive: Bool
-        public let isMobileBrowserStreamActive: Bool
         public let hasPopups: Bool
         public let isCapturingMedia: Bool
         public let isPlayingMedia: Bool
@@ -61,7 +60,6 @@ extension BrowserHiddenWebViewDiscardManager {
             isReactGrabActive: Bool,
             isDesignModeActive: Bool = false,
             isVisualAutomationCaptureActive: Bool,
-            isMobileBrowserStreamActive: Bool = false,
             hasPopups: Bool,
             isCapturingMedia: Bool,
             isPlayingMedia: Bool,
@@ -85,7 +83,6 @@ extension BrowserHiddenWebViewDiscardManager {
             self.isReactGrabActive = isReactGrabActive
             self.isDesignModeActive = isDesignModeActive
             self.isVisualAutomationCaptureActive = isVisualAutomationCaptureActive
-            self.isMobileBrowserStreamActive = isMobileBrowserStreamActive
             self.hasPopups = hasPopups
             self.isCapturingMedia = isCapturingMedia
             self.isPlayingMedia = isPlayingMedia

@@ -5,7 +5,7 @@
 /// style presence must not follow the surface's own scrollback, or the grid
 /// becomes a function of the terminal's content. A local pane then reflows
 /// when its first row scrolls off (https://github.com/ecyx00/bree/issues/3051),
-/// and a Cloud mirror, whose reset empties history before every remote replay
+/// and a remote mirror, whose reset empties history before every remote replay
 /// refills it, reports a new grid after each replay; the remote PTY resizes
 /// again and sends the next replay, and the loop never ends
 /// (https://github.com/ecyx00/bree/issues/12885).

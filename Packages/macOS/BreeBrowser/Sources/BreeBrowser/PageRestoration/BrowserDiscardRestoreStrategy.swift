@@ -23,8 +23,8 @@ public enum BrowserDiscardRestoreStrategy: Equatable, Sendable {
         /// replay stale proxy URLs. The URL path also queues until the
         /// endpoint is up.
         public var usesRemoteWorkspaceProxy: Bool
-        /// Cloud browser routing owns its own connection flow.
-        public var usesCloudAccessRouting: Bool
+        /// Remote browser routing owns its own connection flow.
+        public var usesRemoteAccessRouting: Bool
         /// The web content process died and recovery replaces the web view.
         public var hasRecoverableWebContentTermination: Bool
         /// An http page the insecure-HTTP gate would stop. Session state
@@ -35,13 +35,13 @@ public enum BrowserDiscardRestoreStrategy: Equatable, Sendable {
         public init(
             isExplicitReload: Bool = false,
             usesRemoteWorkspaceProxy: Bool = false,
-            usesCloudAccessRouting: Bool = false,
+            usesRemoteAccessRouting: Bool = false,
             hasRecoverableWebContentTermination: Bool = false,
             requiresInsecureHTTPConsent: Bool = false
         ) {
             self.isExplicitReload = isExplicitReload
             self.usesRemoteWorkspaceProxy = usesRemoteWorkspaceProxy
-            self.usesCloudAccessRouting = usesCloudAccessRouting
+            self.usesRemoteAccessRouting = usesRemoteAccessRouting
             self.hasRecoverableWebContentTermination = hasRecoverableWebContentTermination
             self.requiresInsecureHTTPConsent = requiresInsecureHTTPConsent
         }
@@ -49,7 +49,7 @@ public enum BrowserDiscardRestoreStrategy: Equatable, Sendable {
         var forcesURLReplay: Bool {
             isExplicitReload
                 || usesRemoteWorkspaceProxy
-                || usesCloudAccessRouting
+                || usesRemoteAccessRouting
                 || hasRecoverableWebContentTermination
                 || requiresInsecureHTTPConsent
         }

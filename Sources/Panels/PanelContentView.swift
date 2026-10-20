@@ -179,14 +179,6 @@ struct PanelContentView: View {
                     .contentShape(Rectangle())
                     .onTapGesture { onRequestPanelFocus() }
             }
-        case .accountSignIn:
-            if let accountSignInPanel = panel as? AccountSignInPanel {
-                AccountSignInPanelView(
-                    panel: accountSignInPanel,
-                    appearance: appearance,
-                    onRequestPanelFocus: onRequestPanelFocus
-                )
-            }
         }
     }
 
@@ -204,7 +196,7 @@ struct PanelContentView: View {
     private var shouldInstallPaneDropTarget: Bool {
         guard isVisibleInUI else { return false }
         switch panel.panelType {
-        case .markdown, .filePreview, .rightSidebarTool, .customSidebar, .project, .extensionBrowser, .workspaceTodo, .notifications, .accountSignIn:
+        case .markdown, .filePreview, .rightSidebarTool, .customSidebar, .project, .extensionBrowser, .workspaceTodo, .notifications:
             return true
         case .terminal, .browser:
             return false

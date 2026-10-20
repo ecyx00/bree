@@ -151,6 +151,21 @@ final class WikiSupportTests: XCTestCase {
         XCTAssertNil(WikiPaths.resolveSlug("x", pageDir: w.project, wikiDir: w.wiki))
     }
 
+    func testSymlinkedProjectFolderPagesAreNotMissing() throws {
+        let w = try makeWiki()
+        let target = FileManager.default.temporaryDirectory.appendingPathComponent("real-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: target) }
+        try touch(target.path + "/a.md")
+        try FileManager.default.createSymbolicLink(atPath: w.wiki + "/linked", withDestinationPath: target.path)
+        var idx = try index(dir: w.wiki + "/linked")
+        idx.wikiRoot = w.wiki
+        let p = try page(slug: "a", file: nil)
+        XCTAssertNotNil(idx.pagePath(for: p))
+        XCTAssertFalse(idx.isMissing(p))
+        XCTAssertNil(idx.pagePath(for: try page(slug: "x", file: "../../etc/passwd")))
+    }
+
     func testSlugResolvesOwnFolderFirstThenConcepts() throws {
         let w = try makeWiki()
         try touch(w.wiki + "/_kavramlar/shared.md")

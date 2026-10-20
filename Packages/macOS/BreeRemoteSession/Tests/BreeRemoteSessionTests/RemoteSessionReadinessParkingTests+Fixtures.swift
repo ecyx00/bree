@@ -50,7 +50,6 @@ extension RemoteSessionReadinessParkingTests {
         proxyBroker: any RemoteProxyBrokering = SSHOverrideUnusedRemoteProxyBroker(),
         reverseRelayLauncher: any RemoteReverseRelayLaunching = RecordingReverseRelayLauncher(),
         relayPort: Int? = 64_044,
-        skipDaemonBootstrap: Bool = false,
         clock: any RemoteProxyRetryClock
     ) throws -> ReadinessCoordinatorFixture {
         let scratchDirectory = FileManager.default.temporaryDirectory
@@ -84,8 +83,7 @@ extension RemoteSessionReadinessParkingTests {
                 ownerWorkspaceID: UUID(),
                 terminalStartupCommand: nil,
                 preserveAfterTerminalExit: false,
-                persistentDaemonSlot: nil,
-                skipDaemonBootstrap: skipDaemonBootstrap
+                persistentDaemonSlot: nil
             )
         )
         let coordinator = RemoteSessionCoordinator(
@@ -101,13 +99,9 @@ extension RemoteSessionReadinessParkingTests {
             buildInfo: SSHOverrideStubBuildInfo(),
             daemonStrings: RemoteDaemonStrings(
                 missingPersistentPTYCapability: "",
-                missingRequiredFunctionality: "",
-                cloudNotificationClearWorkspaceInvalid: "",
-                cloudNotificationClearWorkspaceDenied: "",
-                cloudNotificationClearSurfaceInvalid: ""
+                missingRequiredFunctionality: ""
             ),
             strings: RemoteSessionStrings(
-                connectedVMNoProxyFormat: "%@",
                 suspendedDetailFormat: "%@",
                 reverseRelayUnavailableRetrying: "test relay unavailable",
                 reverseRelayPortUnavailableRetrying: "test relay port unavailable",

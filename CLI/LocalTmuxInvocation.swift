@@ -10,6 +10,8 @@ struct LocalTmuxInvocation {
         case detach
         case close
         case cleanup
+        case auto
+        case enter
     }
 
     let action: Action
@@ -31,7 +33,7 @@ struct LocalTmuxInvocation {
 
     var canRunWithoutBree: Bool {
         switch action {
-        case .list, .status, .detach, .close, .cleanup:
+        case .list, .status, .detach, .close, .cleanup, .auto, .enter:
             return true
         case .start:
             return detached || headless
@@ -53,6 +55,8 @@ struct LocalTmuxInvocation {
         case "detach": action = .detach
         case "close", "kill", "delete": action = .close
         case "cleanup", "prune": action = .cleanup
+        case "auto": action = .auto
+        case "enter": action = .enter
         case "help", "--help", "-h": throw CLIError(message: usage)
         default: throw CLIError(message: String.localizedStringWithFormat(
             String(localized: "cli.localTmux.error.unknownSubcommand", defaultValue: "Unknown local-tmux subcommand '%@'.\n%@"),
@@ -187,7 +191,7 @@ struct LocalTmuxInvocation {
         if action == .cleanup, name != nil || id != nil {
             throw CLIError(message: String(localized: "cli.localTmux.error.cleanupSelector", defaultValue: "local-tmux cleanup does not take a session selector"))
         }
-        if action != .start, command != nil || cwd != nil {
+        if action != .start, action != .auto, command != nil || cwd != nil {
             throw CLIError(message: String(localized: "cli.localTmux.error.startOnly", defaultValue: "local-tmux --cwd and --command are only valid with start"))
         }
         if action != .start && action != .attach,

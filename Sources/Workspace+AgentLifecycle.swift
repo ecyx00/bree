@@ -502,6 +502,7 @@ extension Workspace {
         if !AgentHibernationLifecycleStatusKeys.isManualKey(key) {
             AttentionStore.shared.noteLifecycle(panelId: targetPanelId, agentKey: key, lifecycle: lifecycle)
             recordAgentLifecycleChange(panelId: targetPanelId)
+            noteAgentWaitLedger(panelId: targetPanelId)
             // Wake confirmation needs the report's own pane, never the
             // focused-pane fallback.
             if let panelId {
@@ -526,6 +527,7 @@ extension Workspace {
             didClear = true
             if recordsHibernationActivity {
                 recordAgentLifecycleChange(panelId: panelId)
+                noteAgentWaitLedger(panelId: panelId)
             }
         }
         return didClear
@@ -731,6 +733,16 @@ extension Workspace {
     func agentLifecycleStateForTextBoxEscape(panelId: UUID) -> AgentHibernationLifecycleState {
         AgentHibernationLifecycleState.aggregateForTextBoxEscape(
             statusKeyedStates: agentLifecycleStatesByPanelId[panelId] ?? [:]
+        )
+    }
+
+    /// Feeds `bree agent wait` (`agent.lifecycle.changed`, completion counters).
+    private func noteAgentWaitLedger(panelId: UUID) {
+        AgentWaitLedger.shared.note(
+            workspaceId: id,
+            panelId: panelId,
+            lifecycle: agentHibernationLifecycleState(panelId: panelId, fallback: nil),
+            hasAgent: agentLifecycleStatesByPanelId[panelId]?.isEmpty == false
         )
     }
 

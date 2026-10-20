@@ -15,7 +15,6 @@ public enum PanelType: String, Codable, CaseIterable, Sendable {
     case extensionBrowser
     case workspaceTodo
     case notifications
-    case accountSignIn
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -42,10 +41,6 @@ public enum PanelType: String, Codable, CaseIterable, Sendable {
         }
         if rawValue.lowercased() == Self.notifications.rawValue.lowercased() {
             self = .notifications
-            return
-        }
-        if rawValue.lowercased() == Self.accountSignIn.rawValue.lowercased() {
-            self = .accountSignIn
             return
         }
         throw DecodingError.dataCorruptedError(

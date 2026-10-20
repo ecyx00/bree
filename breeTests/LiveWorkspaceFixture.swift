@@ -13,7 +13,7 @@ import Foundation
 /// `renameService`, the same lookup the app installs at its composition root.
 ///
 /// Only `workspace(_:)` resolves. `workspaces()` stays empty so the catalog's native
-/// projection coordinator does not start mirroring Cloud tabs into these workspaces.
+/// projection coordinator does not start mirroring remote tabs into these workspaces.
 @MainActor
 final class LiveWorkspaceFixture {
     private var workspacesByID: [UUID: Workspace] = [:]
@@ -45,14 +45,6 @@ final class LiveWorkspaceFixture {
         workspacesByID[id]
     }
 
-    var environment: CloudWorkspaceRenameEnvironment {
-        CloudWorkspaceRenameEnvironment(workspace: { [self] id in workspacesByID[id] })
-    }
-
-    var renameService: CloudWorkspaceRenameService {
-        CloudWorkspaceRenameService(environment: environment)
-    }
-
     /// Closes the panels of the workspaces this fixture created or registered.
     func tearDown() {
         for workspace in workspacesByID.values { workspace.teardownAllPanels() }
@@ -79,15 +71,8 @@ extension LiveWorkspaceFixture {
 extension SurfaceCatalog {
     /// A catalog whose local destinations resolve through `live`.
     @MainActor
-    convenience init(
-        live: LiveWorkspaceFixture,
-        cloudPlacementCoordinator: CloudPlacementCoordinator? = nil,
-        cloudWorkspaceProjectionCoordinator: CloudWorkspaceProjectionCoordinator? = nil
-    ) {
-        self.init(
-            cloudWorkspaceRenameService: live.renameService,
-            cloudPlacementCoordinator: cloudPlacementCoordinator,
-            cloudWorkspaceProjectionCoordinator: cloudWorkspaceProjectionCoordinator
-        )
+    convenience init(live: LiveWorkspaceFixture) {
+        self.init()
+        workspaceLookup = { live[$0] }
     }
 }

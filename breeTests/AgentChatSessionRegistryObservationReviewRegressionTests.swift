@@ -8,7 +8,7 @@ import Testing
 #endif
 
 struct AgentChatSessionRegistryObservationReviewRegressionTests {
-    @Test func mobileChatObserverPrefersRealClaudeChildForSameSession() throws {
+    @Test func chatObserverPrefersRealClaudeChildForSameSession() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -72,7 +72,7 @@ struct AgentChatSessionRegistryObservationReviewRegressionTests {
         #expect(session.pid == 202)
     }
 
-    @Test func mobileChatObserverIgnoresInheritedLaunchKindOnChildTool() throws {
+    @Test func chatObserverIgnoresInheritedLaunchKindOnChildTool() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -143,7 +143,7 @@ struct AgentChatSessionRegistryObservationReviewRegressionTests {
         #expect(livePID == 101)
     }
 
-    @Test func mobileChatObserverDetectsHostedClaudeUnderScopedShellRoot() throws {
+    @Test func chatObserverDetectsHostedClaudeUnderScopedShellRoot() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -213,7 +213,7 @@ struct AgentChatSessionRegistryObservationReviewRegressionTests {
         #expect(livePID == 202)
     }
 
-    @Test func mobileChatObserverIgnoresInheritedLaunchKindOnUnrelatedForegroundChild() {
+    @Test func chatObserverIgnoresInheritedLaunchKindOnUnrelatedForegroundChild() {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -277,7 +277,7 @@ struct AgentChatSessionRegistryObservationReviewRegressionTests {
         #expect(livePID == nil)
     }
 
-    @Test func mobileChatObserverUsesPendingAliasForClaudeForkResumeParent() throws {
+    @Test func chatObserverUsesPendingAliasForClaudeForkResumeParent() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let parentSessionID = "24ec0052-450c-4914-b1dd-2ee80d4bc84b"
@@ -323,7 +323,7 @@ struct AgentChatSessionRegistryObservationReviewRegressionTests {
         #expect(livePendingPID == 303)
     }
 
-    @Test func mobileChatObserverDetectsClaudeExeRuntimeProcess() throws {
+    @Test func chatObserverDetectsClaudeExeRuntimeProcess() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let sessionID = "1258bb73-b1b8-469e-910a-61266f4dfc44"
@@ -376,7 +376,7 @@ struct AgentChatSessionRegistryObservationReviewRegressionTests {
         #expect(livePID == 96441)
     }
 
-    @Test func mobileChatObserverCreatesPendingClaudeExeWhenSessionIdentityIsUnavailable() throws {
+    @Test func chatObserverCreatesPendingClaudeExeWhenSessionIdentityIsUnavailable() throws {
         let workspaceID = UUID()
         let surfaceID = UUID()
         let snapshot = BreeTopProcessSnapshot(

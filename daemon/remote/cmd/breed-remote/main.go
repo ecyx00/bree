@@ -113,7 +113,6 @@ type rpcServer struct {
 	ownsPTYHub     bool
 	ptyAttachments map[string]*wsPTYAttachment
 	frameWriter    rpcFrameWriter
-	cliBridge      *cloudCLIBridge
 }
 
 type rpcRequestDispatcher struct {
@@ -368,18 +367,11 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 		fs.SetOutput(stderr)
 		stdio := fs.Bool("stdio", false, "serve over stdin/stdout")
-		ws := fs.Bool("ws", false, "serve terminal PTY transport over WebSocket")
 		persistent := fs.Bool("persistent", false, "proxy stdio to a persistent per-slot daemon")
 		persistentServer := fs.Bool("persistent-server", false, "run the persistent per-slot daemon")
 		persistentStop := fs.Bool("persistent-stop", false, "stop the persistent per-slot daemon")
 		persistentSlot := fs.String("slot", "", "persistent daemon slot")
 		persistentLeasePort := fs.Int("persistent-lease-port", 0, "relay port whose slot file leases the persistent daemon")
-		listen := fs.String("listen", "127.0.0.1:7777", "address for --ws")
-		authLeaseFile := fs.String("auth-lease-file", "", "required lease JSON path for --ws")
-		rpcAuthLeaseFile := fs.String("rpc-auth-lease-file", "", "optional daemon RPC lease JSON path for --ws /rpc")
-		adminTokenSHA256 := fs.String("admin-token-sha256", "", "optional bearer token SHA-256 for HTTPS lease installation")
-		adminEd25519PublicKey := fs.String("admin-ed25519-public-key", "", "optional base64 Ed25519 public key for signed HTTPS lease installation")
-		shell := fs.String("shell", "", "shell path for --ws PTY sessions")
 		if err := fs.Parse(args[1:]); err != nil {
 			return 2
 		}
@@ -388,8 +380,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			return 2
 		}
 		if *persistentServer {
-			if *stdio || *ws || *persistent || *persistentStop {
-				_, _ = fmt.Fprintln(stderr, "serve --persistent-server cannot be combined with --stdio, --ws, --persistent, or --persistent-stop")
+			if *stdio || *persistent || *persistentStop {
+				_, _ = fmt.Fprintln(stderr, "serve --persistent-server cannot be combined with --stdio, --persistent, or --persistent-stop")
 				return 2
 			}
 			if strings.TrimSpace(*persistentSlot) == "" {
@@ -403,8 +395,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			return 0
 		}
 		if *persistentStop {
-			if *stdio || *ws || *persistent || *persistentLeasePort != 0 {
-				_, _ = fmt.Fprintln(stderr, "serve --persistent-stop cannot be combined with --stdio, --ws, --persistent, or --persistent-lease-port")
+			if *stdio || *persistent || *persistentLeasePort != 0 {
+				_, _ = fmt.Fprintln(stderr, "serve --persistent-stop cannot be combined with --stdio, --persistent, or --persistent-lease-port")
 				return 2
 			}
 			if strings.TrimSpace(*persistentSlot) == "" {
@@ -417,8 +409,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 			}
 			return 0
 		}
-		if *stdio == *ws {
-			_, _ = fmt.Fprintln(stderr, "serve requires exactly one of --stdio or --ws")
+		if !*stdio {
+			_, _ = fmt.Fprintln(stderr, "serve requires --stdio")
 			return 2
 		}
 		if (*persistent || strings.TrimSpace(*persistentSlot) != "") && !*stdio {
@@ -432,27 +424,6 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		if *persistentLeasePort != 0 && !*persistent {
 			_, _ = fmt.Fprintln(stderr, "serve --persistent-lease-port requires --persistent")
 			return 2
-		}
-		if *ws {
-			if strings.TrimSpace(*authLeaseFile) == "" {
-				_, _ = fmt.Fprintln(stderr, "serve --ws requires --auth-lease-file")
-				return 2
-			}
-			if err := runWebSocketPTYServer(context.Background(), wsPTYServerConfig{
-				ListenAddr:       strings.TrimSpace(*listen),
-				PTYAuthLeaseFile: strings.TrimSpace(*authLeaseFile),
-				RPCAuthLeaseFile: strings.TrimSpace(*rpcAuthLeaseFile),
-				AdminTokenSHA256: firstNonEmpty(strings.TrimSpace(*adminTokenSHA256), strings.TrimSpace(os.Getenv("BREED_WS_ADMIN_TOKEN_SHA256"))),
-				AdminEd25519PubKey: firstNonEmpty(
-					strings.TrimSpace(*adminEd25519PublicKey),
-					strings.TrimSpace(os.Getenv("BREED_WS_ADMIN_ED25519_PUBLIC_KEY")),
-				),
-				Shell: strings.TrimSpace(*shell),
-			}, stderr); err != nil {
-				_, _ = fmt.Fprintf(stderr, "serve --ws failed: %v\n", err)
-				return 1
-			}
-			return 0
 		}
 		if *persistent {
 			if strings.TrimSpace(*persistentSlot) == "" {
@@ -483,7 +454,6 @@ func usage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  breed-remote version")
 	_, _ = fmt.Fprintln(w, "  breed-remote serve --stdio")
 	_, _ = fmt.Fprintln(w, "  breed-remote serve --stdio --persistent --slot <slot>")
-	_, _ = fmt.Fprintln(w, "  breed-remote serve --ws --auth-lease-file <path> [--rpc-auth-lease-file <path>] [--listen 127.0.0.1:7777]")
 	_, _ = fmt.Fprintln(w, "  breed-remote cli <command> [args...]")
 }
 
@@ -1942,8 +1912,6 @@ func (s *rpcServer) handleRequest(req rpcRequest) rpcResponse {
 		return s.handlePTYClose(req)
 	case "pty.list":
 		return s.handlePTYList(req)
-	case "cli.response":
-		return s.handleCLIResponse(req)
 	default:
 		return rpcResponse{
 			ID: req.ID,
@@ -3204,8 +3172,6 @@ func (s *rpcServer) closeAll() {
 	for _, attachment := range ptyAttachments {
 		if s.ptyHub != nil {
 			s.ptyHub.dropAttachment(attachment)
-		} else {
-			attachment.closeNow()
 		}
 	}
 	if s.ownsPTYHub && s.ptyHub != nil {

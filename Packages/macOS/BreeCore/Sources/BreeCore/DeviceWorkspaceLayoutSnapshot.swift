@@ -1,4 +1,4 @@
-/// A Mac workspace's authoritative pane layout, independent of mobile state sync.
+/// A Mac workspace's authoritative pane layout, independent of remote state sync.
 public struct DeviceWorkspaceLayoutSnapshot: Codable, Equatable, Sendable {
     /// The stable workspace ID on the owning Mac.
     public let workspaceID: String

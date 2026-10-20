@@ -14,7 +14,7 @@ This map records how each selected upstream tmux regression or fuzz target is re
 | `regress/command-order.sh` | tmux-compat | ported | pr | Command splitting and sequential dispatch are covered. |
 | `regress/conf-syntax.sh` | tmux-config | not_applicable | none | bree does not parse tmux config files. |
 | `regress/control-client-sanity.sh` | tmux-compat | adapted | pr | bree exposes JSON-RPC and tmux-compat commands instead of tmux control mode. |
-| `regress/control-client-size.sh` | remote-pty | ported | pr | WebSocket PTY resize control frames are covered. |
+| `regress/control-client-size.sh` | remote-pty | ported | pr | PTY resize through the RPC server is covered. |
 | `regress/copy-mode-test-emacs.sh` | tmux-copy-mode | not_applicable | none | bree does not implement tmux copy-mode key tables. |
 | `regress/copy-mode-test-vi.sh` | tmux-copy-mode | not_applicable | none | bree does not implement tmux copy-mode key tables. |
 | `regress/cursor-test1.sh` | terminal-renderer | adapted | nightly | Cursor wrapping and reflow belong to terminal rendering. |
@@ -28,10 +28,10 @@ This map records how each selected upstream tmux regression or fuzz target is re
 | `regress/if-shell-error.sh` | tmux-shell | not_applicable | none | bree does not implement tmux if-shell. |
 | `regress/if-shell-nested.sh` | tmux-shell | not_applicable | none | bree does not implement tmux if-shell. |
 | `regress/input-keys.sh` | tmux-compat | ported | pr | send-keys token translation and literal passthrough are covered. |
-| `regress/kill-session-process-exit.sh` | remote-pty | adapted | pr | PTY process exit closes the WebSocket session normally. |
+| `regress/kill-session-process-exit.sh` | remote-pty | adapted | pr | PTY process exit closes the session normally. |
 | `regress/new-session-base-index.sh` | tmux-indexing | not_applicable | none | bree workspace numbering is not tmux base-index configurable. |
 | `regress/new-session-command.sh` | tmux-compat | ported | pr | new-session command dispatch to the first surface is covered. |
-| `regress/new-session-environment.sh` | remote-pty | ported | pr | WebSocket PTY startup environment covers UTF-8 and truecolor identity. |
+| `regress/new-session-environment.sh` | remote-pty | ported | pr | PTY startup environment covers UTF-8 and truecolor identity. |
 | `regress/new-session-no-client.sh` | tmux-compat | adapted | pr | Detached creation is represented by focus=false workspace creation. |
 | `regress/new-session-size.sh` | remote-pty | ported | pr | Initial PTY rows and columns are covered through stty output. |
 | `regress/new-window-command.sh` | tmux-compat | ported | pr | new-window command dispatch is covered through workspace creation and surface input. |

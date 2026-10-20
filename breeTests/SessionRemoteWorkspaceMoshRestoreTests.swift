@@ -74,7 +74,6 @@ struct SessionRemoteWorkspaceMoshRestoreTests {
     @Test("restores the Mosh terminal preference with SSH fallback")
     func restoresMoshTerminalCommand() throws {
         let snapshot = SessionRemoteWorkspaceSnapshot(
-            transport: .ssh,
             terminalTransport: .mosh,
             destination: "dev@example.com",
             port: 2222,
@@ -97,7 +96,6 @@ struct SessionRemoteWorkspaceMoshRestoreTests {
     @Test("keeps a durable TTY request on the SSH fallback, not the Mosh bootstrap")
     func keepsTTYRequestOnlyOnSSHRestoreFallback() throws {
         let snapshot = SessionRemoteWorkspaceSnapshot(
-            transport: .ssh,
             terminalTransport: .mosh,
             destination: "dev@example.com",
             sshOptions: ["RequestTTY=force"]
@@ -121,7 +119,6 @@ struct SessionRemoteWorkspaceMoshRestoreTests {
             tmuxSessionName: "agent-main"
         ))
         let snapshot = SessionRemoteWorkspaceSnapshot(
-            transport: .ssh,
             terminalTransport: .mosh,
             terminalProfile: terminalProfile,
             destination: "dev@example.com",
@@ -159,28 +156,10 @@ struct SessionRemoteWorkspaceMoshRestoreTests {
         #expect(!command.contains("mosh"), "\(command)")
     }
 
-    @Test("unsupported daemon bootstrap snapshots restore through SSH")
-    func unsupportedDaemonBootstrapSnapshotRestoresSSH() throws {
-        let snapshot = SessionRemoteWorkspaceSnapshot(
-            transport: .ssh,
-            terminalTransport: .mosh,
-            destination: "dev@example.com",
-            sshOptions: [],
-            skipDaemonBootstrap: true
-        )
-
-        let configuration = try #require(snapshot.workspaceConfiguration())
-        let command = try #require(configuration.terminalStartupCommand)
-
-        #expect(configuration.terminalTransport == .ssh)
-        #expect(!command.contains("mosh"), "\(command)")
-    }
-
     @Test("Mosh restore keeps its relay namespace without claiming SSH persistent PTY")
     func moshRestoresRelayWithoutPersistentSSHPTY() throws {
         let configuredRemoteCommand = #"cd "/srv/project dir" && exec fish"#
         let snapshot = SessionRemoteWorkspaceSnapshot(
-            transport: .ssh,
             terminalTransport: .mosh,
             configuredRemoteCommand: configuredRemoteCommand,
             destination: "dev@example.com",
@@ -234,7 +213,6 @@ struct SessionRemoteWorkspaceMoshRestoreTests {
         let configuredRemoteCommand = "printf configured-mosh-command"
         let currentHostRemoteCommand = "printf current-host-command"
         let snapshot = SessionRemoteWorkspaceSnapshot(
-            transport: .ssh,
             terminalTransport: .mosh,
             configuredRemoteCommand: configuredRemoteCommand,
             destination: "dev@example.com",

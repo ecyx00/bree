@@ -191,7 +191,7 @@ struct SessionIndexViewTests {
         #expect(!inner.contains("-a never -s"))
     }
 
-    // The `managed` sandbox type (ChatGPT/cloud-managed) likewise has no `--sandbox`
+    // The `managed` sandbox type (ChatGPT/Remote-managed) likewise has no `--sandbox`
     // equivalent, so it must be dropped rather than emitted as the invalid `-s managed`.
     @Test
     func codexResumeCommandDropsUnsupportedManagedSandbox() {

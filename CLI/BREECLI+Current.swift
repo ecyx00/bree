@@ -5,7 +5,7 @@ struct CurrentCommand {
     static let usage = String(localized: "cli.current.help", defaultValue: """
             Usage: bree current [--limit <1...200>] [--json]
 
-            Read bounded current-work facts already known to Bree across local and Cloud surfaces.
+            Read bounded current-work facts already known to Bree across local and remote surfaces.
             Does not refresh machines, read transcripts, or mutate work.
 
             Flags:

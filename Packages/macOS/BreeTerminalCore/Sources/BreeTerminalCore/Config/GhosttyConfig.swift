@@ -463,12 +463,15 @@ public struct GhosttyConfig {
         }
     }
 
-    /// Bree's warm chrome base (#1F1E1D) replaces the bundled "Apple System Colors"
+    /// Bree's warm chrome base (#1F1E1D) and ivory text (#F5F4EE) replace the bundled "Apple System Colors"
     /// dark background (#1E1E1E, pure grey), so every surface that follows the
     /// terminal background is warm. Only that exact stock value is rewritten; any
     /// other theme file is left alone, and a user theme or terminal colours still win.
     static func warmingStockDarkBackground(_ contents: String) -> String {
+        // The stock text colour #ffffff becomes the ivory text token (#f5f4ee); whole lines only,
+        // so `selection-foreground` stays as the theme wrote it.
         contents.replacingOccurrences(of: "background = #1e1e1e", with: "background = #1f1e1d")
+            .replacingOccurrences(of: "(?m)^foreground = #ffffff$", with: "foreground = #f5f4ee", options: .regularExpression)
     }
 
     /// The bree managed default theme's config contents for `preferredColorScheme`,

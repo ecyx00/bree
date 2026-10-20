@@ -87,7 +87,7 @@ public struct SessionSplitContainerLayoutCodec {
         }
     }
 
-    /// Builds only the pane tree with inert tabs, so restoring a Cloud panel
+    /// Builds only the pane tree with inert tabs, so restoring a remote panel
     /// never creates an unrelated terminal process.
     public func restoreScaffold(_ layout: SessionWorkspaceLayoutSnapshot) -> RestoreScaffold {
         guard let rootPaneId = controller.allPaneIds.first else {

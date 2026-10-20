@@ -22,7 +22,7 @@ LEGACY = re.compile(r"bree")
 KEPT = re.compile(
     r"(~?/?\.config/bree\S*|bree\.json|/tmp/bree\S*|"
     r"https?://\S*bree\S*|\.bree/\S*|\.bree\S*|bree\.xcodeproj|"
-    r"\.cache/bree\S*|breed-remote|bree-hq|bree-json|bree-tui)"
+    r"\.cache/bree\S*|breed-remote|bree-hq|bree-json)"
 )
 
 

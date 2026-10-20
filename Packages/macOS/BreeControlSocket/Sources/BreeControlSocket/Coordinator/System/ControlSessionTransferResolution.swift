@@ -22,7 +22,7 @@ public enum ControlSessionImportResolution: Sendable, Equatable {
     /// The snapshot was validated and reopened as additional windows.
     /// `heldBackResumeCount` counts terminals whose resume command was kept
     /// for manual restore instead of running automatically (file imports
-    /// only); `droppedRemoteWorkspaceCount` counts workspaces whose SSH/cloud
+    /// only); `droppedRemoteWorkspaceCount` counts workspaces whose SSH/Remote
     /// connection or environment from the file was dropped.
     case restored(
         sourcePath: String,
